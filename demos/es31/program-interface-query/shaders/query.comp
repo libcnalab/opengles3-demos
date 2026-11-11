@@ -1,0 +1,60 @@
+#version 310 es
+// The "compute" program of the demo: the resources that a graphics program of ES 3.1 cannot rely on
+// (shader storage blocks, buffer variables and atomic counters are only guaranteed in compute shaders).
+//
+//   SHADER_STORAGE_BLOCK   Source (binding 1), Result (binding 5), Plain (no binding: binding point 0)
+//   BUFFER_VARIABLE        Source.head/m/w[0]/rm, Result.count, Result.items[0].p/.s, plain_value
+//   ATOMIC_COUNTER_BUFFER  binding 1 (c_a at offset 0, c_b at offset 4), binding 3 (c_c at offset 8)
+//   UNIFORM                u_n (explicit location 2) and the three atomic counters
+//
+// std430 layout (ES 3.2 section 7.8), offsets worked out by hand in main.cpp:
+//   Source: head 0 | m 16 (3 columns, stride 16) | w 64 (stride 4) | rm 80 (row_major, 3 rows, stride 8)
+//   Result: count 0 | items[] 8 (struct stride 16; p at +0, s at +8)
+layout(local_size_x = 1) in;
+
+layout(location = 2) uniform uint u_n;
+
+layout(std430, binding = 1) buffer Source
+{
+    vec4 head;
+    mat3 m;
+    float w[3];
+    layout(row_major) mat2x3 rm;
+} src;
+
+struct Item
+{
+    vec2 p;
+    float s;
+};
+
+layout(std430, binding = 5) buffer Result
+{
+    uint count;
+    Item items[];          // a runtime-sized array of structures: a "top-level array"
+} res;
+
+layout(std430) buffer Plain      // no binding qualifier -> binding point 0; no instance name -> bare member names
+{
+    uint plain_value;
+};
+
+layout(binding = 1, offset = 0) uniform atomic_uint c_a;
+layout(binding = 1, offset = 4) uniform atomic_uint c_b;
+layout(binding = 3, offset = 8) uniform atomic_uint c_c;
+
+void main()
+{
+    // Reads of every Source member: head.x + head.w are both used, m[2][1] is column 2 / row 1, rm[1][2] is column 1 / row 2.
+    float s = src.head.x + src.head.w + src.m[2][1] + src.m[0][0] + src.w[2] + src.w[1] + src.rm[1][2];
+    res.count = u_n + uint(s);
+    res.items[0].p = vec2(src.m[0][0], src.w[1]);
+    res.items[0].s = src.head.w;
+    plain_value = u_n;
+    atomicCounterIncrement(c_a);
+    atomicCounterIncrement(c_b);
+    atomicCounterIncrement(c_b);
+    atomicCounterIncrement(c_c);
+    atomicCounterIncrement(c_c);
+    atomicCounterIncrement(c_c);
+}

@@ -1,0 +1,68 @@
+{
+  "name": "es31-program-interface-query",
+  "title": "Program interface queries",
+  "min_es": "3.1",
+  "glsl": [
+    "310 es"
+  ],
+  "category": "es31",
+  "order": 3300,
+  "summary": "glGetProgramInterfaceiv and glGetProgramResource{Index,Name,iv,Location} on all eight interfaces of ES 3.1 (uniforms, uniform blocks, program inputs/outputs, buffer variables, shader storage blocks, atomic counter buffers, transform feedback varyings), compared with values derived from the shader source; explicit uniform locations, layout(binding) and MAX_UNIFORM_LOCATIONS, proven by pixels and by a compute run that uses the queried layout.",
+  "spec": [
+    "ES 3.2 §7.3.1 Program Interfaces (Table 7.2 GetProgramResourceiv properties), §7.3.1.1 Naming Active Resources",
+    "ES 3.2 §7.6 Uniform Variables (explicit and generated locations, MAX_UNIFORM_LOCATIONS), §7.6.2.2 Standard Uniform Block Layout (std140)",
+    "ES 3.2 §7.7 Atomic Counter Buffers, §7.8 Shader Buffer Variables and Shader Storage Blocks (std430, top-level arrays)",
+    "ES 3.2 §11.1.2.1 Output Variables (transform feedback varyings, order of TransformFeedbackVaryings)",
+    "GLSL ES 3.10 §4.4.1/§4.4.2 location qualifiers on in/out, §4.4.3 Uniform Variable Layout Qualifiers, §4.4.4 Uniform and Shader Storage Block Layout Qualifiers (binding), §4.4.5 Opaque Uniform Layout Qualifiers (binding for samplers), §4.4.6 Atomic Counter Layout Qualifiers"
+  ],
+  "api": {
+    "glGetProgramInterfaceiv": "ACTIVE_RESOURCES, MAX_NAME_LENGTH and MAX_NUM_ACTIVE_VARIABLES of all eight interfaces on two programs compared with counts and longest names derived from the shader source; empty lists report 0; INVALID_OPERATION for MAX_NAME_LENGTH on ATOMIC_COUNTER_BUFFER and MAX_NUM_ACTIVE_VARIABLES on non-block interfaces, INVALID_VALUE/INVALID_OPERATION for bad programs",
+    "glGetProgramResourceIndex": "every table entry found by name; the \"[0]\" rule (base name of an array matches, other elements do not); structure names are not resources; unknown names return INVALID_INDEX without an error; INVALID_ENUM for ATOMIC_COUNTER_BUFFER",
+    "glGetProgramResourceName": "name round trip of every entry, truncation with bufSize 5, bufSize 0 writes nothing; INVALID_ENUM, INVALID_VALUE (index, negative bufSize)",
+    "glGetProgramResourceiv": "NAME_LENGTH, TYPE, ARRAY_SIZE, LOCATION, BLOCK_INDEX, OFFSET, ARRAY_STRIDE, MATRIX_STRIDE, IS_ROW_MAJOR, ATOMIC_COUNTER_BUFFER_INDEX, BUFFER_BINDING, BUFFER_DATA_SIZE, NUM_ACTIVE_VARIABLES, ACTIVE_VARIABLES, TOP_LEVEL_ARRAY_SIZE/STRIDE, REFERENCED_BY_VERTEX/FRAGMENT/COMPUTE_SHADER compared with tables derived from the shader source; value order and count/length semantics; 17 property/interface combinations that table 7.2 forbids -> INVALID_OPERATION",
+    "glGetProgramResourceLocation": "explicit locations 4, 8-10 (array elements), 20/21 (structure members), 30/31, vertex input and fragment output locations incl. array elements, -1 for block members, atomic counters, built-ins and unknown names; same numbers as glGetUniformLocation, glGetAttribLocation, glGetFragDataLocation; INVALID_ENUM for the five other interfaces; INVALID_OPERATION for programs that are not linked",
+    "glTransformFeedbackVaryings": "the TRANSFORM_FEEDBACK_VARYING list has exactly the names, in the order given before the link; a whole array is listed as one entry with ARRAY_SIZE 2",
+    "glGetTransformFeedbackVarying": "name, size and type agree with the TRANSFORM_FEEDBACK_VARYING entry of the same index",
+    "glGetProgramiv": "ACTIVE_UNIFORMS, ACTIVE_UNIFORM_BLOCKS, TRANSFORM_FEEDBACK_VARYINGS, ACTIVE_ATOMIC_COUNTER_BUFFERS equal the ACTIVE_RESOURCES of the matching interface; LINK_STATUS",
+    "glLinkProgram": "a program with no shaders fails to link and reports no resources; the rejected explicit-location programs",
+    "glCompileShader": "layout(location = MAX_UNIFORM_LOCATIONS) and duplicate or overlapping explicit uniform locations are rejected at compile or link time; the highest valid location is accepted",
+    "glGetShaderiv": "COMPILE_STATUS decides at which stage a deliberately invalid program was rejected",
+    "glGetUniformiv": "layout(binding = 2) sampler2D reads back 2, layout(binding = 4) sampler2D u_texarr[2] reads back 4 and 5 with no glUniform1i call",
+    "glGetUniformLocation": "agrees with glGetProgramResourceLocation(UNIFORM) for explicit and linker-assigned locations",
+    "glGetAttribLocation": "agrees with glGetProgramResourceLocation(PROGRAM_INPUT) for a linker-assigned location",
+    "glGetFragDataLocation": "agrees with glGetProgramResourceLocation(PROGRAM_OUTPUT)",
+    "glGetActiveUniformBlockiv": "UNIFORM_BLOCK_BINDING and UNIFORM_BLOCK_DATA_SIZE equal BUFFER_BINDING and BUFFER_DATA_SIZE of the new interface",
+    "glUniformBlockBinding": "changing the binding of Cell[1] is visible as BUFFER_BINDING 9 and back to 7",
+    "glUniform4f": "hard-coded explicit location 4 drives cell 0 (pixels); a changed value changes the pixels (negative control)",
+    "glUniform1fv": "hard-coded explicit location 8 loads u_weights[0..2] (locations 8, 9, 10): cell 1 pixels",
+    "glUniform3f": "hard-coded explicit location 20 (u_light.dir): cell 2 pixels",
+    "glUniform1f": "explicit location 21 (u_light.power) and MAX_UNIFORM_LOCATIONS - 1: pixels; location MAX_UNIFORM_LOCATIONS -> INVALID_OPERATION",
+    "glUniform2i": "u_pick set at the queried location of a linker-assigned uniform: cell 7 pixels",
+    "glUniform1ui": "u_n at explicit location 2 of the compute program: results read back",
+    "glBindBufferBase": "uniform buffers at the binding points of layout(binding = 3/6/7) feed the shader without glUniformBlockBinding (cells 5 and 6); shader storage and atomic counter buffers bound at the queried BUFFER_BINDING values are read and written by the compute run",
+    "glDispatchCompute": "five invocations: Result.count, Result.items[0], plain_value and the three atomic counters hold the values predicted from the queried offsets",
+    "glVertexAttribPointer": "attributes at locations obtained from glGetProgramResourceLocation(PROGRAM_INPUT) deliver position and color (pixels)",
+    "glVertexAttribIPointer": "the integer attribute a_cell at its linker-assigned location selects the cell and a second integer (pixels)",
+    "glDrawArrays": "eight cells, the explicit-location patch, the negative control"
+  },
+  "features": [
+    "ES31.PROGRAM.INTERFACE_QUERY",
+    "ES31.UNIFORM.EXPLICIT_LOCATION"
+  ],
+  "glsl_features": [
+    "GLSL310.LAYOUT.UNIFORM_LOCATION",
+    "GLSL310.LAYOUT.BINDING"
+  ],
+  "validation": [
+    "state-query",
+    "pixel-reference",
+    "compute-check",
+    "negative",
+    "gl-error"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5",
+    "notes": "256x256 radeonsi capture viewed 1:1 and zoomed (llvmpipe/zink differ by at most 1 per channel): upper half shows the 4x2 grid with the expected colours (olive, green, orange-brown, pink in the lower row; sky-blue|lime, grey-green, green|violet, violet in the upper row), a violet patch at y=96..127 on the left (highest explicit uniform location), and below it 289 small cells of the check matrix in 13 bands, all green."
+  }
+}

@@ -113,6 +113,10 @@ The typed `RenderbufferId` overloads take no level, and the `TextureTarget` comp
 cannot be tested without a raw cast. The typed design is sound; this affects only negative tests. Found by
 es32-astc-and-copy-image.
 
+### O11 — `glHint` INVALID_ENUM is unreachable with typed enums
+`HintTarget` and `HintMode` hold only legal values, so the ES 3.0 §5.3 INVALID_ENUM cases need a raw cast. These
+cases are left untested (es20-state-queries-errors prints a note). This is the same class as O1.
+
 ### Note — arbitrary sample masks
 `SampleMaskValue` (for `glSampleMaski`) has only `None` and `All`. Since it is a registered 32-bit bitfield
 (`all_bits = 0xFFFFFFFF`), a chosen mask is formed with `static_cast<SampleMaskValue>(bits)`. Every value is

@@ -34,5 +34,5 @@ Result directories: build/debug/test-results
 
 | status | count |
 |---|---|
-| FULLY_VALIDATED | 80 |
+| FULLY_VALIDATED | 81 |
 | VISUALLY_VERIFIED | 1 |

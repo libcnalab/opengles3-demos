@@ -6,9 +6,9 @@
 | ES20.CONTEXT.INIT | 2.0 | context | Context creation + meta-gl initialization + version/API verification | ES 3.0 §2.1-2.2; meta-gl Loader.hpp | FULLY_VALIDATED | diagnostics-capabilities, test-metagl-contracts |
 | ES20.CONTEXT.STRINGS | 2.0 | context | GL_VENDOR/RENDERER/VERSION/SHADING_LANGUAGE_VERSION strings and version parsing | ES 3.0 §6.1.6 | FULLY_VALIDATED | diagnostics-capabilities |
 | ES20.ERRORS.GETERROR | 2.0 | errors | glGetError semantics: sticky flags; command ignored on error | ES 3.0 §2.5 | NOT_STARTED |  |
-| ES20.ERRORS.INVALID_ENUM | 2.0 | errors | GL_INVALID_ENUM generation (only reachable via raw casts through typed wrappers) | ES 3.0 §2.5 Table 2.3 | FULLY_VALIDATED | es30-framebuffer-invalidate, es30-instancing, es30-transform-feedback, es30-vertex-array-objects, es31-indirect-draw, es31-separate-vertex-format |
-| ES20.ERRORS.INVALID_VALUE | 2.0 | errors | GL_INVALID_VALUE generation (negative sizes/out-of-range indices) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-copy-and-read-pixels, es20-culling-front-face, es30-buffer-mapping, es30-framebuffer-blit-msaa, es30-framebuffer-invalidate, es30-instancing, es30-sync-objects, es30-transform-feedback, es30-uniform-buffer-objects, es30-vertex-array-objects, es31-compute-basics, es31-indirect-draw, es31-separate-vertex-format |
-| ES20.ERRORS.INVALID_OPERATION | 2.0 | errors | GL_INVALID_OPERATION generation (state-dependent misuse) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-copy-and-read-pixels, es30-buffer-mapping, es30-framebuffer-blit-msaa, es30-framebuffer-invalidate, es30-transform-feedback, es30-vertex-array-objects, es31-compute-basics, es31-indirect-draw, es31-separate-vertex-format |
+| ES20.ERRORS.INVALID_ENUM | 2.0 | errors | GL_INVALID_ENUM generation (only reachable via raw casts through typed wrappers) | ES 3.0 §2.5 Table 2.3 | FULLY_VALIDATED | es30-framebuffer-invalidate, es30-instancing, es30-transform-feedback, es30-vertex-array-objects, es31-indirect-draw, es31-multisample-textures, es31-separate-vertex-format |
+| ES20.ERRORS.INVALID_VALUE | 2.0 | errors | GL_INVALID_VALUE generation (negative sizes/out-of-range indices) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-copy-and-read-pixels, es20-culling-front-face, es30-buffer-mapping, es30-framebuffer-blit-msaa, es30-framebuffer-invalidate, es30-instancing, es30-sync-objects, es30-transform-feedback, es30-uniform-buffer-objects, es30-vertex-array-objects, es31-compute-basics, es31-indirect-draw, es31-multisample-textures, es31-separate-vertex-format |
+| ES20.ERRORS.INVALID_OPERATION | 2.0 | errors | GL_INVALID_OPERATION generation (state-dependent misuse) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-copy-and-read-pixels, es30-buffer-mapping, es30-framebuffer-blit-msaa, es30-framebuffer-invalidate, es30-transform-feedback, es30-vertex-array-objects, es31-compute-basics, es31-indirect-draw, es31-multisample-textures, es31-separate-vertex-format |
 | ES20.ERRORS.INVALID_FB_OP | 2.0 | errors | GL_INVALID_FRAMEBUFFER_OPERATION on incomplete framebuffer | ES 3.0 §4.4.4 | FULLY_VALIDATED | es20-framebuffer-objects, es30-framebuffer-blit-msaa |
 | ES20.VIEWPORT | 2.0 | transform | glViewport mapping NDC->window; MAX_VIEWPORT_DIMS | ES 3.0 §2.13.1 | FULLY_VALIDATED | es20-clear-viewport-scissor |
 | ES20.DEPTH_RANGE | 2.0 | transform | glDepthRangef mapping of NDC z to window z | ES 3.0 §2.13.1 | FULLY_VALIDATED | es20-clear-viewport-scissor, es20-depth-test |
@@ -146,7 +146,7 @@
 | ES30.FBO.DEPTH_STENCIL_ATTACHMENT | 3.0 | framebuffer | DEPTH_STENCIL_ATTACHMENT point | ES 3.0 §4.4.2 | FULLY_VALIDATED | es20-framebuffer-objects, es30-multiple-render-targets |
 | ES30.FBO.INTEGER_TARGET | 3.0 | framebuffer | Integer color attachments + glClearBufferiv/uiv + readback | ES 3.0 §4.4.4 | FULLY_VALIDATED | es30-multiple-render-targets |
 | ES30.FBO.ATTACHMENT_QUERY | 3.0 | framebuffer | COMPONENT_TYPE / color sizes / TEXTURE_LAYER attachment queries | ES 3.0 §6.1.13 | FULLY_VALIDATED | es30-framebuffer-invalidate |
-| ES30.INTERNALFORMAT.QUERY | 3.0 | framebuffer | glGetInternalformativ NUM_SAMPLE_COUNTS / SAMPLES | ES 3.0 §6.1.15 | FULLY_VALIDATED | es30-framebuffer-blit-msaa |
+| ES30.INTERNALFORMAT.QUERY | 3.0 | framebuffer | glGetInternalformativ NUM_SAMPLE_COUNTS / SAMPLES | ES 3.0 §6.1.15 | FULLY_VALIDATED | es30-framebuffer-blit-msaa, es31-multisample-textures |
 | ES30.TF.BASIC | 3.0 | transform-feedback | glTransformFeedbackVaryings + begin/end capture into a buffer | ES 3.0 §2.15 | FULLY_VALIDATED | es30-transform-feedback, test-glsl300-builtins |
 | ES30.TF.MODES | 3.0 | transform-feedback | INTERLEAVED_ATTRIBS vs SEPARATE_ATTRIBS | ES 3.0 §2.15.2 | FULLY_VALIDATED | es30-transform-feedback |
 | ES30.TF.OBJECTS | 3.0 | transform-feedback | Transform feedback objects gen/bind/delete/isTransformFeedback | ES 3.0 §2.15.1 | FULLY_VALIDATED | es30-transform-feedback |
@@ -189,11 +189,11 @@
 | ES31.PIPELINE.VALIDATE | 3.1 | shaders | glValidateProgramPipeline + info log; interface mismatch | ES 3.2 §7.4.1 | NOT_STARTED |  |
 | ES31.PROGRAM.INTERFACE_QUERY | 3.1 | shaders | glGetProgramInterfaceiv/ResourceIndex/Name/iv/Location | ES 3.2 §7.3.1 | NOT_STARTED |  |
 | ES31.UNIFORM.EXPLICIT_LOCATION | 3.1 | uniforms | layout(location) on uniforms + MAX_UNIFORM_LOCATIONS | GLSL 3.10 §4.4.3 | NOT_STARTED |  |
-| ES31.TEXTURE.GATHER | 3.1 | textures | textureGather / textureGatherOffset(s) + gather offset limits | GLSL 3.10 §8.9.3 | NOT_STARTED |  |
-| ES31.TEXTURE.MULTISAMPLE | 3.1 | textures | glTexStorage2DMultisample + sampler2DMS texelFetch + glGetMultisamplefv | ES 3.2 §8.8 | NOT_STARTED |  |
+| ES31.TEXTURE.GATHER | 3.1 | textures | textureGather / textureGatherOffset(s) + gather offset limits | GLSL 3.10 §8.9.3 | FULLY_VALIDATED | es31-texture-gather |
+| ES31.TEXTURE.MULTISAMPLE | 3.1 | textures | glTexStorage2DMultisample + sampler2DMS texelFetch + glGetMultisamplefv | ES 3.2 §8.8 | FULLY_VALIDATED | es31-multisample-textures |
 | ES31.TEXTURE.STENCIL_TEXTURING | 3.1 | textures | DEPTH_STENCIL_TEXTURE_MODE = STENCIL_INDEX sampling | ES 3.2 §8.16 | NOT_STARTED |  |
 | ES31.TEXTURE.LEVEL_QUERY | 3.1 | textures | glGetTexLevelParameteriv/fv | ES 3.2 §8.11.3 | NOT_STARTED |  |
-| ES31.SAMPLE_MASK | 3.1 | multisample | glSampleMaski + SAMPLE_MASK | ES 3.2 §13.8.3 | NOT_STARTED |  |
+| ES31.SAMPLE_MASK | 3.1 | multisample | glSampleMaski + SAMPLE_MASK | ES 3.2 §13.8.3 | FULLY_VALIDATED | es31-multisample-textures |
 | ES31.FBO.NO_ATTACHMENTS | 3.1 | framebuffer | Framebuffers without attachments (glFramebufferParameteri defaults) | ES 3.2 §9.2.1 | NOT_STARTED |  |
 | ES31.STATE.BOOLEANI | 3.1 | state | glGetBooleani_v (IMAGE_BINDING_LAYERED) | ES 3.2 §20.1 | NOT_STARTED |  |
 | ES31.SHADER.HELPER_INVOCATION | 3.1 | shaders | gl_HelperInvocation | GLSL 3.10 §7.1 | NOT_STARTED |  |

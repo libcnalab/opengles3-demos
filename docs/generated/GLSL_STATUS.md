@@ -76,8 +76,8 @@
 | GLSL310.FN.INTEGER | 310 | builtins | uaddCarry usubBorrow umulExtended imulExtended bitfieldExtract bitfieldInsert bitfieldReverse bitCount findLSB findMSB | GLSL ES 3.10 §8.8 | compute-check | NOT_STARTED |  |
 | GLSL310.FN.FLOAT_EXT | 310 | builtins | frexp ldexp | GLSL ES 3.10 §8.3 | compute-check | NOT_STARTED |  |
 | GLSL310.FN.PACKING_8 | 310 | builtins | packUnorm4x8 packSnorm4x8 unpackUnorm4x8 unpackSnorm4x8 | GLSL ES 3.10 §8.4 | compute-check | NOT_STARTED |  |
-| GLSL310.FN.TEXTURE_GATHER | 310 | builtins | textureGather textureGatherOffset (+ shadow variants) | GLSL ES 3.10 §8.9.3 | render | NOT_STARTED |  |
-| GLSL310.FN.TEXTURE_MS | 310 | builtins | sampler2DMS + texelFetch(sample) + textureSize | GLSL ES 3.10 §8.9 | render | NOT_STARTED |  |
+| GLSL310.FN.TEXTURE_GATHER | 310 | builtins | textureGather textureGatherOffset (+ shadow variants) | GLSL ES 3.10 §8.9.3 | render | FULLY_VALIDATED | es31-texture-gather |
+| GLSL310.FN.TEXTURE_MS | 310 | builtins | sampler2DMS + texelFetch(sample) + textureSize | GLSL ES 3.10 §8.9 | render | FULLY_VALIDATED | es31-multisample-textures |
 | GLSL310.EARLY_FRAGMENT_TESTS | 310 | interface | layout(early_fragment_tests) | GLSL ES 3.10 §4.4.1.3 | render | NOT_STARTED |  |
 | GLSL310.HELPER_INVOCATION | 310 | builtins | gl_HelperInvocation | GLSL ES 3.10 §7.1.2 | render | NOT_STARTED |  |
 | GLSL310.BUILTIN_CONSTANTS | 310 | builtins | New gl_Max*Compute*/Image*/AtomicCounter* constants | GLSL ES 3.10 §7.2 | compute-check | NOT_STARTED |  |

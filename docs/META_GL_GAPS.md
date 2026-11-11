@@ -68,6 +68,19 @@ meta-gl revision audited: `develop` @ `795bcdc` (v0.4.1). Fixes live on the loca
 ### G5 — `to_string(DefaultFramebufferAttachment)` missing — FIXED
 - meta-gl's README promises `to_string()` for all enum classes; this one had none. Added (same commit).
 
+### G6 — multisample level queries missing from `TextureLevelParameter` — FIXED (meta-gl `0a7766c`)
+- **Expected:** `TEXTURE_SAMPLES` and `TEXTURE_FIXED_SAMPLE_LOCATIONS` are `glGetTexLevelParameter*` pnames for
+  multisample textures (ES 3.1/3.2 §8.11.3, Table 21.11).
+- **Actual:** they existed only in `TextureParameterQuery` (for `glGetTexParameter*`, where the spec does not
+  allow them), so the correct query was not expressible. Found by the es31-multisample-textures work.
+- **Fix:** added `TextureLevelParameter::Samples` / `FixedSampleLocations` (additive).
+
+### Note — arbitrary sample masks
+`SampleMaskValue` (for `glSampleMaski`) has only `None` and `All`. Since it is a registered 32-bit bitfield
+(`all_bits = 0xFFFFFFFF`), a chosen mask is formed with `static_cast<SampleMaskValue>(bits)`. Every value is
+valid there, so the demo isolates that one cast in a helper. A `metagl::sample_mask(GLbitfield)` helper would
+be a small additive improvement.
+
 ## Observations (not defects; documented for users of the demos)
 
 - **O1 — invalid enum values are unreachable by design.** Typed enums make `GL_INVALID_ENUM`

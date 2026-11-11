@@ -1,0 +1,53 @@
+{
+  "name": "es20-cube-map",
+  "title": "Cube map textures: face selection (Table 3.21) and completeness",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es20-foundations",
+  "order": 150,
+  "summary": "Six 2x2 cube faces sampled with a samplerCube: a skybox, per-face tiles, 24 texel-centre, hand-derived and 1500 random directions checked against a CPU model of ES 3.0 Table 3.21, and four kinds of incomplete cube map.",
+  "spec": [
+    "ES 3.0 §3.8.1 Texture Objects (cube map binding), §3.8.3 Texture Image Specification (cube map faces, square faces, maximum size)",
+    "ES 3.0 §3.8.9 Cube Map Texture Selection, Table 3.21, §3.8.9.1 Seamless Cube Map Filtering",
+    "ES 3.0 §3.8.10.5 Manual Mipmap Generation (cube complete)",
+    "ES 3.0 §3.8.13 Texture Completeness (cube complete), §3.9.2 (incomplete -> (0,0,0,1))",
+    "ES 3.0 Table 6.28 (MAX_CUBE_MAP_TEXTURE_SIZE)",
+    "GLSL ES 3.00 §8.8 Texture Lookup Functions (texture with samplerCube)"
+  ],
+  "api": {
+    "glGenTextures": "main cube map, four broken and four complete scenario cube maps",
+    "glBindTexture": "TEXTURE_CUBE_MAP binding selects the cube map to sample; TEXTURE_BINDING_CUBE_MAP read back (and 0 after unbinding); a cube map bound to TEXTURE_2D -> INVALID_OPERATION",
+    "glTexImage2D": "six face targets POSITIVE_X..NEGATIVE_Z, each with a distinct 2x2 image; sampled texels compared with the CPU model of Table 3.21; non-square face and face above MAX_CUBE_MAP_TEXTURE_SIZE -> INVALID_VALUE; target TEXTURE_CUBE_MAP -> INVALID_ENUM; a missing, wrong-size or wrong-format face makes the cube map incomplete (samples (0,0,0,1))",
+    "glTexSubImage2D": "overwriting one texel of the -Y face changes exactly that quadrant of the -Y tile (mutation control)",
+    "glTexParameteri": "TEXTURE_MIN_FILTER NEAREST (via the typed wrapper) makes a base-level-only cube map complete; the default NEAREST_MIPMAP_LINEAR leaves it incomplete",
+    "glGenerateMipmap": "TEXTURE_CUBE_MAP: INVALID_OPERATION when not cube complete; on a complete cube map with the default filter it makes the cube map complete (face appears)",
+    "glGetIntegerv": "TEXTURE_BINDING_CUBE_MAP, TEXTURE_BINDING_2D (independent), MAX_CUBE_MAP_TEXTURE_SIZE >= 2048",
+    "glDrawArrays": "TRIANGLE_STRIP quad for the skybox, the face tiles and the one-pixel direction probes",
+    "glViewport": "sky, tile and one-pixel viewports; pixel positions verified",
+    "glUniform1i": "sampler unit, sampling mode and face index",
+    "glUniform3f": "probe direction and skybox camera vectors; the CPU evaluates the same linear ray function",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE readback of the default framebuffer for all comparisons",
+    "glDeleteTextures": "cleanup; final glGetError == NO_ERROR"
+  },
+  "features": [
+    "ES20.TEXTURE.CUBE",
+    "ES20.TEXTURE.COMPLETENESS"
+  ],
+  "glsl_features": [
+    "GLSL300.FN.TEXTURE.BASIC",
+    "GLSL300.TYPES.SAMPLERS",
+    "GLSL300.BUILTIN_VARS.VS"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "negative"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5",
+    "notes": "radeonsi es-max capture (viewed at 3x): the skybox shows three faces meeting at a corner (green +Y at the top, yellow -Z left, red +X right), each split into four brightness quadrants; the six face tiles show red, cyan, green, magenta, blue, yellow with the brightest texel top-left; the four bottom pairs show a black incomplete cube map next to the red +X face. All six captures (gpu, llvmpipe, zink at es-min and es-max) are pixel-identical."
+  }
+}

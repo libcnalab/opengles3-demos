@@ -33,9 +33,24 @@ on a wider surface they get flatter (`height / 4`), so the skybox always keeps a
 skybox camera has a 70° vertical field of view, and the horizontal one follows the aspect ratio. On a
 very wide or very tall sky rectangle each half-angle is kept between 14° and 60°, so pixels are no longer
 square: the view never turns into a fisheye strip (mostly near face edges, where probes must be skipped)
-or into a sliver that shows only one or two faces. The checks use the same scale factors, so every size
-passes. There is no minimum size: even 32×32 and 16×400 pass, because the single-direction probes are
-drawn and read back in batches of one surface.
+or into a sliver that shows only one or two faces. The checks use the same scale factors. The single-direction
+probes are drawn and read back in batches of one surface, so they work at any size.
+
+**Minimum size.** `init()` throws `demo::Skip` unless two conditions hold. Both follow from what the
+checks need, and both depend only on the layout:
+
+1. Every face tile is at least 2×2 pixels, so **width ≥ 16 and height ≥ 8**. In a 2-pixel tile the pixel
+   centres sit at s, t = 0.25 and 0.75, half a texel from the boundary. Each of the four texels then gets a
+   probe, and the face-tile check requires that. A 1-pixel tile has its only pixel centre exactly on the
+   texel boundary, so it would have no probe at all.
+2. The CPU model of the skybox (the same Table 3.21 lookup the skybox check uses) predicts more than 100
+   unambiguous pixels on each of at least three faces, and more than 60 % of the sky rectangle away from texel
+   and face edges. These are the skybox check's own conditions. A sky only a few pixels high, or too
+   narrow for its clamped field of view, cannot meet them.
+
+The second condition depends on the aspect ratio, so the minimum is not a single rectangle. Some smallest
+admitted sizes: 26×26 (25×25 skips), 16×35 (16×34 skips), 400×25 (400×24 skips), and 1000×10 (1000×9 skips). On llvmpipe,
+a sweep of every 3rd width from 8 to 128 against every 3rd height from 7 to 127 gives only PASS or SKIP.
 
 ## Key ideas
 

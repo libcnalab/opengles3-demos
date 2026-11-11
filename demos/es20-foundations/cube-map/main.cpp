@@ -45,6 +45,10 @@ namespace
     constexpr int kSize = 2;  // every face is 2 x 2 texels
     constexpr double kTexelMargin = 0.05;  // texel units; probes closer to a texel boundary are skipped
     constexpr double kEdgeMargin = 0.98;   // probes with max(|sc|,|tc|) / |ma| above this are skipped (face edge / tie)
+    constexpr int kMinTile = 2;            // pixels; a face tile must sample all four texels of its face
+    constexpr long kMinFaceProbes = 100;   // a skybox face counts as visible with more than this many probes
+    constexpr int kMinSkyFaces = 3;        // the skybox check must cover at least this many faces
+    constexpr long kMinSkySharePercent = 60;  // more than this share of the sky must be unambiguous (not near an edge)
 
     constexpr std::array<mgl::TextureTarget, kFaces> kTargets = {
         mgl::TextureTarget::TextureCubeMapPositiveX, mgl::TextureTarget::TextureCubeMapNegativeX,
@@ -165,6 +169,21 @@ namespace
         int width = 0, height = 0, tile_w = 0, tile_h = 0, sky_h = 0;
     };
 
+    /// What the CPU model predicts for the skybox: unambiguous pixels in total and per face.
+    struct SkyStats
+    {
+        long probes = 0, skipped = 0;
+        std::array<long, kFaces> seen{};
+        [[nodiscard]] int faces_seen() const
+        {
+            return static_cast<int>(std::ranges::count_if(seen, [](long n) { return n > kMinFaceProbes; }));
+        }
+        [[nodiscard]] bool usable(const Layout& lay) const
+        {
+            return faces_seen() >= kMinSkyFaces && probes * 100 > static_cast<long>(lay.width) * lay.sky_h * kMinSkySharePercent;
+        }
+    };
+
     /// Top-down view of an RGBA8 read-back (glReadPixels returns the bottom row first).
     struct Image
     {
@@ -243,6 +262,23 @@ namespace
             tan_half_fov_ = std::tan(fov / 2.0);
             right_ = right * tan_half_fov_;  // scaled for the aspect ratio by sky_scale()
             up_ = up * tan_half_fov_;
+
+            // Minimum size, derived from what the checks need. Both conditions are pure functions of the layout, so a
+            // surface that passes them gives every pixel check a non-vacuous probe set:
+            //  - every face tile is at least kMinTile x kMinTile pixels, so each of its four texel quadrants holds a
+            //    probe pixel (in a 2-pixel tile the pixel centres sit at s, t = 0.25 and 0.75, half a texel from the boundary);
+            //  - the CPU model of the skybox finds more than kMinFaceProbes unambiguous pixels on each of at least
+            //    kMinSkyFaces faces, and at least kMinSkyShare of the sky is unambiguous.
+            const Layout lay = layout_of(env);
+            if (lay.tile_w < kMinTile || lay.tile_h < kMinTile)
+                throw demo::Skip(std::format("needs face tiles of at least {0} x {0} pixels (width >= {1}, height >= {2})", kMinTile, 8 * kMinTile,
+                                             4 * kMinTile));
+            const SkyStats sky = sky_stats(lay);
+            if (!sky.usable(lay))
+                throw demo::Skip(std::format("the skybox of a {}x{} surface is too small: {} faces with more than {} unambiguous pixels (needs {}), "
+                                             "{} of {} pixels unambiguous (needs more than {}%)",
+                                             env.width, env.height, sky.faces_seen(), kMinFaceProbes, kMinSkyFaces, sky.probes,
+                                             static_cast<long>(lay.width) * lay.sky_h, kMinSkySharePercent));
         }
 
         void render(demo::Env& env, int /*frame*/) override
@@ -426,6 +462,34 @@ namespace
             return {tan_h / tan_half_fov_, tan_v / tan_half_fov_};
         }
 
+        /// The CPU Table 3.21 lookup of the view ray through sky pixel (x, y), y counted from the top of the sky rectangle.
+        [[nodiscard]] Lookup sky_lookup(const Layout& lay, const SkyScale& k, int x, int y) const
+        {
+            // Window pixel centre -> NDC (the viewport is the sky rectangle) -> the same linear function the vertex shader evaluates.
+            const double ndc_x = 2.0 * (x + 0.5) / lay.width - 1.0;
+            const double ndc_y = 2.0 * ((lay.sky_h - 1 - y) + 0.5) / lay.sky_h - 1.0;
+            return select_face(as_float(forward_ + right_ * (ndc_x * k.right) + up_ * (ndc_y * k.up)));
+        }
+
+        /// The skybox probe set predicted by the CPU model alone (no read-back).
+        [[nodiscard]] SkyStats sky_stats(const Layout& lay) const
+        {
+            const SkyScale k = sky_scale(lay);
+            SkyStats st;
+            for (int y = 0; y < lay.sky_h; ++y)
+                for (int x = 0; x < lay.width; ++x)
+                {
+                    const Lookup L = sky_lookup(lay, k, x, y);
+                    if (L.ambiguous) ++st.skipped;
+                    else
+                    {
+                        ++st.probes;
+                        ++st.seen[static_cast<std::size_t>(L.face)];
+                    }
+                }
+            return st;
+        }
+
         /// A w x h tile at framebuffer position (x, y) (y from the bottom) that samples directions on the plane of `face`.
         void draw_face_tile(mgl::TextureId cube, int face, int x, int y, int w, int h) const
         {
@@ -486,11 +550,7 @@ namespace
             for (int y = 0; y < lay.sky_h; ++y)
                 for (int x = 0; x < lay.width; ++x)
                 {
-                    // Window pixel centre -> NDC (the viewport is the sky rectangle) -> the same linear function the vertex shader evaluates.
-                    const double ndc_x = 2.0 * (x + 0.5) / lay.width - 1.0;
-                    const double ndc_y = 2.0 * ((lay.sky_h - 1 - y) + 0.5) / lay.sky_h - 1.0;
-                    const Vec3 r = as_float(forward_ + right_ * (ndc_x * k.right) + up_ * (ndc_y * k.up));
-                    const Lookup L = select_face(r);
+                    const Lookup L = sky_lookup(lay, k, x, y);
                     if (L.ambiguous)
                     {
                         ++skipped;
@@ -505,14 +565,14 @@ namespace
                 }
             int faces_seen = 0;
             for (const long n : seen)
-                if (n > 100) ++faces_seen;
-            check.expect(bad == 0 && probes > lay.width * lay.sky_h * 6 / 10,
+                if (n > kMinFaceProbes) ++faces_seen;
+            check.expect(bad == 0 && probes * 100 > static_cast<long>(lay.width) * lay.sky_h * kMinSkySharePercent,
                          "skybox: every pixel equals the CPU Table 3.21 lookup of its view ray",
                          bad == 0 ? std::format("{} px compared, {} skipped near edges; +X {} -X {} +Y {} -Y {} +Z {} -Z {}", probes, skipped, seen[0],
                                                 seen[1], seen[2], seen[3], seen[4], seen[5])
                                   : first_bad);
-            check.expect(faces_seen >= 3, "skybox: at least three different faces are visible (the test is not confined to one face)",
-                         std::format("{} faces with more than 100 probes", faces_seen));
+            check.expect(faces_seen >= kMinSkyFaces, "skybox: at least three different faces are visible (the test is not confined to one face)",
+                         std::format("{} faces with more than {} probes", faces_seen, kMinFaceProbes));
         }
 
         // ------------------------------------------------------------------------------------------
@@ -523,6 +583,7 @@ namespace
             for (int f = 0; f < kFaces; ++f)
             {
                 long probes = 0, bad = 0;
+                std::array<long, kSize * kSize> per_texel{};
                 std::string first_bad;
                 for (int y = 0; y < lay.tile_h; ++y)
                     for (int x = 0; x < lay.tile_w; ++x)
@@ -531,15 +592,19 @@ namespace
                         if (std::abs(s * kSize - 1.0) < kTexelMargin || std::abs(t * kSize - 1.0) < kTexelMargin) continue;
                         ++probes;
                         const int i = static_cast<int>(std::floor(s * kSize)), j = static_cast<int>(std::floor(t * kSize));
+                        ++per_texel[static_cast<std::size_t>(j * kSize + i)];
                         const Rgba8 want = texel_color(f, i, j), got = fb.at(lay.tile_w * f + x, lay.sky_h + y);
                         if (got != want && bad++ == 0)
                             first_bad = std::format("tile pixel ({},{}): got {} expected texel ({},{}) = {}", x, y, demo::format_rgba(got), i, j,
                                                     demo::format_rgba(want));
                     }
-                check.expect(bad == 0 && probes > 0,
+                const bool all_texels = std::ranges::all_of(per_texel, [](long n) { return n > 0; });
+                check.expect(bad == 0 && all_texels,
                              std::format("face tile {}: directions on the plane of the {} face return that face's 2x2 image upright and unmirrored", f,
                                          kFaceName[static_cast<std::size_t>(f)]),
-                             bad == 0 ? std::format("{} px compared", probes) : first_bad);
+                             bad == 0 ? std::format("{} px compared, per texel (0,0) {} (1,0) {} (0,1) {} (1,1) {}", probes, per_texel[0],
+                                                    per_texel[1], per_texel[2], per_texel[3])
+                                      : first_bad);
             }
         }
 

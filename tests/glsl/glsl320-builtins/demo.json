@@ -1,0 +1,55 @@
+{
+  "name": "test-glsl320-builtins",
+  "title": "GLSL ES 3.20 image atomics, fma and precise",
+  "min_es": "3.2",
+  "glsl": [
+    "320 es",
+    "310 es"
+  ],
+  "category": "tests",
+  "order": 12,
+  "summary": "Image atomics (imageAtomicAdd/Min/Max/And/Or/Xor/Exchange/CompSwap on r32ui and r32i, imageAtomicExchange on r32f) with 1024 compute invocations contending for each texel: exact order-independent final values, and every returned value explained by one serial order of the operations (Euler-trail check); a compSwap counter that hands out each value exactly once; an exact single-invocation sequence; invalid (non-existent texel) atomics that return zero; contended adds through uimage2DArray, uimage3D, uimageCube, uimageCubeArray and uimageBuffer. fma() checked against the 'single or two correctly rounded operations' rule and for bit-exact invariance under precise within and across programs; precise a*b+c never fused (six declaration forms), a*b+c*d identical in every operand order, no reassociation. Negative controls for every checker and compile errors for 3.20-only features in #version 310 es and for wrong overloads.",
+  "spec": [
+    "GLSL ES 3.20 §8.12 Image Functions (atomic read-compute-write without intervening modification, r32i / r32ui / r32f-exchange-only rule, IMAGE_PARAMS for 2D, 3D, Cube, Buffer, 2DArray, CubeArray)",
+    "GLSL ES 3.20 §8.3 Common Functions (fma: single operation, may differ from a*b+c, invariant when consumed by precise)",
+    "GLSL ES 3.20 §4.7.1 Range and Precision (a*b: correctly rounded; a*b+c: correctly rounded single operation or sequence of two; fma inherited; rounding mode undefined)",
+    "GLSL ES 3.20 §4.9 The Precise Qualifier (no fma contraction, no reassociation, a*b+c*d identities, operands of a precise assignment, structures, redeclaration, blocks)",
+    "GLSL ES 3.20 §4.3.9 Interface Blocks (precise allowed as a block qualifier), §4.10 Memory Qualifiers (r32* images may omit them), §4.1.3 Integers (wrap-around), §5.12 Evaluation of Expressions (reassociation allowed without precise), §6.1 Function Definitions (only a precision qualifier on a return type)",
+    "GLSL ES 3.10 §3.7 Keywords (precise reserved), §8 (no fma, no image atomics)",
+    "ES 3.2 §8.23 Texture Image Loads and Stores (BindImageTexture, Table 8.25 coordinates, invalid atomics return zero and update nothing), §8.9 Buffer Textures, §7.11.2 Shader Memory Access Synchronization, §17 Compute Shaders"
+  ],
+  "api": {
+    "glDispatchCompute": "1024 invocations (16 x 64) per atomic dispatch, one invocation per row for the fma/precise programs; every returned word compared with a CPU model",
+    "glBindImageTexture": "R32UI / R32I / R32F 2D textures on units 0-2 (READ_WRITE), and layered (TRUE) R32UI 2D array, 3D, cube and cube-map-array textures and an R32UI buffer texture on unit 0: the atomics' results and the read-back texels come from exactly these textures",
+    "glTexStorage2D": "immutable 4x4 R32UI / R32I / R32F and 2x2 cube R32UI storage used as images (immutable storage is required by BindImageTexture)",
+    "glTexStorage3D": "immutable R32UI 2D array (3 layers), 3D (depth 2) and cube map array (12 layer-faces) storage",
+    "glTexSubImage2D": "initial texels (RED_INTEGER/UNSIGNED_INT, RED_INTEGER/INT, RED/FLOAT and each cube face): counters start at the uploaded bases and texels never addressed read back unchanged",
+    "glTexSubImage3D": "initial texels of the 2D array, 3D and cube map array textures, read back unchanged except the one addressed texel",
+    "glTexBuffer": "R32UI buffer texture over an 8-word buffer; imageAtomicAdd through uimageBuffer updates exactly word 5",
+    "glMemoryBarrier": "SHADER_IMAGE_ACCESS_BARRIER_BIT between the atomic dispatch and the imageLoad dispatch, BUFFER_UPDATE_BARRIER_BIT before mapping",
+    "glBindBufferBase": "SHADER_STORAGE_BUFFER bindings 0-3 match layout(binding) of the argument, result and sequence blocks",
+    "glMapBufferRange": "MAP_READ_BIT readback of every shader-written buffer",
+    "glCompileShader": "COMPILE_STATUS false for imageAtomicAdd, fma and precise in #version 310 es, for imageAtomicAdd with int data on a uimage2D and float data on an image2D, and for precise on a function return type; true for the 320 es positive controls"
+  },
+  "features": [
+    "ES31.COMPUTE.DISPATCH",
+    "ES31.SSBO.BASIC",
+    "ES31.IMAGE.LOAD_STORE"
+  ],
+  "glsl_features": [
+    "GLSL320.FN.IMAGE_ATOMIC",
+    "GLSL320.FN.FMA",
+    "GLSL320.PRECISE"
+  ],
+  "validation": [
+    "readback",
+    "compute-check",
+    "negative",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-opus",
+    "notes": "gpu es-max capture viewed: uniform black clear, as intended; the test draws nothing, all 83 checks are buffer readbacks and compile statuses."
+  }
+}

@@ -1,0 +1,19 @@
+#version 320 es
+// Reads every texel of the three 4x4 images of image_atomics.comp into a buffer. Runs as a separate
+// dispatch after glMemoryBarrier(SHADER_IMAGE_ACCESS_BARRIER_BIT), so it sees the final values.
+layout(local_size_x = 16) in;
+precision highp float;
+precision highp int;
+
+layout(r32ui, binding = 0) readonly uniform highp uimage2D uimg;
+layout(r32i, binding = 1) readonly uniform highp iimage2D iimg;
+layout(r32f, binding = 2) readonly uniform highp image2D fimg;
+
+layout(std430, binding = 0) writeonly buffer Dump { uvec4 dump[16]; };
+
+void main()
+{
+    int t = int(gl_LocalInvocationID.x);
+    ivec2 p = ivec2(t % 4, t / 4);
+    dump[t] = uvec4(imageLoad(uimg, p).x, uint(imageLoad(iimg, p).x), floatBitsToUint(imageLoad(fimg, p).x), 0u);
+}

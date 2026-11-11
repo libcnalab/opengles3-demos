@@ -1,0 +1,144 @@
+#version 320 es
+// GLSL ES 3.20 §8.12 image atomics. Every invocation of the dispatch applies one atomic of every
+// kind to the SAME texels of three 4x4 images, so up to 1024 invocations contend for each texel.
+// The value each atomic returns (the texel before the update) is written to the Olds buffer;
+// main.cpp reads the final texels back with image_dump.comp and checks that some serial order of
+// the operations explains all returned values and the final value.
+//
+// Texel of slot s: ivec2(s % 4, s / 4). Slot meaning (identical for uimg and iimg):
+//   0 add (small data)   1 add (wrapping data)   2 min   3 max   4 and   5 or   6 xor
+//   7 exchange           8 compSwap (single attempt)    9 compSwap counter (retry loop)
+//  10 single-invocation sequence (invocation 0 only)    11..15 never accessed
+// fimg: slot 0 contended exchange, slot 1 sequence, the rest never accessed.
+layout(local_size_x = 64) in;
+precision highp float;
+precision highp int;
+
+// r32ui / r32i / r32f image variables may omit the memory qualifier (GLSL ES 3.20 §4.10), which
+// the atomics need: they read and write.
+layout(r32ui, binding = 0) uniform highp uimage2D uimg;
+layout(r32i, binding = 1) uniform highp iimage2D iimg;
+layout(r32f, binding = 2) uniform highp image2D fimg;
+
+// Per invocation kStride words. Args: [0..8] uint data, [10..18] int data, [20] float data bits,
+// [21] uint compare, [22] int compare. Olds: [0..9] uint results, [10..19] int results,
+// [20] float result bits, [23] / [24] counter attempts (uint / int).
+layout(std430, binding = 0) readonly buffer Args { uint args[]; };
+layout(std430, binding = 1) writeonly buffer Olds { uint olds[]; };
+layout(std430, binding = 2) readonly buffer SeqArgs { uint seq_args[40]; };
+layout(std430, binding = 3) writeonly buffer SeqOut { uint seq_out[40]; };
+
+const uint kStride = 32u;
+const uint kUBase = 1000u;  // counter start values; main.cpp uploads the same
+const int kIBase = -512;
+const int kMaxAttempts = 8192;
+
+ivec2 texel(int slot) { return ivec2(slot % 4, slot / 4); }
+
+void main()
+{
+    uint a = gl_GlobalInvocationID.x * kStride;
+
+    // ---- r32ui ---------------------------------------------------------------------------------
+    olds[a + 0u] = imageAtomicAdd(uimg, texel(0), args[a + 0u]);
+    olds[a + 1u] = imageAtomicAdd(uimg, texel(1), args[a + 1u]);
+    olds[a + 2u] = imageAtomicMin(uimg, texel(2), args[a + 2u]);
+    olds[a + 3u] = imageAtomicMax(uimg, texel(3), args[a + 3u]);
+    olds[a + 4u] = imageAtomicAnd(uimg, texel(4), args[a + 4u]);
+    olds[a + 5u] = imageAtomicOr(uimg, texel(5), args[a + 5u]);
+    olds[a + 6u] = imageAtomicXor(uimg, texel(6), args[a + 6u]);
+    olds[a + 7u] = imageAtomicExchange(uimg, texel(7), args[a + 7u]);
+    olds[a + 8u] = imageAtomicCompSwap(uimg, texel(8), args[a + 21u], args[a + 8u]);
+    {
+        // Lock-free counter: retry with the returned value until the swap succeeds.
+        uint expected = kUBase;
+        uint got = 0xFFFFFFFFu;
+        int attempts = 0;
+        while (attempts < kMaxAttempts)
+        {
+            uint old = imageAtomicCompSwap(uimg, texel(9), expected, expected + 1u);
+            ++attempts;
+            if (old == expected)
+            {
+                got = old;
+                break;
+            }
+            expected = old;
+        }
+        olds[a + 9u] = got;
+        olds[a + 23u] = uint(attempts);
+    }
+
+    // ---- r32i ----------------------------------------------------------------------------------
+    olds[a + 10u] = uint(imageAtomicAdd(iimg, texel(0), int(args[a + 10u])));
+    olds[a + 11u] = uint(imageAtomicAdd(iimg, texel(1), int(args[a + 11u])));
+    olds[a + 12u] = uint(imageAtomicMin(iimg, texel(2), int(args[a + 12u])));
+    olds[a + 13u] = uint(imageAtomicMax(iimg, texel(3), int(args[a + 13u])));
+    olds[a + 14u] = uint(imageAtomicAnd(iimg, texel(4), int(args[a + 14u])));
+    olds[a + 15u] = uint(imageAtomicOr(iimg, texel(5), int(args[a + 15u])));
+    olds[a + 16u] = uint(imageAtomicXor(iimg, texel(6), int(args[a + 16u])));
+    olds[a + 17u] = uint(imageAtomicExchange(iimg, texel(7), int(args[a + 17u])));
+    olds[a + 18u] = uint(imageAtomicCompSwap(iimg, texel(8), int(args[a + 22u]), int(args[a + 18u])));
+    {
+        int expected = kIBase;
+        int got = 0x7FFFFFFF;
+        int attempts = 0;
+        while (attempts < kMaxAttempts)
+        {
+            int old = imageAtomicCompSwap(iimg, texel(9), expected, expected + 1);
+            ++attempts;
+            if (old == expected)
+            {
+                got = old;
+                break;
+            }
+            expected = old;
+        }
+        olds[a + 19u] = uint(got);
+        olds[a + 24u] = uint(attempts);
+    }
+
+    // ---- r32f: imageAtomicExchange is the only float atomic -------------------------------------
+    olds[a + 20u] = floatBitsToUint(imageAtomicExchange(fimg, texel(0), uintBitsToFloat(args[a + 20u])));
+
+    // ---- invocation 0: a deterministic sequence on private texels, plus invalid accesses --------
+    if (gl_GlobalInvocationID.x == 0u)
+    {
+        ivec2 su = texel(10);
+        seq_out[0] = imageAtomicAdd(uimg, su, seq_args[0]);
+        seq_out[1] = imageAtomicAdd(uimg, su, seq_args[1]);
+        seq_out[2] = imageAtomicMin(uimg, su, seq_args[2]);
+        seq_out[3] = imageAtomicMax(uimg, su, seq_args[3]);
+        seq_out[4] = imageAtomicAnd(uimg, su, seq_args[4]);
+        seq_out[5] = imageAtomicOr(uimg, su, seq_args[5]);
+        seq_out[6] = imageAtomicXor(uimg, su, seq_args[6]);
+        seq_out[7] = imageAtomicExchange(uimg, su, seq_args[7]);
+        seq_out[8] = imageAtomicCompSwap(uimg, su, seq_args[8], seq_args[9]);    // compare differs
+        seq_out[9] = imageAtomicCompSwap(uimg, su, seq_args[10], seq_args[11]);  // compare equal
+        // ES 3.2 §8.23: a texel that does not exist makes the access invalid: no update, result 0.
+        seq_out[10] = imageAtomicAdd(uimg, ivec2(4, 0), seq_args[12]);
+        seq_out[11] = imageAtomicMax(uimg, ivec2(0, 4), seq_args[12]);
+        seq_out[12] = imageAtomicExchange(uimg, ivec2(-1, 1), seq_args[12]);
+        seq_out[13] = imageAtomicCompSwap(uimg, ivec2(4, 4), 0u, seq_args[12]);
+
+        seq_out[14] = uint(imageAtomicAdd(iimg, su, int(seq_args[13])));
+        seq_out[15] = uint(imageAtomicAdd(iimg, su, int(seq_args[14])));
+        seq_out[16] = uint(imageAtomicMin(iimg, su, int(seq_args[15])));
+        seq_out[17] = uint(imageAtomicMax(iimg, su, int(seq_args[16])));
+        seq_out[18] = uint(imageAtomicAnd(iimg, su, int(seq_args[17])));
+        seq_out[19] = uint(imageAtomicOr(iimg, su, int(seq_args[18])));
+        seq_out[20] = uint(imageAtomicXor(iimg, su, int(seq_args[19])));
+        seq_out[21] = uint(imageAtomicExchange(iimg, su, int(seq_args[20])));
+        seq_out[22] = uint(imageAtomicCompSwap(iimg, su, int(seq_args[21]), int(seq_args[22])));
+        seq_out[23] = uint(imageAtomicCompSwap(iimg, su, int(seq_args[23]), int(seq_args[24])));
+        seq_out[24] = uint(imageAtomicAdd(iimg, ivec2(4, 0), int(seq_args[25])));
+        seq_out[25] = uint(imageAtomicMin(iimg, ivec2(0, 4), int(seq_args[25])));
+        seq_out[26] = uint(imageAtomicExchange(iimg, ivec2(-1, 1), int(seq_args[25])));
+        seq_out[27] = uint(imageAtomicCompSwap(iimg, ivec2(4, 4), 0, int(seq_args[25])));
+
+        ivec2 sf = texel(1);
+        for (int k = 0; k < 4; ++k)
+            seq_out[28 + k] = floatBitsToUint(imageAtomicExchange(fimg, sf, uintBitsToFloat(seq_args[26 + k])));
+        seq_out[32] = floatBitsToUint(imageAtomicExchange(fimg, ivec2(4, 0), uintBitsToFloat(seq_args[30])));
+    }
+}

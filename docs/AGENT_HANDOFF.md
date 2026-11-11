@@ -78,14 +78,20 @@ independent validation, then education.
 - **MSAA:** resolve-dependent hard checks in three demos were demoted to printed observations or replaced by
   per-sample checks (texelFetch on sampler2DMS, stencil/occlusion counting). VALIDATION.md is updated.
 
-**Running**
-- A Claude subagent on the last 5 ANGLE failures: flat-centroid, framebuffer-blit-msaa, and the crashes in
-  immutable-storage, program-binary and image-load-store (crashes go into a child process).
-- Codex phase 6 audits: background job from 22:05, two waves of three groups (es20, es31, es32, then es30a,
-  es30b, tests), per docs/agent-briefs/AUDIT_BRIEF.md. Reports go to
-  ../opengles3-demos-worktrees/audit-*.report.md. Triage each finding against the spec.
+**Since 21:00**
+- ANGLE triage is complete. All 556 runs pass (now 563, after the capstone demo).
+- **GPU safety:** an ANGLE/RADV case faulted the shared GPU and froze the owner's desktop (72 amdgpu lines,
+  20:23-20:38). ANGLE now runs on lavapipe by default (`OGLES3_ANGLE_VULKAN_ICD`). Known GPU-faulting cases are
+  opt-in only (`OGLES3_RUN_GPU_FAULT_CASES=1`). Rule in VALIDATION.md.
+- **Compile limit is now 6 cores** (presets jobs 6; agents -j 2; Codex -j 1).
+- **Capstone es30-interactive-3d-scene** is merged: mouse/WASD camera, technique toggles 1-6, 50 checks on every
+  driver. New runtime input: `Demo::on_mouse`, `Env::key_held`, `Env::frame_seconds`.
 
-**Last full run:** 551/556. The 5 failures are the ANGLE items above.
+**Running**
+- A Claude subagent on meta-gl O8: a mock loader so meta-gl's own contract death tests prove their contracts.
+  Branch opengles3-demos/enum-gaps, not pushed yet; the integrator reviews and pushes.
+- Codex phase 6 audits: background job from 22:05, three waves of two (es20+es31, es32+es30a, es30b+tests), -j 1.
+  Reports go to ../opengles3-demos-worktrees/audit-*.report.md. Triage each finding against the spec.
 
 ## Parallel work / Codex
 

@@ -12,7 +12,7 @@ _Keep this file current. It is the first thing any agent reads._
   branch `opengles3-demos/enum-gaps`, commit `146e171`; see `docs/META_GL_GAPS.md`), environment
   survey, registry-derived inventory (`inventory/`), feature + GLSL inventories.
 - Phase 1: CMake + presets, meta-gl via `add_subdirectory`, `common/` runtime (EGL pbuffer +
-  SDL3 window, CLI, checks, PNG capture), CTest matrix (gpu/llvmpipe × es-max/es-min), result
+  SDL3 window, CLI, checks, PNG capture), CTest matrix, result
   JSON, coverage generator, docs.
 - Demos: `es30-hello-triangle`, `es20-shader-compilation` (FULLY_VALIDATED, captures viewed).
 - `shader-tests/` (`glsl-compile-tests`): 37 data-driven GLSL ES 1.00-3.20 compile/link cases with
@@ -23,7 +23,8 @@ _Keep this file current. It is the first thing any agent reads._
 ## Environment (reference machine)
 
 - AMD Radeon 780M radeonsi + llvmpipe, Mesa 25.0.7, EGL 1.5 surfaceless platform with pbuffers.
-- `MESA_GLES_VERSION_OVERRIDE=3.0|3.1` gives genuine lower-version contexts (GLSL 3.00/3.10).
+- `MESA_GLES_VERSION_OVERRIDE=3.0|3.1` lowers the reported API/GLSL version only (compiler still accepts
+  newer `#version`s). softpipe is a native ES 3.1 driver; zink runs on lavapipe.
 - SDL3 3.4.0 in `/usr/local`; windowed runs tested with `xvfb-run -a`.
 - Khronos specs are not committed. Fetch them into a scratch directory when needed
   (URLs in `docs/references/README.md`).
@@ -40,9 +41,8 @@ cmake --build --preset debug --target coverage
 1. Merge the parallel foundation-demo branches (clear/scissor, topology, vertex attributes, indexed
    drawing, depth, stencil, blending, culling) after review + full 4-driver matrix.
 2. More shader-test cases (3.10 image/atomic/memory-qualifier rules, 3.20 geometry/tess negatives).
-3. Stage 1–2 demos from `docs/DEMO_CATALOG.md` (es20-clear-viewport-scissor,
-   es20-shader-compilation, es20-vertex-attributes, es20-indexed-drawing, es20-primitive-topology,
-   es20-uniforms, es20-culling-front-face, es20-depth-test, es20-stencil-test, es20-blending).
+3. Remaining Stage 1–3 demos from `docs/DEMO_CATALOG.md` (es20-uniforms, textures, mipmaps,
+   cube map, framebuffer objects, copy-tex-image, read-pixels, ...).
 4. `tests/negative/` death tests for meta-gl contract violations (`std::terminate`).
 5. Stage 3–4 (textures, framebuffers, ES 3.0 data paths), then `glsl300-builtins` via transform feedback.
 6. `diagnostics-capabilities`.

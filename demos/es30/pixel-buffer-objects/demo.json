@@ -1,0 +1,91 @@
+{
+  "name": "es30-pixel-buffer-objects",
+  "title": "Pixel buffer objects: texture uploads and read-backs through buffer objects",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es30",
+  "order": 230,
+  "summary": "PIXEL_UNPACK_BUFFER as the source of glTexImage2D/3D and glTexSubImage2D (the pointer is a byte offset; UNPACK_ROW_LENGTH/SKIP_PIXELS/SKIP_ROWS/ALIGNMENT/IMAGE_HEIGHT/SKIP_IMAGES select sub-rectangles and sub-volumes of a larger image in the buffer) and PIXEL_PACK_BUFFER as the destination of glReadPixels read back with glMapBufferRange and compared byte for byte, the asynchronous fence + two-buffer pattern, buffer bindings, pixel-store queries and the defined INVALID_OPERATION / INVALID_VALUE errors.",
+  "spec": [
+    "ES 3.0 §3.7.1 Pixel Storage Modes and Pixel Buffer Objects (Table 3.1; INVALID_VALUE for out-of-range modes)",
+    "ES 3.0 §3.7.2.1 Unpacking (equations 3.12 and 3.13; offset in the unpack buffer; INVALID_OPERATION for ranges beyond the buffer and for offsets not divisible by the type size)",
+    "ES 3.0 §3.8.3 Texture Image Specification (TexImage3D UNPACK_IMAGE_HEIGHT / SKIP_IMAGES; TexImage2D ignores SKIP_IMAGES; data is an offset when a buffer is bound), §3.8.5 (TexSubImage)",
+    "ES 3.0 §4.3.2 Reading Pixels, §4.3.2.4 Placement in Pixel Pack Buffer or Client Memory (Table 4.4; INVALID_OPERATION for ranges beyond the buffer and unaligned offsets)",
+    "ES 3.0 §2.10 Buffer Objects (2.10.1 deletion resets bindings and zero-bound errors, 2.10.2 BufferSubData on a mapped range, 2.10.3 MapBufferRange / UnmapBuffer, 2.10.3.2 effects of mapping), Tables 2.6 and 6.16 (PIXEL_*_BUFFER_BINDING)",
+    "ES 3.0 §5.2 Sync Objects and Fences (FenceSync, ClientWaitSync)",
+    "ES 3.0 §2.1.6.2 Conversion from Floating-Point to Normalized Fixed-Point"
+  ],
+  "api": {
+    "glGenBuffers": "unpack buffers (images, RGB, RGBA4), the round-trip buffer and per-test pack buffers",
+    "glBindBuffer": "PIXEL_UNPACK_BUFFER / PIXEL_PACK_BUFFER bindings read back with glGetIntegerv; independent targets; one buffer on both targets; the pointer arguments become byte offsets only while a buffer is bound",
+    "glBufferData": "chart / RGB / RGBA4 uploads into unpack buffers (observed through the textures), size-only pack buffers filled with a sentinel, exact boundary sizes for the INVALID_OPERATION tests; zero-bound -> INVALID_OPERATION",
+    "glBufferSubData": "INVALID_OPERATION when the range is mapped",
+    "glDeleteBuffers": "deleting a buffer bound to both pixel targets resets both bindings to 0",
+    "glMapBufferRange": "READ mapping of pack buffers (whole and a 16..80 sub-range): contents compared byte for byte with the CPU placement; a second map -> INVALID_OPERATION",
+    "glUnmapBuffer": "returns TRUE for an intact mapping; unmapping an unmapped buffer -> INVALID_OPERATION",
+    "glGetBufferParameteriv": "BUFFER_SIZE / BUFFER_USAGE through either pixel target, BUFFER_MAPPED false -> true, MAP_OFFSET 16 / MAP_LENGTH 64; buffer 0 bound -> INVALID_OPERATION",
+    "glGetBufferPointerv": "MAP_POINTER equals the pointer glMapBufferRange returned and is NULL after unmapping",
+    "glPixelStorei": "UNPACK_ROW_LENGTH / SKIP_PIXELS / SKIP_ROWS / ALIGNMENT / IMAGE_HEIGHT / SKIP_IMAGES and PACK_ROW_LENGTH / SKIP_PIXELS / SKIP_ROWS / ALIGNMENT change the buffer layouts exactly as eq. 3.12-3.13 predict; negative values and alignments 3 and 16 -> INVALID_VALUE",
+    "glGetIntegerv": "initial and set values of all UNPACK_* and PACK_* modes (meta-gl gap G1), PIXEL_PACK_BUFFER_BINDING, PIXEL_UNPACK_BUFFER_BINDING, ARRAY_BUFFER_BINDING unaffected",
+    "glGenTextures": "seven textures filled from buffers, scratch and volume textures",
+    "glBindTexture": "texture of each cell, 3D volume",
+    "glTexImage2D": "from a PIXEL_UNPACK_BUFFER with a byte offset (0, 5, 6, 4160), ROW_LENGTH / SKIP / ALIGNMENT; RGBA8, RGB8 and RGBA4 (UNSIGNED_SHORT_4_4_4_4); textures read back exactly through a framebuffer or compared as drawn; range and alignment errors",
+    "glTexSubImage2D": "patch from a buffer with ROW_LENGTH / SKIP into an existing texture (rest unchanged); range and offset-alignment errors leave the texture unchanged",
+    "glTexImage3D": "sub-volume of a 6x5x3 volume in a buffer with ROW_LENGTH, IMAGE_HEIGHT, SKIP_PIXELS / ROWS / IMAGES: every texel of both layers compared",
+    "glTexParameteri": "NEAREST / CLAMP_TO_EDGE (typed overloads) so one-level textures are complete (observed through the drawn cells)",
+    "glActiveTexture": "unit 0 for the cells",
+    "glFramebufferTexture2D": "attaches an uploaded texture to read its texels back exactly",
+    "glFramebufferTextureLayer": "attaches the layers of the uploaded 3D texture",
+    "glGenFramebuffers": "framebuffers for reading textures back, the RGBA8UI test and the asynchronous frames",
+    "glBindFramebuffer": "read / draw targets of the checks",
+    "glCheckFramebufferStatus": "COMPLETE for every attachment used",
+    "glDeleteFramebuffers": "cleanup",
+    "glGenRenderbuffers": "RGBA8UI 4x4 and RGBA8 16x16 renderbuffers",
+    "glRenderbufferStorage": "RGBA8UI and RGBA8 storage",
+    "glFramebufferRenderbuffer": "attaches the renderbuffers",
+    "glDeleteRenderbuffers": "cleanup",
+    "glClearBufferuiv": "RGBA8UI framebuffer cleared to (7, 150, 255, 33); the values are read back exactly with RGBA_INTEGER / UNSIGNED_INT into a pack buffer",
+    "glReadPixels": "into a PIXEL_PACK_BUFFER at byte offsets with PACK_ROW_LENGTH / SKIP / ALIGNMENT (RGBA/UNSIGNED_BYTE and RGBA_INTEGER/UNSIGNED_INT): mapped bytes compared with the CPU model; round trip into the unpack buffer of a texture; range / alignment errors",
+    "glFenceSync": "fence after each queued read-back of the asynchronous pattern",
+    "glClientWaitSync": "returns ALREADY_SIGNALED or CONDITION_SATISFIED before the previous frame's buffer is mapped",
+    "glDeleteSync": "cleanup of each fence",
+    "glClearColor": "frame colors of the asynchronous pattern, read back +-1",
+    "glClear": "COLOR_BUFFER_BIT of each frame; the read-back colors differ per frame",
+    "glUseProgram": "show program",
+    "glGetUniformLocation": "u_tex located",
+    "glUniform1i": "sampler unit 0",
+    "glDrawArrays": "TRIANGLE_STRIP quad per cell; every pixel compared",
+    "glViewport": "per-cell viewports of texture size times scale; pixel positions verified",
+    "glDeleteTextures": "cleanup, final glGetError == NO_ERROR",
+    "glDeleteProgram": "cleanup"
+  },
+  "features": [
+    "ES30.BUFFER.PBO_PACK",
+    "ES30.BUFFER.PBO_UNPACK",
+    "ES30.TEXTURE.PIXEL_STORE"
+  ],
+  "glsl_features": [
+    "GLSL300.VERSION",
+    "GLSL300.UNIFORM",
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.FRAG.OUTPUT",
+    "GLSL300.TYPES.SAMPLERS",
+    "GLSL300.FN.TEXTURE.BASIC",
+    "GLSL300.BUILTIN_VARS.VS",
+    "GLSL300.PRECISION.DEFAULT"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "state-query",
+    "gl-error",
+    "negative"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5 (subagent)",
+    "notes": "radeonsi es-max capture viewed at 4x (llvmpipe and zink captures identical). Bottom row, left to right: the 32x32 chart (hue gradient with a 4-pixel checker in blue); a 20x13 sub-rectangle of it, bottom-aligned; a 20x13 rectangle of the color-inverted chart; a flat blue-gray 32x32 square with a 14x10 chart patch in its middle; a 5x4 RGB texture magnified 6x (blue top-left texel, dark red and red texels, light cyan row); a 5x4 RGBA4 texture magnified 6x (teal to rose gradient); and the round-trip copy of the chart, identical to cell 0. The rest of the framebuffer is the dark clear color."
+  }
+}

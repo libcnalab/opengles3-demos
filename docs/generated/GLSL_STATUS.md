@@ -63,7 +63,7 @@
 | GLSL310.COMPUTE.BUILTINS | 310 | compute | gl_NumWorkGroups gl_WorkGroupID gl_LocalInvocationID gl_GlobalInvocationID gl_LocalInvocationIndex | GLSL ES 3.10 §7.1.3 | compute-check | FULLY_VALIDATED | es31-compute-basics, es31-compute-indirect-and-to-render, es31-image-load-store |
 | GLSL310.SHARED | 310 | compute | shared variables | GLSL ES 3.10 §4.3.8 | compute-check | FULLY_VALIDATED | es31-compute-shared-memory |
 | GLSL310.BARRIERS | 310 | compute | barrier memoryBarrier memoryBarrierAtomicCounter memoryBarrierBuffer memoryBarrierImage memoryBarrierShared groupMemoryBarrier | GLSL ES 3.10 §8.14-8.15 | compute-check | FULLY_VALIDATED | es31-compute-shared-memory, es31-image-load-store |
-| GLSL310.SSBO | 310 | storage | buffer blocks; std430; runtime-sized last member; .length() | GLSL ES 3.10 §4.3.7 §4.4.5 | compute-check | FULLY_VALIDATED | es31-compute-indirect-and-to-render, es31-compute-particles, es31-indirect-draw, es31-ssbo-std430 |
+| GLSL310.SSBO | 310 | storage | buffer blocks; std430; runtime-sized last member; .length() | GLSL ES 3.10 §4.3.7 §4.4.5 | compute-check | FULLY_VALIDATED | es31-compute-indirect-and-to-render, es31-compute-particles, es31-indirect-draw, es31-ssbo-std430, test-glsl310-builtins |
 | GLSL310.MEMORY_QUALIFIERS | 310 | storage | coherent volatile restrict readonly writeonly | GLSL ES 3.10 §4.10 | compile+negative | FULLY_VALIDATED | es31-image-load-store |
 | GLSL310.IMAGES | 310 | images | image2D/3D/Cube/2DArray (+i/u) with format layout qualifiers | GLSL ES 3.10 §4.1.7.2 §4.4.7 | compute-check | FULLY_VALIDATED | es31-compute-indirect-and-to-render, es31-image-load-store |
 | GLSL310.FN.IMAGE | 310 | images | imageLoad imageStore imageSize | GLSL ES 3.10 §8.12 | compute-check | FULLY_VALIDATED | es31-compute-indirect-and-to-render, es31-image-load-store |
@@ -71,11 +71,11 @@
 | GLSL310.FN.ATOMIC_MEMORY | 310 | atomics | atomicAdd Min Max And Or Xor Exchange CompSwap | GLSL ES 3.10 §8.11 | compute-check | FULLY_VALIDATED | es31-atomics |
 | GLSL310.LAYOUT.BINDING | 310 | interface | layout(binding) for samplers, images, blocks, atomic counters | GLSL ES 3.10 §4.4.4-4.4.6 | render | FULLY_VALIDATED | es31-compute-indirect-and-to-render, es31-compute-particles, es31-image-load-store, es31-program-interface-query, es32-debug-output, es32-layered-rendering |
 | GLSL310.LAYOUT.UNIFORM_LOCATION | 310 | interface | layout(location) on default-block uniforms | GLSL ES 3.10 §4.4.3 | render | FULLY_VALIDATED | es31-program-interface-query, es32-debug-output |
-| GLSL310.ARRAYS_OF_ARRAYS | 310 | types | Arrays of arrays | GLSL ES 3.10 §4.1.9 | compute-check | NOT_STARTED |  |
+| GLSL310.ARRAYS_OF_ARRAYS | 310 | types | Arrays of arrays | GLSL ES 3.10 §4.1.9 | compute-check | FULLY_VALIDATED | test-glsl310-builtins |
 | GLSL310.SEPARABLE_IO | 310 | interface | Separable-program interface matching by location (gl_PerVertex redeclaration is GLSL ES 3.20) | GLSL ES 3.10 §4.4.1 §9.2.1 | render+negative | FULLY_VALIDATED | es31-program-pipelines |
-| GLSL310.FN.INTEGER | 310 | builtins | uaddCarry usubBorrow umulExtended imulExtended bitfieldExtract bitfieldInsert bitfieldReverse bitCount findLSB findMSB | GLSL ES 3.10 §8.8 | compute-check | NOT_STARTED |  |
-| GLSL310.FN.FLOAT_EXT | 310 | builtins | frexp ldexp | GLSL ES 3.10 §8.3 | compute-check | NOT_STARTED |  |
-| GLSL310.FN.PACKING_8 | 310 | builtins | packUnorm4x8 packSnorm4x8 unpackUnorm4x8 unpackSnorm4x8 | GLSL ES 3.10 §8.4 | compute-check | NOT_STARTED |  |
+| GLSL310.FN.INTEGER | 310 | builtins | uaddCarry usubBorrow umulExtended imulExtended bitfieldExtract bitfieldInsert bitfieldReverse bitCount findLSB findMSB | GLSL ES 3.10 §8.8 | compute-check | FULLY_VALIDATED | test-glsl310-builtins |
+| GLSL310.FN.FLOAT_EXT | 310 | builtins | frexp ldexp | GLSL ES 3.10 §8.3 | compute-check | FULLY_VALIDATED | test-glsl310-builtins |
+| GLSL310.FN.PACKING_8 | 310 | builtins | packUnorm4x8 packSnorm4x8 unpackUnorm4x8 unpackSnorm4x8 | GLSL ES 3.10 §8.4 | compute-check | FULLY_VALIDATED | test-glsl310-builtins |
 | GLSL310.FN.TEXTURE_GATHER | 310 | builtins | textureGather textureGatherOffset (+ shadow variants) | GLSL ES 3.10 §8.9.3 | render | FULLY_VALIDATED | es31-texture-gather |
 | GLSL310.FN.TEXTURE_MS | 310 | builtins | sampler2DMS + texelFetch(sample) + textureSize | GLSL ES 3.10 §8.9 | render | FULLY_VALIDATED | es31-multisample-textures, es32-advanced-blend-and-sample-shading |
 | GLSL310.EARLY_FRAGMENT_TESTS | 310 | interface | layout(early_fragment_tests) | GLSL ES 3.10 §4.4.1 | render | FULLY_VALIDATED | es31-framebuffer-no-attachments |

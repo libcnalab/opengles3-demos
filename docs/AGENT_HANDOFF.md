@@ -61,10 +61,14 @@ float-targets-and-indexed-blend, texture-buffer, cube-map-array, geometry-shader
 tessellation-domains and tessellation-terrain.
 meta-gl G8 (transpose = GL_TRUE) is fixed on its branch (`3bb7411`).
 Running Claude subagents (worktrees under .claude/worktrees/):
-Still unassigned: 62 (glsl320 built-ins), 35 (glsl310 built-ins),
-ES 3.0 items 10, 14, 16-20, 3D fog and skybox.
-All 358 core entry points have passing evidence (2026-11-11 17:50).
-Open: ES30.MULTISAMPLE.DEFAULT needs a demo with `Info::samples = 4` (BLOCKED_ENVIRONMENT on llvmpipe/zink, see KNOWN_LIMITATIONS).
+- es20 state-queries-errors (18)
+- test driver-crash-readpixels-none (20)
+- es30 multisample-default-framebuffer (ES30.MULTISAMPLE.DEFAULT)
+Coverage (2026-11-11 19:00): API 358/358, ES features 99% (FBO feedback loop is documentation-only; MSAA
+default framebuffer is in progress), GLSL 100% at all four language versions.
+Codex from 22:05 (background job): phase 6 audits per docs/agent-briefs/AUDIT_BRIEF.md via
+tools/agents/codex_audit.sh, groups es20, es30a, es30b and es31, then es32 and tests. Reports go to
+../opengles3-demos-worktrees/audit-*.report.md; the integrator triages and fixes.
 
 ## Parallel work / Codex
 

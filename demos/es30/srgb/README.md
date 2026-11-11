@@ -5,8 +5,8 @@
 
 ## Purpose
 
-Display devices are not linear: a pixel value of 128 is not "half as bright" as 255, and 8-bit images are stored in the **sRGB** color
-space, which spends its 256 steps where the eye needs them (dark colors). Shading, blending and filtering, on the other hand, are only
+Display devices are not linear: a pixel value of 128 is not "half as bright" as 255, and many 8-bit color images use **sRGB**
+encoding, which spends its 256 steps where the eye needs them (dark colors). Shading, blending and filtering, on the other hand, are only
 correct in *linear* light. ES 3.0 therefore performs the conversion for you in two places, and gives the application a query to see which
 one applies:
 

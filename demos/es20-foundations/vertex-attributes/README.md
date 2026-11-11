@@ -21,6 +21,23 @@ step against numbers computed on the CPU:
 7. **`glGetActiveAttrib`** enumeration and the **`glGetVertexAttrib*` / `glGetVertexAttribPointerv`**
    state queries.
 
+## Read this first
+
+The basic attribute path is in four places, one shader and three functions of `main.cpp`:
+
+- `shaders/attrib.vert` declares the two inputs, `layout(location = 0) in vec2 a_position` and
+  `layout(location = 1) in vec4 a_value`.
+- `create_shared_buffers()` is the minimal setup: one VBO with a unit quad, one VAO, then
+  `glBindBuffer(ARRAY_BUFFER)`, `glEnableVertexAttribArray(0)` and `glVertexAttribPointer(0, 2, FLOAT, ...)`.
+- `create_layout_buffers_and_vaos()`, "Layout 1", is the usual real-world case: an interleaved struct with both
+  attributes, described by `stride = sizeof(InterleavedFloat)` and `offsetof` offsets, all recorded in its own VAO.
+- `render()` binds the program and the VAO and calls one `draw_*()` function per section; `draw_layouts()` is the
+  plainest draw path (`glBindVertexArray`, `glViewport`, `glDrawArrays`).
+
+The other `draw_*()` functions (with their `create_*()` setup where they need one) vary one aspect at a time: data
+type, component count, constants, client memory, locations. `validate()`, the `check_*()` functions and helpers such as
+`expected_for()` are the CPU model and the checks.
+
 ## Reading the image
 
 The 256 × 256 window is an 8 × 8 grid of 32-pixel cells (row 0 at the top). Each cell is one draw call

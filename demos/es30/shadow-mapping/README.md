@@ -4,7 +4,7 @@
 
 ## Purpose
 
-A 3D scene with real shadows, built the way every game engine builds them: a **shadow map**. The scene
+A 3D scene with real shadows, made with a **shadow map**, a common approach to real-time shadows. The scene
 (a checkered ground, a low platform, three boxes, four pillars with a lintel, three spheres, one of them
 bobbing and one box spinning) is lit by an animated directional light. Shadows come from two passes:
 
@@ -102,6 +102,11 @@ stripes. With PCF on, the same acne turns into a finer, fainter hatching.
 - **`sampler2DShadow`.** `texture(u_shadow, vec3(s, t, Dref))` returns the comparison result. The depth value written by the
   rasterizer is the window-space z in [0,1], which for this orthographic projection is an affine function of the
   distance along the light direction - the same quantity as `sc.z`.
+- **Comparison first, filtering second.** Depth comparison and filtering are separate steps. With `LINEAR` filters on
+  the `sampler2DShadow` texture, the GL does not average depths and compare the average with `Dref`; it may compare
+  several depth texels with `Dref` and combine the 0/1 *comparison results*, giving a value in [0, 1] "proportional to
+  the number of comparison passes or failures" (ES 3.0 §3.8.15.1). The weights are implementation-dependent. (Averaging
+  the depths across a depth edge would give a depth that belongs to no surface; averaging the results gives a soft edge.)
 - **Receiver bias and out-of-map points.** `Dref - bias` is compared; points outside the map's [0,1]^2 or beyond the
   far plane are treated as lit (the map holds nothing there and the clamp-to-edge texels would shadow them wrongly).
 - **PCF.** One tap on a `LINEAR` texture is hardware PCF; the 3x3 loop averages nine such taps, one texel apart.

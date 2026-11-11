@@ -67,5 +67,6 @@
 | es32-texture-buffer | 3.2 | es32 | Buffer textures | FULLY_VALIDATED | gpu:es-max=PASS llvmpipe:es-max=PASS softpipe:es-max=SKIP_UNSUPPORTED zink:es-max=PASS |
 | es32-cube-map-array | 3.2 | es32 | Cube map array textures | FULLY_VALIDATED | gpu:es-max=PASS llvmpipe:es-max=PASS softpipe:es-max=SKIP_UNSUPPORTED zink:es-max=PASS |
 | es32-multisample-array-and-border-color | 3.2 | es32 | Multisample array textures and the border color | FULLY_VALIDATED | gpu:es-max=PASS llvmpipe:es-max=PASS softpipe:es-max=SKIP_UNSUPPORTED zink:es-max=PASS |
+| es32-advanced-blend-and-sample-shading | 3.2 | es32 | Advanced blend equations and sample shading | FULLY_VALIDATED | gpu:es-max=PASS llvmpipe:es-max=PASS softpipe:es-max=SKIP_UNSUPPORTED zink:es-max=PASS |
 | test-metagl-contracts | 3.0 | tests | meta-gl contracts | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | test-glsl300-builtins | 3.0 | tests | GLSL ES 3.00 built-in functions (numeric) | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |

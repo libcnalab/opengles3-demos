@@ -53,57 +53,37 @@ cmake --build --preset debug --target coverage
 4. Phase 6 audit (coverage gaps: run `coverage` and read docs/generated/COVERAGE_SUMMARY.md), then phase 7
    final verification on a clean build.
 
-## In flight (2026-11-11 21:00): continuation directive (rigour over statistics)
+## In flight (2026-11-11 23:50)
 
-The owner's continuation directive sets the priorities: correctness, gaps, test reliability, reproducibility,
-independent validation, then education.
+**State**
+- 83 executables. Full matrix 563/563: gpu, llvmpipe, zink × es-max/es-min, softpipe for ES 3.2, and ANGLE on
+  lavapipe.
+- 82 FULLY_VALIDATED, 1 VISUALLY_VERIFIED (es30-multisample-default-framebuffer, BLOCKED_ENVIRONMENT on
+  llvmpipe/zink).
+- **Window-size sweep** (`tools/sweep_sizes.sh`, 6 sizes, llvmpipe) is clean.
+- **Clean-clone reproducibility** is verified (VALIDATION.md).
+- **meta-gl:** branch `opengles3-demos/enum-gaps` at 333d777 is pushed. O8 is fixed (contract tests now real) and
+  O12 is resolved by docs (owner's decision).
 
-**Done in this phase**
-- **meta-gl:** edits are authorized again and the branch `opengles3-demos/enum-gaps` is pushed to origin.
-  docs/METAGL_DEPENDENCY.md documents it: with public `develop`, 17 executables do not build.
-- **Evidence:**
-  - Result JSON records the executable, run time and override value.
-  - A run writes `CRASHED` first, so crashes cannot vanish.
-  - The generator ignores stale results (code vs. exe mtime, run-time inputs vs. run time), lints `api` claims
-    against the code, and writes docs/generated/DEVIATIONS.md (per-run XFAIL/XPASS evidence).
-- **ANGLE** (Android SDK build 2.1.17841, native ES 3.1, Vulkan/RADV) runs as driver `angle`, mode `native`.
-  Triage done for 22 executables:
-  - Most failures were real ANGLE deviations (KNOWN_LIMITATIONS, ANGLE table).
-  - Test bugs fixed: es31-indirect-draw was missing a barrier before reusing the command buffer; es31-ssbo-std430
-    asserted length() rounding.
-  - Two of our readings were wrong and are corrected: atomic counters without binding; SAMPLE_BUFFERS of an
-    attachment-less FBO.
-  - Three readings were re-verified because ANGLE agrees with Mesa: occlusion-query reuse,
-    PROGRAM_SEPARABLE after link, 64-bit VERTEX_BINDING_OFFSET.
-- **MSAA:** resolve-dependent hard checks in three demos were demoted to printed observations or replaced by
-  per-sample checks (texelFetch on sampler2DMS, stencil/occlusion counting). VALIDATION.md is updated.
-
-**Since 21:00**
-- ANGLE triage is complete. All 556 runs pass (now 563, after the capstone demo).
-- **GPU safety:** an ANGLE/RADV case faulted the shared GPU and froze the owner's desktop (72 amdgpu lines,
-  20:23-20:38). ANGLE now runs on lavapipe by default (`OGLES3_ANGLE_VULKAN_ICD`). Known GPU-faulting cases are
-  opt-in only (`OGLES3_RUN_GPU_FAULT_CASES=1`). Rule in VALIDATION.md.
-- **Compile limit is now 6 cores** (presets jobs 6; agents -j 2; Codex -j 1).
-- **Capstone es30-interactive-3d-scene** is merged: mouse/WASD camera, technique toggles 1-6, 50 checks on every
-  driver. New runtime input: `Demo::on_mouse`, `Env::key_held`, `Env::frame_seconds`.
-
-**Owner decisions (2026-11-11, before the night):**
-- O12: correct the meta-gl docs, not the code (done, 333d777 pushed).
-- Codex audit findings: fix them autonomously after verifying each against the spec, run the full matrix, commit
-  locally, and summarise in the morning.
-
-**Since 22:00**
-- Codex phase 6 audit: 19 findings, all accepted and fixed (docs/audits/README.md).
-- The deviation matcher no longer lets ANGLE's backend name excuse ANGLE (this unmasked one lavapipe case).
-- Codex educational review: 10 accepted, 1 rejected; README fixes delegated.
-- tools/sweep_sizes.sh: the window-size sweep on llvmpipe found 25 executables failing at 333x777 / 1000x200 /
-  200x1000. List: docs/agent-briefs/size-sweep-failures.txt.
-- Full matrix after the audit fixes: 563/563.
+**Done tonight**
+- **Codex phase 6 audit:** 19 findings, all fixed.
+- **Codex educational review:** 10 accepted and fixed, 1 rejected.
+- **Size sweep:** 25 executables fixed, plus es31-image-load-store.
+- **Deviation matcher:** no longer lets ANGLE's backend name excuse ANGLE.
+- **GPU safety:** ANGLE runs on lavapipe; GPU-faulting cases are opt-in only.
+- Archived reports are in docs/audits/.
 
 **Running**
-- Claude: README fixes from the educational review (docs only).
-- Claude, three size-sweep fix agents: ES 2.0 group (8), ES 3.0 group (7), ES 3.1/3.2 group (6), each -j 2.
-After they finish: merge, then run the full matrix, `tools/sweep_sizes.sh` and the coverage target, and commit.
+- Codex independent review of every demo changed after the audit (`git diff 5bd59a6..HEAD`), per
+  docs/agent-briefs/DIFF_REVIEW_BRIEF.md. Three groups; reports in ../opengles3-demos-worktrees/diffreview-*/DIFF_REVIEW.md.
+- Sanitizer build plus Mesa matrix (`-E :angle:`).
+
+**Known follow-ups**
+- es20-clear-viewport-scissor and es20-primitive-topology draw their 64-px panel gallery at native size, so larger
+  windows are not filled. The models are pixel-exact, so scaling them is a larger rewrite.
+- Inventory has no IDs for shader fog, interactive input determinism or the barycentric wireframe
+  (es30-interactive-3d-scene).
+- softpipe and ANGLE give only ES 3.1 natively; there is still no native ES 3.0 driver.
 
 ## Parallel work / Codex
 

@@ -44,7 +44,7 @@
 | `es30-texture-3d-and-arrays` | ES 3.0 §2.1: commands execute in order; reads see all prior commands | zink: `glCopyTexSubImage3D` directly after scissored `glClear`s copies stale texels (a `glFlush` in between fixes it) |
 
 | `es31-indirect-draw` (es-min only) | ES 3.1 §10.5/§12.1.2: any `Draw*Indirect` while transform feedback is active and not paused → INVALID_OPERATION (relaxed in ES 3.2 §12.2.2) | Mesa applies the ES 3.2 rule on ES 3.1 contexts too, including **natively on softpipe** (so not only an override artifact). XFAIL on "Mesa" when the context reports 3.1 |
-| `es31-separate-vertex-format` | ES 3.2 Table 21.3, §2.2.2: `VERTEX_BINDING_OFFSET` is 64-bit state; `GetIntegeri_v` clamps | after `glBindVertexBuffer(..., 2^33+8, ...)` `GetInteger64i_v` returns 8 (truncated to 32 bits) and `GetIntegeri_v` is truncated instead of clamped. All Mesa drivers |
+| `es31-separate-vertex-format` | ES 3.2 Table 21.3, §2.2.2: `VERTEX_BINDING_OFFSET` is 64-bit state; `GetIntegeri_v` clamps | after `glBindVertexBuffer(..., 2^33+8, ...)` `GetInteger64i_v` returns 8 (truncated to 32 bits) and `GetIntegeri_v` is truncated instead of clamped. All Mesa drivers Also ANGLE |
 
 | `es31-image-load-store` | ES 3.2 §8.23: `glBindImageTexture` with a format not in Table 8.26 → INVALID_VALUE | RG32F, RG16F, R16F, R8, RG8, R11F_G11F_B10F accepted (desktop ARB_shader_image_load_store list); RGB8 rejected. No exposed extension adds these formats. All Mesa drivers |
 
@@ -52,8 +52,7 @@
 | `es31-program-interface-query` | ES 3.2 §7.3.1: `glGetProgramResourceiv` writes at most `count` values; `length` = values written | for `ACTIVE_VARIABLES` with count 3 of 5 Mesa writes all 5 and returns 5 (buffer-overrun hazard). All Mesa drivers |
 | `es31-program-interface-query` | ES 3.2 §7.3.1 `REFERENCED_BY_*` | radeonsi reports a vertex-only uniform block as referenced by the fragment shader when the FS declares other blocks |
 | `es31-ssbo-std430` | ES 3.2 §6.1.1: negative `glBindBufferRange` offset → INVALID_VALUE | same as the UBO row: no error for alignment-multiple negative offsets. All Mesa drivers |
-| `es31-framebuffer-no-attachments` | GLSL ES 3.10 §4.4.1: static `gl_FragDepth` write with `early_fragment_tests` is an error | compiles. All Mesa drivers |
-| `es31-framebuffer-no-attachments` | ES 3.2 §9.2.1: an attachment-less FBO has sample buffers iff `FRAMEBUFFER_DEFAULT_SAMPLES` ≠ 0 | `SAMPLE_BUFFERS`/`SAMPLES` read 0 with 4 default samples although rasterization is multisampled. All Mesa drivers |
+| `es31-framebuffer-no-attachments` | GLSL ES 3.10 §4.4.1 / 3.20 §4.4.1.3: a static `gl_FragDepth` write with `early_fragment_tests` "is an error" (reported at compile or link time, GLSL ES §1.3) | compiles and links. All Mesa drivers and ANGLE |
 | `es31-framebuffer-no-attachments` | ES 3.2 §7.11.1, GLSL ES 3.10 §7.1.2: scissor-failed fragments are not shaded; helper invocations have no side effects | llvmpipe/zink (lavapipe), multisampled: pixels outside the scissor sharing a 2×2 quad run with `gl_HelperInvocation` false and their atomics take effect. radeonsi and single-sample runs exact |
 
 | `es32-debug-output` | ES 3.2 §18.1/§18.2: the callback receives a null-terminated message of `length` characters | with an explicit shorter `length` in `glDebugMessageInsert`/`glPushDebugGroup`, Mesa passes the caller's pointer unterminated at `length`. Read callback messages by `length`. All Mesa drivers |
@@ -72,7 +71,7 @@
 | `es30-program-binary` | ES 3.0 §2.5: an erroring command does not modify values through pointer arguments | an erroring `glGetProgramBinary` (not linked, or `bufSize` too small) writes `*length = 0`. All Mesa drivers |
 | environment (runtime check) | EGL 1.5 §3.5.2: a pbuffer has the requested `EGL_WIDTH`×`EGL_HEIGHT`; ES 3.0 §2.12.1: the initial viewport is the surface size | llvmpipe and zink (lavapipe): a surfaceless pbuffer from a 4-sample config (`EGL_SAMPLES` 4, `SAMPLE_BUFFERS` 1) yields a 0x0 default framebuffer; `glReadPixels` raises INVALID_OPERATION. radeonsi works. The runtime reports BLOCKED_ENVIRONMENT. So `ES30.MULTISAMPLE.DEFAULT` is exercised only on radeonsi, and es30-flat-centroid uses multisample renderbuffers instead |
 | `es30-occlusion-queries` | ES 3.0 §2.14: deleting an active query frees its name, but the object stays active until it is no longer active | `glDeleteQueries` on an active query ends it: `CURRENT_QUERY` reads 0 and the following `glEndQuery` raises INVALID_OPERATION. All Mesa drivers |
-| `es30-occlusion-queries` | ES 3.2 §4.2: an object created as ANY_SAMPLES_PASSED or ANY_SAMPLES_PASSED_CONSERVATIVE "may be reused for either target" | `glBeginQuery(ANY_SAMPLES_PASSED_CONSERVATIVE)` on an ANY_SAMPLES_PASSED object raises INVALID_OPERATION. All Mesa drivers |
+| `es30-occlusion-queries` | ES 3.2 §4.2: an object created as ANY_SAMPLES_PASSED or ANY_SAMPLES_PASSED_CONSERVATIVE "may be reused for either target" | `glBeginQuery(ANY_SAMPLES_PASSED_CONSERVATIVE)` on an ANY_SAMPLES_PASSED object raises INVALID_OPERATION. All Mesa drivers and ANGLE. The ES 3.1 change log (Bug 13342) states the intent: "occlusion query objects may be specified and reused with any mix of the two valid occlusion query targets" |
 | `es30-occlusion-queries` | ES 3.0 §6.1.7: once a query reports available, all earlier queries of the same type are available; an occlusion result is boolean | zink (lavapipe), only after QUERY_RESULT_AVAILABLE has been polled to TRUE: QUERY_RESULT returns a partial sample count (e.g. 30), or 0 for a visible box, and earlier queries still report unavailable. Blocking reads are correct. The polled behaviour is nondeterministic: in a given run many of the zink-matched polled checks pass (XPASS in generated/DEVIATIONS.md) |
 | **crash** (worked around) `es30-glsl-texture-functions` | correct execution of a valid shader | a fragment shader with a `switch` over about 80 texture-lookup cases segfaults in libgallium on the first draw on llvmpipe and zink (the llvmpipe backtrace shows a recursion about 80 frames deep). The demo compiles the shader six times, once per sampler family (`#define GROUP n`), so no check needs an XFAIL |
 | `es30-depth-textures` | ES 3.0 §3.8.13 / ES 3.2 §8.17: a sized depth(-stencil) texture with `TEXTURE_COMPARE_MODE` NONE and a non-NEAREST filter is incomplete, so it returns (0,0,0,1) | Mesa filters the texture and returns the filtered depth (e.g. 0.75). This affects 5 filter settings × 2 formats; no exposed extension relaxes the rule. All Mesa drivers |
@@ -98,8 +97,29 @@
 | `glsl-compile-tests` | GLSL ES 3.00 §4.6.1: `invariant` "followed by a comma separated list of previously declared identifiers" | `invariant a, b;` is a syntax error |
 | `glsl-compile-tests` | GLSL ES 3.00 §4.6.1 + §1.3: `invariant` after a use must be reported by link time at the latest | compiles and links |
 | `glsl-compile-tests` | GLSL ES 3.00 §4.3.3: dFdx/dFdy/fwidth of a constant expression in an initializer return 0 (constant expression) | rejected ("assigning non-constant") |
+| `es20-clear-viewport-scissor` | ES 3.0 §2.13.1: viewport width/height "are clamped to implementation-dependent maximums when specified" | `GL_VIEWPORT` returns the unclamped size (MAX + 1000) |
+| `es20-framebuffer-objects` | ES 3.0 Table 6.15: `RENDERBUFFER_*_SIZE` initially 0 | a renderbuffer without storage reports R4 G4 B4 A4 |
+| `es20-shader-compilation` | ES 3.0 §2.12.9.7: ValidateProgram checks the conflicting-sampler-types condition | `VALIDATE_STATUS` TRUE (the draw does fail with INVALID_OPERATION) |
+| `es30-depth-textures` | ES 3.0 §3.8.15.1: Dref and Dt are clamped to [0, 1] for fixed-point depth formats | not clamped for DEPTH_COMPONENT24 / DEPTH24_STENCIL8 (DEPTH_COMPONENT16 is) |
+| `es30-etc2-eac` | ES 3.0 §3.8.6: a sub-image whose size is not a block multiple is allowed when it reaches the level edge | 2x2 at (4,4) of a 6x6 texture → INVALID_OPERATION |
+| `es30-etc2-eac` | ES 3.0 Appendix C.1.5 (eq. C.2, bit replication): 11-bit code 2047 is exactly 1.0 | 11-bit codes zero-filled to 16 bits: x·32/65535, 2047 → 0.99953 |
+| `es30-etc2-eac` | ES 3.0 Appendix C.1.7 (eq. C.8) | signed R11/RG11 values 4 codes too far from zero (worked example: 324 instead of 320) |
+| `es30-integer-float-textures` | ES 3.0 §3.8.3.2: RGB9_E5 shared exponent uses ⌊log2(maxc)⌋ | 4 of 64 texels get an exponent one too large (matches ⌊ln(maxc)⌋) |
+| `es30-framebuffer-invalidate` | ES 3.0 §4.3.3, §4.4.2.4: a blit reads the attached 3D-texture slice | `glBlitFramebuffer` from slice > 0 copies slice 0 (`glReadPixels` reads the right slice) |
+| `es30-framebuffer-invalidate` | ES 3.2 §9.2.3: `GetFramebufferAttachmentParameteriv` with an FBO bound: BACK → INVALID_ENUM; COLOR_ATTACHMENTm, m ≥ MAX → INVALID_OPERATION | the two errors are swapped |
+| `es30-multiple-render-targets` | ES 3.0 §4.2.1: draw buffers correspond in order to the fragment colours | after `glDrawBuffers` on the bound FBO the next draw still uses the previous mapping (`DRAW_BUFFERi` reads correctly; re-binding the FBO fixes it) |
+| `es30-pixel-buffer-objects` | ES 3.0 §4.3.2.4: a pack-buffer offset not divisible by the type size → INVALID_OPERATION | no error (the unpack rule is enforced) |
+| `es30-transform-feedback` | ES 3.0 §2.15.2: ResumeTransformFeedback with a different program active → INVALID_OPERATION | resumes |
+| `es31-stencil-texturing-and-level-queries` | ES 3.2 §8.11.3: compressed formats report the post-decompression component types | RGB8_ETC2 R/G/B types read NONE |
+| `es31-stencil-texturing-and-level-queries`, `es31-multisample-textures` | ES 3.1 §8.8 / 3.2 §8.11.3: multisample textures have only level 0 | `GetTexLevelParameteriv(…, level 1)` raises no error |
+| `es31-multisample-textures` | ES 3.2 §8.14.4: `GenerateMipmap` target list | `TEXTURE_2D_MULTISAMPLE` raises no error (INVALID_ENUM expected) |
 
-Not deviations (verified during integration): The earlier `es31-atomics` row ("Mesa rejects an atomic counter
+Not deviations (verified during integration): `es31-framebuffer-no-attachments` SAMPLE_BUFFERS/SAMPLES of an
+attachment-less FBO with default samples 4 was our misreading. §9.2.3.1 derives the queried values only from
+attachments, so the check now asserts only the §9.2.3.1 relation between them. `DEPTH_STENCIL_ATTACHMENT` with nothing
+attached may give NONE (Mesa) or INVALID_OPERATION (ANGLE), since the text supports both. ANGLE conforms on three rules
+where Mesa has XFAILs (default-framebuffer attachment query, deleting an active query, Draw*Indirect during
+transform feedback); this supports our readings of them. The earlier `es31-atomics` row ("Mesa rejects an atomic counter
 without binding") was our misreading: GLSL ES 3.20 §4.4.6 makes it a compile-time error (the change log calls it
 a clarification), and Mesa and ANGLE both reject it correctly. Further: Mesa accepting `glGenerateMipmap` on R32F and unsized
 `RGB + FLOAT` uploads is correct, because the contexts expose `GL_OES_texture_float_linear`,

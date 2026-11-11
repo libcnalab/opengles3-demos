@@ -1,6 +1,6 @@
 function,introduced,registry_feature,in_metagl,demos,verification,runtime_status,limitations,evidence
 glActiveTexture,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glAttachShader,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,both stages attached before link,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
+glAttachShader,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,ATTACHED_SHADERS = 2 / both stages attached before link,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glBindAttribLocation,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glBindBuffer,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,ARRAY_BUFFER binding captured by attrib pointers,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
 glBindFramebuffer,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
@@ -19,29 +19,29 @@ glClearColor,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,corner pixels equal t
 glClearDepthf,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glClearStencil,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glColorMask,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glCompileShader,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,COMPILE_STATUS == GL_TRUE required,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
+glCompileShader,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,"COMPILE_STATUS TRUE for valid, FALSE for 2 invalid sources, no GL error / COMPILE_STATUS == GL_TRUE required",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glCompressedTexImage2D,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glCompressedTexSubImage2D,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glCopyTexImage2D,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glCopyTexSubImage2D,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glCreateProgram,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,program used for the validated draw,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
-glCreateShader,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,vertex + fragment shader created; compile status checked,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
+glCreateProgram,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,programs used in validated draws / program used for the validated draw,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
+glCreateShader,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,valid and invalid shaders created; SHADER_TYPE verified / vertex + fragment shader created; compile status checked,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glCullFace,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glDeleteBuffers,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,cleanup,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
 glDeleteFramebuffers,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glDeleteProgram,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,cleanup,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
+glDeleteProgram,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,"deferred while current (glIsProgram TRUE, still renders), deleted when replaced / cleanup",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glDeleteRenderbuffers,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glDeleteShader,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,deleted after detach,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
+glDeleteShader,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,"deferred while attached (glIsShader TRUE, DELETE_STATUS TRUE); deleted on detach; 0 ignored / deleted after detach",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glDeleteTextures,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glDepthFunc,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glDepthMask,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glDepthRangef,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glDetachShader,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,shaders detached after link,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
-glDisable,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glDetachShader,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,ATTACHED_SHADERS = 0 afterwards; link status kept / shaders detached after link,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
+glDisable,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,SCISSOR_TEST,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glDisableVertexAttribArray,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glDrawArrays,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,TRIANGLES; interior pixels match CPU reference,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
 glDrawElements,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glEnable,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glEnable,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,SCISSOR_TEST,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glEnableVertexAttribArray,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,both attributes sourced from the buffer,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
 glFinish,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glFlush,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
@@ -55,25 +55,25 @@ glGenTextures,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGenerateMipmap,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetActiveAttrib,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetActiveUniform,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glGetAttachedShaders,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glGetAttachedShaders,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,returns exactly the two attached shader names,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glGetAttribLocation,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glGetBooleanv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glGetBooleanv,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,SHADER_COMPILER = TRUE,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glGetBufferParameteriv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetError,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetFloatv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetFramebufferAttachmentParameteriv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetIntegerv,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,"CURRENT_PROGRAM, VERTEX_ARRAY_BINDING",FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
-glGetProgramInfoLog,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glGetProgramiv,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,LINK_STATUS queried,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
+glGetProgramInfoLog,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,printed for link failure,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
+glGetProgramiv,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,"LINK_STATUS, ATTACHED_SHADERS, DELETE_STATUS, VALIDATE_STATUS / LINK_STATUS queried",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glGetRenderbufferParameteriv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glGetShaderInfoLog,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glGetShaderPrecisionFormat,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glGetShaderSource,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glGetShaderiv,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,COMPILE_STATUS queried,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
+glGetShaderInfoLog,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,INFO_LOG_LENGTH consistent with returned log,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
+glGetShaderPrecisionFormat,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,all 6 precision types x 2 stages meet GLSL ES 3.00 minimums,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
+glGetShaderSource,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,returned source equals the concatenated strings,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
+glGetShaderiv,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,"COMPILE_STATUS, SHADER_TYPE, SOURCE_LENGTH (=len+1), INFO_LOG_LENGTH, DELETE_STATUS / COMPILE_STATUS queried",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glGetString,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetTexParameterfv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetTexParameteriv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glGetUniformLocation,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glGetUniformLocation,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,u_color located in each program,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glGetUniformfv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetUniformiv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetVertexAttribPointerv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
@@ -83,21 +83,21 @@ glHint,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glIsBuffer,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glIsEnabled,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glIsFramebuffer,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glIsProgram,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glIsProgram,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,"TRUE while current-and-flagged, FALSE afterwards",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glIsRenderbuffer,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glIsShader,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glIsShader,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,"TRUE while flagged and attached, FALSE after final detach",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glIsTexture,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glLineWidth,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glLinkProgram,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,LINK_STATUS == GL_TRUE required,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
+glLinkProgram,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,"LINK_STATUS TRUE for valid programs, FALSE for varying mismatch and missing FS / LINK_STATUS == GL_TRUE required",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glPixelStorei,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glPolygonOffset,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glReadPixels,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,RGBA/UNSIGNED_BYTE readback of the default framebuffer,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
-glReleaseShaderCompiler,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glReleaseShaderCompiler,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,compilation still succeeds afterwards,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glRenderbufferStorage,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glSampleCoverage,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glScissor,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glShaderBinary,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glShaderSource,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,"source uploaded (string_view overload, explicit length)",FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
+glScissor,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,two halves drawn by different programs,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
+glShaderBinary,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,unsupported format -> INVALID_ENUM,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
+glShaderSource,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,"3 strings with lengths {-1,-1,N}: concatenation verified via glGetShaderSource / source uploaded (string_view overload, explicit length)",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glStencilFunc,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glStencilFuncSeparate,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glStencilMask,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
@@ -112,7 +112,7 @@ glTexParameteriv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glTexSubImage2D,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glUniform1f,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glUniform1fv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUniform1i,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glUniform1i,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,sampler unit reassignment resolves the validation failure,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glUniform1iv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glUniform2f,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glUniform2fv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
@@ -122,15 +122,15 @@ glUniform3f,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glUniform3fv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glUniform3i,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glUniform3iv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUniform4f,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glUniform4f,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,per-program colors observed in the image,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glUniform4fv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glUniform4i,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glUniform4iv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glUniformMatrix2fv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glUniformMatrix3fv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glUniformMatrix4fv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUseProgram,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,GL_CURRENT_PROGRAM verified,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
-glValidateProgram,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glUseProgram,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,INVALID_OPERATION for an unlinked program; current program survives deletion / GL_CURRENT_PROGRAM verified,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
+glValidateProgram,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,"FALSE for sampler2D+samplerCube on one unit, TRUE after fixing the unit",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glVertexAttrib1f,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glVertexAttrib1fv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glVertexAttrib2f,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,

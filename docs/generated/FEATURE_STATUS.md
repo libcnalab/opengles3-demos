@@ -19,16 +19,16 @@
 | ES20.CLEAR.DEPTH | 2.0 | framebuffer | glClear depth + glClearDepthf | ES 3.0 §4.2.3 | NOT_STARTED |  |
 | ES20.CLEAR.STENCIL | 2.0 | framebuffer | glClear stencil + glClearStencil | ES 3.0 §4.2.3 | NOT_STARTED |  |
 | ES20.CLEAR.SCISSORED | 2.0 | framebuffer | Clear honours scissor and write masks | ES 3.0 §4.2.3 | NOT_STARTED |  |
-| ES20.SHADER.COMPILE_LINK | 2.0 | shaders | Shader/program object creation compile link use | ES 3.0 §2.12.1-2.12.3 | FULLY_VALIDATED | es30-hello-triangle |
-| ES20.SHADER.COMPILE_ERROR | 2.0 | shaders | Compile failure diagnostics (COMPILE_STATUS=FALSE + info log) | ES 3.0 §2.12.1 | NOT_STARTED |  |
-| ES20.SHADER.LINK_ERROR | 2.0 | shaders | Link failure diagnostics (interface mismatch / missing main) | ES 3.0 §2.12.3 | NOT_STARTED |  |
-| ES20.SHADER.SOURCE_QUERY | 2.0 | shaders | glGetShaderSource / SHADER_SOURCE_LENGTH round trip | ES 3.0 §6.1.12 | NOT_STARTED |  |
-| ES20.SHADER.OBJECT_LIFETIME | 2.0 | shaders | Deferred deletion of attached shaders / in-use programs (DELETE_STATUS) | ES 3.0 §2.12.1 §2.12.3 | NOT_STARTED |  |
-| ES20.SHADER.PRECISION_FORMAT | 2.0 | shaders | glGetShaderPrecisionFormat ranges for low/medium/high float+int | ES 3.0 §6.1.12 | NOT_STARTED |  |
-| ES20.SHADER.RELEASE_COMPILER | 2.0 | shaders | glReleaseShaderCompiler hint (no observable effect required) | ES 3.0 §2.12.1 | NOT_STARTED |  |
-| ES20.SHADER.BINARY | 2.0 | shaders | glShaderBinary + SHADER_BINARY_FORMATS (may legitimately be empty) | ES 3.0 §2.12.2 | NOT_STARTED |  |
-| ES20.PROGRAM.VALIDATE | 2.0 | shaders | glValidateProgram + VALIDATE_STATUS (e.g. sampler type conflict on one unit) | ES 3.0 §2.12.3 §2.12.9 | NOT_STARTED |  |
-| ES20.PROGRAM.ATTACHED | 2.0 | shaders | glGetAttachedShaders / ATTACHED_SHADERS | ES 3.0 §6.1.12 | NOT_STARTED |  |
+| ES20.SHADER.COMPILE_LINK | 2.0 | shaders | Shader/program object creation compile link use | ES 3.0 §2.12.1-2.12.3 | FULLY_VALIDATED | es20-shader-compilation, es30-hello-triangle |
+| ES20.SHADER.COMPILE_ERROR | 2.0 | shaders | Compile failure diagnostics (COMPILE_STATUS=FALSE + info log) | ES 3.0 §2.12.1 | FULLY_VALIDATED | es20-shader-compilation |
+| ES20.SHADER.LINK_ERROR | 2.0 | shaders | Link failure diagnostics (interface mismatch / missing main) | ES 3.0 §2.12.3 | FULLY_VALIDATED | es20-shader-compilation |
+| ES20.SHADER.SOURCE_QUERY | 2.0 | shaders | glGetShaderSource / SHADER_SOURCE_LENGTH round trip | ES 3.0 §6.1.12 | FULLY_VALIDATED | es20-shader-compilation |
+| ES20.SHADER.OBJECT_LIFETIME | 2.0 | shaders | Deferred deletion of attached shaders / in-use programs (DELETE_STATUS) | ES 3.0 §2.12.1 §2.12.3 | FULLY_VALIDATED | es20-shader-compilation |
+| ES20.SHADER.PRECISION_FORMAT | 2.0 | shaders | glGetShaderPrecisionFormat ranges for low/medium/high float+int | ES 3.0 §6.1.12 | FULLY_VALIDATED | es20-shader-compilation |
+| ES20.SHADER.RELEASE_COMPILER | 2.0 | shaders | glReleaseShaderCompiler hint (no observable effect required) | ES 3.0 §2.12.1 | FULLY_VALIDATED | es20-shader-compilation |
+| ES20.SHADER.BINARY | 2.0 | shaders | glShaderBinary + SHADER_BINARY_FORMATS (may legitimately be empty) | ES 3.0 §2.12.2 | FULLY_VALIDATED | es20-shader-compilation |
+| ES20.PROGRAM.VALIDATE | 2.0 | shaders | glValidateProgram + VALIDATE_STATUS (e.g. sampler type conflict on one unit) | ES 3.0 §2.12.3 §2.12.9 | FULLY_VALIDATED | es20-shader-compilation |
+| ES20.PROGRAM.ATTACHED | 2.0 | shaders | glGetAttachedShaders / ATTACHED_SHADERS | ES 3.0 §6.1.12 | FULLY_VALIDATED | es20-shader-compilation |
 | ES20.ATTRIB.BIND_LOCATION | 2.0 | vertex-input | glBindAttribLocation before link vs glGetAttribLocation | ES 3.0 §2.12.5 | NOT_STARTED |  |
 | ES20.ATTRIB.ACTIVE_QUERY | 2.0 | vertex-input | glGetActiveAttrib enumeration (name/type/size) | ES 3.0 §2.12.5 | NOT_STARTED |  |
 | ES20.ATTRIB.CONSTANT | 2.0 | vertex-input | Current (constant) generic attribute values glVertexAttrib*f[v] | ES 3.0 §2.8 | NOT_STARTED |  |

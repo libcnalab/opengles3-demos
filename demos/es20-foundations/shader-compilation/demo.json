@@ -1,0 +1,83 @@
+{
+  "name": "es20-shader-compilation",
+  "title": "Shader and program objects",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es20-foundations",
+  "order": 30,
+  "summary": "Compile/link status and logs, multi-string sources, deferred deletion, validation, precision guarantees, shader binaries.",
+  "spec": [
+    "ES 3.0 §2.12.1 Shader Objects",
+    "ES 3.0 §2.12.2 Loading Shader Binaries",
+    "ES 3.0 §2.12.3 Program Objects",
+    "ES 3.0 §2.12.9.7 Validation",
+    "ES 3.0 §6.1.12 Shader and Program Queries",
+    "GLSL ES 3.00 §4.3.10 Linking of Vertex Outputs and Fragment Inputs",
+    "GLSL ES 3.00 §4.5.1 Range and Precision",
+    "GLSL ES 3.00 §4.5.4 Default Precision Qualifiers",
+    "GLSL ES 3.00 §7.1 Vertex Shader Special Variables (gl_VertexID)"
+  ],
+  "api": {
+    "glCreateShader": "valid and invalid shaders created; SHADER_TYPE verified",
+    "glShaderSource": "3 strings with lengths {-1,-1,N}: concatenation verified via glGetShaderSource",
+    "glCompileShader": "COMPILE_STATUS TRUE for valid, FALSE for 2 invalid sources, no GL error",
+    "glGetShaderiv": "COMPILE_STATUS, SHADER_TYPE, SOURCE_LENGTH (=len+1), INFO_LOG_LENGTH, DELETE_STATUS",
+    "glGetShaderInfoLog": "INFO_LOG_LENGTH consistent with returned log",
+    "glGetShaderSource": "returned source equals the concatenated strings",
+    "glDeleteShader": "deferred while attached (glIsShader TRUE, DELETE_STATUS TRUE); deleted on detach; 0 ignored",
+    "glIsShader": "TRUE while flagged and attached, FALSE after final detach",
+    "glCreateProgram": "programs used in validated draws",
+    "glAttachShader": "ATTACHED_SHADERS = 2",
+    "glDetachShader": "ATTACHED_SHADERS = 0 afterwards; link status kept",
+    "glGetAttachedShaders": "returns exactly the two attached shader names",
+    "glLinkProgram": "LINK_STATUS TRUE for valid programs, FALSE for varying mismatch and missing FS",
+    "glGetProgramiv": "LINK_STATUS, ATTACHED_SHADERS, DELETE_STATUS, VALIDATE_STATUS",
+    "glGetProgramInfoLog": "printed for link failure",
+    "glUseProgram": "INVALID_OPERATION for an unlinked program; current program survives deletion",
+    "glDeleteProgram": "deferred while current (glIsProgram TRUE, still renders), deleted when replaced",
+    "glIsProgram": "TRUE while current-and-flagged, FALSE afterwards",
+    "glValidateProgram": "FALSE for sampler2D+samplerCube on one unit, TRUE after fixing the unit",
+    "glGetShaderPrecisionFormat": "all 6 precision types x 2 stages meet GLSL ES 3.00 minimums",
+    "glReleaseShaderCompiler": "compilation still succeeds afterwards",
+    "glShaderBinary": "unsupported format -> INVALID_ENUM",
+    "glGetBooleanv": "SHADER_COMPILER = TRUE",
+    "glGetUniformLocation": "u_color located in each program",
+    "glUniform4f": "per-program colors observed in the image",
+    "glUniform1i": "sampler unit reassignment resolves the validation failure",
+    "glScissor": "two halves drawn by different programs",
+    "glEnable": "SCISSOR_TEST",
+    "glDisable": "SCISSOR_TEST"
+  },
+  "features": [
+    "ES20.SHADER.COMPILE_LINK",
+    "ES20.SHADER.COMPILE_ERROR",
+    "ES20.SHADER.LINK_ERROR",
+    "ES20.SHADER.SOURCE_QUERY",
+    "ES20.SHADER.OBJECT_LIFETIME",
+    "ES20.SHADER.PRECISION_FORMAT",
+    "ES20.SHADER.RELEASE_COMPILER",
+    "ES20.SHADER.BINARY",
+    "ES20.PROGRAM.VALIDATE",
+    "ES20.PROGRAM.ATTACHED"
+  ],
+  "glsl_features": [
+    "GLSL300.VERSION",
+    "GLSL300.PRECISION.DEFAULT",
+    "GLSL300.INTERFACE_MATCHING",
+    "GLSL300.BUILTIN_VARS.VS",
+    "GLSL300.UNIFORM"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "negative",
+    "gl-error"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-opus-5.5",
+    "notes": "Left half green (multi-string program A), right half blue (program B); no artifacts at the seam."
+  }
+}

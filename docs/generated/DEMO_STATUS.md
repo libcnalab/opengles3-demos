@@ -3,4 +3,5 @@
 
 | executable | min ES | category | title | status | runs |
 |---|---|---|---|---|---|
+| es20-shader-compilation | 3.0 | es20-foundations | Shader and program objects | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS |
 | es30-hello-triangle | 3.0 | es30 | Hello Triangle | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS |

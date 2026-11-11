@@ -285,9 +285,32 @@ namespace demo
         std::string error;
         if (!platform->create(req, error))
         {
-            rep.outcome = Outcome::BlockedEnvironment;
-            rep.reason = error;
-            return finish(options, info, rep, runtime_checks, demo_checks);
+            // A driver may refuse to create a context of a version it does not support (e.g. softpipe,
+            // a native ES 3.1 driver, answers EGL_BAD_MATCH for ES 3.2). Retry with ES 3.0 to learn what
+            // the driver offers: the version check below then reports SKIP_UNSUPPORTED with the real
+            // version instead of a misleading BLOCKED_ENVIRONMENT.
+            bool recovered = false;
+            if (Version{3, 0} < req.version)
+            {
+                platform.reset();
+#if OGLES3_HAVE_SDL3
+                if (windowed) platform = detail::make_sdl3_platform();
+#endif
+                if (!platform) platform = detail::make_egl_headless_platform();
+                detail::ContextRequest fallback = req;
+                fallback.version = {3, 0};
+                std::string fallback_error;
+                recovered = platform->create(fallback, fallback_error);
+                if (recovered)
+                    std::cout << std::format("note: ES {} context refused ({}); probing with an ES 3.0 request\n",
+                                             to_string(req.version), error);
+            }
+            if (!recovered)
+            {
+                rep.outcome = Outcome::BlockedEnvironment;
+                rep.reason = error;
+                return finish(options, info, rep, runtime_checks, demo_checks);
+            }
         }
         rep.platform = platform->description();
 

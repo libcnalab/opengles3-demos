@@ -109,6 +109,11 @@ be a small additive improvement.
   `IMPLEMENTATION_COLOR_READ_FORMAT/TYPE`, so demos compare them with `GL_*` macros. Candidates for
   small additive helpers in meta-gl.
 
+- **O7 — debug-output ergonomics (from es32-debug-output, not defects):** the `GLDEBUGPROC` callback receives raw
+  `GLenum`s (demos `static_cast` to `DebugSource/Type/Severity`); `glGetPointerv(DEBUG_CALLBACK_FUNCTION)` returns
+  `void*` (copied into a `GLDEBUGPROC` with `memcpy`); no `std::string_view` overloads for
+  `glDebugMessageInsert`/`glPushDebugGroup`/`glObjectLabel`. Candidate additive helpers.
+
 ## Open questions
 
 - None yet. New findings are appended here with the same fields:

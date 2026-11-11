@@ -69,8 +69,8 @@
 | GLSL310.FN.IMAGE | 310 | images | imageLoad imageStore imageSize | GLSL ES 3.10 §8.12 | compute-check | FULLY_VALIDATED | es31-compute-indirect-and-to-render, es31-image-load-store |
 | GLSL310.ATOMIC_COUNTERS | 310 | atomics | atomic_uint + binding/offset; atomicCounter/Increment/Decrement | GLSL ES 3.10 §4.4.6 §8.10 | compute-check | FULLY_VALIDATED | es31-atomics |
 | GLSL310.FN.ATOMIC_MEMORY | 310 | atomics | atomicAdd Min Max And Or Xor Exchange CompSwap | GLSL ES 3.10 §8.11 | compute-check | FULLY_VALIDATED | es31-atomics |
-| GLSL310.LAYOUT.BINDING | 310 | interface | layout(binding) for samplers, images, blocks, atomic counters | GLSL ES 3.10 §4.4.4-4.4.6 | render | FULLY_VALIDATED | es31-compute-indirect-and-to-render, es31-image-load-store, es31-program-interface-query |
-| GLSL310.LAYOUT.UNIFORM_LOCATION | 310 | interface | layout(location) on default-block uniforms | GLSL ES 3.10 §4.4.3 | render | FULLY_VALIDATED | es31-program-interface-query |
+| GLSL310.LAYOUT.BINDING | 310 | interface | layout(binding) for samplers, images, blocks, atomic counters | GLSL ES 3.10 §4.4.4-4.4.6 | render | FULLY_VALIDATED | es31-compute-indirect-and-to-render, es31-image-load-store, es31-program-interface-query, es32-debug-output |
+| GLSL310.LAYOUT.UNIFORM_LOCATION | 310 | interface | layout(location) on default-block uniforms | GLSL ES 3.10 §4.4.3 | render | FULLY_VALIDATED | es31-program-interface-query, es32-debug-output |
 | GLSL310.ARRAYS_OF_ARRAYS | 310 | types | Arrays of arrays | GLSL ES 3.10 §4.1.9 | compute-check | NOT_STARTED |  |
 | GLSL310.SEPARABLE_IO | 310 | interface | Separable-program interface matching by location (gl_PerVertex redeclaration is GLSL ES 3.20) | GLSL ES 3.10 §4.4.1 §9.2.1 | render+negative | FULLY_VALIDATED | es31-program-pipelines |
 | GLSL310.FN.INTEGER | 310 | builtins | uaddCarry usubBorrow umulExtended imulExtended bitfieldExtract bitfieldInsert bitfieldReverse bitCount findLSB findMSB | GLSL ES 3.10 §8.8 | compute-check | NOT_STARTED |  |

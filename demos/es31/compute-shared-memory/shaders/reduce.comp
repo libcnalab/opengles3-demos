@@ -1,0 +1,76 @@
+#version 310 es
+// Work group reduction in shared memory: every work group of 128 invocations reduces up to 128 inputs to their
+// sum, minimum and maximum with a tree of 7 folding steps.
+//
+// The host inserts two lines directly below the #version line:
+//     #define PASS 1                          1: inputs are plain ints,  2: inputs are the (sum, min, max, n) partials of pass 1
+//     #define SHARED_FENCE memoryBarrierShared()      (or groupMemoryBarrier() / memoryBarrier(): all three are legal here)
+//
+// Why each synchronization point exists (GLSL ES 3.10 sections 4.3.8, 8.14 and 8.15):
+//   * barrier() makes every invocation of the work group wait until all of them have arrived. It orders execution,
+//     but "does not by itself synchronize memory accesses".
+//   * SHARED_FENCE (a memory barrier) completes this invocation's reads and writes of shared variables before any
+//     later ones, as seen by the other invocations of the group.
+// Writing shared memory in one step and reading what another invocation wrote in the next step needs BOTH:
+// the barrier so that the writer has executed the store at all, the memory barrier so that the store is visible.
+layout(local_size_x = 128) in;
+
+#if PASS == 1
+layout(std430, binding = 0) readonly buffer Values { int values[]; };
+#else
+layout(std430, binding = 0) readonly buffer Partials { ivec4 partials[]; };
+#endif
+layout(std430, binding = 1) writeonly buffer Results { ivec4 results[]; };  // per work group: (sum, min, max, inputs consumed)
+
+uniform uint u_count;  // number of inputs
+
+shared int s_sum[128];
+shared int s_min[128];
+shared int s_max[128];
+
+void main()
+{
+    uint lid = gl_LocalInvocationID.x;
+    uint i = gl_GlobalInvocationID.x;
+
+    // Load phase. Invocations past the end contribute the identity element of each operation.
+    int v_sum = 0;
+    int v_min = 2147483647;
+    int v_max = -2147483647 - 1;
+    if (i < u_count)
+    {
+#if PASS == 1
+        v_sum = v_min = v_max = values[i];
+#else
+        ivec4 p = partials[i];
+        v_sum = p.x;
+        v_min = p.y;
+        v_max = p.z;
+#endif
+    }
+    s_sum[lid] = v_sum;
+    s_min[lid] = v_min;
+    s_max[lid] = v_max;
+    SHARED_FENCE;
+    barrier();
+
+    // Folding steps: the upper half of the active range is added into the lower half. The loop bound is the same for
+    // every invocation, so the barrier() inside it is in uniform control flow (section 8.14).
+    for (uint stride = 64u; stride > 0u; stride >>= 1u)
+    {
+        if (lid < stride)
+        {
+            s_sum[lid] += s_sum[lid + stride];
+            s_min[lid] = min(s_min[lid], s_min[lid + stride]);
+            s_max[lid] = max(s_max[lid], s_max[lid + stride]);
+        }
+        SHARED_FENCE;
+        barrier();
+    }
+
+    if (lid == 0u)
+    {
+        uint first = gl_WorkGroupID.x * 128u;
+        results[gl_WorkGroupID.x] = ivec4(s_sum[0], s_min[0], s_max[0], int(min(u_count - first, 128u)));
+    }
+}

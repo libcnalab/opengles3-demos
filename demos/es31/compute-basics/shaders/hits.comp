@@ -1,0 +1,16 @@
+#version 310 es
+// One invocation per work group: hits[id] = id + 1. Used to dispatch exactly the maximum work group count
+// in one dimension (the other two stay at 1, so the sum below is the group's index in the long dimension).
+// The guard keeps a (hypothetical) wrongly accepted dispatch from writing outside the buffer.
+layout(local_size_x = 1) in;
+
+layout(std430, binding = 0) writeonly buffer Hits { uint hits[]; };
+
+uniform uint u_capacity;  // number of words in hits[] that may be written
+
+void main()
+{
+    uint id = gl_WorkGroupID.x + gl_WorkGroupID.y + gl_WorkGroupID.z;
+    if (id < u_capacity)
+        hits[id] = id + 1u;
+}

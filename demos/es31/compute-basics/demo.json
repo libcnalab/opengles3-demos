@@ -1,0 +1,85 @@
+{
+  "name": "es31-compute-basics",
+  "title": "Compute shaders: dispatch, built-ins, limits",
+  "min_es": "3.1",
+  "glsl": [
+    "310 es"
+  ],
+  "category": "es31",
+  "order": 100,
+  "summary": "glDispatchCompute with 1-D, 2-D and 3-D work group grids and local sizes: every compute built-in (gl_NumWorkGroups, gl_WorkGroupID, gl_LocalInvocationID, gl_GlobalInvocationID, gl_LocalInvocationIndex, gl_WorkGroupSize) written to an SSBO by every invocation and compared exactly with a CPU model, COMPUTE_WORK_GROUP_SIZE queries, the MAX_COMPUTE_WORK_GROUP_COUNT/SIZE/INVOCATIONS limits dispatched at and rejected above, the dispatch and link errors, vector addition, a dependent second dispatch behind SHADER_STORAGE_BARRIER_BIT and a 2-D transpose; the SSBO contents are drawn as colored cells.",
+  "spec": [
+    "ES 3.2 §17 Compute Shaders (DispatchCompute, workgroup size queries, errors)",
+    "ES 3.2 §7.3 Program Objects (active program per stage, compute shader link rules), §7.12 Shader, Program, and Program Pipeline Queries (COMPUTE_WORK_GROUP_SIZE)",
+    "ES 3.2 §7.11.2 Shader Memory Access Synchronization (MemoryBarrier: SHADER_STORAGE, BUFFER_UPDATE, VERTEX_ATTRIB_ARRAY bits)",
+    "ES 3.2 §6.3 Mapping and Unmapping Buffer Data, §2.3.1 Errors (a failing command has no effect), §20.1 Simple Queries (GetIntegeri_v), Table 21.49 Implementation Dependent Compute Shader Limits",
+    "GLSL ES 3.10 §4.4.1.1 Compute Shader Inputs (local_size_x/y/z, default 1, compile and link errors), §7.1.3 Compute Shader Special Variables",
+    "GLSL ES 3.10 §4.1.3 Integers (wrapping), §5.4.1 Conversion and Scalar Constructors (float to uint)"
+  ],
+  "api": {
+    "glCreateShader": "COMPUTE_SHADER objects (builtins in five local-size variants, vecadd, transform, transpose, hits and the negative cases) plus one VERTEX_SHADER for the compute+vertex link error",
+    "glShaderSource": "sources compiled; the builtins source is loaded with a '#define LOCAL_SIZE ...' line inserted below #version",
+    "glCompileShader": "local_size_x above MAX_COMPUTE_WORK_GROUP_SIZE[0] and gl_WorkGroupSize without a local size fail to compile; the largest legal size and all demo shaders compile",
+    "glGetShaderiv": "COMPILE_STATUS of the positive and negative compute shaders",
+    "glAttachShader": "compute shader (plus a vertex shader in the negative case) attached before linking",
+    "glLinkProgram": "a program without a local size and a program mixing compute and vertex shaders fail to link; every demo compute program links",
+    "glGetProgramiv": "LINK_STATUS; COMPUTE_WORK_GROUP_SIZE equals the layout qualifier of each configuration (unnamed dimensions = 1); INVALID_OPERATION on a program without a compute shader, output untouched",
+    "glDetachShader": "after linking (demo helper)",
+    "glDeleteShader": "cleanup",
+    "glUseProgram": "the compute program is the active one for dispatches; with none or with a vertex+fragment program current glDispatchCompute is INVALID_OPERATION",
+    "glDeleteProgram": "cleanup, final glGetError == NO_ERROR",
+    "glGetUniformLocation": "u_capacity, u_count, u_size and the display uniforms are active",
+    "glUniform1ui": "u_capacity / u_count / u_local_count: the guards and the brightness ramp are observable in buffer contents and pixels",
+    "glUniform2ui": "u_size (matrix width and height) of the transpose, observed through the exact transposed output",
+    "glUniform1i": "cell size of the display program, observed through the pixel positions of every cell",
+    "glUniform2i": "target size and panel origin of the display program, observed through the pixel positions of every cell",
+    "glUniform4i": "z-slice tiling layout of the display program, observed through the pixel positions of every cell",
+    "glGenBuffers": "SSBOs for records, vector addition, transform, transpose and hit counters",
+    "glBindBuffer": "SHADER_STORAGE_BUFFER and ARRAY_BUFFER targets used to create, map and use the buffers",
+    "glBufferData": "initial contents (the 0xDEADBEEF sentinel) of every result buffer; the sentinel is what unwritten words show",
+    "glBindBufferBase": "SHADER_STORAGE_BUFFER binding points 0..2: the shaders' layout(binding) blocks read and write exactly these buffers",
+    "glMapBufferRange": "MAP_READ_BIT readback of every result buffer, compared exactly",
+    "glUnmapBuffer": "after every readback",
+    "glDeleteBuffers": "cleanup",
+    "glDispatchCompute": "1-D, 2-D, 3-D and maximum-size work group grids (all records exact), counts exactly at MAX_COMPUTE_WORK_GROUP_COUNT run every group, counts one above give INVALID_VALUE and run nothing, a zero count in any dimension runs nothing without an error, no compute program gives INVALID_OPERATION",
+    "glMemoryBarrier": "SHADER_STORAGE_BARRIER_BIT between dependent dispatches, BUFFER_UPDATE_BARRIER_BIT before every glMapBufferRange readback, VERTEX_ATTRIB_ARRAY_BARRIER_BIT before the SSBO is drawn as vertex data; results are exact after them (the demo cannot observe a failure without them: implementations may synchronize more than required)",
+    "glGetIntegerv": "MAX_COMPUTE_WORK_GROUP_INVOCATIONS >= 128 (Table 21.49) and used to size the maximum work group",
+    "glGetIntegeri_v": "MAX_COMPUTE_WORK_GROUP_COUNT and MAX_COMPUTE_WORK_GROUP_SIZE for x, y, z compared with the Table 21.49 minimums; index 3 is INVALID_VALUE and leaves the output untouched",
+    "glGenVertexArrays": "one VAO per configuration for the cell display",
+    "glBindVertexArray": "selects the record buffer drawn",
+    "glEnableVertexAttribArray": "three per-instance attributes enabled, observed through pixels",
+    "glVertexAttribIPointer": "uvec4 attributes read from the 64-byte records the compute shader wrote; colors and positions of 624 cells compared exactly",
+    "glVertexAttribDivisor": "divisor 1: one record per instance, observed through the cell grid",
+    "glDrawArraysInstanced": "one instanced quad per invocation record",
+    "glViewport": "full-surface viewport maps the cell pixel coordinates exactly",
+    "glClearColor": "margin and panel colors compared",
+    "glClear": "COLOR_BUFFER_BIT, scissored for the panels",
+    "glScissor": "the four panels clear to their own color, the margins keep the clear color",
+    "glEnable": "SCISSOR_TEST for the panel clears",
+    "glDisable": "SCISSOR_TEST is off for the cell draws: cells of all four panels appear although the last scissor box covers only one panel",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE readback of the default framebuffer, center pixel and gap pixel of every cell",
+    "glDeleteVertexArrays": "cleanup"
+  },
+  "features": [
+    "ES31.COMPUTE.DISPATCH",
+    "ES31.COMPUTE.LIMITS",
+    "ES20.ERRORS.INVALID_VALUE",
+    "ES20.ERRORS.INVALID_OPERATION"
+  ],
+  "glsl_features": [
+    "GLSL310.COMPUTE.LAYOUT",
+    "GLSL310.COMPUTE.BUILTINS"
+  ],
+  "validation": [
+    "readback",
+    "state-query",
+    "gl-error",
+    "pixel-reference",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5",
+    "notes": "Viewed the gpu (radeonsi), llvmpipe and zink captures, 256x256, identical, also enlarged 3x. Four panels on a near-black background, each one dispatch configuration drawn as a grid of square cells with a one pixel gap. Top left (1-D, 5 groups of 8): five rows, one per work group, bottom to top red, orange, yellow, lime, green, each row ramping from dark at the left to bright at the right (local index). Top right (2-D, 3x2 groups of 4x4): a 12x8 cell block made of six 4x4 colored tiles (bottom row red, orange, yellow; top row lime, green, teal), each tile brighter toward its top right. Bottom left (3-D, 2x2x2 groups of 4x2x2): four 8x4 slices tiled 2x2 (z slices), each made of four 4x2 color blocks (2x2 work groups per slice). Bottom right (3-D odd, 2x2x3 groups of 3x5x2): six 6x10 slices tiled 3x2, each made of four 3x5 color blocks, twelve distinct hues over the whole panel (12 work groups). No stray cells, no overdraw, margins between panels dark."
+  }
+}

@@ -94,12 +94,26 @@ meta-gl revision audited: `develop` @ `795bcdc` (v0.4.1). Fixes live on the loca
 - **Fix:** the helper passes `transpose` through. `test-metagl-contracts` now asserts that a row-major upload
   reads back transposed.
 
-### O8 — meta-gl `test_release_contract` cases do not isolate their contracts
+### O8 — meta-gl `test_release_contract` cases did not isolate their contracts — FIXED (meta-gl `de86b9e`)
 The child processes call `Initialize(dummy_loader)`. The dummy loader returns no-op functions, so `Initialize`
 fails, and *every* wrapper then terminates because meta-gl is uninitialized, whatever its arguments. That is how
 `test_invalid_transpose` passed although the raw wrapper never checked transpose. It was replaced by a
 partial-matrix case, but the harness still needs a working mock context to prove contracts.
 `test-metagl-contracts` in this repository checks them with a real context.
+
+**Fix (de86b9e, test-only).** Every child now initializes a headless mock "OpenGL ES 3.2" context and exits with a
+distinct code if `Initialize` fails. Each of the 10 contract violations has a positive control: the same wrapper with
+valid arguments must reach a recording stub with the expected count, size, location and transpose. A meta-test
+proves that an uninitialized child terminates even on a valid call, which was the old trap.
+- **Mutation check:** removing the `size % n` check made all 6 element-count and matrix death tests fail.
+- **Finding:** the old `test_overflow_glsizei` called the raw `GLsizei` overload, where `size_t` 2^31 narrows silently
+  to INT_MIN. It never reached `checked_glsizei`; the size check exists only in the span and string_view overloads.
+
+### O12 — documented "unsupported bitfields terminate" contract is not enforced
+`include/metagl/Functions.hpp` ("Invalid Input Contract") says unsupported bitfields terminate. `to_gl_bitfield` is a
+plain `static_cast`, so `glClear`, `glMapBufferRange` and others forward any bits to the driver, which reports
+INVALID_VALUE as ES specifies. Either the comment or the code should change. This is the owner's call: enforcing it
+could break dependents that pass extra bits. Found by the O8 work.
 
 ### O9 — `glGetInternalformativ` cannot name compressed formats
 `glGetInternalformativ` takes `InternalFormat`, which has no compressed values, and there is no

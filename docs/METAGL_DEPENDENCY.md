@@ -8,7 +8,7 @@ meta-gl revision the suite needs and what happens with the public one. Measured 
 | | revision | content |
 |---|---|---|
 | **public `develop`** | `795bcdc` (`v0.4.1-2-g795bcdc`, "ai policy v2") | upstream; contains AI Contribution Policy v2 |
-| **required** | branch `opengles3-demos/enum-gaps` at `3bb7411` (pushed to `origin`) | `develop` + 5 commits (6 files, +123/−13) |
+| **required** | branch `opengles3-demos/enum-gaps` at `de86b9e` (pushed to `origin`) | `develop` + 6 commits (G1-G8 fixes; O8 test fix) |
 
 The five commits implement the fixes for gaps G1-G8 (details, spec evidence and motivation are in
 [META_GL_GAPS.md](META_GL_GAPS.md)):
@@ -20,6 +20,7 @@ The five commits implement the fixes for gaps G1-G8 (details, spec evidence and 
 | `0a7766c` | G6 | `TextureLevelParameter::Samples`, `FixedSampleLocations` |
 | `a451376` | G7 | `TextureLevelParameter` buffer-texture data-store queries |
 | `3bb7411` | G8 | `glUniformMatrix<…>` helpers accept `transpose = GL_TRUE` (ES 3.0+) instead of terminating |
+| `de86b9e` | O8 | test-only: release-contract death tests run under an initialized mock context (no effect on the suite) |
 
 The changes are additive, except G8. G8 relaxes a contract: the helpers used to call `std::terminate` on
 `GL_TRUE`. That termination was wrong for ES 3.0+, and no dependent relied on it (easy-gl, cna-engine and CNA were

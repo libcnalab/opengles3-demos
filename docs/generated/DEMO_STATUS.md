@@ -18,6 +18,8 @@
 | es20-mipmaps | 3.0 | es20-foundations | Mipmaps: level of detail, the four mipmap filters, glGenerateMipmap, completeness | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es20-cube-map | 3.0 | es20-foundations | Cube map textures: face selection (Table 3.21) and completeness | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-hello-triangle | 3.0 | es30 | Hello Triangle | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| es30-vertex-array-objects | 3.0 | es30 | Vertex array objects, integer and packed attributes | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| es30-instancing | 3.0 | es30 | Instancing, divisors, primitive restart | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-multiple-render-targets | 3.0 | es30 | Multiple render targets: glDrawBuffers, glClearBuffer*, integer targets | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-sampler-objects | 3.0 | es30 | Sampler objects: sampling state separate from textures | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | test-metagl-contracts | 3.0 | tests | meta-gl contracts | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |

@@ -6,9 +6,9 @@
 | ES20.CONTEXT.INIT | 2.0 | context | Context creation + meta-gl initialization + version/API verification | ES 3.0 §2.1-2.2; meta-gl Loader.hpp | FULLY_VALIDATED | diagnostics-capabilities, test-metagl-contracts |
 | ES20.CONTEXT.STRINGS | 2.0 | context | GL_VENDOR/RENDERER/VERSION/SHADING_LANGUAGE_VERSION strings and version parsing | ES 3.0 §6.1.6 | FULLY_VALIDATED | diagnostics-capabilities |
 | ES20.ERRORS.GETERROR | 2.0 | errors | glGetError semantics: sticky flags; command ignored on error | ES 3.0 §2.5 | NOT_STARTED |  |
-| ES20.ERRORS.INVALID_ENUM | 2.0 | errors | GL_INVALID_ENUM generation (only reachable via raw casts through typed wrappers) | ES 3.0 §2.5 Table 2.3 | NOT_STARTED |  |
-| ES20.ERRORS.INVALID_VALUE | 2.0 | errors | GL_INVALID_VALUE generation (negative sizes/out-of-range indices) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-culling-front-face |
-| ES20.ERRORS.INVALID_OPERATION | 2.0 | errors | GL_INVALID_OPERATION generation (state-dependent misuse) | ES 3.0 §2.5 | NOT_STARTED |  |
+| ES20.ERRORS.INVALID_ENUM | 2.0 | errors | GL_INVALID_ENUM generation (only reachable via raw casts through typed wrappers) | ES 3.0 §2.5 Table 2.3 | FULLY_VALIDATED | es30-instancing, es30-vertex-array-objects |
+| ES20.ERRORS.INVALID_VALUE | 2.0 | errors | GL_INVALID_VALUE generation (negative sizes/out-of-range indices) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-culling-front-face, es30-instancing, es30-vertex-array-objects |
+| ES20.ERRORS.INVALID_OPERATION | 2.0 | errors | GL_INVALID_OPERATION generation (state-dependent misuse) | ES 3.0 §2.5 | FULLY_VALIDATED | es30-vertex-array-objects |
 | ES20.ERRORS.INVALID_FB_OP | 2.0 | errors | GL_INVALID_FRAMEBUFFER_OPERATION on incomplete framebuffer | ES 3.0 §4.4.4 | NOT_STARTED |  |
 | ES20.VIEWPORT | 2.0 | transform | glViewport mapping NDC->window; MAX_VIEWPORT_DIMS | ES 3.0 §2.13.1 | FULLY_VALIDATED | es20-clear-viewport-scissor |
 | ES20.DEPTH_RANGE | 2.0 | transform | glDepthRangef mapping of NDC z to window z | ES 3.0 §2.13.1 | FULLY_VALIDATED | es20-clear-viewport-scissor, es20-depth-test |
@@ -33,16 +33,16 @@
 | ES20.ATTRIB.ACTIVE_QUERY | 2.0 | vertex-input | glGetActiveAttrib enumeration (name/type/size) | ES 3.0 §2.12.5 | FULLY_VALIDATED | es20-vertex-attributes |
 | ES20.ATTRIB.CONSTANT | 2.0 | vertex-input | Current (constant) generic attribute values glVertexAttrib*f[v] | ES 3.0 §2.8 | FULLY_VALIDATED | es20-vertex-attributes |
 | ES20.ATTRIB.FORMATS | 2.0 | vertex-input | Attribute types BYTE/UBYTE/SHORT/USHORT/FLOAT/FIXED with normalized flag | ES 3.0 §2.9 Table 2.4 | FULLY_VALIDATED | es20-vertex-attributes |
-| ES20.ATTRIB.INTERLEAVED | 2.0 | vertex-input | Interleaved vs planar layouts; stride and offset | ES 3.0 §2.9 | FULLY_VALIDATED | es20-vertex-attributes |
-| ES20.ATTRIB.QUERY | 2.0 | vertex-input | glGetVertexAttrib*/glGetVertexAttribPointerv state queries | ES 3.0 §6.1.12 | FULLY_VALIDATED | es20-vertex-attributes |
+| ES20.ATTRIB.INTERLEAVED | 2.0 | vertex-input | Interleaved vs planar layouts; stride and offset | ES 3.0 §2.9 | FULLY_VALIDATED | es20-vertex-attributes, es30-vertex-array-objects |
+| ES20.ATTRIB.QUERY | 2.0 | vertex-input | glGetVertexAttrib*/glGetVertexAttribPointerv state queries | ES 3.0 §6.1.12 | FULLY_VALIDATED | es20-vertex-attributes, es30-vertex-array-objects |
 | ES20.ATTRIB.CLIENT_ARRAYS | 2.0 | vertex-input | Client-memory vertex arrays on the default VAO (legal only with VAO 0) | ES 3.0 §2.9 §2.11 | FULLY_VALIDATED | es20-vertex-attributes |
 | ES20.BUFFER.VBO | 2.0 | buffers | Vertex buffer objects (ARRAY_BUFFER) glGenBuffers/glBindBuffer/glBufferData | ES 3.0 §2.10 | FULLY_VALIDATED | es20-culling-front-face, es20-indexed-drawing, es20-primitive-topology, es20-vertex-attributes, es30-hello-triangle |
-| ES20.BUFFER.IBO | 2.0 | buffers | Index buffers (ELEMENT_ARRAY_BUFFER) with UBYTE/USHORT/UINT indices | ES 3.0 §2.10.7 | FULLY_VALIDATED | es20-indexed-drawing |
+| ES20.BUFFER.IBO | 2.0 | buffers | Index buffers (ELEMENT_ARRAY_BUFFER) with UBYTE/USHORT/UINT indices | ES 3.0 §2.10.7 | FULLY_VALIDATED | es20-indexed-drawing, es30-instancing |
 | ES20.BUFFER.SUBDATA | 2.0 | buffers | glBufferSubData partial updates | ES 3.0 §2.10.2 | FULLY_VALIDATED | es20-indexed-drawing |
 | ES20.BUFFER.REALLOC | 2.0 | buffers | glBufferData re-specification (orphaning) and size/usage queries | ES 3.0 §2.10.2 §6.1.9 | FULLY_VALIDATED | es20-indexed-drawing |
 | ES20.BUFFER.QUERY | 2.0 | buffers | glGetBufferParameteriv / glIsBuffer | ES 3.0 §6.1.9 | FULLY_VALIDATED | es20-indexed-drawing |
-| ES20.DRAW.ARRAYS | 2.0 | drawing | glDrawArrays | ES 3.0 §2.9.3 | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-indexed-drawing, es20-primitive-topology, es30-hello-triangle |
-| ES20.DRAW.ELEMENTS | 2.0 | drawing | glDrawElements with index buffer | ES 3.0 §2.9.3 | FULLY_VALIDATED | es20-indexed-drawing |
+| ES20.DRAW.ARRAYS | 2.0 | drawing | glDrawArrays | ES 3.0 §2.9.3 | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-indexed-drawing, es20-primitive-topology, es30-hello-triangle, es30-instancing, es30-vertex-array-objects |
+| ES20.DRAW.ELEMENTS | 2.0 | drawing | glDrawElements with index buffer | ES 3.0 §2.9.3 | FULLY_VALIDATED | es20-indexed-drawing, es30-instancing, es30-vertex-array-objects |
 | ES20.DRAW.TOPOLOGY | 2.0 | drawing | Primitive types POINTS/LINES/LINE_LOOP/LINE_STRIP/TRIANGLES/STRIP/FAN | ES 3.0 §2.7.1 | FULLY_VALIDATED | es20-primitive-topology |
 | ES20.DRAW.POINT_SIZE | 2.0 | drawing | gl_PointSize + ALIASED_POINT_SIZE_RANGE + gl_PointCoord | ES 3.0 §3.4 | FULLY_VALIDATED | es20-primitive-topology |
 | ES20.DRAW.LINE_WIDTH | 2.0 | drawing | glLineWidth + ALIASED_LINE_WIDTH_RANGE (only 1.0 guaranteed) | ES 3.0 §3.5 | FULLY_VALIDATED | es20-primitive-topology |
@@ -89,15 +89,15 @@
 | ES20.FLUSH_FINISH | 2.0 | sync | glFlush / glFinish | ES 3.0 §5.1 | NOT_STARTED |  |
 | ES20.LIGHTING.SHADER | 2.0 | shading | Shader-based lighting (directional/point/spot; Phong/Blinn-Phong) with normal matrix | n/a (composition) | NOT_STARTED |  |
 | ES20.CAMERA.MVP | 2.0 | shading | Model/view/projection matrices; perspective vs orthographic; camera movement | n/a (composition) | NOT_STARTED |  |
-| ES30.VAO.BASIC | 3.0 | vertex-input | Vertex array objects: gen/bind/delete/isVertexArray; per-VAO attribute state | ES 3.0 §2.11 | FULLY_VALIDATED | es20-culling-front-face, es20-vertex-attributes, es30-hello-triangle |
-| ES30.VAO.SWITCHING | 3.0 | vertex-input | Multiple VAOs with different configurations; ELEMENT_ARRAY_BUFFER is VAO state | ES 3.0 §2.11 | FULLY_VALIDATED | es20-indexed-drawing |
-| ES30.ATTRIB.INTEGER | 3.0 | vertex-input | glVertexAttribIPointer + ivec/uvec inputs; glVertexAttribI4*; glGetVertexAttribI* | ES 3.0 §2.8-2.9 | FULLY_VALIDATED | test-glsl300-builtins |
-| ES30.ATTRIB.PACKED | 3.0 | vertex-input | INT_2_10_10_10_REV / UNSIGNED_INT_2_10_10_10_REV and HALF_FLOAT attributes | ES 3.0 §2.9.2 | NOT_STARTED |  |
-| ES30.ATTRIB.DIVISOR | 3.0 | vertex-input | glVertexAttribDivisor per-instance attributes | ES 3.0 §2.9 | NOT_STARTED |  |
-| ES30.DRAW.INSTANCED | 3.0 | drawing | glDrawArraysInstanced / glDrawElementsInstanced + gl_InstanceID | ES 3.0 §2.9.3 | NOT_STARTED |  |
-| ES30.DRAW.RANGE_ELEMENTS | 3.0 | drawing | glDrawRangeElements + MAX_ELEMENTS_VERTICES/INDICES | ES 3.0 §2.9.3 | NOT_STARTED |  |
-| ES30.DRAW.PRIMITIVE_RESTART | 3.0 | drawing | PRIMITIVE_RESTART_FIXED_INDEX | ES 3.0 §2.9.3 | NOT_STARTED |  |
-| ES30.DRAW.MAX_ELEMENT_INDEX | 3.0 | drawing | MAX_ELEMENT_INDEX limit query | ES 3.0 §2.9.3 | NOT_STARTED |  |
+| ES30.VAO.BASIC | 3.0 | vertex-input | Vertex array objects: gen/bind/delete/isVertexArray; per-VAO attribute state | ES 3.0 §2.11 | FULLY_VALIDATED | es20-culling-front-face, es20-vertex-attributes, es30-hello-triangle, es30-vertex-array-objects |
+| ES30.VAO.SWITCHING | 3.0 | vertex-input | Multiple VAOs with different configurations; ELEMENT_ARRAY_BUFFER is VAO state | ES 3.0 §2.11 | FULLY_VALIDATED | es20-indexed-drawing, es30-vertex-array-objects |
+| ES30.ATTRIB.INTEGER | 3.0 | vertex-input | glVertexAttribIPointer + ivec/uvec inputs; glVertexAttribI4*; glGetVertexAttribI* | ES 3.0 §2.8-2.9 | FULLY_VALIDATED | es30-vertex-array-objects, test-glsl300-builtins |
+| ES30.ATTRIB.PACKED | 3.0 | vertex-input | INT_2_10_10_10_REV / UNSIGNED_INT_2_10_10_10_REV and HALF_FLOAT attributes | ES 3.0 §2.9.2 | FULLY_VALIDATED | es30-vertex-array-objects |
+| ES30.ATTRIB.DIVISOR | 3.0 | vertex-input | glVertexAttribDivisor per-instance attributes | ES 3.0 §2.9 | FULLY_VALIDATED | es30-instancing |
+| ES30.DRAW.INSTANCED | 3.0 | drawing | glDrawArraysInstanced / glDrawElementsInstanced + gl_InstanceID | ES 3.0 §2.9.3 | FULLY_VALIDATED | es30-instancing |
+| ES30.DRAW.RANGE_ELEMENTS | 3.0 | drawing | glDrawRangeElements + MAX_ELEMENTS_VERTICES/INDICES | ES 3.0 §2.9.3 | FULLY_VALIDATED | es30-instancing |
+| ES30.DRAW.PRIMITIVE_RESTART | 3.0 | drawing | PRIMITIVE_RESTART_FIXED_INDEX | ES 3.0 §2.9.3 | FULLY_VALIDATED | es30-instancing |
+| ES30.DRAW.MAX_ELEMENT_INDEX | 3.0 | drawing | MAX_ELEMENT_INDEX limit query | ES 3.0 §2.9.3 | FULLY_VALIDATED | es30-instancing |
 | ES30.BUFFER.MAP_RANGE | 3.0 | buffers | glMapBufferRange read/write + glUnmapBuffer + glGetBufferPointerv | ES 3.0 §2.10.3 | FULLY_VALIDATED | test-glsl300-builtins |
 | ES30.BUFFER.MAP_FLAGS | 3.0 | buffers | INVALIDATE_RANGE/INVALIDATE_BUFFER/UNSYNCHRONIZED semantics + illegal combinations | ES 3.0 §2.10.3 | NOT_STARTED |  |
 | ES30.BUFFER.FLUSH_EXPLICIT | 3.0 | buffers | MAP_FLUSH_EXPLICIT_BIT + glFlushMappedBufferRange | ES 3.0 §2.10.3 | NOT_STARTED |  |

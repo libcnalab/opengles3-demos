@@ -26,7 +26,7 @@ Result directories: build/debug/test-results
 | GLSL | total | passed | passed % | NOT_STARTED | FULLY_VALIDATED |
 |---|---|---|---|---|---|
 | 100 | 4 | 0 | 0% | 4 | 0 |
-| 300 | 51 | 36 | 71% | 15 | 36 |
+| 300 | 51 | 37 | 73% | 14 | 37 |
 | 310 | 23 | 17 | 74% | 6 | 17 |
 | 320 | 16 | 3 | 19% | 13 | 3 |
 
@@ -34,4 +34,4 @@ Result directories: build/debug/test-results
 
 | status | count |
 |---|---|
-| FULLY_VALIDATED | 58 |
+| FULLY_VALIDATED | 59 |

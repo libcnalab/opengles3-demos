@@ -56,11 +56,10 @@ cmake --build --preset debug --target coverage
 ## In flight (2026-11-11 16:30)
 
 Merged: 58 executables, 350/350 runs PASS, 329/358 entry points with evidence. That includes the 3D demos
-camera, normal mapping, post-processing, shadow mapping and deferred shading, and the ES 3.2 demos
+camera, lighting, normal mapping, post-processing, shadow mapping and deferred shading, and the ES 3.2 demos
 debug-output, float-targets-and-indexed-blend, texture-buffer and cube-map-array.
 meta-gl G8 (transpose = GL_TRUE) is fixed on its branch (`3bb7411`).
 Running Claude subagents (worktrees under .claude/worktrees/):
-- es30-lighting (backlog 41)
 - es32 geometry-shaders + layered-rendering (50+51)
 - es32 tessellation-domains + tessellation-terrain (52+53)
 - es32 multisample-array-and-border-color (56)

@@ -5,6 +5,7 @@ followed by feature IDs. Claim an item by moving it to "In progress" with the ag
 
 ## In progress
 - 3D compositions 40-45 (Claude subagents, batch 5)
+- ES 3.2 items 50+51, 52+53, 54+55, 58, 61 (Claude subagents, batch 6)
 
 ## Done
 All Stage 1–4 foundation demos listed as implemented in DEMO_CATALOG.md (merged 2026-11-11).
@@ -34,6 +35,21 @@ Batch 4 (2026-11-11): ES 3.1 items 21-34 merged (14 demos). Item 35 (glsl310 bui
 19. `es30/glsl-texture-functions` → GLSL300.FN.TEXTURE.* (textureLod/Grad/Offset/texelFetch/textureSize/Proj), GLSL300.FN.DERIVATIVES
 
 20. `tests/negative/driver-crash-readpixels-none` → run the Mesa crash case (READ_BUFFER NONE + integer attachment) in a child process; report crash as a known deviation, PASS when the driver raises INVALID_OPERATION
+
+## ES 3.2 (min_es "3.2", GLSL 320 es; softpipe runs automatically and must report SKIP_UNSUPPORTED)
+50. `es32/geometry-shaders` → ES32.GEOMETRY.BASIC, ES32.GEOMETRY.AMPLIFICATION, ES32.GEOMETRY.ADJACENCY; GLSL320.GEOMETRY.LAYOUT, GLSL320.GEOMETRY.BUILTINS, GLSL320.INTERFACE_BLOCKS_IO
+51. `es32/layered-rendering` → ES32.GEOMETRY.LAYERED (gl_Layer, glFramebufferTexture)
+52. `es32/tessellation-domains` → ES32.TESS.TRIANGLES, ES32.TESS.QUADS, ES32.TESS.ISOLINES, ES32.TESS.SPACING_WINDING, ES32.TESS.PATCH_PARAM; GLSL320.TESS.CONTROL, GLSL320.TESS.EVAL
+53. `es32/tessellation-terrain` → dynamic LOD 3D terrain, ES32.TESS.LIMITS, ES32.PRIMITIVE_BOUNDING_BOX; GLSL320.PRIMITIVE_BOUNDING_BOX
+54. `es32/texture-buffer` → ES32.TEXTURE.BUFFER; GLSL320.TEXTURE_BUFFER_FETCH (uses meta-gl BufferTarget::TextureBuffer, GetParameter::TextureBufferOffsetAlignment)
+55. `es32/cube-map-array` → ES32.TEXTURE.CUBE_ARRAY; GLSL320.TYPES.NEW_SAMPLERS
+56. `es32/multisample-array-and-border-color` → ES32.TEXTURE.MS_ARRAY, ES32.TEXTURE.BORDER_COLOR
+57. `es32/astc-and-copy-image` → ES32.TEXTURE.ASTC, ES32.TEXTURE.COPY_IMAGE
+58. `es32/float-targets-and-indexed-blend` → ES32.FBO.FLOAT_TARGETS, ES32.BLEND.INDEXED
+59. `es32/advanced-blend-and-sample-shading` → ES32.BLEND.ADVANCED, ES32.SAMPLE.SHADING, ES32.SAMPLE.INTERPOLATION; GLSL320.SAMPLE_VARS, GLSL320.FN.INTERPOLATE_AT, GLSL320.BLEND_EQUATION_LAYOUT
+60. `es32/base-vertex-and-robustness` → ES32.DRAW.BASE_VERTEX, ES32.ROBUST.RESET_STATUS, ES32.ROBUST.READN, ES32.ROBUST.BUFFER_ACCESS, ES32.CONTEXT.FLAGS
+61. `es32/debug-output` → ES32.DEBUG.OUTPUT, ES32.DEBUG.GROUPS, ES32.DEBUG.LABELS, ES32.DEBUG.POINTER
+62. `tests/glsl/glsl320-builtins` → GLSL320.FN.IMAGE_ATOMIC, GLSL320.FN.FMA, GLSL320.PRECISE (numeric, compute + SSBO)
 
 ## 3D compositions (prioritized by the owner on 2026-11-11: "I don't see 3D demos")
 Real 3D scenes: perspective camera, depth buffer, animation in windowed mode (time = frame/60),

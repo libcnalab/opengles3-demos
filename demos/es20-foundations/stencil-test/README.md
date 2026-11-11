@@ -23,7 +23,7 @@ The demo therefore **measures the stencil value with the stencil test itself**:
 
 ## The image
 
-Top part: a grid of 16 x 14 pixel cells. Each cell is cleared to a start value, receives one or more
+Top part: a grid of cells (16 x 14 pixels at the 256 x 256 design size). Each cell is cleared to a start value, receives one or more
 draws with the state under test, and is then read out; **red = the stencil value left behind**
 (teal = 0, salmon = 255). Bottom part: two classic uses.
 
@@ -125,8 +125,13 @@ which keeps the stripe index exact so that the CPU can predict every pixel.
   (front and back), `glStencilFuncSeparate`/`OpSeparate`/`MaskSeparate` touching only the named face,
   `ref` clamping on query, `glIsEnabled`, `glClearStencil`, plus a final `glGetError`.
 
-Run: `es20-stencil-test --headless --validate --capture out.png`. The layout scales by the integer
-factor `min(width, height) / 256`, so `--width 512 --height 512` works too.
+Run: `es20-stencil-test --headless --validate --capture out.png`. The layout is designed on a
+256 x 256 grid and stretched to the surface, independently in x and y: every design edge maps to
+`round(edge * size / 256)`, so neighbouring cells share their edges and the picture fills any surface
+(on a wide or tall surface the cells, the portal and the star are stretched; the probes are computed
+in the panel's NDC, so they follow). **Minimum surface: 64x64**; below that a cell is smaller than
+4 x 3.5 pixels and the visual panels are too coarse for the probe margins, and the demo reports
+`SKIP_UNSUPPORTED`.
 
 **Limits.** The readout is not independent of the stencil test: it measures with `EQUAL` and `KEEP`.
 If `EQUAL` were broken, the 125 cells would disagree with the CPU model in obvious ways, and the

@@ -79,14 +79,17 @@ is listed in `docs/KNOWN_LIMITATIONS.md`. Checks are never loosened to make a dr
   count as passed.
 
 ## Suite-wide assumptions beyond the normative text
-- **Multisample resolve is a convex combination of the samples.** ES 3.0 §4.3.3 says only that the samples are
-  "converted to a single sample" in an implementation-dependent manner. Three demos rely on the resolve being a
-  weighted average of the samples: es30-framebuffer-blit-msaa, es30-flat-centroid (resolved bands) and
-  es30-multisample-default-framebuffer (bounds, seam sums, coverage area). The checks that depend on it are:
-  - resolved values lie between the sample colours;
-  - a pixel whose samples are all equal resolves to that value.
-  Both READMEs state the assumption. A conformant implementation that resolves differently would fail these
-  checks without violating the spec.
+- **No assumption about the multisample resolve of normalized colors (removed 2026-11-11).** ES 3.0 §4.3.3 says that
+  "the sample values for each pixel are resolved in an implementation-dependent manner" for floating-point and
+  normalized formats, and §4.1.10 says of the window that "the method of combination is not specified" (an average is
+  only recommended). Neither guarantees that a resolved value lies between the samples, nor that a pixel whose samples
+  are all equal resolves to that value. es30-framebuffer-blit-msaa, es30-flat-centroid and
+  es30-multisample-default-framebuffer used to assert both; they now print those measurements as `note: observed ...`
+  lines and assert only what holds for any resolve: the integer and stencil rule ("a single sample's value is
+  selected"), the depth rule ("between the minimum and maximum depth values in the pixel") on pixels whose samples were
+  set by scissored clears, the filter being ignored, identical-bounds sub-rectangles equal to the whole resolve (a
+  resolved pixel is a function of that pixel's samples; Appendix A.1 repeatability), per-sample readback with
+  `texelFetch(gsampler2DMS)` in ES 3.1+ contexts, and per-sample stencil counts with occlusion queries.
 
 ## Coverage status definitions
 

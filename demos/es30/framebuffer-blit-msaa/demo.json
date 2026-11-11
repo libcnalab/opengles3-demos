@@ -3,13 +3,14 @@
   "title": "Framebuffer blits and multisample resolve",
   "min_es": "3.0",
   "glsl": [
-    "300 es"
+    "300 es",
+    "310 es"
   ],
   "category": "es30",
   "order": 280,
-  "summary": "glBlitFramebuffer between separate READ and DRAW framebuffers checked against one CPU model of the blit rule: color with NEAREST and LINEAR, 2x and 3:1 scaling, mirroring by swapped coordinates, sub-rectangles, clipping on both sides, the scissor test, write masks ignored; depth and stencil copies proven by depth- and stencil-tested draws; glReadBuffer picking the source and every draw buffer receiving the copy; multisample renderbuffers sized from glGetInternalformativ and resolved by a blit (exact interior, blended edge pixels, coverage equal to the triangle area); and the INVALID_OPERATION / INVALID_FRAMEBUFFER_OPERATION cases of ES 3.0 section 4.3.3.",
+  "summary": "glBlitFramebuffer between separate READ and DRAW framebuffers checked against one CPU model of the blit rule: color with NEAREST and LINEAR, 2x and 3:1 scaling, mirroring by swapped coordinates, sub-rectangles, clipping on both sides, the scissor test, write masks ignored; depth and stencil copies proven by depth- and stencil-tested draws; glReadBuffer picking the source and every draw buffer receiving the copy; multisample renderbuffers sized from glGetInternalformativ and resolved by a blit, asserting only what ES 3.0 section 4.3.3 defines (filter ignored, identical-bounds sub-rectangles, uniformly cleared depth/stencil resolving to their values, and in ES 3.1+ contexts an RGBA8UI resolve whose every pixel is one of its own samples read back with texelFetch(usampler2DMS)) while the implementation-dependent RGBA8 resolve is only observed; and the INVALID_OPERATION / INVALID_FRAMEBUFFER_OPERATION cases of ES 3.0 section 4.3.3.",
   "spec": [
-    "ES 3.0 §4.3.3 Copying Pixels (glBlitFramebuffer: rectangles and mirroring, NEAREST/LINEAR, clipping, scissor, masks ignored, format conversion, multisample resolve, every error condition)",
+    "ES 3.0 §4.3.3 Copying Pixels (glBlitFramebuffer: rectangles and mirroring, NEAREST/LINEAR, clipping, scissor, masks ignored, format conversion, every error condition; multisample resolve: integer and stencil \"a single sample's value is selected\", depth \"between the minimum and maximum depth values\", normalized \"implementation-dependent\"); ES 3.2 §16.2.1 for the same rules in ES 3.1+ contexts",
     "ES 3.0 §4.3.1 Selecting a Buffer for Reading, §4.3.2 Reading Pixels (SAMPLE_BUFFERS = 1 is INVALID_OPERATION)",
     "ES 3.0 §4.4.1 Binding and Managing Framebuffer Objects (READ_FRAMEBUFFER / DRAW_FRAMEBUFFER)",
     "ES 3.0 §4.4.2.1 Renderbuffer Objects (glRenderbufferStorageMultisample, RENDERBUFFER_SAMPLES), §4.4.2.2 Required Renderbuffer Formats",
@@ -17,10 +18,12 @@
     "ES 3.0 §6.1.15 Internal Format Queries (glGetInternalformativ: NUM_SAMPLE_COUNTS, SAMPLES); ES 3.1 §19.3 / ES 3.2 §20.3 for integer formats in newer contexts",
     "ES 3.0 §4.1.2 Scissor Test, §4.1.4 Stencil Test, §4.1.5 Depth Buffer Test, §4.2.2 Fine Control of Buffer Updates, §4.2.3 Clearing the Buffers",
     "ES 3.0 §2.1.6.2 Conversion from Floating-Point to Normalized Fixed-Point (equation 2.3), §2.5 GL Errors",
-    "GLSL ES 3.00 §4.3.8.2 Output Layout Qualifiers, §5.1 Operators (bitwise), §7.1 gl_VertexID, §7.2 gl_FragCoord"
+    "GLSL ES 3.00 §4.3.8.2 Output Layout Qualifiers, §5.1 Operators (bitwise), §7.1 gl_VertexID, §7.2 gl_FragCoord",
+    "ES 3.0 §4.2.3.1 Clearing the Multisample Buffer (scissored clears set every sample of a pixel), Appendix A.1 Repeatability",
+    "ES 3.2 §8.8 Multisample Textures (glTexStorage2DMultisample), §11.1.3.3 Multisample Texel Fetches; GLSL ES 3.10 §8.9.2 texelFetch(gsampler2DMS), §4.7.4 (no default precision for usampler2DMS), §1.1 (one language version per program) - ES 3.1+ contexts only"
   ],
   "api": {
-    "glBlitFramebuffer": "color 1:1, sub-rectangle, 2x and 3:1 NEAREST, 2x and 2:1 LINEAR, mirrored in x / y / both, both-swapped (no reversal), destination and source clipped, scissored, with all color writes masked: the whole destination equals a CPU model (NEAREST exact, LINEAR +-2); depth and stencil copied 1:1, 2x, mirrored, one at a time, with failing write masks and tests active: probed with depth- and stencil-tested draws; multisample resolve (NEAREST and LINEAR identical, sub-rectangle); mask 0 copies nothing; INVALID_OPERATION for LINEAR with depth/stencil (nothing copied), DEPTH24_STENCIL8 -> DEPTH_COMPONENT16, resolve with scaling / translation / mirroring (nothing copied), multisample -> RGB565, multisample draw framebuffer, identical buffers, integer/fixed-point/signed/unsigned mismatches, LINEAR on integer data; INVALID_FRAMEBUFFER_OPERATION for an incomplete read or draw framebuffer; missing buffers are ignored silently",
+    "glBlitFramebuffer": "color 1:1, sub-rectangle, 2x and 3:1 NEAREST, 2x and 2:1 LINEAR, mirrored in x / y / both, both-swapped (no reversal), destination and source clipped, scissored, with all color writes masked: the whole destination equals a CPU model (NEAREST exact, LINEAR +-2); depth and stencil copied 1:1, 2x, mirrored, one at a time, with failing write masks and tests active: probed with depth- and stencil-tested draws; multisample resolve: LINEAR identical to NEAREST, identical-bounds sub-rectangle equal to the whole resolve with the rest untouched, uniformly cleared depth/stencil resolved to exactly their values (probed), RGBA8UI resolve (ES 3.1+) equal in every pixel to one of its own samples (texelFetch per sample); RGBA8 resolved values only observed; mask 0 copies nothing; INVALID_OPERATION for LINEAR with depth/stencil (nothing copied), DEPTH24_STENCIL8 -> DEPTH_COMPONENT16, resolve with scaling / translation / mirroring (nothing copied), multisample -> RGB565, multisample draw framebuffer, identical buffers, integer/fixed-point/signed/unsigned mismatches, LINEAR on integer data; INVALID_FRAMEBUFFER_OPERATION for an incomplete read or draw framebuffer; missing buffers are ignored silently",
     "glBindFramebuffer": "READ_FRAMEBUFFER and DRAW_FRAMEBUFFER bound to different objects: glReadPixels reads one and glClear writes the other, READ/DRAW/FRAMEBUFFER binding queries, FRAMEBUFFER sets both",
     "glReadBuffer": "COLOR_ATTACHMENT1 / 2 select the blit source (copy equals that chart); READ_BUFFER is per framebuffer object",
     "glDrawBuffers": "{C0, NONE, C2} receives the copy in C0 and C2 and leaves C1 untouched",
@@ -42,13 +45,13 @@
     "glReadPixels": "RGBA/UNSIGNED_BYTE readback of every compared image, RGBA_INTEGER/UNSIGNED_INT readback of the integer fixtures; INVALID_OPERATION from a multisample framebuffer",
     "glClear": "COLOR/DEPTH/STENCIL of the destinations and scenes; the separate-binding test shows it writes the DRAW framebuffer only",
     "glClearColor": "sentinel and scene colors, observed in the read-back images",
-    "glClearDepthf": "depth 1 in the cleared targets: probed with tested draws",
-    "glClearStencil": "stencil 0 in the cleared targets: probed with tested draws",
+    "glClearDepthf": "depth 1 in the cleared targets and the region depths of the scissored multisample scene: probed with tested draws",
+    "glClearStencil": "stencil 0 in the cleared targets and the region values of the scissored multisample scene: probed with tested draws",
     "glClearBufferfv": "per-attachment sentinel colors of the destination, read back",
-    "glClearBufferuiv": "unsigned integer fixtures (whole target and a scissored block): the integer blit copies them exactly",
+    "glClearBufferuiv": "unsigned integer fixtures (whole target and a scissored block): the integer blit copies them exactly; the RGBA8UI multisample texture cleared to the background value, found in every uncovered sample by texelFetch",
     "glEnable": "SCISSOR_TEST, DEPTH_TEST and STENCIL_TEST: scissor limits a blit; the tests are the probes",
     "glDisable": "the tests restored; the blit model without the scissor is shown to differ",
-    "glScissor": "the box (20,30)-(60,55) limits the 2x blit to exactly that box",
+    "glScissor": "the box (20,30)-(60,55) limits the 2x blit to exactly that box; scissored clears write the multisample depth/stencil scene (resolved and probed region by region)",
     "glColorMask": "all four channels masked during a blit: the blit still writes every pixel",
     "glDepthMask": "FALSE during a blit (still copies); FALSE in every probe pass (probes leave depth unchanged)",
     "glStencilMask": "0 during a blit (still copies)",
@@ -63,7 +66,10 @@
     "glUniform2fv": "u_tri[3]: the triangle's corners; classified pixels match its geometry",
     "glDrawArrays": "TRIANGLE_STRIP quads and the TRIANGLES triangle from gl_VertexID",
     "glGetIntegerv": "READ/DRAW_FRAMEBUFFER_BINDING, FRAMEBUFFER_BINDING, READ_BUFFER, SAMPLES, SAMPLE_BUFFERS, MAX_SAMPLES",
-    "glDeleteProgram": "cleanup, final glGetError == NO_ERROR"
+    "glDeleteProgram": "cleanup, final glGetError == NO_ERROR",
+    "glTexStorage2DMultisample": "ES 3.1+ contexts: RGBA8UI 2D multisample texture with the largest reported count; framebuffer complete with SAMPLE_BUFFERS 1 and SAMPLES >= the request; every sample read back with texelFetch holds the cleared or the drawn value; resolved by a blit",
+    "glUniform4ui": "u_value of the integer triangle: found exactly in the covered samples of the RGBA8UI multisample texture",
+    "glUniform1i": "u_sample selects the sample texelFetch reads (each pass returns a different sample image) and u_ms the texture unit"
   },
   "features": [
     "ES30.FBO.BLIT",

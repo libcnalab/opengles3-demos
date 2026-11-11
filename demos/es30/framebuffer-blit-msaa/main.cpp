@@ -18,8 +18,12 @@
 //     ignored; pixels outside the written region must keep their previous values exactly;
 //   * glReadBuffer picks the source attachment and every draw buffer receives the copy;
 //   * depth and stencil blits are proven through depth- and stencil-tested draws on the copy;
-//   * the multisample resolve: interior pixels exact, edge pixels strictly between the two colours, total
-//     coverage equal to the triangle's area; a single-sample render of the same triangle is the control;
+//   * the multisample resolve, asserted only where the specification defines it: the filter is ignored, an
+//     identical-bounds sub-rectangle resolves just that rectangle, uniformly cleared depth and stencil resolve to
+//     their values ("between the minimum and maximum depth", "a single sample's value is selected"), and - in
+//     ES 3.1+ contexts - every pixel of an RGBA8UI resolve equals one of its own samples, which are read back
+//     one by one with texelFetch(usampler2DMS). The RGBA8 resolve of the triangle is implementation-dependent
+//     (ES 3.0 4.3.3): its blends, bounds and coverage are printed as observations, not asserted;
 //   * the errors ES 3.0 4.3.3 defines (LINEAR with depth/stencil, format mismatches, resolve with
 //     scaling / translation / mirroring, multisample draw framebuffer, identical buffers, ...);
 //   * glGetInternalformativ (NUM_SAMPLE_COUNTS / SAMPLES) and allocation with the largest count.
@@ -630,6 +634,7 @@ namespace
             check_internalformat_queries(env, check);
             check_multisample_resolve(check);
             check_multisample_depth_stencil(check);
+            check_integer_resolve(env, check);
             check_blit_errors(check);
 
             bind_both(kDefaultFbo);
@@ -775,6 +780,28 @@ namespace
             {
                 mgl::glStencilFunc(mgl::CompareFunc::Always, r.stencil, 0xFFu);
                 draw_rect(r.rect, kSrc, ndc_depth(r.depth), r.color);
+            }
+            reset_fragment_state();
+        }
+
+        /// The same scene as draw_ds_scene(), written with scissored clears: every sample of a pixel gets the value of the
+        /// region that contains the pixel (ES 3.0 4.2.3.1).
+        void clear_ds_scene(int size) const
+        {
+            reset_fragment_state();
+            mgl::glViewport(0, 0, size, size);
+            mgl::glClearColor(kSceneBackground[0], kSceneBackground[1], kSceneBackground[2], kSceneBackground[3]);
+            mgl::glClearDepthf(1.0f);
+            mgl::glClearStencil(0);
+            mgl::glClear(kColorBit | kDepthBit | kStencilBit);
+            mgl::glEnable(mgl::Capability::ScissorTest);
+            for (const SceneRegion& r : kRegions)
+            {
+                mgl::glScissor(r.rect.x0, r.rect.y0, r.rect.x1 - r.rect.x0, r.rect.y1 - r.rect.y0);
+                mgl::glClearColor(r.color[0], r.color[1], r.color[2], r.color[3]);
+                mgl::glClearDepthf(static_cast<float>(r.depth));
+                mgl::glClearStencil(r.stencil);
+                mgl::glClear(kColorBit | kDepthBit | kStencilBit);
             }
             reset_fragment_state();
         }
@@ -1578,30 +1605,29 @@ namespace
             check.expect(demo::get_integer(mgl::GetParameter::Samples) == 0 && demo::get_integer(mgl::GetParameter::SampleBuffers) == 0,
                          "a texture-backed framebuffer has SAMPLE_BUFFERS = 0 and SAMPLES = 0");
 
-            // The resolved image.
+            // The resolved image. ES 3.0 4.3.3: "If the source formats are floating-point or normalized types, the sample values
+            // for each pixel are resolved in an implementation-dependent manner." Nothing about the value of a resolved RGBA8
+            // pixel is guaranteed - not even that a pixel whose samples are all equal resolves to that value - so everything
+            // measured on the resolved triangle is printed as an observation, not asserted.
             const TriangleStats ms = analyze_triangle(res_img_);
             const TriangleStats control = analyze_triangle(ss_img_);
             const Triangle tri;
-            std::cout << std::format("   note: {} samples; {} interior, {} exterior, {} edge pixels; {} of {} centred edge pixels strictly between; coverage {:.1f} of area {:.1f}\n",
-                                     samples, ms.interior, ms.exterior, ms.edge, ms.centered_strictly_between, ms.centered, ms.covered_area, tri.area());
-            check.expect(ms.interior > 5000 && ms.exterior > 5000 && ms.edge > 200, "the triangle splits the image into plenty of interior, exterior and edge pixels",
-                         std::format("{} / {} / {}", ms.interior, ms.exterior, ms.edge));
-            check.expect(ms.interior_bad == 0, "resolved interior pixels equal the triangle color (tolerance 1)", std::format("{} of {} differ", ms.interior_bad, ms.interior));
-            check.expect(ms.exterior_bad == 0, "resolved exterior pixels equal the background color (tolerance 1)", std::format("{} of {} differ", ms.exterior_bad, ms.exterior));
-            check.expect(ms.edge_outside_range == 0, "no resolved edge pixel lies outside the closed range between the two colors in any channel",
-                         std::format("{} of {} outside", ms.edge_outside_range, ms.edge));
-            check.expect(ms.centered > 20 && ms.centered_strictly_between == ms.centered,
-                         "edge pixels whose centre is on an edge are strictly between the two colors (a blend of covered and uncovered samples)",
-                         std::format("{} of {}", ms.centered_strictly_between, ms.centered));
-            // Each edge pixel's coverage is a multiple of 1/samples and wrong by up to ~0.25 against the exact area, but the
-            // errors have both signs: over ~440 edge pixels they cancel to well below 0.5% of the area (about 28 pixels).
-            check.expect_near(ms.covered_area, tri.area(), 0.005 * tri.area(),
-                              "interior pixels + the sum of the resolved coverage of the edge pixels equals the triangle's area (within 0.5%: the samples average out)");
-            // Negative control: the same triangle in a single-sample target has no blended pixel, so the checks above must reject it.
-            check.expect(control.interior_bad == 0 && control.exterior_bad == 0, "control: the single-sample image has exact interior and exterior pixels too");
-            check.expect(control.intermediate == 0 && control.centered_strictly_between == 0 && ms.intermediate > 50,
-                         "negative control: the single-sample render of the same triangle has no blended pixel, the multisample resolve has many",
-                         std::format("single-sample {}, multisample {}", control.intermediate, ms.intermediate));
+            std::cout << std::format("   note: observed RGBA8 resolve ({} samples, implementation-dependent, not asserted): interior pixels off the triangle color "
+                                     "by more than 1: {} of {}; exterior pixels off the background: {} of {}; edge pixels outside the range of the two colors: "
+                                     "{} of {}; edge pixels strictly between the colors: {} ({} of {} centred on an edge); summed coverage {:.1f} for a "
+                                     "triangle area of {:.1f} ({:+.3f}%)\n",
+                                     samples, ms.interior_bad, ms.interior, ms.exterior_bad, ms.exterior, ms.edge_outside_range, ms.edge, ms.intermediate,
+                                     ms.centered_strictly_between, ms.centered, ms.covered_area, tri.area(), 100.0 * (ms.covered_area - tri.area()) / tri.area());
+            // The single-sample control is fully specified: point sampling at the pixel centre (ES 3.0 3.6.1) and a flat color.
+            check.expect(control.interior > 5000 && control.exterior > 5000 && control.edge > 200,
+                         "the triangle splits the 128 x 128 target into plenty of interior, exterior and edge pixels (CPU classification)",
+                         std::format("{} / {} / {}", control.interior, control.exterior, control.edge));
+            check.expect(control.interior_bad == 0 && control.exterior_bad == 0,
+                         "single-sample render of the triangle: interior pixels equal the triangle color, exterior pixels the background (tolerance 1)",
+                         std::format("{} interior and {} exterior pixels differ", control.interior_bad, control.exterior_bad));
+            check.expect(control.intermediate == 0 && control.centered_strictly_between == 0,
+                         "single-sample render of the triangle: no pixel is a blend (each pixel centre is either covered or not)",
+                         std::format("{} blended pixels", control.intermediate));
 
             // The filter is ignored when resolving (4.3.3): LINEAR gives the same image as NEAREST.
             clear_target(res_);
@@ -1629,12 +1655,18 @@ namespace
                          [&] { mgl::glReadPixels(0, 0, 1, 1, mgl::PixelFormat::Rgba, mgl::PixelType::UnsignedByte, px.data()); });
         }
 
-        // A depth/stencil resolve. Every pixel of the scene lies in one region, so all of its samples hold the same
-        // value: any resolve ("between the minimum and maximum depth", "a single sample's value" for stencil) gives it.
+        // A depth/stencil resolve (ES 3.0 4.3.3): "If the source formats are integer types or stencil values, a single sample's
+        // value is selected for each pixel. [...] If the source formats are depth values, sample values are resolved in an
+        // implementation-dependent manner where the result will be between the minimum and maximum depth values in the pixel."
+        // Both rules pin the result down exactly when all samples of a pixel are equal. The scene is therefore written with
+        // scissored clears, not with draws: the scissor test selects whole pixels, and "masking and scissoring affect clearing
+        // the multisample buffer in the same way as they affect clearing the corresponding color, depth, and stencil buffers"
+        // (4.2.3.1), so every sample of a pixel receives its region's value whatever the sample locations are (3.3 allows them
+        // outside the pixel square, which would make a drawn rectangle's border pixels mixed).
         void check_multisample_depth_stencil(demo::Check& check)
         {
             bind_both(ds_ms_);
-            draw_ds_scene(kSrc);
+            clear_ds_scene(kSrc);
             reset_ds_target(ds_res_);
             bind_pair(ds_ms_, ds_res_);
             (void)demo::drain_gl_errors();
@@ -1644,10 +1676,191 @@ namespace
             DsImage want(kSrc, kSrc);
             for (int y = 0; y < kSrc; ++y)
                 for (int x = 0; x < kSrc; ++x) want.at(x, y) = scene_pixel(x, y);
-            expect_bits(check, "resolved depth and stencil equal the scene (probed with tested draws)", got.bits, expected_bits(want));
-            expect_image(check, "resolved color equals the scene color (tolerance 1)", got.color, ds_src_img_, 1);
+            expect_bits(check, "resolved depth and stencil of the uniformly cleared regions equal the scene (probed with tested draws)", got.bits, expected_bits(want));
             check.expect(count_mismatches(got.bits, expected_bits(DsImage(kSrc, kSrc))) > 1500,
                          "negative control: the resolved buffer differs from a cleared one in over 1500 pixels");
+            // The RGBA8 color of the same pixels is a normalized format: its resolve is implementation-dependent, even here.
+            const Diff color = compare(got.color, ds_src_img_, 1);
+            std::cout << std::format("   note: observed RGBA8 resolve of uniformly cleared pixels (implementation-dependent, not asserted): {} of {} pixels differ "
+                                     "from the region color by more than 1 (max {})\n",
+                                     color.bad, kSrc * kSrc, color.max_error);
+        }
+
+        // ------------------------------------------------------------------------------------------
+        // The integer resolve, with every sample read back (ES 3.1+ contexts).
+        //
+        // ES 3.0 4.3.3 (ES 3.2 16.2.1): "If the source formats are integer types or stencil values, a single sample's value is
+        // selected for each pixel." This is the one color resolve the specification pins down. ES 3.0 has no multisample integer
+        // images, so the check needs ES 3.1: the triangle goes into an RGBA8UI multisample *texture*, texelFetch(usampler2DMS,
+        // texel, sample) reads every stored sample into a single-sample target (no resolve involved), and the blit resolve of the
+        // same texture must give, in every pixel, the value of one of that pixel's samples. Nothing here depends on where the
+        // samples lie, how many of them an edge covers, or how normalized colors are combined.
+        void check_integer_resolve(const demo::Env& env, demo::Check& check)
+        {
+            if (env.context_version < demo::Version{3, 1})
+            {
+                std::cout << "   note: ES 3.0 context: multisample integer images and texelFetch(usampler2DMS) are ES 3.1, the integer resolve check is not made\n";
+                return;
+            }
+            GLint n = 0;
+            mgl::glGetInternalformativ(mgl::InternalFormatTarget::Texture2DMultisample, mgl::InternalFormat::Rgba8UI, mgl::InternalFormatParameter::NumSampleCounts, 1, &n);
+            std::vector<GLint> counts(static_cast<std::size_t>(std::max(n, 0)));
+            if (n > 0)
+                mgl::glGetInternalformativ(mgl::InternalFormatTarget::Texture2DMultisample, mgl::InternalFormat::Rgba8UI, mgl::InternalFormatParameter::Samples, n,
+                                           counts.data());
+            if (counts.empty() || counts.front() < 2)
+            {
+                std::cout << "   note: RGBA8UI multisample textures offer fewer than 2 samples here, the integer resolve check is not made\n";
+                return;
+            }
+            const int requested = counts.front();
+
+            // Targets: the multisample texture, its resolve target and the target that receives one sample per pass.
+            const mgl::FramebufferId ms = make_fbo();
+            mgl::TextureId ms_tex;
+            mgl::glGenTextures(1, &ms_tex);
+            textures_.push_back(ms_tex);
+            mgl::glBindTexture(mgl::TextureBindingTarget::Texture2DMultisample, ms_tex);
+            mgl::glTexStorage2DMultisample(mgl::TextureTarget::Texture2DMultisample, requested, mgl::SizedInternalFormat::Rgba8UI, kDst, kDst, GL_TRUE);
+            mgl::glFramebufferTexture2D(mgl::FramebufferTarget::Framebuffer, mgl::to_framebuffer_attachment(mgl::ColorAttachment::Color0),
+                                        mgl::TextureTarget::Texture2DMultisample, ms_tex, 0);
+            require_complete("RGBA8UI multisample texture");
+            const int samples = demo::get_integer(mgl::GetParameter::Samples);
+            check.expect(demo::get_integer(mgl::GetParameter::SampleBuffers) == 1 && samples >= requested,
+                         std::format("RGBA8UI multisample texture framebuffer: SAMPLE_BUFFERS = 1, SAMPLES = {} >= {} requested", samples, requested));
+            const mgl::FramebufferId resolved = make_fbo();
+            attach_texture(mgl::ColorAttachment::Color0, make_texture(mgl::SizedInternalFormat::Rgba8UI, kDst, kDst));
+            require_complete("RGBA8UI resolve target");
+            const mgl::FramebufferId fetched = make_fbo();
+            attach_texture(mgl::ColorAttachment::Color0, make_texture(mgl::SizedInternalFormat::Rgba8UI, kDst, kDst));
+            require_complete("RGBA8UI per-sample target");
+
+            // Background and triangle values differ by far more than 1 in every channel (the negative control relies on it).
+            const std::array<GLuint, 4> bg = {10, 20, 30, 40};
+            const std::array<GLuint, 4> fg = {200, 150, 100, 250};
+            bind_both(ms);
+            reset_fragment_state();
+            mgl::glViewport(0, 0, kDst, kDst);
+            mgl::glClearBufferuiv(mgl::UnsignedIntegerClearBuffer::Color, 0, bg.data());
+            const mgl::ProgramId tri_uint = demo::build_program(env, "shaders/tri.vert", "shaders/flat_uint.frag");
+            mgl::glUseProgram(tri_uint);
+            mgl::glUniform2fv(mgl::glGetUniformLocation(tri_uint, "u_tri"), 3, kTriangle.data());
+            mgl::glUniform1f(mgl::glGetUniformLocation(tri_uint, "u_size"), static_cast<float>(kDst));
+            mgl::glUniform4ui(mgl::glGetUniformLocation(tri_uint, "u_value"), fg[0], fg[1], fg[2], fg[3]);
+            mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 3);
+            mgl::glUseProgram(mgl::ProgramId{0});
+            mgl::glDeleteProgram(tri_uint);
+
+            // The resolve.
+            bind_pair(ms, resolved);
+            (void)demo::drain_gl_errors();
+            blit({0, 0, kDst, kDst}, {0, 0, kDst, kDst}, kColorBit, kNearest);
+            check.expect_no_gl_error("resolve blit of the RGBA8UI multisample texture into an RGBA8UI texture (NEAREST) raises no error");
+            const std::vector<std::uint32_t> res = read_uint_image(resolved, kDst);
+
+            // Every sample, one pass per sample index.
+            const mgl::ProgramId fetch = demo::build_program(env, "shaders/fetch_ms.vert", "shaders/fetch_ms.frag");
+            mgl::glUseProgram(fetch);
+            mgl::glUniform1i(mgl::glGetUniformLocation(fetch, "u_ms"), 0);
+            const mgl::UniformLocation u_sample = mgl::glGetUniformLocation(fetch, "u_sample");
+            mgl::glActiveTexture(mgl::TextureUnit::Texture0);
+            mgl::glBindTexture(mgl::TextureBindingTarget::Texture2DMultisample, ms_tex);
+            std::vector<std::vector<std::uint32_t>> per_sample;
+            for (int s = 0; s < samples; ++s)
+            {
+                bind_both(fetched);
+                mgl::glViewport(0, 0, kDst, kDst);
+                mgl::glUniform1i(u_sample, s);
+                mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 3);
+                per_sample.push_back(read_uint_image(fetched, kDst));
+            }
+            mgl::glBindTexture(mgl::TextureBindingTarget::Texture2DMultisample, mgl::TextureId{0});
+            mgl::glUseProgram(mgl::ProgramId{0});
+            mgl::glDeleteProgram(fetch);
+            check.expect_no_gl_error("drawing the triangle into the RGBA8UI multisample texture and fetching its samples raise no error");
+
+            using U4 = std::array<std::uint32_t, 4>;
+            auto value_at = [](const std::vector<std::uint32_t>& img, std::size_t pixel) {
+                return U4{img[4 * pixel], img[4 * pixel + 1], img[4 * pixel + 2], img[4 * pixel + 3]};
+            };
+            const U4 bg32 = {bg[0], bg[1], bg[2], bg[3]}, fg32 = {fg[0], fg[1], fg[2], fg[3]};
+            // "Is v the value of one of the samples of pixel p?" - the property the specification requires of the resolve.
+            auto is_a_sample = [&](std::size_t p, const U4& v) {
+                for (const auto& img : per_sample)
+                    if (value_at(img, p) == v) return true;
+                return false;
+            };
+
+            const std::size_t pixels = static_cast<std::size_t>(kDst) * static_cast<std::size_t>(kDst);
+            int foreign = 0, fg_samples = 0, bg_samples = 0, mixed = 0, uniform = 0, bad = 0;
+            std::vector<int> picked(per_sample.size(), 0);
+            std::string first_bad;
+            for (std::size_t p = 0; p < pixels; ++p)
+            {
+                int covered = 0;
+                for (const auto& img : per_sample)
+                {
+                    const U4 v = value_at(img, p);
+                    covered += v == fg32 ? 1 : 0;
+                    fg_samples += v == fg32 ? 1 : 0;
+                    bg_samples += v == bg32 ? 1 : 0;
+                    foreign += v != fg32 && v != bg32 ? 1 : 0;
+                }
+                const bool is_mixed = covered > 0 && covered < samples;
+                mixed += is_mixed ? 1 : 0;
+                uniform += is_mixed ? 0 : 1;
+                const U4 r = value_at(res, p);
+                if (!is_a_sample(p, r) && bad++ == 0)
+                    first_bad = std::format("pixel ({},{}) resolved to ({},{},{},{})", p % kDst, p / kDst, r[0], r[1], r[2], r[3]);
+                if (is_mixed)
+                    for (std::size_t s = 0; s < per_sample.size(); ++s) picked[s] += value_at(per_sample[s], p) == r ? 1 : 0;
+            }
+            check.expect(foreign == 0 && fg_samples > 0 && bg_samples > 0,
+                         "every stored sample (texelFetch per sample) is exactly the cleared background or the triangle's value, and both occur",
+                         std::format("{} triangle samples, {} background samples, {} other", fg_samples, bg_samples, foreign));
+            check.expect(bad == 0, "integer resolve: every resolved pixel equals the value of one of its own samples ('a single sample's value is selected')",
+                         bad == 0 ? std::format("{} pixels ({} with mixed samples, {} with all samples equal)", pixels, mixed, uniform)
+                                  : std::format("{} of {} pixels violate it, {}", bad, pixels, first_bad));
+            // Negative control: the same test rejects a value that is not one of the samples. Every resolved value shifted by one
+            // in red is neither the background nor the triangle value, so the test must reject every pixel.
+            int rejected = 0;
+            for (std::size_t p = 0; p < pixels; ++p)
+            {
+                U4 r = value_at(res, p);
+                r[0] += 1;
+                rejected += is_a_sample(p, r) ? 0 : 1;
+            }
+            check.expect(rejected == static_cast<int>(pixels), "negative control: resolved values shifted by one in red are rejected in every pixel",
+                         std::format("{} of {}", rejected, pixels));
+            // An averaging resolve would be rejected wherever the samples differ. How many such pixels exist depends on the
+            // implementation-dependent sample locations, so this is printed, not asserted.
+            int mean_rejected = 0;
+            for (std::size_t p = 0; p < pixels; ++p)
+            {
+                U4 mean{};
+                for (std::size_t c = 0; c < 4; ++c)
+                {
+                    std::uint32_t sum = 0;
+                    for (const auto& img : per_sample) sum += img[4 * p + c];
+                    mean[c] = (sum + static_cast<std::uint32_t>(samples) / 2) / static_cast<std::uint32_t>(samples);
+                }
+                mean_rejected += is_a_sample(p, mean) ? 0 : 1;
+            }
+            std::string picks;
+            for (const int k : picked) picks += std::format(" {}", k);
+            std::cout << std::format("   note: observed integer resolve ({} samples): {} pixels with mixed samples; a per-channel mean would be rejected in {} "
+                                     "of them; in the mixed pixels the resolved value equals sample 0..{} this often:{}\n",
+                                     samples, mixed, mean_rejected, samples - 1, picks);
+            bind_both(kDefaultFbo);
+        }
+
+        static std::vector<std::uint32_t> read_uint_image(mgl::FramebufferId f, int size)
+        {
+            bind_read(f);
+            mgl::glReadBuffer(mgl::to_read_buffer(mgl::ColorAttachment::Color0));
+            std::vector<std::uint32_t> px(static_cast<std::size_t>(size) * static_cast<std::size_t>(size) * 4);
+            mgl::glReadPixels(0, 0, size, size, mgl::PixelFormat::RgbaInteger, mgl::PixelType::UnsignedInt, px.data());
+            return px;
         }
 
         // ------------------------------------------------------------------------------------------

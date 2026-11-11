@@ -68,7 +68,7 @@ The surface is a 2 × 2 grid of panels at any window size:
 
 ## How it is validated
 
-Run `./build/debug/bin/es30-flat-centroid --headless --validate`. The demo records 53 checks.
+Run `./build/debug/bin/es30-flat-centroid --headless --validate`. The demo records 45 checks.
 
 **Flat shading.** The landscape is drawn a second time into a 128 × 128 `RGBA32UI` target.
 Each pixel stores `gl_VertexID`, the flat `uint`, the bits of the flat `float` and the bits of
@@ -125,16 +125,27 @@ stencil test `NOTEQUAL 1`, which must be FALSE. The checks:
   The single-sample FBO reports 0 and 0, and there coverage value 0, value 1 inverted,
   alpha-to-coverage with alpha 0 and value 0.5 all change nothing. Every pixel is written,
   checked by exact readback and stencil count;
-* the endpoint bands of the resolved band image are exact. All their samples hold one value, so
-  the resolve has nothing to combine. The coverage panel and both zoom panels must show the
-  resolved texels they magnify: on the single-sample default framebuffer the pixel centre
-  selects exactly one texel;
+* the coverage panel and both zoom panels must show the resolved texels they magnify. They are
+  compared with the resolved images read back from their textures, so the check holds whatever
+  the resolve produced: on the single-sample default framebuffer the pixel centre selects exactly
+  one texel (the demo confirms `SAMPLE_BUFFERS` 0 for the window first and skips the window
+  probes otherwise);
 * errors: `glBlitFramebuffer` into a multisample draw framebuffer and `glReadPixels` from a
   multisample FBO both generate `INVALID_OPERATION`.
 
-The resolved coverage curves (17 values each) are printed, not asserted, because §4.3.3 makes
-the resolve implementation-dependent. On all three drivers they rise in steps of 1/4 for
-`glSampleCoverage` and in 1/16 steps (dithered) for alpha-to-coverage.
+**Observed, not asserted.** Every *resolved* value is printed as a `note:` line and never
+asserted. ES 3.0 §4.3.3: "If the source formats are floating-point or normalized types, the
+sample values for each pixel are resolved in an implementation-dependent manner." The
+specification does not say that the result lies between the sample colours, that it is their
+average, or even that a pixel whose samples all hold one colour resolves to that colour. So the
+eight endpoint bands of the band image (value 0 and 1, inverted, complementary pairs,
+alpha-to-coverage 0 and 1) are reported as "8 of 8 bands show the colour their samples were
+given" (true on radeonsi, llvmpipe and zink), and the resolved coverage curves (17 values each)
+are printed: on all three drivers they rise in steps of 1/4 for `glSampleCoverage` and in 1/16
+steps (dithered) for alpha-to-coverage. What the endpoint bands show is asserted per sample, with
+no resolve involved, by the occlusion-query and stencil checks above. (Earlier versions of this
+demo asserted the endpoint bands as exact. That relied on an assumption the specification does
+not make.)
 
 ## Pitfalls
 
@@ -143,8 +154,8 @@ the resolve implementation-dependent. On all three drivers they rise in steps of
   surfaces. So all multisampling happens in renderbuffers, which ES 3.0 guarantees up to
   `MAX_SAMPLES` ≥ 4.
 * Reading back a multisample FBO is an error. Resolve with `glBlitFramebuffer` into a
-  single-sample target first. The resolve weights are unspecified, so do not build exact
-  expectations on intermediate resolved values. Count samples with stencil and occlusion
+  single-sample target first. The resolve of normalized formats is unspecified, so do not build
+  exact expectations on resolved values, not even where all samples of a pixel agree. Count samples with stencil and occlusion
   queries instead.
 * D3D-style "first vertex" flat shading does not exist in ES 3.0. Meshes ported from such APIs
   must rotate their index order.

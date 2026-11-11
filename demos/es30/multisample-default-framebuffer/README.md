@@ -31,9 +31,10 @@ against 84 for the background. With the default `--frames 1` the cube stands sti
 faces visible: violet top, green left, cyan right). The cube's size follows the smaller side of the surface, so it
 fills a square window and stays centred in a tall or wide one.
 
-Viewed closely, the silhouette and the seams between faces are not stair-stepped: the pixels along them are
-blends of the background and face colors. Away from the edges every pixel is exactly a face color or the
-background.
+Viewed closely, the silhouette and the seams between faces are not stair-stepped: on radeonsi the pixels along them
+are blends of the background and face colors, and away from the edges every pixel is exactly a face color or the
+background. That is what an averaging resolve produces; the specification leaves the combination of the samples to
+the implementation (see Validation).
 
 ## Central calls
 
@@ -68,8 +69,10 @@ background.
   resolve is legal. "If both the source and destination rectangles specify a negative width or height for the same
   direction, no reversal is performed", so the result is not mirrored.
 - **Equal channel sums.** A blend of face colors keeps R + G + B = 450, and a blend with the background lies
-  between 84 and 450. A resolved pixel's channel sum therefore tells how much of it the cube covers, whatever
-  the faces are: `(sum - 84) / 366`.
+  between 84 and 450. If the resolve averages the samples, a resolved pixel's channel sum tells how much of it the
+  cube covers, whatever the faces are: `(sum - 84) / 366`. The demo uses this for its printed observations only.
+- **Per-sample facts without a resolve.** The window's samples cannot be read, but they can be *counted*: stencil
+  `INCR` runs per sample, and an `ANY_SAMPLES_PASSED` query reports whether any sample passes a stencil test.
 
 ## Shader concepts
 
@@ -81,24 +84,26 @@ stores exactly. Dithering is disabled for clarity, although it could not change 
 
 ## Validation (`--validate`)
 
-The CPU projects the 8 cube corners with the same `mvp` matrix, keeps the faces that are counter-clockwise in
-window coordinates (the front faces), and takes the convex hull of the corners as the silhouette. Each pixel's
-square, **grown by half a pixel** on every side, is then classified. The margin is needed because sample points
-may lie outside the pixel's unit square (§3.3) and vertices are snapped to the subpixel grid. The classes are:
+39 checks in an ES 3.1+ context, 36 in an ES 3.0 context (the `glGetMultisamplefv` checks are ES 3.1 API).
 
-| class | where | expectation (8-bit, +-1 per channel) |
-|---|---|---|
-| exterior | grown square misses the silhouette | the background exactly |
-| face | grown square inside one front face | that face's color exactly |
-| seam | grown square inside the silhouette, touching 2-3 faces | R + G + B = 450 +-3, channels between those faces' colors |
-| silhouette | the rest | channels between the background and the touching faces, sum in [81, 453] |
+**What the specification does not promise.** Every pixel of the window, and every pixel a resolve blit writes, is a
+combination of samples, and the specification leaves the combination open:
 
-A seam pixel's sum of 450 relies on the shared-edge rule of §3.6.1 (and corollary 8 of Appendix B, "no pixel dropouts or duplicates"): each
-sample on an edge shared by two faces is produced by exactly one of them. A crack would let background into the
-sum, and a double hit cannot be seen with opaque colors, but a crack can. The sum tolerance is 3 because each
-channel's conversion to 8 bits errs by less than one step.
+> ES 3.0 §4.1.10: "the sample values for each color in the multisample buffer are combined to produce a single color
+> value, and that value is written into the corresponding color buffer [...] The method of combination is not specified.
+> If the framebuffer contains sRGB values, then it is recommended that an average of sample values is computed in a
+> linearized space [...]. Otherwise, a simple average computed independently for each color component is recommended."
+>
+> ES 3.0 §4.3.3: "If the source formats are floating-point or normalized types, the sample values for each pixel are
+> resolved in an implementation-dependent manner."
 
-The checks:
+An average is *recommended*, not required. A conformant implementation may return a resolved value outside the range of
+the samples, and the text does not even say that a pixel whose samples all hold one color resolves to that color. So
+**no value read from the multisampled window or from a resolve blit is asserted.** Everything the demo used to assert
+about them (exact background and face pixels, seam sums of 450, bounded silhouette blends, strictly blended centred
+pixels, coverage equal to the silhouette area) is now measured and printed as a `note: observed ...` line.
+
+The hard checks are the ones that do not depend on how samples are combined:
 
 1. **Queries.** With the default framebuffer bound, `SAMPLE_BUFFERS = 1` and `SAMPLES >= 1` (4 on radeonsi). With a
    single-sample RGBA8 FBO as the draw framebuffer, both are 0. With a 4-sample renderbuffer FBO, 1 and >= 4.
@@ -107,36 +112,76 @@ The checks:
    contexts, `glGetMultisamplefv(SAMPLE_POSITION, i)` lies in [0, 1] for every i < SAMPLES ("x and y each lie in
    the range [0, 1]"), and i = SAMPLES is `INVALID_VALUE`. In an ES 3.0 context the call is ES 3.1 API and is not
    made.
-2. **`glReadPixels` from the default framebuffer** raises no error, and `READ_FRAMEBUFFER_BINDING` is 0 and
-   `READ_BUFFER` is `BACK`. Every pixel of the image passes its class check. Pixels whose centre lies within 0.1
-   pixel of the silhouette, at least 3 pixels from any corner, must be **strictly** between background and cube
-   (sum in (87, 447)): the edge halves the pixel, so samples lie on both sides. The **summed coverage** (face and
-   seam pixels count 1, silhouette pixels `(sum - 84) / 366`) must equal the silhouette's area within 0.05 pixel
-   per pixel of perimeter. That bound is a sanity tolerance, not a spec number. The measured value is printed:
-   within 0.02 % on radeonsi.
-3. **Negative control.** The same cube drawn into a single-sample RGBA8 FBO has identical exterior and face
-   pixels, but **no** blended silhouette pixel, and the centred-pixel check rejects every one of its centred
-   pixels. The multisampled image has hundreds. So the blend checks can fail and do detect multisampling.
-4. **Blit resolve.** The FBO is first filled with a magenta sentinel. A blit of the whole surface with identical
-   rectangles raises no error and passes the same class checks. Its exterior and face pixels equal the
-   `glReadPixels` image exactly. A sub-rectangle with identical bounds writes exactly that rectangle: outside it
-   the sentinel is kept, inside it the pixels are valid resolves. The blit with both rectangles mirrored in x
-   raises no error and is not mirrored (the cube is not symmetric, so a mirrored image would fail).
-5. **Errors (§4.3.3, §4.3.2).** These must raise `INVALID_OPERATION`:
+2. **`glReadPixels` from the default framebuffer** raises no error, `READ_FRAMEBUFFER_BINDING` is 0 and `READ_BUFFER`
+   is `BACK`. The CPU projection yields exterior, single-face, seam and silhouette pixels (none of the checks below is
+   vacuous).
+3. **Per sample, on the window itself: stencil counting and occlusion queries.** The window's stencil buffer is part
+   of its multisample buffer (§3.3), the stencil test and stencil operations run per sample (§4.1.10), and an
+   `ANY_SAMPLES_PASSED` query is TRUE "if any fragment or sample passes the depth test" (§4.1.6). With color writes
+   off, the depth test on with `ALWAYS` and no depth writes, the cube is drawn with stencil op `INCR`, so every sample
+   counts the front faces that cover it. A polygon drawn with a stencil test inside a query then answers "does any of
+   my samples hold such a count?" exactly, without any resolve. The probing polygons are the silhouette moved 0.75 px
+   inwards ("inset") or outwards ("grown"); the margin absorbs vertex snapping (`SUBPIXEL_BITS` >= 4: at most 1/32 px)
+   and CPU/GPU rounding of the projection. Because the cube and the probing polygon are rasterized at the *same*
+   sample points, the checks hold wherever the sample points lie (§3.3: "inside or outside of the unit square";
+   ES 3.2 §13.4: they "cannot be queried").
+   - no sample is covered by two front faces (a full-screen query for stencil > 1 is FALSE): the shared-edge rule of
+     §3.6.1, which §3.6.3 applies to every sample point;
+   - no sample of the inset silhouette is uncovered (stencil = 0 is FALSE): no crack along the seams;
+   - after zeroing the grown silhouette, no sample with a non-zero count remains: the cube covers nothing outside its
+     silhouette;
+   - **positive controls**, so that each query is shown to be able to return TRUE: covered samples exist; before the
+     cube is drawn the inset silhouette query is TRUE; drawing the cube twice makes the "covered twice" query TRUE.
+     Mutating the demo to probe the crack with the grown polygon, or to zero only the inset polygon, makes the crack
+     and the outside check fail.
+4. **Single-sample control, fully specified.** The same cube drawn into a single-sample RGBA8 FBO. There a pixel is
+   produced when its centre lies in a polygon, and a centre on a shared edge is produced by exactly one of the two
+   polygons (§3.6.1); with flat opaque colors every pixel is therefore exactly the background or exactly one face. The
+   CPU classification (pixel square grown by half a pixel, as below) gives: exterior pixels equal the background,
+   single-face pixels equal their face, every seam pixel is exactly one of the faces it touches (no crack, no blend), and
+   every silhouette pixel is the background or exactly one face. Pixels within 1 px of a projected corner are left out
+   of the seam and silhouette counts, because the shared-edge rule says nothing about a centre that falls exactly on a
+   corner where several faces meet (19 of them at 256 x 256).
+5. **Blit resolve.** The FBO is first filled with a magenta sentinel. A blit of the whole surface with identical
+   rectangles raises no error; its result (`full`) is the reference for the next two blits. §4.3.3 says "the samples
+   corresponding to each pixel location in the source are converted to a single sample before being written to the
+   destination": a resolved pixel is a function of that pixel's samples, and Appendix A.1 (repeatability) makes it the
+   same function each time, whatever that function is. So:
+   - a sub-rectangle with identical bounds raises no error, keeps the sentinel outside the rectangle, and equals `full`
+     inside it;
+   - both rectangles mirrored in x raise no error and the result equals `full` ("If both the source and destination
+     rectangles specify a negative width or height for the same direction, no reversal is performed"). The cube is
+     not mirror-symmetric (its single-sample image differs from its mirror image in thousands of pixels), so a mirrored
+     copy would be detected.
+6. **Errors (§4.3.3, §4.3.2).** These must raise `INVALID_OPERATION`:
    - a resolve to a same-size rectangle at another position;
    - a resolve with 2x scaling;
    - a resolve with only the destination mirrored;
    - a resolve into an RGB565 FBO (formats not identical).
 
    The rejected resolves leave the sentinel untouched. A blit *into* the multisampled default framebuffer is
-   `INVALID_OPERATION`, and the window still reads back identically afterwards. `glReadPixels` from a complete
-   4-sample FBO is `INVALID_OPERATION`, and the same call on the default framebuffer is not.
+   `INVALID_OPERATION`, and the window still reads back identically afterwards (a command that generates an error has
+   no other effect, §2.5). `glReadPixels` from a complete 4-sample FBO is `INVALID_OPERATION`, and the same call on the
+   default framebuffer is not.
 
-**Not asserted, only printed.** For edge pixels, the spec does not say that the blit resolve and the window's own
-resolve combine the samples the same way: both are "implementation-dependent". The demo compares the two images
-only where all samples of a pixel are equal, and prints how many edge pixels differ (0 on radeonsi). The class
-checks also assume that a resolve is a weighted average of the samples. ES 3.0 says only that samples are
-"combined" or "resolved in an implementation-dependent manner".
+**Observed, not asserted** (printed as `note:` lines). For the window image and for the blit resolve the demo classifies
+each pixel against the CPU projection. Each pixel's square is **grown by half a pixel** on every side, because sample
+points may lie outside the pixel's unit square (§3.3) and vertices are snapped to the subpixel grid. The classes, and
+what a weighted-average resolve would give in each:
+
+| class | where | what an averaging resolve gives (8-bit, +-1 per channel) |
+|---|---|---|
+| exterior | grown square misses the silhouette | the background exactly |
+| face | grown square inside one front face | that face's color exactly |
+| seam | grown square inside the silhouette, touching 2-3 faces | R + G + B = 450 +-3, channels between those faces' colors |
+| silhouette | the rest | channels between the background and the touching faces, sum in [81, 453] |
+
+The demo prints how many pixels of each class deviate from that, how many pixels centred on the silhouette are strictly
+blended, the summed coverage (face and seam pixels 1, silhouette pixels `(sum - 84) / 366`) against the silhouette's
+area, how many pixels the blit resolve and the window's own resolve differ in (both are implementation-dependent and
+need not agree), and how many blended pixels the single-sample control has (none) against the window (hundreds). On
+radeonsi at 256 x 256: no deviation in any class, 90 of 90 centred pixels blended, coverage within 0.001 % of the area,
+the two resolves identical.
 
 ## Environment and results
 
@@ -153,8 +198,9 @@ Surfaces smaller than 96 x 96 report `SKIP_UNSUPPORTED`: the edge statistics nee
   sample points possibly outside the pixel)
 - ES 3.0 §3.6.1 Basic Polygon Rasterization (point sampling, shared edges, face culling), §3.6.3 Polygon
   Multisample Rasterization
-- ES 3.0 §4.1.10 Additional Multisample Fragment Operations (per-sample operations, combination into the color
-  buffer)
+- ES 3.0 §4.1.10 Additional Multisample Fragment Operations (per-sample stencil test and operations; "The method of
+  combination is not specified"), §4.1.5 Depth Buffer Test, §4.1.6 Occlusion Queries, §2.5 GL Errors (an erroneous
+  command has no effect), Appendix A.1 Repeatability
 - ES 3.0 §4.3.2 Reading Pixels (INVALID_OPERATION only for a multisample framebuffer *object*)
 - ES 3.0 §4.3.3 Copying Pixels (resolve, identical bounds and formats, multisample draw framebuffer, mirroring)
 - ES 3.0 §4.4.4.2 Whole Framebuffer Completeness (SAMPLE_BUFFERS and SAMPLES of framebuffer objects), §4.4.2.1
@@ -175,7 +221,9 @@ Surfaces smaller than 96 x 96 report `SKIP_UNSUPPORTED`: the edge statistics nee
   textured quad, or the window has to be single-sampled.
 - **`glReadPixels` behaves differently on FBOs.** The same call that works on the multisampled window fails on a
   multisample FBO: resolve the FBO with a blit first.
-- **Edge values are implementation-dependent.** Sample positions, the number of samples and the resolve weights
-  are all up to the implementation. Test edge pixels with bounds and statistics, never against exact values.
+- **Resolved values are implementation-dependent.** Sample positions, the number of samples and the way samples are
+  combined are all up to the implementation, for edge pixels and interior pixels alike. Test multisample rasterization
+  per sample (stencil counts, occlusion queries, or `texelFetch` on a multisample texture in ES 3.1), and treat resolved
+  colors as observations.
 - **Software Mesa drivers** (llvmpipe, zink on lavapipe) cannot create a multisampled surfaceless pbuffer of the
   requested size. Use multisample renderbuffers there.

@@ -53,7 +53,7 @@
 | `es31-program-interface-query` | ES 3.2 §7.3.1 `REFERENCED_BY_*` | radeonsi reports a vertex-only uniform block as referenced by the fragment shader when the FS declares other blocks |
 | `es31-ssbo-std430` | ES 3.2 §6.1.1: negative `glBindBufferRange` offset → INVALID_VALUE | same as the UBO row: no error for alignment-multiple negative offsets. All Mesa drivers |
 | `es31-framebuffer-no-attachments` | GLSL ES 3.10 §4.4.1 / 3.20 §4.4.1.3: a static `gl_FragDepth` write with `early_fragment_tests` "is an error" (reported at compile or link time, GLSL ES §1.3) | compiles and links. All Mesa drivers and ANGLE |
-| `es31-framebuffer-no-attachments` | ES 3.2 §7.11.1, GLSL ES 3.10 §7.1.2: scissor-failed fragments are not shaded; helper invocations have no side effects | llvmpipe/zink (lavapipe), multisampled: pixels outside the scissor sharing a 2×2 quad run with `gl_HelperInvocation` false and their atomics take effect. radeonsi and single-sample runs exact |
+| `es31-framebuffer-no-attachments` | ES 3.2 §7.11.1, GLSL ES 3.10 §7.1.2: scissor-failed fragments are not shaded; helper invocations have no side effects | llvmpipe/zink (lavapipe), multisampled: pixels outside the scissor sharing a 2×2 quad run with `gl_HelperInvocation` false and their atomics take effect. radeonsi and single-sample runs exact Also ANGLE on lavapipe (same rasterizer); reported on "ANGLE" there |
 
 | `es32-debug-output` | ES 3.2 §18.1/§18.2: the callback receives a null-terminated message of `length` characters | with an explicit shorter `length` in `glDebugMessageInsert`/`glPushDebugGroup`, Mesa passes the caller's pointer unterminated at `length`. Read callback messages by `length`. All Mesa drivers |
 | `es32-debug-output` | ES 3.2 Table 2.3: a command raising INVALID_VALUE is ignored | a label of `MAX_LABEL_LENGTH` characters raises INVALID_VALUE but is still stored (all 11 namespaces + sync). All Mesa drivers |
@@ -61,7 +61,6 @@
 | `es32-float-targets-and-indexed-blend` | ES 3.2 §15.1.5.5: `IsEnabled(BLEND)` reports draw buffer 0 | radeonsi returns FALSE when only draw buffer 0 has blending enabled via `glEnablei`; llvmpipe/zink conform |
 | `es32-float-targets-and-indexed-blend` | ES 3.2 §15.2.2: masked color components are not written | zink (lavapipe) with blending enabled and `glColorMask(T,F,T,T)` on all buffers blends and stores G; other mask combinations misbehave too (exact trigger not isolated) |
 
-| `es32-geometry-shaders` | ES 3.2 §11.3.4.4: `GEOMETRY_VERTICES_OUT` × active output components may not exceed `MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS`; "LinkProgram will fail if it determines that the total component limit would be violated" | `max_vertices = 256` with 128 active output components per vertex (31 vec4 read by the FS + `gl_Position`): 256 × 128 = 32 768 > 4095 (radeonsi) / 1024 (llvmpipe, zink) links. The product is known at link time, so we read "if it determines" as satisfied. All Mesa drivers |
 | `es32-layered-rendering` | ES 3.2 §9.2.8: `FramebufferTextureLayer` accepts cube map textures; layer selects the face (Table 8.24) | no error, but the previous attachment stays in place (the cube map is not attached). Layered `glFramebufferTexture` on a cube map works. All Mesa drivers |
 | `es32-base-vertex-and-robustness` | ES 3.2 §16.1.2: `ReadnPixels` raises INVALID_VALUE if `bufSize` is negative (INVALID_OPERATION, the too-small-buffer rule, would also be acceptable) | `bufSize = -1` raises no error and writes the pixels. `glGetnUniform*v` rejects a negative `bufSize` correctly. All Mesa drivers |
 | `es32-multisample-array-and-border-color` | ES 3.2 §8.10: integer `TEXTURE_BORDER_COLOR` values from `glTexParameteriv` are converted with equation 2.2 (`max(c / (2^31 - 1), -1)`), so 0 becomes exactly 0.0 | 0 is stored as 2^-32 (the pre-ES 3.0 `(2c + 1) / (2^32 - 1)` formula). All Mesa drivers |
@@ -75,7 +74,7 @@
 | `es30-occlusion-queries` | ES 3.0 §6.1.7: once a query reports available, all earlier queries of the same type are available; an occlusion result is boolean | zink (lavapipe), only after QUERY_RESULT_AVAILABLE has been polled to TRUE: QUERY_RESULT returns a partial sample count (e.g. 30), or 0 for a visible box, and earlier queries still report unavailable. Blocking reads are correct. The polled behaviour is nondeterministic: in a given run many of the zink-matched polled checks pass (XPASS in generated/DEVIATIONS.md) |
 | **crash** (worked around) `es30-glsl-texture-functions` | correct execution of a valid shader | a fragment shader with a `switch` over about 80 texture-lookup cases segfaults in libgallium on the first draw on llvmpipe and zink (the llvmpipe backtrace shows a recursion about 80 frames deep). The demo compiles the shader six times, once per sampler family (`#define GROUP n`), so no check needs an XFAIL |
 | `es30-depth-textures` | ES 3.0 §3.8.13 / ES 3.2 §8.17: a sized depth(-stencil) texture with `TEXTURE_COMPARE_MODE` NONE and a non-NEAREST filter is incomplete, so it returns (0,0,0,1) | Mesa filters the texture and returns the filtered depth (e.g. 0.75). This affects 5 filter settings × 2 formats; no exposed extension relaxes the rule. All Mesa drivers |
-| `es30-depth-textures` | ES 3.0 §3.9.2.1: an incomplete texture returns 0 for a shadow sampler | lavapipe (seen through zink and through ANGLE on lavapipe; matched on "Vulkan"): a mipmap-incomplete DEPTH_COMPONENT32F returns 1.0 (the ALWAYS result) |
+| `es30-depth-textures` | ES 3.0 §3.9.2.1: an incomplete texture returns 0 for a shadow sampler | lavapipe (seen through zink and through ANGLE on lavapipe; accepted only when GL_RENDERER contains both "Vulkan" and "llvmpipe"; reported on "zink" / "ANGLE"): a mipmap-incomplete DEPTH_COMPONENT32F returns 1.0 (the ALWAYS result) |
 | `test-glsl-language` | GLSL ES 3.00 §5.8: "Expressions on the left of an assignment are evaluated before expressions on the right" | `y[j] = ++j` stores into `y[1]` (the index is evaluated after the right side). `x[i++] = i` is correct. GLSL 1.00 and 3.00. All Mesa drivers |
 | `test-glsl-language` | GLSL ES 3.00 §6.1.1: arguments are evaluated once, left to right, and an `out` argument yields the l-value used for copy-out | `store(arr[j], ++j)` writes `arr[1]`. All Mesa drivers |
 | `shader-tests/glsl300` texture2D case | GLSL ES 3.00 §8.8 lists only the new lookup functions; §6.1 requires a prototype or definition before a call | `texture2D()` compiles in a `#version 300 es` shader. All Mesa drivers |
@@ -100,7 +99,7 @@
 | `es20-clear-viewport-scissor` | ES 3.0 §2.13.1: viewport width/height "are clamped to implementation-dependent maximums when specified" | `GL_VIEWPORT` returns the unclamped size (MAX + 1000) |
 | `es20-framebuffer-objects` | ES 3.0 Table 6.15: `RENDERBUFFER_*_SIZE` initially 0 | a renderbuffer without storage reports R4 G4 B4 A4 |
 | `es20-shader-compilation` | ES 3.0 §2.12.9.7: ValidateProgram checks the conflicting-sampler-types condition | `VALIDATE_STATUS` TRUE (the draw does fail with INVALID_OPERATION) |
-| `es30-depth-textures` | ES 3.0 §3.8.15.1: Dref and Dt are clamped to [0, 1] for fixed-point depth formats | not clamped for DEPTH_COMPONENT24 / DEPTH24_STENCIL8 (DEPTH_COMPONENT16 is) |
+| `es30-depth-textures` | ES 3.0 §3.8.15.1: Dref and Dt are clamped to [0, 1] for fixed-point depth formats | not clamped for DEPTH_COMPONENT24 / DEPTH24_STENCIL8 (DEPTH_COMPONENT16 is) (observed with ANGLE's RADV backend; passes on lavapipe, XPASS) |
 | `es30-etc2-eac` | ES 3.0 §3.8.6: a sub-image whose size is not a block multiple is allowed when it reaches the level edge | 2x2 at (4,4) of a 6x6 texture → INVALID_OPERATION |
 | `es30-etc2-eac` | ES 3.0 Appendix C.1.5 (eq. C.2, bit replication): 11-bit code 2047 is exactly 1.0 | 11-bit codes zero-filled to 16 bits: x·32/65535, 2047 → 0.99953 |
 | `es30-etc2-eac` | ES 3.0 Appendix C.1.7 (eq. C.8) | signed R11/RG11 values 4 codes too far from zero (worked example: 324 instead of 320) |
@@ -146,6 +145,13 @@ that opt in with `"extra_drivers": ["softpipe"]`).
 Per-run evidence for every deviation check (which runs failed, which matched runs passed, and which are es-min
 override artifacts) is generated in [generated/DEVIATIONS.md](generated/DEVIATIONS.md). A 2026-11-11 audit of
 that table found every "Mesa"-matched deviation reproduced on radeonsi, llvmpipe and zink.
+
+**Matching rule:** the substring is searched in GL_RENDERER and GL_VERSION. For ANGLE only GL_VERSION is
+searched, because ANGLE's GL_RENDERER names its backend ("ANGLE (Mesa, Vulkan ... (llvmpipe ...))"); "Mesa",
+"llvmpipe" or "Vulkan" deviations therefore never excuse ANGLE. Before this rule (fixed 2026-11-11) every "Mesa"
+match also hid ANGLE-on-lavapipe failures; the rerun found one (es31-framebuffer-no-attachments, now recorded).
+The es32-geometry-shaders row (§11.3.4.4) was removed: the rule is conditional ("if it determines"), so a
+successful link is conformant (Codex audit 2026-11-11).
 
 These are reported as XFAIL only on the matching driver (`GL_VERSION` contains "Mesa", or
 `GL_RENDERER` contains "softpipe"). Every other driver gets the strict check. Consequence: demos that

@@ -38,7 +38,13 @@ namespace demo
             return std::string(p != nullptr ? reinterpret_cast<const char*>(p) : "");
         };
         // Matched against GL_RENDERER and GL_VERSION, so "radeonsi" selects one driver and "Mesa" all Mesa drivers.
-        const std::string haystack = text(metagl::StringName::Renderer) + " | " + text(metagl::StringName::Version);
+        // Exception: ANGLE's GL_RENDERER names its *backend* ("ANGLE (Mesa, Vulkan ... (llvmpipe ...))"), which would
+        // let every "Mesa"/"llvmpipe"/"Vulkan" deviation silently excuse ANGLE too. For ANGLE only GL_VERSION is
+        // used, so only "ANGLE" matches; a demo that must single out ANGLE's backend checks GL_RENDERER itself.
+        const std::string version = text(metagl::StringName::Version);
+        const std::string haystack = version.find("ANGLE") != std::string::npos
+                                         ? version
+                                         : text(metagl::StringName::Renderer) + " | " + version;
         if (haystack.find(renderer_substring) == std::string::npos) return expect(ok, what, detail);
         if (!ok) ++xfail_;
         return expect(true, what,

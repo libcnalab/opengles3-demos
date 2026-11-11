@@ -42,6 +42,11 @@ namespace mgl = metagl;
 
 namespace
 {
+    /// The documented scissor/helper deviation is in llvmpipe's rasterizer, shared by llvmpipe, zink on lavapipe and
+    /// ANGLE on lavapipe. Check::expect_or_known_deviation never matches ANGLE's backend name, so name ANGLE explicitly
+    /// when it runs on lavapipe; ANGLE on a hardware Vulkan driver stays strict.
+    const char* lavapipe_match();
+
     /// True when GL_RENDERER or GL_VERSION contains `needle` (selects the driver of a documented deviation).
     bool renderer_has(std::string_view needle)
     {
@@ -51,6 +56,8 @@ namespace
         };
         return (text(mgl::StringName::Renderer) + " | " + text(mgl::StringName::Version)).find(needle) != std::string::npos;
     }
+
+    const char* lavapipe_match() { return renderer_has("ANGLE") && renderer_has("llvmpipe") ? "ANGLE" : "llvmpipe"; }
 
     constexpr int kW = 64;  // the default size used by most runs
     constexpr int kH = 32;
@@ -1115,7 +1122,7 @@ namespace
             check.expect_or_known_deviation(mh.helper_seen == 0 && mh.unguarded == mh.guarded && outside == 0,
                                             std::format("{} default samples: nothing outside the scissor box is touched: no pixel outside it is hit, the atomic behind gl_HelperInvocation never ran, unguarded == guarded == the invocations inside the box", samples),
                                             std::format("guarded {}, unguarded {}, helper_seen {}, {} pixels outside the box hit", mh.guarded, mh.unguarded, mh.helper_seen, outside),
-                                            "llvmpipe",
+                                            lavapipe_match(),
                                             "ES 3.2 7.11.1: a fragment that fails the scissor test is not shaded (and GLSL ES 3.10 7.1.2: a helper invocation has no side effects); with "
                                             "FRAMEBUFFER_DEFAULT_SAMPLES = 4 llvmpipe (and zink on lavapipe) shades the pixels outside the box that share a 2 x 2 quad with it as ordinary "
                                             "invocations (gl_HelperInvocation false) whose atomics take effect. Single-sample framebuffers are correct");
@@ -1130,7 +1137,7 @@ namespace
             check.expect_or_known_deviation(rh.helper_seen == 0 && rh.unguarded == rh.guarded && rb_outside == 0,
                                             std::format("control: the same triangle and scissor box on a {}-sample RGBA8 renderbuffer attachment: nothing outside the box is touched either", samples),
                                             std::format("guarded {}, unguarded {}, helper_seen {}, {} pixels outside the box hit", rh.guarded, rh.unguarded, rh.helper_seen, rb_outside),
-                                            "llvmpipe",
+                                            lavapipe_match(),
                                             "same rule as above (ES 3.2 7.11.1 / GLSL ES 3.10 7.1.2): llvmpipe and zink on lavapipe also shade the quad neighbours outside the scissor box of a multisample "
                                             "renderbuffer framebuffer as ordinary invocations, so the deviation is about multisampling, not about attachment-less framebuffers");
 

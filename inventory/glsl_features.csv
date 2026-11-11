@@ -5,13 +5,13 @@ GLSL100.TEXTURE2D,100,builtins,texture2D / textureCube / texture2DProj / texture
 GLSL100.MIX_VERSIONS,100,interface,Linking 100 with 300 es shaders is an error,GLSL ES 3.00 §1.5; ES 3.0 §2.12.3,negative
 GLSL300.VERSION,300,structure,#version 300 es as the first line; removed 1.00 keywords,GLSL ES 3.00 §3.4 §1.5,compile+negative
 GLSL300.PREPROCESSOR,300,structure,"#define/#undef/#if/#ifdef/#elif/#else/#endif/#error/#pragma/#extension/#line, __LINE__ __FILE__ __VERSION__ GL_ES",GLSL ES 3.00 §3.5,compile+negative
-GLSL300.COMMENTS_TOKENS,300,structure,Comments; identifiers; reserved words (__ prefix / gl_ prefix errors),GLSL ES 3.00 §3.5-3.8,negative
+GLSL300.COMMENTS_TOKENS,300,structure,Comments; identifiers; reserved words (__ prefix / gl_ prefix errors),GLSL ES 3.00 §3.6-3.9,negative
 GLSL300.TYPES.SCALAR_VECTOR,300,types,"bool/int/uint/float, vec/ivec/uvec/bvec 2-4",GLSL ES 3.00 §4.1,compute-check
 GLSL300.TYPES.MATRIX,300,types,mat2..mat4 and non-square matCxR; column-major indexing,GLSL ES 3.00 §4.1.6,compute-check
 GLSL300.TYPES.SAMPLERS,300,types,"sampler2D/3D/Cube/2DArray, *Shadow, isampler*/usampler*; opaque rules",GLSL ES 3.00 §4.1.7,render+negative
 GLSL300.TYPES.STRUCT,300,types,Structures; nested; constructors; equality,GLSL ES 3.00 §4.1.8,compute-check
 GLSL300.TYPES.ARRAY,300,types,Arrays; array constructors; .length(); assignment/comparison of arrays,GLSL ES 3.00 §4.1.9,compute-check
-GLSL300.TYPES.IMPLICIT_CONVERSION,300,types,No implicit conversions in ES (int->float is an error),GLSL ES 3.00 §4.1.10,negative
+GLSL300.TYPES.IMPLICIT_CONVERSION,300,types,No implicit conversions in ES (int->float is an error),GLSL ES 3.00 §4 (chapter introduction),negative
 GLSL300.SCOPE,300,structure,Scoping rules; redeclaration errors; shadowing,GLSL ES 3.00 §4.2,compile+negative
 GLSL300.QUAL.CONST,300,qualifiers,const and constant expressions (incl. built-in calls),GLSL ES 3.00 §4.3.2-4.3.3,compile+negative
 GLSL300.IO.IN_OUT,300,interface,in/out storage qualifiers vertex->fragment,GLSL ES 3.00 §4.3.4 §4.3.6,render

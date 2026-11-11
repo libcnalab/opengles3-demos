@@ -78,6 +78,11 @@
 | **crash** (worked around) `es30-glsl-texture-functions` | correct execution of a valid shader | a fragment shader with a `switch` over about 80 texture-lookup cases segfaults in libgallium on the first draw on llvmpipe and zink (the llvmpipe backtrace shows a recursion about 80 frames deep). The demo compiles the shader six times, once per sampler family (`#define GROUP n`), so no check needs an XFAIL |
 | `es30-depth-textures` | ES 3.0 §3.8.13 / ES 3.2 §8.17: a sized depth(-stencil) texture with `TEXTURE_COMPARE_MODE` NONE and a non-NEAREST filter is incomplete, so it returns (0,0,0,1) | Mesa filters the texture and returns the filtered depth (e.g. 0.75). This affects 5 filter settings × 2 formats; no exposed extension relaxes the rule. All Mesa drivers |
 | `es30-depth-textures` | ES 3.0 §3.9.2.1: an incomplete texture returns 0 for a shadow sampler | zink: a mipmap-incomplete DEPTH_COMPONENT32F returns 1.0 (the ALWAYS result) |
+| `test-glsl-language` | GLSL ES 3.00 §5.8: "Expressions on the left of an assignment are evaluated before expressions on the right" | `y[j] = ++j` stores into `y[1]` (the index is evaluated after the right side). `x[i++] = i` is correct. GLSL 1.00 and 3.00. All Mesa drivers |
+| `test-glsl-language` | GLSL ES 3.00 §6.1.1: arguments are evaluated once, left to right, and an `out` argument yields the l-value used for copy-out | `store(arr[j], ++j)` writes `arr[1]`. All Mesa drivers |
+| `shader-tests/glsl300` texture2D case | GLSL ES 3.00 §8.8 lists only the new lookup functions; §6.1 requires a prototype or definition before a call | `texture2D()` compiles in a `#version 300 es` shader. All Mesa drivers |
+| `shader-tests/glsl300` ternary l-value case | GLSL ES 3.00 §5.8: "The ternary operator (?:) is also not allowed as an l-value" | `(c ? a : b) = 1.0` compiles. All Mesa drivers |
+| **crash** (avoided) `shader-tests` | linking `#version 310 es` with `#version 100` must fail cleanly | under `MESA_GLES_VERSION_OVERRIDE=3.0`, that link segfaults in libgallium (gpu, llvmpipe, zink). The case runs only in `test-glsl-language` on ES ≥ 3.1 |
 
 Not deviations (verified during integration): Mesa accepting `glGenerateMipmap` on R32F and unsized
 `RGB + FLOAT` uploads is correct, because the contexts expose `GL_OES_texture_float_linear`,

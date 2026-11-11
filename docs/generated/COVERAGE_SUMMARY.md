@@ -26,12 +26,12 @@ Result directories: build/debug/test-results
 | GLSL | total | passed | passed % | NOT_STARTED | FULLY_VALIDATED |
 |---|---|---|---|---|---|
 | 100 | 4 | 4 | 100% | 0 | 4 |
-| 300 | 51 | 47 | 92% | 4 | 47 |
-| 310 | 23 | 22 | 96% | 1 | 22 |
+| 300 | 51 | 51 | 100% | 0 | 51 |
+| 310 | 23 | 23 | 100% | 0 | 23 |
 | 320 | 16 | 13 | 81% | 3 | 13 |
 
 ## Executables
 
 | status | count |
 |---|---|
-| FULLY_VALIDATED | 77 |
+| FULLY_VALIDATED | 78 |

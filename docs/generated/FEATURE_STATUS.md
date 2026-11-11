@@ -29,7 +29,7 @@
 | ES20.SHADER.BINARY | 2.0 | shaders | glShaderBinary + SHADER_BINARY_FORMATS (may legitimately be empty) | ES 3.0 §2.12.2 | FULLY_VALIDATED | es20-shader-compilation |
 | ES20.PROGRAM.VALIDATE | 2.0 | shaders | glValidateProgram + VALIDATE_STATUS (e.g. sampler type conflict on one unit) | ES 3.0 §2.12.3 §2.12.9 | FULLY_VALIDATED | es20-shader-compilation |
 | ES20.PROGRAM.ATTACHED | 2.0 | shaders | glGetAttachedShaders / ATTACHED_SHADERS | ES 3.0 §6.1.12 | FULLY_VALIDATED | es20-shader-compilation |
-| ES20.ATTRIB.BIND_LOCATION | 2.0 | vertex-input | glBindAttribLocation before link vs glGetAttribLocation | ES 3.0 §2.12.5 | FULLY_VALIDATED | es20-vertex-attributes, es30-program-binary |
+| ES20.ATTRIB.BIND_LOCATION | 2.0 | vertex-input | glBindAttribLocation before link vs glGetAttribLocation | ES 3.0 §2.12.5 | FULLY_VALIDATED | es20-vertex-attributes, es30-program-binary, test-glsl-language |
 | ES20.ATTRIB.ACTIVE_QUERY | 2.0 | vertex-input | glGetActiveAttrib enumeration (name/type/size) | ES 3.0 §2.12.5 | FULLY_VALIDATED | es20-vertex-attributes, es30-program-binary |
 | ES20.ATTRIB.CONSTANT | 2.0 | vertex-input | Current (constant) generic attribute values glVertexAttrib*f[v] | ES 3.0 §2.8 | FULLY_VALIDATED | es20-vertex-attributes |
 | ES20.ATTRIB.FORMATS | 2.0 | vertex-input | Attribute types BYTE/UBYTE/SHORT/USHORT/FLOAT/FIXED with normalized flag | ES 3.0 §2.9 Table 2.4 | FULLY_VALIDATED | es20-vertex-attributes |
@@ -71,8 +71,8 @@
 | ES20.TEXTURE.COPY | 2.0 | textures | glCopyTexImage2D / glCopyTexSubImage2D from framebuffer | ES 3.0 §3.8.5 | FULLY_VALIDATED | es20-copy-and-read-pixels |
 | ES20.TEXTURE.FILTER | 2.0 | textures | NEAREST/LINEAR mag+min filtering | ES 3.0 §3.8.10-11 | FULLY_VALIDATED | es20-textures-2d, es30-normal-mapping, es30-sampler-objects, es30-skybox-and-fog |
 | ES20.TEXTURE.WRAP | 2.0 | textures | REPEAT/CLAMP_TO_EDGE/MIRRORED_REPEAT | ES 3.0 §3.8.10 | FULLY_VALIDATED | es20-textures-2d, es30-sampler-objects |
-| ES20.TEXTURE.MIPMAP | 2.0 | textures | Mipmap chains + glGenerateMipmap + mipmap min filters | ES 3.0 §3.8.10 | FULLY_VALIDATED | es20-mipmaps, es30-normal-mapping |
-| ES20.TEXTURE.CUBE | 2.0 | textures | Cube map textures + face selection | ES 3.0 §3.8.9 | FULLY_VALIDATED | es20-cube-map, es30-depth-textures, es30-skybox-and-fog, es32-layered-rendering |
+| ES20.TEXTURE.MIPMAP | 2.0 | textures | Mipmap chains + glGenerateMipmap + mipmap min filters | ES 3.0 §3.8.10 | FULLY_VALIDATED | es20-mipmaps, es30-normal-mapping, test-glsl-language |
+| ES20.TEXTURE.CUBE | 2.0 | textures | Cube map textures + face selection | ES 3.0 §3.8.9 | FULLY_VALIDATED | es20-cube-map, es30-depth-textures, es30-skybox-and-fog, es32-layered-rendering, test-glsl-language |
 | ES20.TEXTURE.UNITS | 2.0 | textures | Multiple texture units / MAX_COMBINED_TEXTURE_IMAGE_UNITS | ES 3.0 §3.8.1 | FULLY_VALIDATED | es20-textures-2d, es30-normal-mapping, es30-sampler-objects |
 | ES20.TEXTURE.UNPACK_ALIGNMENT | 2.0 | textures | GL_UNPACK_ALIGNMENT effect on uploads | ES 3.0 §3.7.1 | FULLY_VALIDATED | es20-textures-2d |
 | ES20.TEXTURE.UNSIZED_FORMATS | 2.0 | textures | Unsized RGBA/RGB/LUMINANCE/LUMINANCE_ALPHA/ALPHA + packed 565/4444/5551 types | ES 3.0 §3.8.3 Table 3.3 | FULLY_VALIDATED | es20-textures-2d |
@@ -136,7 +136,7 @@
 | ES30.SAMPLER.OBJECTS | 3.0 | textures | Sampler objects override texture sampling state | ES 3.0 §3.8.2 | FULLY_VALIDATED | es30-depth-textures, es30-sampler-objects, es30-shadow-mapping, es32-layered-rendering, es32-multisample-array-and-border-color |
 | ES30.SAMPLER.SAME_TEXTURE | 3.0 | textures | Two samplers reading the same texture differently | ES 3.0 §3.8.2 | FULLY_VALIDATED | es30-depth-textures, es30-sampler-objects, es30-shadow-mapping |
 | ES30.SAMPLER.QUERY | 3.0 | textures | glGetSamplerParameter* / glIsSampler / SAMPLER_BINDING | ES 3.0 §6.1.5 | FULLY_VALIDATED | es30-sampler-objects |
-| ES30.FBO.MRT | 3.0 | framebuffer | Multiple render targets glDrawBuffers + layout(location) | ES 3.0 §4.2.1 | FULLY_VALIDATED | es30-deferred-shading, es30-multiple-render-targets, es32-advanced-blend-and-sample-shading, es32-float-targets-and-indexed-blend |
+| ES30.FBO.MRT | 3.0 | framebuffer | Multiple render targets glDrawBuffers + layout(location) | ES 3.0 §4.2.1 | FULLY_VALIDATED | es30-deferred-shading, es30-multiple-render-targets, es32-advanced-blend-and-sample-shading, es32-float-targets-and-indexed-blend, test-glsl-language |
 | ES30.FBO.READ_DRAW | 3.0 | framebuffer | Separate READ/DRAW framebuffer bindings + glReadBuffer | ES 3.0 §4.4.1 §4.3.1 | FULLY_VALIDATED | es30-framebuffer-blit-msaa, es30-multiple-render-targets |
 | ES30.FBO.BLIT | 3.0 | framebuffer | glBlitFramebuffer color/depth/stencil + filters + scaling | ES 3.0 §4.3.3 | FULLY_VALIDATED | es30-framebuffer-blit-msaa |
 | ES30.FBO.MSAA_RENDERBUFFER | 3.0 | framebuffer | glRenderbufferStorageMultisample + resolve blit | ES 3.0 §4.4.2 | FULLY_VALIDATED | es30-flat-centroid, es30-framebuffer-blit-msaa |
@@ -145,15 +145,15 @@
 | ES30.FBO.CLEAR_BUFFER | 3.0 | framebuffer | glClearBuffer{fv iv uiv fi} per draw buffer | ES 3.0 §4.2.3 | FULLY_VALIDATED | es30-depth-textures, es30-multiple-render-targets, es32-advanced-blend-and-sample-shading, es32-float-targets-and-indexed-blend, es32-layered-rendering |
 | ES30.FBO.SRGB | 3.0 | framebuffer | sRGB render targets: encoding on write; FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING | ES 3.0 §4.1.8 | FULLY_VALIDATED | es30-post-processing, es30-srgb |
 | ES30.FBO.DEPTH_STENCIL_ATTACHMENT | 3.0 | framebuffer | DEPTH_STENCIL_ATTACHMENT point | ES 3.0 §4.4.2 | FULLY_VALIDATED | es20-framebuffer-objects, es30-depth-textures, es30-multiple-render-targets |
-| ES30.FBO.INTEGER_TARGET | 3.0 | framebuffer | Integer color attachments + glClearBufferiv/uiv + readback | ES 3.0 §4.4.4 | FULLY_VALIDATED | es30-glsl-texture-functions, es30-multiple-render-targets |
+| ES30.FBO.INTEGER_TARGET | 3.0 | framebuffer | Integer color attachments + glClearBufferiv/uiv + readback | ES 3.0 §4.4.4 | FULLY_VALIDATED | es30-glsl-texture-functions, es30-multiple-render-targets, test-glsl-language |
 | ES30.FBO.ATTACHMENT_QUERY | 3.0 | framebuffer | COMPONENT_TYPE / color sizes / TEXTURE_LAYER attachment queries | ES 3.0 §6.1.13 | FULLY_VALIDATED | es30-deferred-shading, es30-depth-textures, es30-framebuffer-invalidate, es32-float-targets-and-indexed-blend, es32-layered-rendering |
 | ES30.INTERNALFORMAT.QUERY | 3.0 | framebuffer | glGetInternalformativ NUM_SAMPLE_COUNTS / SAMPLES | ES 3.0 §6.1.15 | FULLY_VALIDATED | es30-framebuffer-blit-msaa, es31-multisample-textures, es32-multisample-array-and-border-color |
-| ES30.TF.BASIC | 3.0 | transform-feedback | glTransformFeedbackVaryings + begin/end capture into a buffer | ES 3.0 §2.15 | FULLY_VALIDATED | es30-glsl-texture-functions, es30-transform-feedback, es32-geometry-shaders, test-glsl300-builtins |
+| ES30.TF.BASIC | 3.0 | transform-feedback | glTransformFeedbackVaryings + begin/end capture into a buffer | ES 3.0 §2.15 | FULLY_VALIDATED | es30-glsl-texture-functions, es30-transform-feedback, es32-geometry-shaders, test-glsl-language, test-glsl300-builtins |
 | ES30.TF.MODES | 3.0 | transform-feedback | INTERLEAVED_ATTRIBS vs SEPARATE_ATTRIBS | ES 3.0 §2.15.2 | FULLY_VALIDATED | es30-transform-feedback |
 | ES30.TF.OBJECTS | 3.0 | transform-feedback | Transform feedback objects gen/bind/delete/isTransformFeedback | ES 3.0 §2.15.1 | FULLY_VALIDATED | es30-transform-feedback |
 | ES30.TF.PAUSE_RESUME | 3.0 | transform-feedback | glPauseTransformFeedback / glResumeTransformFeedback | ES 3.0 §2.15.2 | FULLY_VALIDATED | es30-transform-feedback |
 | ES30.TF.RENDER_CAPTURED | 3.0 | transform-feedback | Render a later pass from captured vertex data | ES 3.0 §2.15 | FULLY_VALIDATED | es30-transform-feedback |
-| ES30.TF.RASTERIZER_DISCARD | 3.0 | transform-feedback | RASTERIZER_DISCARD with capture | ES 3.0 §3.1 | FULLY_VALIDATED | es30-transform-feedback, es32-geometry-shaders, test-glsl300-builtins |
+| ES30.TF.RASTERIZER_DISCARD | 3.0 | transform-feedback | RASTERIZER_DISCARD with capture | ES 3.0 §3.1 | FULLY_VALIDATED | es30-transform-feedback, es32-geometry-shaders, test-glsl-language, test-glsl300-builtins |
 | ES30.TF.QUERY | 3.0 | transform-feedback | glGetTransformFeedbackVarying + TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN query | ES 3.0 §2.16 §6.1.11 | FULLY_VALIDATED | es30-transform-feedback, es32-geometry-shaders |
 | ES30.TF.ERRORS | 3.0 | transform-feedback | Overflow/insufficient buffer and state-change errors while active | ES 3.0 §2.15.2 | FULLY_VALIDATED | es30-transform-feedback |
 | ES30.QUERY.OCCLUSION | 3.0 | queries | ANY_SAMPLES_PASSED / ANY_SAMPLES_PASSED_CONSERVATIVE | ES 3.0 §4.1.6 | FULLY_VALIDATED | es30-flat-centroid, es30-occlusion-queries |

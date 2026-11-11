@@ -300,8 +300,13 @@ namespace
                 "sampler-conflict");
             mgl::glUseProgram(p);
             mgl::glValidateProgram(p);
-            check.expect_eq(program_param(p, mgl::ProgramParameter::ValidateStatus), GL_FALSE,
-                            "VALIDATE_STATUS = FALSE: sampler2D and samplerCube both on unit 0");
+            // "ValidateProgram will check for all of the error conditions described in this section": the
+            // sampler-type conflict is the first of them.
+            const GLint conflict_status = program_param(p, mgl::ProgramParameter::ValidateStatus);
+            check.expect_or_known_deviation(conflict_status == GL_FALSE, "VALIDATE_STATUS = FALSE: sampler2D and samplerCube both on unit 0",
+                                            std::format("actual={} expected=0", conflict_status), "ANGLE",
+                                            "ANGLE's glValidateProgram reports TRUE although the draw below fails with INVALID_OPERATION; "
+                                            "ValidateProgram must check every error condition of ES 3.0 §2.12.9.7 (ES 3.2 §11.1.3.11)");
             mgl::glEnable(mgl::Capability::ScissorTest);
             mgl::glScissor(0, 0, 1, 1);
             mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 3);

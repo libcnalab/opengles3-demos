@@ -21,7 +21,7 @@
     "glGenTextures": "one texture per format (15), the mip-chain texture, the initial-state texture and scratch textures",
     "glBindTexture": "textures on unit 0 for the exact path and the display pass; the second unit for the sampler-type check",
     "glActiveTexture": "unit 0 / unit 1 selection; the usampler2D and the sampler2D of the mixed-type program sit on different units in the positive control",
-    "glTexImage2D": "R8UI, R16I, RGBA8I, RGBA16UI, R32I, RGBA32UI, RGB10_A2UI, R32F, RGBA32F, RGBA16F (HALF_FLOAT), R16F (FLOAT), R11F_G11F_B10F, RGB9_E5 (packed words and FLOAT data) uploads: every texel read back exactly through the sampler; a 4-level R32I mip chain; INVALID_OPERATION for five invalid format/type/internalformat combinations, RGBA8UI accepted",
+    "glTexImage2D": "R8UI, R16I, RGBA8I, RGBA16UI, R32I, RGBA32UI, RGB10_A2UI, R32F, RGBA32F, RGBA16F (HALF_FLOAT), R16F (FLOAT), R11F_G11F_B10F, RGB9_E5 (packed words and FLOAT data; the FLOAT encoding strict, ANGLE XFAIL) uploads: every texel read back exactly through the sampler; a 4-level R32I mip chain; INVALID_OPERATION for five invalid format/type/internalformat combinations, RGBA8UI accepted",
     "glTexParameteri": "NEAREST min/mag filters (typed glTexParameter overloads) make the textures complete; NEAREST_MIPMAP_NEAREST on the integer mip chain",
     "glGetTexParameteriv": "initial MIN_FILTER = NEAREST_MIPMAP_LINEAR and MAG_FILTER = LINEAR of a new integer texture",
     "glGenerateMipmap": "INVALID_OPERATION on R8UI, R32I, RGBA16UI, RGBA32UI (not filterable) and RGB9_E5 (not renderable); no error on RGBA8",

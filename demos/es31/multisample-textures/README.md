@@ -140,3 +140,10 @@ shifting the pattern number by one in the shader made 23 checks fail.
 - Sample positions from `glGetMultisamplefv` are shading locations and do not say which samples a triangle edge covers.
 - The sample mask does nothing in a single-sample framebuffer. The demo disables it before every fill, so that a mask left
   over from an earlier draw cannot decide what a fill writes.
+
+## Known driver deviations (XFAIL)
+
+- **ANGLE** accepts `glGenerateMipmap(TEXTURE_2D_MULTISAMPLE)` without an error. ES 3.2 8.14.4: *"An INVALID_ENUM error is
+  generated if target is not TEXTURE_2D, TEXTURE_3D, TEXTURE_2D_ARRAY, TEXTURE_CUBE_MAP or TEXTURE_CUBE_MAP_ARRAY."*
+- **ANGLE** accepts `glGetTexLevelParameteriv(TEXTURE_2D_MULTISAMPLE, 1, ...)`. ES 3.2 8.11.3 makes the maximum level of
+  the multisample targets zero, so level 1 is `INVALID_VALUE`.

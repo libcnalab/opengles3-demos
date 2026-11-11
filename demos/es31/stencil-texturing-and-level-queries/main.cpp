@@ -1009,7 +1009,7 @@ namespace
             (void)demo::drain_gl_errors();
             mgl::glTexStorage2D(mgl::TextureTarget::Texture2D, 2, mgl::CompressedInternalFormat::Rgb8Etc2, 8, 8);
             check.expect_no_gl_error("glTexStorage2D with COMPRESSED_RGB8_ETC2 (8 x 8, 2 levels) is accepted");
-            std::string problems;
+            std::string problems, type_problems;
             for (int level = 0; level < 2; ++level)
             {
                 const Level l = query_level(mgl::TextureTarget::Texture2D, level);
@@ -1017,13 +1017,19 @@ namespace
                 if (l.format != gl(GL_COMPRESSED_RGB8_ETC2)) problems += std::format("level {} INTERNAL_FORMAT 0x{:X}; ", level, l.format);
                 if (l.compressed != 1) problems += std::format("level {} COMPRESSED {}; ", level, l.compressed);
                 for (std::size_t i = 0; i < 3; ++i)
-                    if (l.type[i] != kUnorm) problems += std::format("level {} component {} type {}; ", level, i, type_name(l.type[i]));
+                    if (l.type[i] != kUnorm) type_problems += std::format("level {} component {} type {}; ", level, i, type_name(l.type[i]));
                 if (!l.float_agrees) problems += "float query differs; ";
                 if (level == 0)
                     std::cout << std::format("   note: ETC2 RGB8 resolutions reported (rough approximations, not asserted): R{} G{} B{} A{}\n", l.size[0], l.size[1], l.size[2], l.size[3]);
             }
-            check.expect(problems.empty(), "COMPRESSED_RGB8_ETC2 8 x 8, levels 0 and 1: WIDTH, HEIGHT, INTERNAL_FORMAT as specified, COMPRESSED = TRUE, color types UNSIGNED_NORMALIZED",
+            check.expect(problems.empty(), "COMPRESSED_RGB8_ETC2 8 x 8, levels 0 and 1: WIDTH, HEIGHT, INTERNAL_FORMAT as specified, COMPRESSED = TRUE",
                          problems.empty() ? std::string("ok") : problems);
+            check.expect_or_known_deviation(type_problems.empty(),
+                                            "COMPRESSED_RGB8_ETC2 levels 0 and 1: TEXTURE_RED/GREEN/BLUE_TYPE = UNSIGNED_NORMALIZED (the type after decompression)",
+                                            type_problems.empty() ? std::string("ok") : type_problems, "ANGLE",
+                                            "ANGLE returns NONE for the component types of a compressed format; ES 3.2 8.11.3: \"For texture images "
+                                            "with compressed internal formats, the types returned specify how components are interpreted after "
+                                            "decompression\"");
         }
 
         /// The smallest sample count glGetInternalformativ lists for a multisample texture of `format` that is >= `request` (the request itself when none is).
@@ -1132,7 +1138,12 @@ namespace
             mgl::glTexStorage2DMultisample(mgl::TextureTarget::Texture2DMultisample, 1, mgl::SizedInternalFormat::Rgba8, 4, 4, GL_TRUE);
             (void)demo::drain_gl_errors();
             mgl::glGetTexLevelParameteriv(mgl::TextureTarget::Texture2DMultisample, 1, mgl::TextureLevelParameter::Width, &v);
-            check.expect_gl_error(mgl::ErrorCode::InvalidValue, "TEXTURE_2D_MULTISAMPLE level 1 -> INVALID_VALUE (the maximum level is zero)");
+            const mgl::ErrorCode ms_error = demo::drain_gl_errors();
+            check.expect_or_known_deviation(ms_error == mgl::ErrorCode::InvalidValue, "TEXTURE_2D_MULTISAMPLE level 1 -> INVALID_VALUE (the maximum level is zero)",
+                                            std::format("glGetError() = {}, expected GL_INVALID_VALUE", demo::error_name(ms_error)), "ANGLE",
+                                            "ANGLE accepts level 1 of a TEXTURE_2D_MULTISAMPLE texture without an error; ES 3.2 8.11.3: \"For targets "
+                                            "TEXTURE_BUFFER, TEXTURE_2D_MULTISAMPLE, and TEXTURE_2D_MULTISAMPLE_ARRAY, which do not support mipmaps, "
+                                            "the maximum value is zero\"");
         }
 
         // ------------------------------------------------------------------------------------------

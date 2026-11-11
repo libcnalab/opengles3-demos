@@ -180,3 +180,9 @@ are on uniforms, so every invocation takes the same path and implicit derivative
 - **Dithering** (initially enabled) may change a stored 8-bit value; the demo disables it before comparing.
 - **Depth textures** need `NEAREST` (or no mipmap filter) to be sampled with a plain `sampler2D`; the default
   `NEAREST_MIPMAP_LINEAR` would make a one-level texture incomplete.
+
+## Known driver deviations (XFAIL)
+
+- **ANGLE** reports `RENDERBUFFER_RED/GREEN/BLUE/ALPHA_SIZE` = 4 for a renderbuffer that has no storage yet (the sizes of
+  its initial internal format `RGBA4`). Table 6.15 (ES 3.2 Table 21.17) lists 0 as the initial value of every
+  `RENDERBUFFER_*_SIZE`, and §4.4.2.1 creates the object "with a zero-sized memory buffer". XFAIL on "ANGLE".

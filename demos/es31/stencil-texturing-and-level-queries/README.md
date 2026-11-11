@@ -134,3 +134,12 @@ asserted for 3D textures and arrays.
 * `glTexParameteri(..., DepthStencilTextureMode, GLint)` takes the value as a plain `GLint`; there is no typed enum for its legal values
   (`DEPTH_COMPONENT`, `STENCIL_INDEX`), so the demo passes the `GL_*` macros.
 * `TextureParameterQuery::Samples` / `FixedSampleLocations` exist for `glGetTexParameter*`, but section 8.11.2 does not list those pnames for that command.
+
+## Known driver deviations (XFAIL)
+
+* **ANGLE** returns `NONE` for `TEXTURE_RED/GREEN/BLUE_TYPE` of a `COMPRESSED_RGB8_ETC2` level. ES 3.2 8.11.3: *"For texture
+  images with compressed internal formats, the types returned specify how components are interpreted after
+  decompression"*, i.e. `UNSIGNED_NORMALIZED`. The size/format/`COMPRESSED` part is a separate strict check.
+* **ANGLE** accepts `glGetTexLevelParameteriv(TEXTURE_2D_MULTISAMPLE, 1, ...)` without an error. ES 3.2 8.11.3: *"For
+  targets TEXTURE_BUFFER, TEXTURE_2D_MULTISAMPLE, and TEXTURE_2D_MULTISAMPLE_ARRAY, which do not support mipmaps, the
+  maximum value is zero"* (ES 3.1 8.8: multisample textures "do not have multiple image levels").

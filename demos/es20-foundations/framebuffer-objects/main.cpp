@@ -957,8 +957,16 @@ namespace
             // Table 6.15: a new renderbuffer has no storage and RGBA4 as its internal format.
             check.expect(renderbuffer_param(P::Width) == 0 && renderbuffer_param(P::Height) == 0, "a new renderbuffer is 0x0 (initial state, Table 6.15)");
             check.expect_eq(renderbuffer_param(P::InternalFormat), gl(GL_RGBA4), "a new renderbuffer has internal format RGBA4 (initial state, Table 6.15)");
-            check.expect(renderbuffer_param(P::RedSize) == 0 && renderbuffer_param(P::DepthSize) == 0 && renderbuffer_param(P::StencilSize) == 0,
-                         "a new renderbuffer has zero component sizes (initial state)");
+            // Table 6.15 lists 0 as the initial value of every RENDERBUFFER_*_SIZE: the initial internal format
+            // RGBA4 has no image yet, so it has no components.
+            check.expect_or_known_deviation(
+                renderbuffer_param(P::RedSize) == 0 && renderbuffer_param(P::GreenSize) == 0 && renderbuffer_param(P::BlueSize) == 0 &&
+                    renderbuffer_param(P::AlphaSize) == 0 && renderbuffer_param(P::DepthSize) == 0 && renderbuffer_param(P::StencilSize) == 0,
+                "a new renderbuffer has zero component sizes (initial state, Table 6.15)",
+                std::format("got R{} G{} B{} A{} D{} S{}", renderbuffer_param(P::RedSize), renderbuffer_param(P::GreenSize), renderbuffer_param(P::BlueSize),
+                            renderbuffer_param(P::AlphaSize), renderbuffer_param(P::DepthSize), renderbuffer_param(P::StencilSize)),
+                "ANGLE", "ANGLE reports the component sizes of the initial format RGBA4 for a renderbuffer without storage; Table 6.15 gives 0 as the "
+                "initial value of RENDERBUFFER_{RED,GREEN,BLUE,ALPHA,DEPTH,STENCIL}_SIZE (ES 3.2 Table 21.17)");
             struct Sized { mgl::InternalFormat format; GLenum gl_format; int r, g, b, a; const char* name; };
             const Sized sized[] = {
                 {mgl::InternalFormat::Rgba4, GL_RGBA4, 4, 4, 4, 4, "RGBA4"},

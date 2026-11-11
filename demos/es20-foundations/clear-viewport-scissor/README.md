@@ -109,3 +109,10 @@ afterwards so the capture shows the canonical image.
 - **Dithering is part of a clear.** `GL_DITHER` is enabled by default, so on low-precision buffers a
   clear may be dithered. With an 8-bit-per-channel buffer the difference is at most one level, which the checks allow.
 - **Depth and stencil cannot be read back in ES.** Probing them with a test-gated draw, as done here, is the portable method.
+
+## Known driver deviations (XFAIL)
+
+- **ANGLE** keeps the unclamped size in the `GL_VIEWPORT` state: `glViewport(0, 0, MAX + 1000, MAX + 1000)` reads back
+  `MAX + 1000`. ES 3.0 §2.13.1 (ES 3.2 §12.6.1): *"Viewport width and height are clamped to implementation-dependent
+  maximums when specified."* The clamp happens when the state is set, so the query returns the clamped value. The check
+  stays strict and is reported as XFAIL on "ANGLE".

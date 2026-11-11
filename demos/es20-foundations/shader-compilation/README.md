@@ -49,3 +49,10 @@ probe pixel drawn by the flagged-for-deletion program. Run:
   latent `INVALID_OPERATION`.
 - A missing `precision mediump float;` in a fragment shader is a compile error, not a warning.
 - Info-log text differs between drivers. Never parse it in application logic.
+
+## Known driver deviations (XFAIL)
+
+- **ANGLE** sets `VALIDATE_STATUS = TRUE` for a program whose `sampler2D` and `samplerCube` both use unit 0, although
+  the following draw fails with `INVALID_OPERATION` as required. ES 3.0 §2.12.9.7 (ES 3.2 §11.1.3.11):
+  *"ValidateProgram will check for all of the error conditions described in this section"*, and the sampler-type
+  conflict is the first of them. XFAIL on "ANGLE"; the draw-time error is still checked strictly.

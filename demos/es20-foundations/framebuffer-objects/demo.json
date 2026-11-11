@@ -36,7 +36,7 @@
     "glDeleteRenderbuffers": "deleting an attached renderbuffer detaches it from the bound framebuffer",
     "glRenderbufferStorage": "RGBA8, RGBA4, RGB5_A1, RGB565, RGB8, DEPTH_COMPONENT16/24, STENCIL_INDEX8, DEPTH24_STENCIL8: width, height, internal format and component sizes read back; width > MAX_RENDERBUFFER_SIZE -> INVALID_VALUE; changing storage changes completeness",
     "glRenderbufferStorageMultisample": "RENDERBUFFER_SAMPLES >= requested; a multisampled renderbuffer next to a single-sampled one -> INCOMPLETE_MULTISAMPLE; samples above the format's maximum -> INVALID_OPERATION",
-    "glGetRenderbufferParameteriv": "WIDTH, HEIGHT, INTERNAL_FORMAT, RED..STENCIL_SIZE, SAMPLES of seven sized formats and the initial state of a new renderbuffer (0x0, RGBA4, sizes 0); INVALID_OPERATION with renderbuffer 0 bound",
+    "glGetRenderbufferParameteriv": "WIDTH, HEIGHT, INTERNAL_FORMAT, RED..STENCIL_SIZE, SAMPLES of seven sized formats and the initial state of a new renderbuffer (0x0, RGBA4, sizes 0; strict, ANGLE XFAIL for the sizes); INVALID_OPERATION with renderbuffer 0 bound",
     "glGetInternalformativ": "SAMPLES for RGBA8 renderbuffers: the largest count is >= MAX_SAMPLES and one more than it is rejected by glRenderbufferStorageMultisample",
     "glGenTextures": "color targets, a mip chain, a depth texture and scratch textures",
     "glBindTexture": "texture and mip-level attachments and their sampling in the second pass",

@@ -32,7 +32,7 @@
     "glTexSubImage2D": "UNSIGNED_INT data into DEPTH_COMPONENT16 accepted and sampled back; UNSIGNED_SHORT into DEPTH_COMPONENT24 rejected with INVALID_OPERATION and the texel unchanged; FLOAT / UNSIGNED_INT fills of immutable textures",
     "glTexStorage2D": "immutable DEPTH formats (scene, strips, cube) whose stored values are read back; single-level storage keeps NEAREST_MIPMAP_NEAREST complete",
     "glTexStorage3D": "DEPTH_COMPONENT32F 2-layer array rendered per layer and read back against the CPU model",
-    "glTexParameteri": "MIN/MAG filters decide completeness (§3.8.13) and NEAREST vs LINEAR comparisons; COMPARE_MODE / COMPARE_FUNC switch the shadow results exactly as Table 3.23 predicts (typed glTexParameter overloads)",
+    "glTexParameteri": "MIN/MAG filters decide completeness (§3.8.13) and NEAREST vs LINEAR comparisons; COMPARE_MODE / COMPARE_FUNC switch the shadow results exactly as Table 3.23 predicts (Dref clamping for 24-bit fixed-point formats strict, ANGLE XFAIL) (typed glTexParameter overloads)",
     "glGetTexParameteriv": "initial COMPARE_MODE NONE / COMPARE_FUNC LEQUAL; each of the eight functions reads back",
     "glGenerateMipmap": "INVALID_OPERATION on all five depth formats and on a level-0-only DEPTH_COMPONENT32F that stays mipmap-incomplete afterwards; NO_ERROR on RGBA8",
     "glGenSamplers": "raw NEAREST/NONE sampler, LINEAR display sampler and eight comparing samplers, all observed through lookups",

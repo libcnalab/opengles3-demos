@@ -594,6 +594,19 @@ namespace
             return check.expect_gl_error(code, what);
         }
 
+        /// expect_error with a documented driver deviation (Check::expect_or_known_deviation).
+        template <typename F>
+        static bool expect_error_or_known_deviation(demo::Check& check, mgl::ErrorCode code, std::string_view what, F&& call,
+                                                    std::string_view renderer, std::string_view reason)
+        {
+            (void)demo::drain_gl_errors();
+            call();
+            const mgl::ErrorCode e = demo::drain_gl_errors();
+            return check.expect_or_known_deviation(e == code, what,
+                                                   std::format("glGetError() = {}, expected {}", demo::error_name(e), demo::error_name(code)), renderer,
+                                                   reason);
+        }
+
         bool expect_strips(demo::Check& check, std::string_view what, const Ms& m, const std::vector<int>& ids)
         {
             const Strips got = fetch(m);
@@ -1183,7 +1196,12 @@ namespace
                          [&] { mgl::glTexImage2D(ms, 0, mgl::InternalFormat::Rgba8, 8, 8, 0, mgl::PixelFormat::Rgba, mgl::PixelType::UnsignedByte, static_cast<const void*>(nullptr)); });
             expect_error(check, Err::InvalidEnum, "glTexStorage2D with target TEXTURE_2D_MULTISAMPLE -> INVALID_ENUM (section 8.18)",
                          [&] { mgl::glTexStorage2D(ms, 1, rgba8, 8, 8); });
-            expect_error(check, Err::InvalidEnum, "glGenerateMipmap(TEXTURE_2D_MULTISAMPLE) -> INVALID_ENUM (section 8.14.4)", [&] { mgl::glGenerateMipmap(ms); });
+            // ES 3.2 8.14.4: "An INVALID_ENUM error is generated if target is not TEXTURE_2D, TEXTURE_3D, TEXTURE_2D_ARRAY,
+            // TEXTURE_CUBE_MAP or TEXTURE_CUBE_MAP_ARRAY."
+            expect_error_or_known_deviation(check, Err::InvalidEnum, "glGenerateMipmap(TEXTURE_2D_MULTISAMPLE) -> INVALID_ENUM (section 8.14.4)",
+                                            [&] { mgl::glGenerateMipmap(ms); }, "ANGLE",
+                                            "ANGLE accepts glGenerateMipmap(TEXTURE_2D_MULTISAMPLE) without an error; ES 3.1/3.2 8.14.4 list the "
+                                            "valid targets and require INVALID_ENUM for any other");
             expect_error(check, Err::InvalidEnum, "glTexParameteri(TEXTURE_2D_MULTISAMPLE, TEXTURE_MIN_FILTER, NEAREST): sampler state -> INVALID_ENUM (section 8.10)",
                          [&] { mgl::glTexParameteri(ms, mgl::TextureParameterSetter::MinFilter, GL_NEAREST); });
             expect_error(check, Err::InvalidEnum, "glTexParameteri(TEXTURE_2D_MULTISAMPLE, TEXTURE_WRAP_S, REPEAT): sampler state -> INVALID_ENUM",
@@ -1195,8 +1213,13 @@ namespace
 
             // Level queries: the only level is 0 (section 8.11).
             GLint v = 0;
-            expect_error(check, Err::InvalidValue, "glGetTexLevelParameteriv(TEXTURE_2D_MULTISAMPLE, level 1) -> INVALID_VALUE (a multisample texture has no mipmaps)",
-                         [&] { mgl::glGetTexLevelParameteriv(ms, 1, mgl::TextureLevelParameter::Width, &v); });
+            // ES 3.2 8.11.3: "For targets TEXTURE_BUFFER, TEXTURE_2D_MULTISAMPLE, and TEXTURE_2D_MULTISAMPLE_ARRAY, which do
+            // not support mipmaps, the maximum value is zero"; ES 3.1 8.8: "Multisample textures do not have multiple image levels".
+            expect_error_or_known_deviation(check, Err::InvalidValue,
+                                            "glGetTexLevelParameteriv(TEXTURE_2D_MULTISAMPLE, level 1) -> INVALID_VALUE (a multisample texture has no mipmaps)",
+                                            [&] { mgl::glGetTexLevelParameteriv(ms, 1, mgl::TextureLevelParameter::Width, &v); }, "ANGLE",
+                                            "ANGLE accepts level 1 of a TEXTURE_2D_MULTISAMPLE texture without an error; ES 3.2 8.11.3 makes the "
+                                            "maximum level of that target zero");
             expect_error(check, Err::InvalidValue, "glGetTexLevelParameteriv(TEXTURE_2D_MULTISAMPLE, level -1) -> INVALID_VALUE",
                          [&] { mgl::glGetTexLevelParameteriv(ms, -1, mgl::TextureLevelParameter::Width, &v); });
 

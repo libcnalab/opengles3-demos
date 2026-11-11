@@ -790,10 +790,29 @@ namespace
             for (const Case& c : cases_)
             {
                 const Diff by_texture = diff_words(run_exact(c.kind, c.tex, 0), c.expected, c.kind);
-                check.expect(by_texture.bad_words == 0, std::format("{}: texture() returns all {} texels as the exact 32-bit words ({} words compared)", c.name, kTexels, kTexels * 4),
-                             by_texture.first);
                 const Diff by_fetch = diff_words(run_exact(c.kind, c.tex, 1), c.expected, c.kind);
-                check.expect(by_fetch.bad_words == 0, std::format("{}: texelFetch() returns the same exact words", c.name), by_fetch.first);
+                const std::string what_texture =
+                    std::format("{}: texture() returns all {} texels as the exact 32-bit words ({} words compared)", c.name, kTexels, kTexels * 4);
+                const std::string what_fetch = std::format("{}: texelFetch() returns the same exact words", c.name);
+                const std::string detail_texture = std::format("{} texels wrong; {}", by_texture.bad_texels, by_texture.first);
+                const std::string detail_fetch = std::format("{} texels wrong; {}", by_fetch.bad_texels, by_fetch.first);
+                if (c.internal == mgl::InternalFormat::Rgb9E5 && c.type == mgl::PixelType::Float)
+                {
+                    // The encoding of 3.8.3.2 is a fixed procedure (expp = max(-B-1, floor(log2(maxc))) + 1 + B, then
+                    // round-to-nearest mantissas), and 3.8.17 decodes the stored bits exactly.
+                    constexpr std::string_view kAngleRgb9e5 =
+                        "ANGLE's CPU conversion of FLOAT data to RGB9_E5 picks a larger shared exponent than the procedure of ES 3.0 "
+                        "§3.8.3.2 / ES 3.2 §8.5.2 (expp = max(-B-1, floor(log2(maxc))) + 1 + B) for 4 of the 64 texels, so their "
+                        "components lose the least significant mantissa bit; the 4 texels are exactly those where floor(ln(maxc)) "
+                        "differs from floor(log2(maxc))";
+                    check.expect_or_known_deviation(by_texture.bad_words == 0, what_texture, detail_texture, "ANGLE", kAngleRgb9e5);
+                    check.expect_or_known_deviation(by_fetch.bad_words == 0, what_fetch, detail_fetch, "ANGLE", kAngleRgb9e5);
+                }
+                else
+                {
+                    check.expect(by_texture.bad_words == 0, what_texture, detail_texture);
+                    check.expect(by_fetch.bad_words == 0, what_fetch, detail_fetch);
+                }
             }
         }
 

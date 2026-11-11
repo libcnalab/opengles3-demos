@@ -25,16 +25,32 @@
 
 #include <metagl/metagl.hpp>
 
+#include <fcntl.h>
+#include <poll.h>
+#include <signal.h>
+#include <spawn.h>
+#include <sys/resource.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 #include <algorithm>
 #include <array>
+#include <cerrno>
+#include <chrono>
 #include <cmath>
+#include <csignal>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <format>
 #include <functional>
+#include <iostream>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
+
+extern char** environ;
 
 namespace mgl = metagl;
 using demo::Rgba8;
@@ -47,6 +63,194 @@ namespace
     constexpr auto kColor0 = mgl::to_framebuffer_attachment(mgl::ColorAttachment::Color0);
 
     using Color = std::array<double, 4>;
+
+    // ---------------------------------------------------------------------------------------------
+    // Crash isolation (the pattern of tests/negative/driver-crash-readpixels-none). A call that is valid, or
+    // that the specification says must fail cleanly, but that crashes or hangs a driver cannot be observed
+    // in-process. It runs in a fresh child process instead: this executable re-executed through
+    // /proc/self/exe with a hidden first argument. The child creates its own EGL display and context
+    // through demo::run (a fork()ed copy of the parent's context is not usable), inherits the environment
+    // (driver selection, MESA_GLES_VERSION_OVERRIDE), and prints a marker immediately before and after the
+    // isolated call. The parent classifies how the child ended: exit status, signal or timeout, and whether
+    // it died between the two markers.
+    // ---------------------------------------------------------------------------------------------
+    constexpr std::string_view kChildFlag = "--crash-isolated-child";
+    constexpr std::string_view kBeforeMarker = "@@ before the isolated call";
+    constexpr std::string_view kAfterMarker = "@@ after the isolated call";
+
+    struct ChildResult
+    {
+        bool spawned = false;
+        bool timed_out = false;
+        bool exited = false;
+        int exit_code = -1;
+        bool signaled = false;
+        int signal = 0;
+        std::string output;
+
+        [[nodiscard]] bool reached_call() const { return output.find(kBeforeMarker) != std::string::npos; }
+        [[nodiscard]] bool returned_from_call() const { return output.find(kAfterMarker) != std::string::npos; }
+        /// The child passed its own checks.
+        [[nodiscard]] bool passed() const { return exited && exit_code == 0 && returned_from_call(); }
+        /// The child died (signal or timeout) between the two markers, i.e. inside the isolated call.
+        [[nodiscard]] bool died_in_call() const { return (signaled || timed_out) && reached_call() && !returned_from_call(); }
+        [[nodiscard]] std::string describe() const
+        {
+            if (!spawned) return "child could not be spawned";
+            const char* where = reached_call() && !returned_from_call() ? " inside the isolated call" : "";
+            if (timed_out) return std::format("child timed out{} and was killed", where);
+            if (signaled) return std::format("child killed by signal {} ({}){}", signal, sigabbrev_np(signal) ? sigabbrev_np(signal) : "?", where);
+            return std::format("child exited with status {}", exit_code);
+        }
+    };
+
+    /// Environment of the child: ours, plus ASan options that leave SIGSEGV/SIGBUS/SIGABRT to the default action, so that a
+    /// crash is reported as a signal also in OGLES3_SANITIZE builds. Harmless without ASan.
+    std::vector<std::string> child_environment()
+    {
+        std::vector<std::string> env;
+        std::string asan = "ASAN_OPTIONS=";
+        for (char** e = environ; *e != nullptr; ++e)
+        {
+            const std::string_view kv = *e;
+            if (kv.starts_with("ASAN_OPTIONS=")) asan = std::string(kv) + ":";
+            else env.emplace_back(kv);
+        }
+        env.push_back(asan + "handle_segv=0:handle_sigbus=0:handle_abort=0:handle_sigill=0:handle_sigfpe=0");
+        return env;
+    }
+
+    ChildResult run_child(std::string_view case_name, std::chrono::seconds timeout)
+    {
+        ChildResult r;
+        const std::string name(case_name);
+        std::vector<std::string> args = {"/proc/self/exe", std::string(kChildFlag), name};
+        std::vector<char*> argv;
+        for (auto& a : args) argv.push_back(a.data());
+        argv.push_back(nullptr);
+        std::vector<std::string> env_strings = child_environment();
+        std::vector<char*> envp;
+        for (auto& e : env_strings) envp.push_back(e.data());
+        envp.push_back(nullptr);
+
+        int fds[2] = {-1, -1};
+        if (pipe2(fds, O_CLOEXEC) != 0) return r;
+        posix_spawn_file_actions_t actions;
+        posix_spawn_file_actions_init(&actions);
+        posix_spawn_file_actions_adddup2(&actions, fds[1], STDOUT_FILENO);
+        posix_spawn_file_actions_adddup2(&actions, fds[1], STDERR_FILENO);
+
+        // No core dump for the expected crash (inherited soft limit; restored right after the spawn).
+        rlimit core{};
+        const bool have_core = getrlimit(RLIMIT_CORE, &core) == 0;
+        if (have_core)
+        {
+            rlimit none = core;
+            none.rlim_cur = 0;
+            setrlimit(RLIMIT_CORE, &none);
+        }
+        std::cout << std::flush;
+        std::fflush(nullptr);
+        pid_t pid = -1;
+        const int rc = posix_spawn(&pid, "/proc/self/exe", &actions, nullptr, argv.data(), envp.data());
+        if (have_core) setrlimit(RLIMIT_CORE, &core);
+        posix_spawn_file_actions_destroy(&actions);
+        close(fds[1]);
+        if (rc != 0)
+        {
+            close(fds[0]);
+            return r;
+        }
+        r.spawned = true;
+
+        const auto deadline = std::chrono::steady_clock::now() + timeout;
+        std::array<char, 4096> buf{};
+        for (;;)
+        {
+            const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now());
+            if (left.count() <= 0)
+            {
+                r.timed_out = true;
+                kill(pid, SIGKILL);
+                break;
+            }
+            pollfd p{fds[0], POLLIN, 0};
+            const int n = poll(&p, 1, static_cast<int>(left.count()));
+            if (n < 0 && errno == EINTR) continue;
+            if (n <= 0) continue;
+            const ssize_t got = read(fds[0], buf.data(), buf.size());
+            if (got < 0 && errno == EINTR) continue;
+            if (got <= 0) break;  // EOF: the child (and everything that inherited the pipe) is gone
+            r.output.append(buf.data(), static_cast<std::size_t>(got));
+        }
+        close(fds[0]);
+        int status = 0;
+        while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
+        if (!r.timed_out)
+        {
+            r.exited = WIFEXITED(status);
+            r.exit_code = r.exited ? WEXITSTATUS(status) : -1;
+            r.signaled = WIFSIGNALED(status);
+            r.signal = r.signaled ? WTERMSIG(status) : 0;
+        }
+
+        std::cout << std::format("   --- child '{}' output ---\n", name);
+        std::size_t start = 0;
+        while (start < r.output.size())
+        {
+            const std::size_t end = r.output.find('\n', start);
+            const std::size_t stop = end == std::string::npos ? r.output.size() : end;
+            const std::string_view line = std::string_view(r.output).substr(start, stop - start);
+            // "child RESULT:" so that a log scan for the parent's own "RESULT:" line never matches a child.
+            std::cout << "   | " << (line.starts_with("RESULT:") ? "child " : "") << line << "\n";
+            start = stop + 1;
+        }
+        std::cout << std::format("   --- child '{}': {} ---\n", name, r.describe());
+        return r;
+    }
+
+    /// Prints a marker and flushes it to the pipe before the isolated call can crash.
+    void marker(std::string_view m) { std::cout << m << std::endl; }
+
+
+    // Child process: glTexStorage3D(TEXTURE_3D) with a depth format. ES 3.0 section 3.8.3: "Textures with a base internal
+    // format of DEPTH_COMPONENT or DEPTH_STENCIL are supported by texture image specification commands only if target is
+    // TEXTURE_2D, TEXTURE_2D_ARRAY, or TEXTURE_CUBE_MAP. Using these formats in conjunction with any other target will
+    // result in an INVALID_OPERATION error." Section 3.8.4: "If executing the pseudo-code would result in any other error,
+    // the error is generated and the command will have no effect." ANGLE (Vulkan backend) segfaults inside this call
+    // instead, so it is made in a fresh process on every driver.
+    constexpr std::string_view kDepth3dChild = "texstorage3d-depth";
+
+    class Depth3dChild final : public demo::Demo
+    {
+    public:
+        void init(demo::Env& /*env*/) override { mgl::glGenTextures(1, &tex_); }
+        void render(demo::Env& /*env*/, int /*frame*/) override {}
+
+        void validate(demo::Env& /*env*/, demo::Check& check) override
+        {
+            using TT = mgl::TextureTarget;
+            mgl::glBindTexture(TT::Texture3D, tex_);
+            (void)demo::drain_gl_errors();
+            marker(kBeforeMarker);
+            mgl::glTexStorage3D(TT::Texture3D, 1, mgl::SizedInternalFormat::DepthComponent16, 4, 4, 4);
+            marker(kAfterMarker);
+            check.expect_gl_error(mgl::ErrorCode::InvalidOperation,
+                                  "glTexStorage3D(TEXTURE_3D) with DEPTH_COMPONENT16 -> INVALID_OPERATION (section 3.8.3: depth textures are 2D, 2D array or cube)");
+            GLint immutable = -12345;
+            mgl::glGetTexParameteriv(TT::Texture3D, mgl::TextureParameterQuery::ImmutableFormat, &immutable);
+            check.expect(immutable == GL_FALSE, "the refused call had no effect: TEXTURE_IMMUTABLE_FORMAT is still FALSE", std::format("value {}", immutable));
+            mgl::glTexStorage3D(TT::Texture3D, 1, mgl::SizedInternalFormat::Rgba8, 4, 4, 4);
+            check.expect_no_gl_error("a valid glTexStorage3D(TEXTURE_3D, RGBA8) on the same texture afterwards succeeds");
+            mgl::glBindTexture(TT::Texture3D, mgl::TextureId{0});
+        }
+
+        void shutdown(demo::Env& /*env*/) override { mgl::glDeleteTextures(1, &tex_); }
+
+    private:
+        mgl::TextureId tex_{};
+    };
+
 
     // ---------------------------------------------------------------------------------------------
     // CPU encoders and decoders (ES 3.0 sections 2.1.2 - 2.1.4, 3.8.3.2). Written from the specification, not
@@ -980,8 +1184,19 @@ namespace
             // --- depth formats exist only for 2D, array and cube targets -------------------------------------------------
             fresh(TT::Texture2D);
             expect_error(check, mgl::ErrorCode::NoError, "glTexStorage2D with DEPTH_COMPONENT16 is accepted", [] { mgl::glTexStorage2D(TT::Texture2D, 1, S::DepthComponent16, 4, 4); });
-            fresh(TT::Texture3D);
-            expect_error(check, mgl::ErrorCode::InvalidOperation, "glTexStorage3D(TEXTURE_3D) with DEPTH_COMPONENT16 -> INVALID_OPERATION (section 3.8.3: depth textures are 2D, 2D array or cube)", [] { mgl::glTexStorage3D(TT::Texture3D, 1, S::DepthComponent16, 4, 4, 4); });
+            {
+                // Made in an isolated child process (see Depth3dChild): it crashes one driver. Only a death inside the call is the
+                // documented deviation; any other outcome (a wrong error, a crash during setup) is a plain failure on every driver.
+                const ChildResult r = run_child(kDepth3dChild, std::chrono::seconds{30});
+                const std::string what = "isolated child: glTexStorage3D(TEXTURE_3D) with DEPTH_COMPONENT16 -> INVALID_OPERATION with no effect "
+                                         "(section 3.8.3: depth textures are 2D, 2D array or cube), and the process survives";
+                if (r.passed() || r.died_in_call())
+                    check.expect_or_known_deviation(r.passed(), what, r.describe(), "ANGLE",
+                                                    "ANGLE segfaults in glTexStorage3D(TEXTURE_3D, DEPTH_COMPONENT16) instead of raising INVALID_OPERATION "
+                                                    "(ES 3.0 3.8.3)");
+                else
+                    check.expect(false, what, r.describe());
+            }
             fresh(TT::Texture2DArray);
             expect_error(check, mgl::ErrorCode::NoError, "glTexStorage3D(TEXTURE_2D_ARRAY) with DEPTH_COMPONENT16 is accepted", [] { mgl::glTexStorage3D(TT::Texture2DArray, 1, S::DepthComponent16, 4, 4, 4); });
             mgl::glBindTexture(TT::Texture2D, mgl::TextureId{0});
@@ -1253,6 +1468,24 @@ namespace
 
 int main(int argc, char** argv)
 {
+    if (argc >= 3 && std::string_view(argv[1]) == kChildFlag)
+    {
+        if (std::string_view(argv[2]) != kDepth3dChild)
+        {
+            std::cerr << "unknown child case '" << argv[2] << "'\n";
+            return 2;
+        }
+        std::array<char*, 3> child_argv = {argv[0], const_cast<char*>("--headless"), const_cast<char*>("--validate")};
+        const demo::Info child_info{
+            .name = "es30-immutable-storage(child)",
+            .title = "glTexStorage3D(TEXTURE_3D) with a depth format: isolated child process",
+            .min_es = {3, 0},
+            .summary = "Internal child process of es30-immutable-storage.",
+            .source_dir = DEMO_SOURCE_DIR,
+        };
+        return demo::run<Depth3dChild>(static_cast<int>(child_argv.size()), child_argv.data(), child_info);
+    }
+
     const demo::Info info{
         .name = "es30-immutable-storage",
         .title = "Immutable texture storage and sized formats",

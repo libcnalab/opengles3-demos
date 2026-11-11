@@ -14,21 +14,40 @@
 //         half shows the original program in grey instead.
 // In both cases glGetProgramBinary with a too-small bufSize and with an unlinked program must fail
 // with INVALID_OPERATION.
+//
+// The corrupted / truncated / over-long binaries are loaded in child processes (this executable
+// re-executed with a hidden first argument), because one of those loads crashes a driver (ANGLE).
 
 #include <demo/gl_util.hpp>
 #include <demo/runtime.hpp>
 
 #include <metagl/metagl.hpp>
 
+#include <fcntl.h>
+#include <poll.h>
+#include <signal.h>
+#include <spawn.h>
+#include <sys/resource.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 #include <algorithm>
-#include <cstdlib>
 #include <array>
+#include <cerrno>
+#include <chrono>
+#include <csignal>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <format>
+#include <iostream>
 #include <map>
 #include <string>
+#include <string_view>
 #include <vector>
+
+extern char** environ;
 
 namespace mgl = metagl;
 
@@ -200,6 +219,287 @@ namespace
         if (!s.all_found) return "a uniform location is missing";
         return std::format("u_scale=({},{}) u_origin=({},{}) u_cell={} u_seed={} u_gray={}", s.scale[0], s.scale[1],
                            s.origin[0], s.origin[1], s.cell, s.seed, s.gray);
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Crash isolation (the pattern of tests/negative/driver-crash-readpixels-none). A call that is valid, or
+    // that the specification says must fail cleanly, but that crashes or hangs a driver cannot be observed
+    // in-process. It runs in a fresh child process instead: this executable re-executed through
+    // /proc/self/exe with a hidden first argument. The child creates its own EGL display and context
+    // through demo::run (a fork()ed copy of the parent's context is not usable), inherits the environment
+    // (driver selection, MESA_GLES_VERSION_OVERRIDE), and prints a marker immediately before and after the
+    // isolated call. The parent classifies how the child ended: exit status, signal or timeout, and whether
+    // it died between the two markers.
+    // ---------------------------------------------------------------------------------------------
+    constexpr std::string_view kChildFlag = "--crash-isolated-child";
+    constexpr std::string_view kBeforeMarker = "@@ before the isolated call";
+    constexpr std::string_view kAfterMarker = "@@ after the isolated call";
+
+    struct ChildResult
+    {
+        bool spawned = false;
+        bool timed_out = false;
+        bool exited = false;
+        int exit_code = -1;
+        bool signaled = false;
+        int signal = 0;
+        std::string output;
+
+        [[nodiscard]] bool reached_call() const { return output.find(kBeforeMarker) != std::string::npos; }
+        [[nodiscard]] bool returned_from_call() const { return output.find(kAfterMarker) != std::string::npos; }
+        /// The child passed its own checks.
+        [[nodiscard]] bool passed() const { return exited && exit_code == 0 && returned_from_call(); }
+        /// The child died (signal or timeout) between the two markers, i.e. inside the isolated call.
+        [[nodiscard]] bool died_in_call() const { return (signaled || timed_out) && reached_call() && !returned_from_call(); }
+        [[nodiscard]] std::string describe() const
+        {
+            if (!spawned) return "child could not be spawned";
+            const char* where = reached_call() && !returned_from_call() ? " inside the isolated call" : "";
+            if (timed_out) return std::format("child timed out{} and was killed", where);
+            if (signaled) return std::format("child killed by signal {} ({}){}", signal, sigabbrev_np(signal) ? sigabbrev_np(signal) : "?", where);
+            return std::format("child exited with status {}", exit_code);
+        }
+    };
+
+    /// Environment of the child: ours, plus ASan options that leave SIGSEGV/SIGBUS/SIGABRT to the default action, so that a
+    /// crash is reported as a signal also in OGLES3_SANITIZE builds. Harmless without ASan.
+    std::vector<std::string> child_environment()
+    {
+        std::vector<std::string> env;
+        std::string asan = "ASAN_OPTIONS=";
+        for (char** e = environ; *e != nullptr; ++e)
+        {
+            const std::string_view kv = *e;
+            if (kv.starts_with("ASAN_OPTIONS=")) asan = std::string(kv) + ":";
+            else env.emplace_back(kv);
+        }
+        env.push_back(asan + "handle_segv=0:handle_sigbus=0:handle_abort=0:handle_sigill=0:handle_sigfpe=0");
+        return env;
+    }
+
+    ChildResult run_child(std::string_view case_name, std::chrono::seconds timeout)
+    {
+        ChildResult r;
+        const std::string name(case_name);
+        std::vector<std::string> args = {"/proc/self/exe", std::string(kChildFlag), name};
+        std::vector<char*> argv;
+        for (auto& a : args) argv.push_back(a.data());
+        argv.push_back(nullptr);
+        std::vector<std::string> env_strings = child_environment();
+        std::vector<char*> envp;
+        for (auto& e : env_strings) envp.push_back(e.data());
+        envp.push_back(nullptr);
+
+        int fds[2] = {-1, -1};
+        if (pipe2(fds, O_CLOEXEC) != 0) return r;
+        posix_spawn_file_actions_t actions;
+        posix_spawn_file_actions_init(&actions);
+        posix_spawn_file_actions_adddup2(&actions, fds[1], STDOUT_FILENO);
+        posix_spawn_file_actions_adddup2(&actions, fds[1], STDERR_FILENO);
+
+        // No core dump for the expected crash (inherited soft limit; restored right after the spawn).
+        rlimit core{};
+        const bool have_core = getrlimit(RLIMIT_CORE, &core) == 0;
+        if (have_core)
+        {
+            rlimit none = core;
+            none.rlim_cur = 0;
+            setrlimit(RLIMIT_CORE, &none);
+        }
+        std::cout << std::flush;
+        std::fflush(nullptr);
+        pid_t pid = -1;
+        const int rc = posix_spawn(&pid, "/proc/self/exe", &actions, nullptr, argv.data(), envp.data());
+        if (have_core) setrlimit(RLIMIT_CORE, &core);
+        posix_spawn_file_actions_destroy(&actions);
+        close(fds[1]);
+        if (rc != 0)
+        {
+            close(fds[0]);
+            return r;
+        }
+        r.spawned = true;
+
+        const auto deadline = std::chrono::steady_clock::now() + timeout;
+        std::array<char, 4096> buf{};
+        for (;;)
+        {
+            const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now());
+            if (left.count() <= 0)
+            {
+                r.timed_out = true;
+                kill(pid, SIGKILL);
+                break;
+            }
+            pollfd p{fds[0], POLLIN, 0};
+            const int n = poll(&p, 1, static_cast<int>(left.count()));
+            if (n < 0 && errno == EINTR) continue;
+            if (n <= 0) continue;
+            const ssize_t got = read(fds[0], buf.data(), buf.size());
+            if (got < 0 && errno == EINTR) continue;
+            if (got <= 0) break;  // EOF: the child (and everything that inherited the pipe) is gone
+            r.output.append(buf.data(), static_cast<std::size_t>(got));
+        }
+        close(fds[0]);
+        int status = 0;
+        while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
+        if (!r.timed_out)
+        {
+            r.exited = WIFEXITED(status);
+            r.exit_code = r.exited ? WEXITSTATUS(status) : -1;
+            r.signaled = WIFSIGNALED(status);
+            r.signal = r.signaled ? WTERMSIG(status) : 0;
+        }
+
+        std::cout << std::format("   --- child '{}' output ---\n", name);
+        std::size_t start = 0;
+        while (start < r.output.size())
+        {
+            const std::size_t end = r.output.find('\n', start);
+            const std::size_t stop = end == std::string::npos ? r.output.size() : end;
+            const std::string_view line = std::string_view(r.output).substr(start, stop - start);
+            // "child RESULT:" so that a log scan for the parent's own "RESULT:" line never matches a child.
+            std::cout << "   | " << (line.starts_with("RESULT:") ? "child " : "") << line << "\n";
+            start = stop + 1;
+        }
+        std::cout << std::format("   --- child '{}': {} ---\n", name, r.describe());
+        return r;
+    }
+
+    /// Prints a marker and flushes it to the pipe before the isolated call can crash.
+    void marker(std::string_view m) { std::cout << m << std::endl; }
+
+
+    // ---------------------------------------------------------------------------------------------
+    // Child process: one corrupted, truncated or over-long binary loaded over a successfully loaded program.
+    // ES 3.0 2.12.4: "binaryFormat and binary must be those returned by a previous call to GetProgramBinary, and length
+    // must be the length of the program binary as returned by GetProgramBinary or GetProgramiv with pname
+    // PROGRAM_BINARY_LENGTH. Loading the program binary will fail, setting the LINK_STATUS of program to FALSE, if these
+    // conditions are not met." and "If ProgramBinary fails to load a binary, no error is generated". A load that must
+    // fail cleanly crashes ANGLE (SIGILL inside glProgramBinary for a binary truncated to half its length), so every
+    // mutation is loaded in a fresh process, on every driver.
+    // ---------------------------------------------------------------------------------------------
+    struct MutationCase
+    {
+        std::string_view name;
+        const char* what;
+    };
+    constexpr std::array<MutationCase, 7> kMutations = {{
+        {"middle-byte", "one byte in the middle inverted"},
+        {"first-byte", "first byte inverted"},
+        {"last-byte", "last byte inverted"},
+        {"truncated-1", "truncated by one byte (length - 1)"},
+        {"truncated-half", "truncated to half its length"},
+        {"extra-16", "with 16 extra bytes (length + 16)"},
+        {"bit-flip", "a single flipped bit (one third into the binary)"},
+    }};
+    std::string g_child_case;  // set by main() in child mode
+    constexpr std::string_view kResultMarker = "@@ result ";
+
+    /// The mutated binary and the length passed to glProgramBinary.
+    std::pair<std::vector<std::uint8_t>, GLsizei> mutate(std::string_view name, const std::vector<std::uint8_t>& binary, GLsizei n)
+    {
+        auto d = binary;
+        if (name == "middle-byte") d[d.size() / 2] ^= 0xFFu;
+        else if (name == "first-byte") d[0] ^= 0xFFu;
+        else if (name == "last-byte") d[d.size() - 1] ^= 0xFFu;
+        else if (name == "truncated-1") return {d, n - 1};
+        else if (name == "truncated-half") return {d, n / 2};
+        else if (name == "extra-16")
+        {
+            d.resize(d.size() + 16, 0);
+            return {d, n + 16};
+        }
+        else if (name == "bit-flip") d[d.size() / 3] ^= 0x01u;
+        return {d, n};
+    }
+
+    class MutationChild final : public demo::Demo
+    {
+    public:
+        void init(demo::Env& env) override
+        {
+            std::string log;
+            const mgl::ShaderId vs = demo::compile_shader(mgl::ShaderType::Vertex, env.load_text("shaders/pattern.vert"), log);
+            const mgl::ShaderId fs = demo::compile_shader(mgl::ShaderType::Fragment, env.load_text("shaders/pattern.frag"), log);
+            if (vs.value == 0 || fs.value == 0) throw demo::Failure("pattern shaders failed to compile:\n" + log);
+            const mgl::ProgramId original = mgl::glCreateProgram();
+            mgl::glAttachShader(original, vs);
+            mgl::glAttachShader(original, fs);
+            mgl::glProgramParameteri(original, mgl::ProgramParameter::BinaryRetrievableHint, GL_TRUE);
+            mgl::glLinkProgram(original);
+            mgl::glDeleteShader(vs);
+            mgl::glDeleteShader(fs);
+            if (program_int(original, mgl::ProgramParameter::LinkStatus) != GL_TRUE)
+                throw demo::Failure("pattern program failed to link:\n" + demo::program_info_log(original));
+            if (demo::get_integer(mgl::GetParameter::NumProgramBinaryFormats) < 1) throw demo::Skip("no program binary formats");
+            const GLint length = program_int(original, mgl::ProgramParameter::BinaryLength);
+            binary_.assign(static_cast<std::size_t>(std::max(length, 1)), 0);
+            mgl::glGetProgramBinary(original, length, &written_, &format_, binary_.data());
+            mgl::glDeleteProgram(original);
+            if (written_ <= 2) throw demo::Failure(std::format("glGetProgramBinary wrote {} bytes", written_));
+            binary_.resize(static_cast<std::size_t>(written_));
+        }
+
+        void render(demo::Env& /*env*/, int /*frame*/) override {}
+
+        void validate(demo::Env& /*env*/, demo::Check& check) override
+        {
+            const mgl::ProgramId p = mgl::glCreateProgram();
+            // Load the valid binary first, so the failure must also discard a previous successful load:
+            // "any information about a previous link or load of that program object is lost".
+            mgl::glProgramBinary(p, format_, binary_.data(), written_);
+            const mgl::ErrorCode ok_error = demo::drain_gl_errors();
+            const GLint ok_linked = program_int(p, mgl::ProgramParameter::LinkStatus);
+            const auto [data, length] = mutate(g_child_case, binary_, written_);
+            marker(kBeforeMarker);
+            mgl::glProgramBinary(p, format_, data.data(), length);
+            const mgl::ErrorCode error = demo::drain_gl_errors();
+            const GLint linked = program_int(p, mgl::ProgramParameter::LinkStatus);
+            const GLint binary_length = program_int(p, mgl::ProgramParameter::BinaryLength);
+            marker(kAfterMarker);
+            // Parsed by the parent.
+            std::cout << kResultMarker << std::format("valid_linked={} error={} linked={} length={}", ok_linked, demo::error_name(error), linked, binary_length)
+                      << std::endl;
+            check.expect(ok_error == mgl::ErrorCode::NoError && ok_linked == GL_TRUE, "the valid binary loads first (LINK_STATUS TRUE)");
+            check.expect(error == mgl::ErrorCode::NoError && linked == GL_FALSE && binary_length == 0,
+                         std::format("the {} binary: glProgramBinary generates no error, LINK_STATUS FALSE, PROGRAM_BINARY_LENGTH 0", g_child_case),
+                         std::format("error {}, LINK_STATUS {}, length {}", demo::error_name(error), linked, binary_length));
+            mgl::glDeleteProgram(p);
+        }
+
+        void shutdown(demo::Env& /*env*/) override {}
+
+    private:
+        std::vector<std::uint8_t> binary_;
+        GLsizei written_ = -1;
+        mgl::ProgramBinaryFormat format_{};
+    };
+
+    bool renderer_is_angle()
+    {
+        const GLubyte* renderer = mgl::glGetString(mgl::StringName::Renderer);
+        return renderer != nullptr && std::string_view(reinterpret_cast<const char*>(renderer)).find("ANGLE") != std::string_view::npos;
+    }
+
+    /// Values of the child's result line; `found` is false when the child never printed it.
+    struct ChildLoad
+    {
+        bool found = false;
+        int valid_linked = -1, linked = -1, length = -1;
+        std::string error;
+    };
+
+    ChildLoad parse_child_load(const ChildResult& r)
+    {
+        ChildLoad l;
+        const std::size_t at = r.output.find(kResultMarker);
+        if (at == std::string::npos) return l;
+        const std::string line = r.output.substr(at + kResultMarker.size(), r.output.find('\n', at) - at - kResultMarker.size());
+        char error[64] = {};
+        l.found = std::sscanf(line.c_str(), "valid_linked=%d error=%63s linked=%d length=%d", &l.valid_linked, error, &l.linked, &l.length) == 4;
+        l.error = error;
+        return l;
     }
 
     class ProgramBinary final : public demo::Demo
@@ -537,66 +837,19 @@ namespace
             const mgl::ProgramId p = mgl::glCreateProgram();
             const GLsizei n = written_;
 
-            struct Mutation
-            {
-                const char* what;
-                std::vector<std::uint8_t> data;
-                GLsizei length;
-            };
-            std::vector<Mutation> cases;
-            {
-                auto d = binary_;
-                d[d.size() / 2] ^= 0xFFu;
-                cases.push_back({"one byte in the middle inverted", d, n});
-            }
+            check_mutations_isolated(check);
+
+            // After a failed load the program is "last linked unsuccessfully": UseProgram must refuse it
+            // (ES 3.0 §2.12.3) and GetProgramBinary must refuse it (§2.12.4). The failed load made in this process inverts
+            // the first byte, a header mutation that every tested driver rejects cleanly; the other mutations are loaded
+            // in child processes above.
             {
                 auto d = binary_;
                 d[0] ^= 0xFFu;
-                cases.push_back({"first byte inverted", d, n});
-            }
-            {
-                auto d = binary_;
-                d[d.size() - 1] ^= 0xFFu;
-                cases.push_back({"last byte inverted", d, n});
-            }
-            cases.push_back({"truncated by one byte (length - 1)", binary_, n - 1});
-            cases.push_back({"truncated to half its length", binary_, n / 2});
-
-            for (const auto& c : cases)
-            {
-                // Load the valid binary first, so the failure must also discard a previous successful load:
-                // "any information about a previous link or load of that program object is lost".
                 const LoadResult ok = load(p, binary_format_, binary_, n);
-                const LoadResult r = load(p, binary_format_, c.data, c.length);
-                check.expect(ok.linked == GL_TRUE && r.error == mgl::ErrorCode::NoError && r.linked == GL_FALSE && r.length == 0,
-                             std::format("binary {}: glProgramBinary generates no error, LINK_STATUS FALSE, PROGRAM_BINARY_LENGTH 0",
-                                         c.what),
-                             std::format("valid load first: LINK_STATUS {}; mutated: error {}, LINK_STATUS {}, length {}", ok.linked,
-                                         demo::error_name(r.error), r.linked, r.length));
-            }
-
-            // A length larger than the binary violates "length must be the length of the program binary as returned
-            // by GetProgramBinary or GetProgramiv" just as a shorter one does, so the load "will fail".
-            {
-                auto d = binary_;
-                d.resize(d.size() + 16, 0);
-                const LoadResult ok = load(p, binary_format_, binary_, n);
-                const LoadResult r = load(p, binary_format_, d, n + 16);
-                check.expect_or_known_deviation(
-                    ok.linked == GL_TRUE && r.error == mgl::ErrorCode::NoError && r.linked == GL_FALSE && r.length == 0,
-                    "binary with 16 extra bytes (length + 16): no error, LINK_STATUS FALSE, PROGRAM_BINARY_LENGTH 0",
-                    std::format("mutated: error {}, LINK_STATUS {}, length {}", demo::error_name(r.error), r.linked, r.length), "Mesa",
-                    "Mesa's CRC covers only the payload size stored in the header and ignores trailing bytes, so an over-long "
-                    "length still loads (ES 3.0 §2.12.4 requires the load to fail)");
-            }
-
-            // After a failed load the program is "last linked unsuccessfully": UseProgram must refuse it
-            // (ES 3.0 §2.12.3) and GetProgramBinary must refuse it (§2.12.4).
-            {
-                auto d = binary_;
-                d[d.size() / 3] ^= 0x01u;
                 const LoadResult r = load(p, binary_format_, d, n);
-                check.expect(r.error == mgl::ErrorCode::NoError && r.linked == GL_FALSE, "a single flipped bit also makes the load fail",
+                check.expect(ok.linked == GL_TRUE && r.error == mgl::ErrorCode::NoError && r.linked == GL_FALSE,
+                             "in-process: a binary with an inverted first byte loaded over a valid load fails (no error, LINK_STATUS FALSE)",
                              std::format("error {}, LINK_STATUS {}", demo::error_name(r.error), r.linked));
             }
             mgl::glUseProgram(p);
@@ -628,7 +881,13 @@ namespace
             // Negative length: ES 3.2 §7.5 "INVALID_VALUE ... if length is negative"; ES 3.0 §2.5 sizei rule.
             load(p, binary_format_, binary_, n);
             mgl::glProgramBinary(p, binary_format_, binary_.data(), -1);
-            check.expect_gl_error(mgl::ErrorCode::InvalidValue, "glProgramBinary with length -1 -> INVALID_VALUE");
+            {
+                const mgl::ErrorCode e = demo::drain_gl_errors();
+                check.expect_or_known_deviation(e == mgl::ErrorCode::InvalidValue, "glProgramBinary with length -1 -> INVALID_VALUE",
+                                                std::format("glGetError() = {}", demo::error_name(e)), "ANGLE",
+                                                "ANGLE's glProgramBinary raises no error for a negative length (ES 3.0 2.5 sizei rule; "
+                                                "ES 3.2 7.5: INVALID_VALUE if length is negative)");
+            }
             linked = program_int(p, mgl::ProgramParameter::LinkStatus);
             check.expect_or_known_deviation(linked == GL_TRUE, "the INVALID_VALUE call had no effect: the program is still linked",
                                             std::format("LINK_STATUS {}", linked), "Mesa", kMesaClearsFirst);
@@ -636,15 +895,63 @@ namespace
             mgl::glDeleteProgram(p);
         }
 
+        // The mutated loads, each in a fresh child process (see MutationChild).
+        static void check_mutations_isolated(demo::Check& check)
+        {
+            const bool angle = renderer_is_angle();
+            constexpr std::string_view kAngleLoads =
+                "ANGLE does not validate a program binary against what GetProgramBinary returned: a byte inverted in the middle or at the "
+                "end, a flipped bit, a length one byte short or 16 bytes long all load with LINK_STATUS TRUE (ES 3.0 2.12.4: loading "
+                "will fail if these conditions are not met)";
+            constexpr std::string_view kAngleCrash =
+                "ANGLE crashes inside glProgramBinary for a truncated binary (SIGILL) instead of failing the load with LINK_STATUS FALSE "
+                "(ES 3.0 2.12.4)";
+            constexpr std::string_view kMesaTrailing =
+                "Mesa's CRC covers only the payload size stored in the header and ignores trailing bytes, so an over-long "
+                "length still loads (ES 3.0 2.12.4 requires the load to fail)";
+            for (const MutationCase& c : kMutations)
+            {
+                const ChildResult r = run_child(c.name, std::chrono::seconds{30});
+                const ChildLoad l = parse_child_load(r);
+                const std::string what = std::format("binary {} (isolated child): glProgramBinary generates no error, LINK_STATUS FALSE, "
+                                                     "PROGRAM_BINARY_LENGTH 0, and the process survives", c.what);
+                const std::string detail = l.found ? std::format("valid load first: LINK_STATUS {}; mutated: error {}, LINK_STATUS {}, length {}; {}",
+                                                                 l.valid_linked, l.error, l.linked, l.length, r.describe())
+                                                   : r.describe();
+                // The documented deviations: a death inside glProgramBinary, or a mutated binary that loads successfully.
+                // Anything else (a wrong error, a failing valid load, a crash during setup) is a plain failure.
+                const bool loaded = r.exited && r.returned_from_call() && l.found && l.valid_linked == GL_TRUE && l.error == "GL_NO_ERROR" &&
+                                    l.linked == GL_TRUE;
+                if (r.passed())
+                    check.expect(true, what, detail);
+                else if (r.died_in_call())
+                    check.expect_or_known_deviation(false, what, detail, "ANGLE", kAngleCrash);
+                else if (loaded && c.name == "extra-16" && !angle)
+                    check.expect_or_known_deviation(false, what, detail, "Mesa", kMesaTrailing);
+                else if (loaded)
+                    check.expect_or_known_deviation(false, what, detail, "ANGLE", kAngleLoads);
+                else
+                    check.expect(false, what, detail);
+            }
+        }
+
         // ES 3.0 §2.5: "If the generating command modifies values through a pointer argument, no change is made
         // to these values."
-        static void expect_outputs_untouched(demo::Check& check, GLsizei length, mgl::ProgramBinaryFormat format, std::string_view call)
+        // `angle_writes`: ANGLE writes both outputs on this path (the too-small bufSize).
+        static void expect_outputs_untouched(demo::Check& check, GLsizei length, mgl::ProgramBinaryFormat format, std::string_view call,
+                                             bool angle_writes = false)
         {
-            check.expect(static_cast<GLenum>(format) == 0x7777u, std::format("{}: binaryFormat was not written", call),
-                         std::format("0x{:X}", static_cast<unsigned>(format)));
+            constexpr std::string_view kAngleWrites =
+                "ANGLE's glGetProgramBinary with a too-small bufSize raises INVALID_OPERATION but stores *binaryFormat and *length = 0 "
+                "(ES 3.0 2.5: the erroring command makes no change to values through pointer arguments)";
+            const bool angle = angle_writes && renderer_is_angle();
+            const std::string format_what = std::format("{}: binaryFormat was not written", call);
+            const std::string format_detail = std::format("0x{:X}", static_cast<unsigned>(format));
+            if (angle) check.expect_or_known_deviation(static_cast<GLenum>(format) == 0x7777u, format_what, format_detail, "ANGLE", kAngleWrites);
+            else check.expect(static_cast<GLenum>(format) == 0x7777u, format_what, format_detail);
             check.expect_or_known_deviation(length == -7, std::format("{}: length was not written (ES 3.0 §2.5)", call),
-                                            std::format("length = {}", length), "Mesa",
-                                            "Mesa's glGetProgramBinary stores *length = 0 on its INVALID_OPERATION paths");
+                                            std::format("length = {}", length), angle ? "ANGLE" : "Mesa",
+                                            angle ? kAngleWrites : "Mesa's glGetProgramBinary stores *length = 0 on its INVALID_OPERATION paths");
         }
 
         // Fallback path (§2.12.4: "the application should fall back to providing the original ... source
@@ -656,8 +963,10 @@ namespace
             mgl::glAttachShader(p, vs_);
             mgl::glAttachShader(p, fs_);
             mgl::glBindAttribLocation(p, mgl::AttribLocation{kPosAttrib}, "a_pos");
+            // A stale binary as a driver update produces it: the header no longer matches. (Arbitrary corruptions are
+            // loaded in child processes, see check_mutations_isolated: one driver accepts or crashes on some of them.)
             auto stale = binary_;
-            stale[stale.size() / 2] ^= 0x5Au;
+            stale[0] ^= 0x5Au;
             mgl::glProgramBinary(p, binary_format_, stale.data(), written_);
             check.expect_no_gl_error("fallback: loading a stale binary generates no error");
             check.expect_eq(program_int(p, mgl::ProgramParameter::LinkStatus), GL_FALSE, "fallback: LINK_STATUS FALSE tells the application to fall back");
@@ -744,7 +1053,7 @@ namespace
                 mgl::ProgramBinaryFormat f{0x7777u};
                 mgl::glGetProgramBinary(original_, binary_length_ - 1, &w, &f, buf.data());
                 check.expect_gl_error(mgl::ErrorCode::InvalidOperation, "glGetProgramBinary with bufSize = PROGRAM_BINARY_LENGTH - 1 -> INVALID_OPERATION");
-                expect_outputs_untouched(check, w, f, "glGetProgramBinary with a too-small bufSize");
+                expect_outputs_untouched(check, w, f, "glGetProgramBinary with a too-small bufSize", true);
                 mgl::glGetProgramBinary(original_, 0, &w, &f, buf.data());
                 check.expect_gl_error(mgl::ErrorCode::InvalidOperation, "glGetProgramBinary with bufSize = 0 -> INVALID_OPERATION");
             }
@@ -809,6 +1118,27 @@ namespace
 
 int main(int argc, char** argv)
 {
+    if (argc >= 3 && std::string_view(argv[1]) == kChildFlag)
+    {
+        bool known = false;
+        for (const MutationCase& c : kMutations) known = known || c.name == argv[2];
+        if (!known)
+        {
+            std::cerr << "unknown child case '" << argv[2] << "'\n";
+            return 2;
+        }
+        g_child_case = argv[2];
+        std::array<char*, 3> child_argv = {argv[0], const_cast<char*>("--headless"), const_cast<char*>("--validate")};
+        const demo::Info child_info{
+            .name = "es30-program-binary(child)",
+            .title = "glProgramBinary with a mutated binary: isolated child process",
+            .min_es = {3, 0},
+            .summary = "Internal child process of es30-program-binary.",
+            .source_dir = DEMO_SOURCE_DIR,
+        };
+        return demo::run<MutationChild>(static_cast<int>(child_argv.size()), child_argv.data(), child_info);
+    }
+
     const demo::Info info{
         .name = "es30-program-binary",
         .title = "Program binaries",

@@ -99,9 +99,15 @@ which need not hold half-float values, and `sampler3D` / `sampler2DArray` have n
   of the immutable behavior (same filter state, black instead of the level color). A manual mutation (shifting the shared-exponent bias by one) makes
   panels 20 to 22 fail.
 - **Queries (5 checks).** `TEXTURE_IMMUTABLE_FORMAT/LEVELS` for 2D, 3D and array textures (and cube map), `FALSE` / 0 for a mutable texture, `glTexParameteri` on an immutable texture reads back.
-- **Level limits and storage errors (26 `glGetError` checks and 2 "the refused call had no effect" checks).** `levels` around the limit for 2D, cube map, 3D and array textures (accepted at the limit, `INVALID_OPERATION` above it,
+- **Level limits and storage errors (25 `glGetError` checks, 2 "the refused call had no effect" checks and 1 isolated child process).** `levels` around the limit for 2D, cube map, 3D and array textures (accepted at the limit, `INVALID_OPERATION` above it,
   and the refused texture is still usable), `INVALID_VALUE` for zero or negative levels and sizes, `INVALID_ENUM` for the wrong target (`TEXTURE_3D` with `glTexStorage2D`,
-  `TEXTURE_2D` with `glTexStorage3D`, ...), `INVALID_OPERATION` for the default texture object, and for a depth format with a 3D target.
+  `TEXTURE_2D` with `glTexStorage3D`, ...), `INVALID_OPERATION` for the default texture object, and for a depth format with a 3D target. That last call,
+  `glTexStorage3D(TEXTURE_3D, 1, DEPTH_COMPONENT16, 4, 4, 4)`, runs in a **child process** on every driver, because it crashes one
+  driver. The executable re-executes itself (`/proc/self/exe` with a hidden first argument, the pattern of
+  `tests/negative/driver-crash-readpixels-none`). The child creates its own context, makes the call between two printed markers,
+  expects `INVALID_OPERATION`, `TEXTURE_IMMUTABLE_FORMAT` still `FALSE` and a valid `glTexStorage3D(RGBA8)` afterwards, and exits
+  with PASS or FAIL. The parent echoes the child's output and classifies its end (exit status, signal, 30 s timeout). Only a
+  death between the markers counts as the documented deviation; any other failure is a plain FAIL.
 - **Format validation (about 40 `glGetError` checks).** 30 combinations of internal format, format and type through `glTexImage2D` (invalid: `INVALID_OPERATION`; valid ones
   as positive controls), `glTexSubImage2D` with a pair that does not fit the level, depth formats on 3D and array targets.
 - **Respecification (11 checks).** On immutable 2D, 3D and array textures: `glTexImage2D` / `glTexImage3D` (with the very same parameters and with others), a second `glTexStorage*`,
@@ -111,6 +117,13 @@ which need not hold half-float values, and `sampler3D` / `sampler2DArray` have n
 
 ## Known driver deviation and spec notes
 
+- **ANGLE crashes in `glTexStorage3D(TEXTURE_3D)` with a depth format.** ANGLE 2.1.17841 (Vulkan backend) dies with SIGSEGV
+  inside `GL_TexStorage3D` (in the Vulkan driver) instead of generating the error. ES 3.0 §3.8.3: *"Textures with a base internal
+  format of DEPTH_COMPONENT or DEPTH_STENCIL are supported by texture image specification commands only if target is
+  TEXTURE_2D, TEXTURE_2D_ARRAY, or TEXTURE_CUBE_MAP. Using these formats in conjunction with any other target will result in an
+  INVALID_OPERATION error."* §3.8.4: *"If executing the pseudo-code would result in any other error, the error is generated and
+  the command will have no effect."* `glTexImage3D(TEXTURE_3D)` with the same format is rejected correctly. The isolated
+  check is reported as XFAIL on "ANGLE".
 - **Unsized `RGB + FLOAT` depends on `GL_OES_texture_float`.** Core ES 3.0 Table 3.3 (ES 3.2 Table 8.3) lists
   unsized `RGB` only with `UNSIGNED_BYTE` and `UNSIGNED_SHORT_5_6_5`. `OES_texture_float` adds `RGB/RGBA + FLOAT`, and
   every Mesa context here exposes it. So accepting the pair is correct, and the check's expectation follows the

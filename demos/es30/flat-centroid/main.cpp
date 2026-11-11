@@ -1242,6 +1242,22 @@ namespace
             const int s = demo::get_integer(mgl::GetParameter::Samples);
             check.expect(sb == 0 && s == 0, "single-sample FBO: SAMPLE_BUFFERS 0, SAMPLES 0",
                          std::format("SAMPLE_BUFFERS {}, SAMPLES {}", sb, s));
+            {
+                // The attachments themselves were allocated with glRenderbufferStorage, i.e. RENDERBUFFER_SAMPLES 0.
+                GLint cs = -1, ds = -1;
+                mgl::glBindRenderbuffer(mgl::RenderbufferTarget::Renderbuffer, ss_color_);
+                mgl::glGetRenderbufferParameteriv(mgl::RenderbufferTarget::Renderbuffer, mgl::RenderbufferParameter::Samples, &cs);
+                mgl::glBindRenderbuffer(mgl::RenderbufferTarget::Renderbuffer, ss_ds_);
+                mgl::glGetRenderbufferParameteriv(mgl::RenderbufferTarget::Renderbuffer, mgl::RenderbufferParameter::Samples, &ds);
+                mgl::glBindRenderbuffer(mgl::RenderbufferTarget::Renderbuffer, mgl::RenderbufferId{0});
+                check.expect(cs == 0 && ds == 0, "single-sample FBO: both attachments report RENDERBUFFER_SAMPLES 0",
+                             std::format("colour {}, depth/stencil {}", cs, ds));
+            }
+
+            // ANGLE (Vulkan backend) applies the coverage mask to the single sample although it reports SAMPLE_BUFFERS 0.
+            constexpr std::string_view kAngleReason =
+                "ANGLE applies SAMPLE_COVERAGE / SAMPLE_ALPHA_TO_COVERAGE to a framebuffer whose SAMPLE_BUFFERS is 0 "
+                "(ES 3.0 4.1.3: no change is made if SAMPLE_BUFFERS is not one)";
 
             // With SAMPLE_BUFFERS = 0 the multisample fragment operations change nothing (ES 3.0 4.1.3).
             struct Case { const char* what; std::array<float, 3> c; float alpha; bool cov; float v; GLboolean inv; bool a2c; };
@@ -1261,14 +1277,17 @@ namespace
                 int bad = 0;
                 for (std::size_t p = 0; p < img.size(); p += 4)
                     if (!near_rgb(&img[p], e, 1) || std::abs(img[p + 3] - ea) > 1) ++bad;
-                check.expect(bad == 0, std::format("single-sample FBO: {} has no effect - every pixel is written", c.what),
-                             std::format("{} of {} pixels differ", bad, kOffW * kOffH));
+                check.expect_or_known_deviation(bad == 0, std::format("single-sample FBO: {} has no effect - every pixel is written", c.what),
+                                                std::format("{} of {} pixels differ, pixel (0,0) = ({},{},{},{})", bad, kOffW * kOffH,
+                                                            img[0], img[1], img[2], img[3]),
+                                                "ANGLE", kAngleReason);
             }
             begin_stencil_count();
             cover_all(kOffW, kOffH, {1, 1, 1}, 1.0f, true, 0.5f, GL_FALSE, false);
             const bool other = any_stencil(kOffW, kOffH, mgl::CompareFunc::Notequal, 1);
             end_stencil_count();
-            check.expect(!other, "single-sample FBO: SAMPLE_COVERAGE 0.5 has no effect - every pixel's stencil incremented exactly once");
+            check.expect_or_known_deviation(!other, "single-sample FBO: SAMPLE_COVERAGE 0.5 has no effect - every pixel's stencil incremented exactly once",
+                                            "", "ANGLE", kAngleReason);
 
             // Centroid on a single-sample target: interpolation at the pixel centre, the qualifier is ignored.
             mgl::glViewport(0, 0, kView, kView);

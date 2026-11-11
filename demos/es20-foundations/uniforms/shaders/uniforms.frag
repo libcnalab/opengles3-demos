@@ -6,7 +6,7 @@
 precision highp float;
 precision highp int;
 
-uniform int u_cell_px;  // cell size in pixels
+uniform ivec2 u_cell_size;  // cell width and height in pixels (surface / 8 columns x 5 rows)
 
 // --- default-block uniforms of every ES 2.0/3.0 type, set by the matching glUniform* call -------
 uniform float u_f;      uniform vec2 u_v2;      uniform vec3 u_v3;      uniform vec4 u_v4;
@@ -77,8 +77,9 @@ bool check(int i)
 
 void main()
 {
-    ivec2 cell = ivec2(gl_FragCoord.xy) / u_cell_px;
+    ivec2 cell = ivec2(gl_FragCoord.xy) / u_cell_size;
     int index = cell.y * 8 + cell.x;
-    if (index >= 38) { o_color = vec4(0.1, 0.1, 0.12, 1.0); return; }
+    // cell.x == 8 is the remainder strip of a width not divisible by 8; index >= 38 holds no test.
+    if (cell.x >= 8 || index >= 38) { o_color = vec4(0.1, 0.1, 0.12, 1.0); return; }
     o_color = check(index) ? vec4(0.0, 1.0, 0.0, 1.0) : vec4(1.0, 0.0, 0.0, 1.0);
 }

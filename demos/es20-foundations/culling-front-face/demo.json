@@ -1,0 +1,83 @@
+{
+  "name": "es20-culling-front-face",
+  "title": "Face culling and front-face winding",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es20-foundations",
+  "order": 80,
+  "summary": "Front/back determination from window-space winding (signed area), glFrontFace, glCullFace incl. FRONT_AND_BACK (which never culls points or lines), gl_FrontFacing, and winding flips by mirroring in the vertex shader - 56 cells checked against a CPU model of ES 3.0 3.6.1.",
+  "spec": [
+    "ES 3.0 §3.6.1 Basic Polygon Rasterization (equation 3.6 signed area, FrontFace, CullFace, initial state)",
+    "ES 3.0 §3.9.2.2 Shader Inputs (gl_FrontFacing; all non-triangle fragments are front-facing)",
+    "ES 3.0 §2.13.1 Controlling the Viewport (viewport transformation; INVALID_VALUE for a negative size)",
+    "ES 3.0 §3.4 Points, §3.5 Line Segments",
+    "ES 3.0 §2.7.1 Primitive Types (triangles, points, lines)",
+    "ES 3.0 §4.1.2 Scissor Test, §4.2.3 Clearing the Buffers (per-cell backdrop)",
+    "GLSL ES 3.00 §7.1 Vertex Shader Special Variables (gl_Position, gl_PointSize), §7.2 Fragment Shader Special Variables (gl_FrontFacing)",
+    "GLSL ES 3.00 §4.3.4 Input Variables, §4.3.5 Uniform Variables, §4.3.6 Output Variables, §4.3.8 Layout Qualifiers"
+  ],
+  "api": {
+    "glFrontFace": "CCW and CW per grid column; triangles listed CCW/CW, mirrored and rotated are front/back exactly as the CPU window-space signed area predicts; GL_FRONT_FACE read back for both values",
+    "glCullFace": "FRONT, BACK and FRONT_AND_BACK per grid column; triangles present/absent as predicted, points and lines never culled; GL_CULL_FACE_MODE read back for all three values",
+    "glEnable": "CULL_FACE: culling takes effect only while enabled (columns 2-7); SCISSOR_TEST for per-cell backdrop clears; glIsEnabled TRUE",
+    "glDisable": "CULL_FACE: all triangles drawn, glCullFace ignored (columns 0-1), glIsEnabled FALSE; SCISSOR_TEST",
+    "glIsEnabled": "CULL_FACE false initially / true after glEnable / false after glDisable",
+    "glGetIntegerv": "CULL_FACE_MODE (initial BACK, then each mode), FRONT_FACE (initial CCW, then CW/CCW), VIEWPORT unchanged after a rejected glViewport",
+    "glGetFloatv": "ALIASED_POINT_SIZE_RANGE maximum >= 1; used to choose the point size",
+    "glViewport": "per-cell viewport maps NDC to the probed pixels (CPU applies the same transform); negative width or height -> INVALID_VALUE and the viewport stays unchanged",
+    "glGetError": "INVALID_VALUE after glViewport with a negative width and with a negative height (via Check::expect_gl_error); NO_ERROR after valid culling commands",
+    "glScissor": "per-cell backdrop clear confined to its cell: every cell corner shows its own backdrop shade",
+    "glClearColor": "cell backdrop colors observed at cell corners",
+    "glClear": "COLOR_BUFFER_BIT, scissored per cell",
+    "glGenBuffers": "vertex buffer feeding every draw",
+    "glBindBuffer": "ARRAY_BUFFER binding captured by glVertexAttribPointer",
+    "glBufferData": "triangle (both windings), line and point vertices observed through the rendered primitives",
+    "glGenVertexArrays": "VAO used for every draw",
+    "glBindVertexArray": "VAO bound for the draws, reset to 0 afterwards",
+    "glEnableVertexAttribArray": "position attribute sourced from the buffer",
+    "glVertexAttribPointer": "vec2 positions, tightly packed; geometry appears where the CPU model puts it",
+    "glDrawArrays": "TRIANGLES (CCW and CW vertex order), LINES and POINTS with different first indices; pixels match the CPU plan",
+    "glGetUniformLocation": "u_flip, u_point_size, u_front_color, u_back_color located and used",
+    "glUseProgram": "the facing program renders every cell",
+    "glUniform2f": "u_flip (+-1, +-1): mirror reverses winding, 180-degree rotation keeps it - verified by front/back colors",
+    "glUniform1f": "u_point_size: the point appears at the probed pixel",
+    "glUniform4f": "u_front_color / u_back_color: probe pixels show the front color for gl_FrontFacing true and the back color for false",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE probes of every cell",
+    "glDeleteVertexArrays": "cleanup, final glGetError == NO_ERROR",
+    "glDeleteBuffers": "cleanup",
+    "glDeleteProgram": "cleanup"
+  },
+  "features": [
+    "ES20.RASTER.FRONT_FACE",
+    "ES20.RASTER.CULL",
+    "ES20.SCISSOR",
+    "ES20.CLEAR.COLOR",
+    "ES20.DRAW.ARRAYS",
+    "ES20.BUFFER.VBO",
+    "ES30.VAO.BASIC",
+    "ES20.ERRORS.INVALID_VALUE"
+  ],
+  "glsl_features": [
+    "GLSL300.BUILTIN_VARS.FS",
+    "GLSL300.BUILTIN_VARS.VS",
+    "GLSL300.VERSION",
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.UNIFORM",
+    "GLSL300.LAYOUT.LOCATION",
+    "GLSL300.FRAG.OUTPUT",
+    "GLSL300.PRECISION.DEFAULT"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "negative",
+    "gl-error"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet (subagent)",
+    "notes": "256x256 radeonsi es-max capture viewed. 8x7 grid with alternating dark backdrop shades. Row 0 (CCW triangle): green, orange, green, empty, empty, empty, orange, empty. Row 1 (CW triangle): orange, green, empty, orange, empty, green, empty, empty. Rows 2 and 3 show the mirror image (apex leaning right): row 2 (mirrored CCW) has exactly the colors and gaps of row 1, row 3 (mirrored CW) those of row 0. Row 4 is the CCW triangle upside down with exactly the colors of row 0. Rows 5 and 6 show a green square and a thin green horizontal line in all 8 columns, including both FRONT_AND_BACK columns. No stray pixels; each cell's backdrop is intact."
+  }
+}

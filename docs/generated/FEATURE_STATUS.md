@@ -91,14 +91,14 @@
 | ES20.CAMERA.MVP | 2.0 | shading | Model/view/projection matrices; perspective vs orthographic; camera movement | n/a (composition) | NOT_STARTED |  |
 | ES30.VAO.BASIC | 3.0 | vertex-input | Vertex array objects: gen/bind/delete/isVertexArray; per-VAO attribute state | ES 3.0 §2.11 | FULLY_VALIDATED | es30-hello-triangle |
 | ES30.VAO.SWITCHING | 3.0 | vertex-input | Multiple VAOs with different configurations; ELEMENT_ARRAY_BUFFER is VAO state | ES 3.0 §2.11 | NOT_STARTED |  |
-| ES30.ATTRIB.INTEGER | 3.0 | vertex-input | glVertexAttribIPointer + ivec/uvec inputs; glVertexAttribI4*; glGetVertexAttribI* | ES 3.0 §2.8-2.9 | NOT_STARTED |  |
+| ES30.ATTRIB.INTEGER | 3.0 | vertex-input | glVertexAttribIPointer + ivec/uvec inputs; glVertexAttribI4*; glGetVertexAttribI* | ES 3.0 §2.8-2.9 | BUILD_PASSED | test-glsl300-builtins |
 | ES30.ATTRIB.PACKED | 3.0 | vertex-input | INT_2_10_10_10_REV / UNSIGNED_INT_2_10_10_10_REV and HALF_FLOAT attributes | ES 3.0 §2.9.2 | NOT_STARTED |  |
 | ES30.ATTRIB.DIVISOR | 3.0 | vertex-input | glVertexAttribDivisor per-instance attributes | ES 3.0 §2.9 | NOT_STARTED |  |
 | ES30.DRAW.INSTANCED | 3.0 | drawing | glDrawArraysInstanced / glDrawElementsInstanced + gl_InstanceID | ES 3.0 §2.9.3 | NOT_STARTED |  |
 | ES30.DRAW.RANGE_ELEMENTS | 3.0 | drawing | glDrawRangeElements + MAX_ELEMENTS_VERTICES/INDICES | ES 3.0 §2.9.3 | NOT_STARTED |  |
 | ES30.DRAW.PRIMITIVE_RESTART | 3.0 | drawing | PRIMITIVE_RESTART_FIXED_INDEX | ES 3.0 §2.9.3 | NOT_STARTED |  |
 | ES30.DRAW.MAX_ELEMENT_INDEX | 3.0 | drawing | MAX_ELEMENT_INDEX limit query | ES 3.0 §2.9.3 | NOT_STARTED |  |
-| ES30.BUFFER.MAP_RANGE | 3.0 | buffers | glMapBufferRange read/write + glUnmapBuffer + glGetBufferPointerv | ES 3.0 §2.10.3 | NOT_STARTED |  |
+| ES30.BUFFER.MAP_RANGE | 3.0 | buffers | glMapBufferRange read/write + glUnmapBuffer + glGetBufferPointerv | ES 3.0 §2.10.3 | BUILD_PASSED | test-glsl300-builtins |
 | ES30.BUFFER.MAP_FLAGS | 3.0 | buffers | INVALIDATE_RANGE/INVALIDATE_BUFFER/UNSYNCHRONIZED semantics + illegal combinations | ES 3.0 §2.10.3 | NOT_STARTED |  |
 | ES30.BUFFER.FLUSH_EXPLICIT | 3.0 | buffers | MAP_FLUSH_EXPLICIT_BIT + glFlushMappedBufferRange | ES 3.0 §2.10.3 | NOT_STARTED |  |
 | ES30.BUFFER.COPY | 3.0 | buffers | glCopyBufferSubData via COPY_READ/COPY_WRITE (+ overlap error) | ES 3.0 §2.10.5 | NOT_STARTED |  |
@@ -147,12 +147,12 @@
 | ES30.FBO.INTEGER_TARGET | 3.0 | framebuffer | Integer color attachments + glClearBufferiv/uiv + readback | ES 3.0 §4.4.4 | NOT_STARTED |  |
 | ES30.FBO.ATTACHMENT_QUERY | 3.0 | framebuffer | COMPONENT_TYPE / color sizes / TEXTURE_LAYER attachment queries | ES 3.0 §6.1.13 | NOT_STARTED |  |
 | ES30.INTERNALFORMAT.QUERY | 3.0 | framebuffer | glGetInternalformativ NUM_SAMPLE_COUNTS / SAMPLES | ES 3.0 §6.1.15 | NOT_STARTED |  |
-| ES30.TF.BASIC | 3.0 | transform-feedback | glTransformFeedbackVaryings + begin/end capture into a buffer | ES 3.0 §2.15 | NOT_STARTED |  |
+| ES30.TF.BASIC | 3.0 | transform-feedback | glTransformFeedbackVaryings + begin/end capture into a buffer | ES 3.0 §2.15 | BUILD_PASSED | test-glsl300-builtins |
 | ES30.TF.MODES | 3.0 | transform-feedback | INTERLEAVED_ATTRIBS vs SEPARATE_ATTRIBS | ES 3.0 §2.15.2 | NOT_STARTED |  |
 | ES30.TF.OBJECTS | 3.0 | transform-feedback | Transform feedback objects gen/bind/delete/isTransformFeedback | ES 3.0 §2.15.1 | NOT_STARTED |  |
 | ES30.TF.PAUSE_RESUME | 3.0 | transform-feedback | glPauseTransformFeedback / glResumeTransformFeedback | ES 3.0 §2.15.2 | NOT_STARTED |  |
 | ES30.TF.RENDER_CAPTURED | 3.0 | transform-feedback | Render a later pass from captured vertex data | ES 3.0 §2.15 | NOT_STARTED |  |
-| ES30.TF.RASTERIZER_DISCARD | 3.0 | transform-feedback | RASTERIZER_DISCARD with capture | ES 3.0 §3.1 | NOT_STARTED |  |
+| ES30.TF.RASTERIZER_DISCARD | 3.0 | transform-feedback | RASTERIZER_DISCARD with capture | ES 3.0 §3.1 | BUILD_PASSED | test-glsl300-builtins |
 | ES30.TF.QUERY | 3.0 | transform-feedback | glGetTransformFeedbackVarying + TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN query | ES 3.0 §2.16 §6.1.11 | NOT_STARTED |  |
 | ES30.TF.ERRORS | 3.0 | transform-feedback | Overflow/insufficient buffer and state-change errors while active | ES 3.0 §2.15.2 | NOT_STARTED |  |
 | ES30.QUERY.OCCLUSION | 3.0 | queries | ANY_SAMPLES_PASSED / ANY_SAMPLES_PASSED_CONSERVATIVE | ES 3.0 §4.1.6 | NOT_STARTED |  |

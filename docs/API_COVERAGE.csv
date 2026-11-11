@@ -37,11 +37,11 @@ glDepthFunc,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glDepthMask,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glDepthRangef,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glDetachShader,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,ATTACHED_SHADERS = 0 afterwards; link status kept / shaders detached after link,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
-glDisable,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,SCISSOR_TEST,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
+glDisable,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation test-glsl300-builtins,SCISSOR_TEST / RASTERIZER_DISCARD,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED test-glsl300-builtins:BUILD_PASSED
 glDisableVertexAttribArray,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glDrawArrays,2.0,GL_ES_VERSION_2_0,yes,es20-textures-2d es30-hello-triangle,TRIANGLE_STRIP quads per cell / TRIANGLES; interior pixels match CPU reference,FULLY_VALIDATED,,es20-textures-2d:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glDrawElements,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glEnable,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,SCISSOR_TEST,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
+glEnable,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation test-glsl300-builtins,SCISSOR_TEST / RASTERIZER_DISCARD,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED test-glsl300-builtins:BUILD_PASSED
 glEnableVertexAttribArray,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,both attributes sourced from the buffer,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
 glFinish,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glFlush,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
@@ -142,8 +142,8 @@ glVertexAttrib4fv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glVertexAttribPointer,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,interleaved stride/offset; stride read back with glGetVertexAttribiv,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
 glViewport,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,full-surface viewport maps NDC to the probed pixels,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
 glBeginQuery,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glBeginTransformFeedback,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glBindBufferBase,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
+glBeginTransformFeedback,3.0,GL_ES_VERSION_3_0,yes,test-glsl300-builtins,POINTS capture; results compared numerically,BUILD_PASSED,,test-glsl300-builtins:BUILD_PASSED
+glBindBufferBase,3.0,GL_ES_VERSION_3_0,yes,test-glsl300-builtins,TRANSFORM_FEEDBACK_BUFFER binding 0,BUILD_PASSED,,test-glsl300-builtins:BUILD_PASSED
 glBindBufferRange,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glBindSampler,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glBindTransformFeedback,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
@@ -168,7 +168,7 @@ glDrawBuffers,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glDrawElementsInstanced,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glDrawRangeElements,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glEndQuery,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glEndTransformFeedback,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
+glEndTransformFeedback,3.0,GL_ES_VERSION_3_0,yes,test-glsl300-builtins,capture completes; buffer read back,BUILD_PASSED,,test-glsl300-builtins:BUILD_PASSED
 glFenceSync,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glFlushMappedBufferRange,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glFramebufferTextureLayer,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
@@ -206,7 +206,7 @@ glIsSampler,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glIsSync,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glIsTransformFeedback,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glIsVertexArray,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glMapBufferRange,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
+glMapBufferRange,3.0,GL_ES_VERSION_3_0,yes,test-glsl300-builtins,MAP_READ_BIT readback of captured values,BUILD_PASSED,,test-glsl300-builtins:BUILD_PASSED
 glPauseTransformFeedback,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glProgramBinary,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glProgramParameteri,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
@@ -221,7 +221,7 @@ glTexImage3D,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glTexStorage2D,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glTexStorage3D,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glTexSubImage3D,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glTransformFeedbackVaryings,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
+glTransformFeedbackVaryings,3.0,GL_ES_VERSION_3_0,yes,test-glsl300-builtins,4 interleaved varyings captured per case (float/int/uint),BUILD_PASSED,,test-glsl300-builtins:BUILD_PASSED
 glUniform1ui,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
 glUniform1uiv,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
 glUniform2ui,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
@@ -237,13 +237,13 @@ glUniformMatrix3x2fv,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,column-major elemen
 glUniformMatrix3x4fv,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,column-major element check in the shader + readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
 glUniformMatrix4x2fv,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,column-major element check in the shader + readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
 glUniformMatrix4x3fv,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,column-major element check in the shader + readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
-glUnmapBuffer,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
+glUnmapBuffer,3.0,GL_ES_VERSION_3_0,yes,test-glsl300-builtins,after each readback,BUILD_PASSED,,test-glsl300-builtins:BUILD_PASSED
 glVertexAttribDivisor,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glVertexAttribI4i,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glVertexAttribI4iv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glVertexAttribI4ui,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glVertexAttribI4uiv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glVertexAttribIPointer,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
+glVertexAttribIPointer,3.0,GL_ES_VERSION_3_0,yes,test-glsl300-builtins,ivec4/uvec4 inputs reach the shader exactly (bit-cast and integer cases),BUILD_PASSED,,test-glsl300-builtins:BUILD_PASSED
 glWaitSync,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glActiveShaderProgram,3.1,GL_ES_VERSION_3_1,yes,,,NOT_STARTED,,
 glBindImageTexture,3.1,GL_ES_VERSION_3_1,yes,,,NOT_STARTED,,

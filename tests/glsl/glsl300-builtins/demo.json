@@ -1,0 +1,49 @@
+{
+  "name": "test-glsl300-builtins",
+  "title": "GLSL ES 3.00 built-in functions (numeric)",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "tests",
+  "order": 10,
+  "summary": "All non-texture GLSL ES 3.00 built-ins evaluated in a vertex shader, captured with transform feedback, compared with CPU references under the §4.5.1 precision rules.",
+  "spec": [
+    "GLSL ES 3.00 §8.1-§8.7 Built-in Functions",
+    "GLSL ES 3.00 §4.5.1 Range and Precision",
+    "GLSL ES 3.00 §5.9 Expressions (integer operators)",
+    "ES 3.0 §2.15 Transform Feedback"
+  ],
+  "api": {
+    "glTransformFeedbackVaryings": "4 interleaved varyings captured per case (float/int/uint)",
+    "glBeginTransformFeedback": "POINTS capture; results compared numerically",
+    "glEndTransformFeedback": "capture completes; buffer read back",
+    "glBindBufferBase": "TRANSFORM_FEEDBACK_BUFFER binding 0",
+    "glMapBufferRange": "MAP_READ_BIT readback of captured values",
+    "glUnmapBuffer": "after each readback",
+    "glVertexAttribIPointer": "ivec4/uvec4 inputs reach the shader exactly (bit-cast and integer cases)",
+    "glEnable": "RASTERIZER_DISCARD",
+    "glDisable": "RASTERIZER_DISCARD"
+  },
+  "features": [
+    "ES30.TF.BASIC",
+    "ES30.TF.RASTERIZER_DISCARD",
+    "ES30.ATTRIB.INTEGER",
+    "ES30.BUFFER.MAP_RANGE"
+  ],
+  "glsl_features": [
+    "GLSL300.FN.TRIG",
+    "GLSL300.FN.EXP",
+    "GLSL300.FN.COMMON",
+    "GLSL300.FN.PACKING",
+    "GLSL300.FN.GEOMETRIC",
+    "GLSL300.FN.MATRIX",
+    "GLSL300.FN.VECREL",
+    "GLSL300.OPERATORS.BITWISE",
+    "GLSL300.PRECISION.QUALIFIERS"
+  ],
+  "validation": [
+    "readback",
+    "compute-check"
+  ]
+}

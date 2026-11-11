@@ -28,11 +28,11 @@
 | GLSL300.INTERP.SMOOTH_FLAT | 300 | interface | smooth / flat interpolation qualifiers | GLSL ES 3.00 §4.3.9 | render | NOT_STARTED |  |
 | GLSL300.INTERP.CENTROID | 300 | interface | centroid in/out | GLSL ES 3.00 §4.3.9 | render | NOT_STARTED |  |
 | GLSL300.INTERFACE_MATCHING | 300 | interface | VS output / FS input matching rules + link errors | GLSL ES 3.00 §4.3.10 | negative | FULLY_VALIDATED | es20-shader-compilation |
-| GLSL300.PRECISION.QUALIFIERS | 300 | precision | lowp/mediump/highp + precision ranges | GLSL ES 3.00 §4.5.1-4.5.3 | compute-check | FULLY_VALIDATED | es20-uniforms |
+| GLSL300.PRECISION.QUALIFIERS | 300 | precision | lowp/mediump/highp + precision ranges | GLSL ES 3.00 §4.5.1-4.5.3 | compute-check | FULLY_VALIDATED | es20-uniforms, test-glsl300-builtins |
 | GLSL300.PRECISION.DEFAULT | 300 | precision | Default precision statements; missing float precision in FS is an error | GLSL ES 3.00 §4.5.4 | negative | FULLY_VALIDATED | es20-shader-compilation, es30-hello-triangle |
 | GLSL300.INVARIANT | 300 | precision | invariant qualifier + #pragma STDGL invariant(all) | GLSL ES 3.00 §4.6 | compile | NOT_STARTED |  |
 | GLSL300.OPERATORS | 300 | expressions | Arithmetic, relational, logical, ternary, comma, ++/-- | GLSL ES 3.00 §5.1 | compute-check | NOT_STARTED |  |
-| GLSL300.OPERATORS.BITWISE | 300 | expressions | Integer bitwise ~ & \| ^ << >> and % | GLSL ES 3.00 §5.1 | compute-check | NOT_STARTED |  |
+| GLSL300.OPERATORS.BITWISE | 300 | expressions | Integer bitwise ~ & \| ^ << >> and % | GLSL ES 3.00 §5.1 | compute-check | BUILD_PASSED | test-glsl300-builtins |
 | GLSL300.CONSTRUCTORS | 300 | expressions | Scalar/vector/matrix/struct/array constructors and conversions | GLSL ES 3.00 §5.4 | compute-check | NOT_STARTED |  |
 | GLSL300.SWIZZLE | 300 | expressions | Component selection xyzw/rgba/stpq; l-value swizzles | GLSL ES 3.00 §5.5 | compute-check | NOT_STARTED |  |
 | GLSL300.MATRIX_OPS | 300 | expressions | Matrix*vector, vector*matrix, matrix*matrix, component-wise ops | GLSL ES 3.00 §5.10-5.11 | compute-check | NOT_STARTED |  |
@@ -44,13 +44,13 @@
 | GLSL300.BUILTIN_VARS.FS | 300 | builtins | gl_FragCoord, gl_FrontFacing, gl_PointCoord, gl_FragDepth | GLSL ES 3.00 §7.2 | render | NOT_STARTED |  |
 | GLSL300.BUILTIN_CONSTANTS | 300 | builtins | gl_Max* built-in constants match API limits | GLSL ES 3.00 §7.3 | compute-check | NOT_STARTED |  |
 | GLSL300.BUILTIN_UNIFORMS | 300 | builtins | gl_DepthRange | GLSL ES 3.00 §7.4 | render | NOT_STARTED |  |
-| GLSL300.FN.TRIG | 300 | builtins | radians degrees sin cos tan asin acos atan(1,2 args) sinh cosh tanh asinh acosh atanh | GLSL ES 3.00 §8.1 | compute-check | NOT_STARTED |  |
-| GLSL300.FN.EXP | 300 | builtins | pow exp log exp2 log2 sqrt inversesqrt | GLSL ES 3.00 §8.2 | compute-check | NOT_STARTED |  |
-| GLSL300.FN.COMMON | 300 | builtins | abs sign floor trunc round roundEven ceil fract mod modf min max clamp mix(incl. bvec) step smoothstep isnan isinf floatBitsToInt/Uint intBitsToFloat uintBitsToFloat | GLSL ES 3.00 §8.3 | compute-check | NOT_STARTED |  |
-| GLSL300.FN.PACKING | 300 | builtins | packSnorm2x16 unpackSnorm2x16 packUnorm2x16 unpackUnorm2x16 packHalf2x16 unpackHalf2x16 | GLSL ES 3.00 §8.4 | compute-check | NOT_STARTED |  |
-| GLSL300.FN.GEOMETRIC | 300 | builtins | length distance dot cross normalize faceforward reflect refract | GLSL ES 3.00 §8.5 | compute-check | NOT_STARTED |  |
-| GLSL300.FN.MATRIX | 300 | builtins | matrixCompMult outerProduct transpose determinant inverse | GLSL ES 3.00 §8.6 | compute-check | NOT_STARTED |  |
-| GLSL300.FN.VECREL | 300 | builtins | lessThan lessThanEqual greaterThan greaterThanEqual equal notEqual any all not | GLSL ES 3.00 §8.7 | compute-check | NOT_STARTED |  |
+| GLSL300.FN.TRIG | 300 | builtins | radians degrees sin cos tan asin acos atan(1,2 args) sinh cosh tanh asinh acosh atanh | GLSL ES 3.00 §8.1 | compute-check | BUILD_PASSED | test-glsl300-builtins |
+| GLSL300.FN.EXP | 300 | builtins | pow exp log exp2 log2 sqrt inversesqrt | GLSL ES 3.00 §8.2 | compute-check | BUILD_PASSED | test-glsl300-builtins |
+| GLSL300.FN.COMMON | 300 | builtins | abs sign floor trunc round roundEven ceil fract mod modf min max clamp mix(incl. bvec) step smoothstep isnan isinf floatBitsToInt/Uint intBitsToFloat uintBitsToFloat | GLSL ES 3.00 §8.3 | compute-check | BUILD_PASSED | test-glsl300-builtins |
+| GLSL300.FN.PACKING | 300 | builtins | packSnorm2x16 unpackSnorm2x16 packUnorm2x16 unpackUnorm2x16 packHalf2x16 unpackHalf2x16 | GLSL ES 3.00 §8.4 | compute-check | BUILD_PASSED | test-glsl300-builtins |
+| GLSL300.FN.GEOMETRIC | 300 | builtins | length distance dot cross normalize faceforward reflect refract | GLSL ES 3.00 §8.5 | compute-check | BUILD_PASSED | test-glsl300-builtins |
+| GLSL300.FN.MATRIX | 300 | builtins | matrixCompMult outerProduct transpose determinant inverse | GLSL ES 3.00 §8.6 | compute-check | BUILD_PASSED | test-glsl300-builtins |
+| GLSL300.FN.VECREL | 300 | builtins | lessThan lessThanEqual greaterThan greaterThanEqual equal notEqual any all not | GLSL ES 3.00 §8.7 | compute-check | BUILD_PASSED | test-glsl300-builtins |
 | GLSL300.FN.TEXTURE.BASIC | 300 | builtins | texture textureProj textureSize | GLSL ES 3.00 §8.8 | render | FULLY_VALIDATED | es20-textures-2d |
 | GLSL300.FN.TEXTURE.LOD | 300 | builtins | textureLod textureProjLod textureGrad textureProjGrad | GLSL ES 3.00 §8.8 | render | NOT_STARTED |  |
 | GLSL300.FN.TEXTURE.OFFSET | 300 | builtins | textureOffset texelFetchOffset textureLodOffset textureGradOffset etc. + offset limits | GLSL ES 3.00 §8.8 | render | NOT_STARTED |  |

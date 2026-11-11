@@ -16,7 +16,7 @@
 | ES20.COORDS.SYSTEMS | 2.0 | transform | Object->eye->clip->NDC->window coordinate chain (shader-based) | ES 3.0 §2.13 | NOT_STARTED |  |
 | ES20.SCISSOR | 2.0 | fragment-ops | Scissor test (glScissor + GL_SCISSOR_TEST) | ES 3.0 §4.1.2 | FULLY_VALIDATED | es20-clear-viewport-scissor, es20-culling-front-face, es20-depth-test, es20-stencil-test, es31-framebuffer-no-attachments |
 | ES20.CLEAR.COLOR | 2.0 | framebuffer | glClear color + glClearColor | ES 3.0 §4.2.3 | FULLY_VALIDATED | es20-blending, es20-clear-viewport-scissor, es20-copy-and-read-pixels, es20-culling-front-face, es20-framebuffer-objects, es30-hello-triangle |
-| ES20.CLEAR.DEPTH | 2.0 | framebuffer | glClear depth + glClearDepthf | ES 3.0 §4.2.3 | FULLY_VALIDATED | es20-clear-viewport-scissor, es20-depth-test |
+| ES20.CLEAR.DEPTH | 2.0 | framebuffer | glClear depth + glClearDepthf | ES 3.0 §4.2.3 | FULLY_VALIDATED | es20-clear-viewport-scissor, es20-depth-test, es30-post-processing |
 | ES20.CLEAR.STENCIL | 2.0 | framebuffer | glClear stencil + glClearStencil | ES 3.0 §4.2.3 | FULLY_VALIDATED | es20-clear-viewport-scissor, es20-stencil-test |
 | ES20.CLEAR.SCISSORED | 2.0 | framebuffer | Clear honours scissor and write masks | ES 3.0 §4.2.3 | FULLY_VALIDATED | es20-clear-viewport-scissor, es20-depth-test, es20-stencil-test |
 | ES20.SHADER.COMPILE_LINK | 2.0 | shaders | Shader/program object creation compile link use | ES 3.0 §2.12.1-2.12.3 | FULLY_VALIDATED | es20-shader-compilation, es30-hello-triangle |
@@ -78,8 +78,8 @@
 | ES20.TEXTURE.UNSIZED_FORMATS | 2.0 | textures | Unsized RGBA/RGB/LUMINANCE/LUMINANCE_ALPHA/ALPHA + packed 565/4444/5551 types | ES 3.0 §3.8.3 Table 3.3 | FULLY_VALIDATED | es20-textures-2d |
 | ES20.TEXTURE.COMPLETENESS | 2.0 | textures | Incomplete texture sampling returns (0 | 0 | FULLY_VALIDATED | es20-cube-map, es20-mipmaps, es20-textures-2d, es30-immutable-storage, es30-sampler-objects |
 | ES20.TEXTURE.QUERY | 2.0 | textures | glGetTexParameter* / glIsTexture | ES 3.0 §6.1.4 | FULLY_VALIDATED | es20-textures-2d |
-| ES20.FBO.RENDER_TO_TEXTURE | 2.0 | framebuffer | Framebuffer objects with texture color attachment (render to texture) | ES 3.0 §4.4 | FULLY_VALIDATED | es20-framebuffer-objects, es30-multiple-render-targets |
-| ES20.FBO.RENDERBUFFER | 2.0 | framebuffer | Renderbuffers (color/depth/stencil) glRenderbufferStorage | ES 3.0 §4.4.2 | FULLY_VALIDATED | es20-framebuffer-objects |
+| ES20.FBO.RENDER_TO_TEXTURE | 2.0 | framebuffer | Framebuffer objects with texture color attachment (render to texture) | ES 3.0 §4.4 | FULLY_VALIDATED | es20-framebuffer-objects, es30-multiple-render-targets, es30-post-processing |
+| ES20.FBO.RENDERBUFFER | 2.0 | framebuffer | Renderbuffers (color/depth/stencil) glRenderbufferStorage | ES 3.0 §4.4.2 | FULLY_VALIDATED | es20-framebuffer-objects, es30-post-processing |
 | ES20.FBO.COMPLETENESS | 2.0 | framebuffer | glCheckFramebufferStatus incl. intentionally incomplete cases | ES 3.0 §4.4.4 | FULLY_VALIDATED | es20-framebuffer-objects, es31-framebuffer-no-attachments |
 | ES20.FBO.QUERY | 2.0 | framebuffer | glGetFramebufferAttachmentParameteriv / glGetRenderbufferParameteriv / glIs* | ES 3.0 §6.1.13-14 | FULLY_VALIDATED | es20-framebuffer-objects |
 | ES20.FBO.FEEDBACK_LOOP | 2.0 | framebuffer | Texture feedback loop rules (undefined results - documented not rendered) | ES 3.0 §4.4.3 | NOT_STARTED |  |
@@ -87,9 +87,9 @@
 | ES20.STATE.QUERIES | 2.0 | state | glGetBooleanv/Integerv/Floatv/glIsEnabled; data conversion rules | ES 3.0 §6.1.1-6.1.2 | FULLY_VALIDATED | es20-depth-test, es20-stencil-test, es30-transform-feedback |
 | ES20.HINT | 2.0 | state | glHint GENERATE_MIPMAP_HINT (FRAGMENT_SHADER_DERIVATIVE_HINT: ES 3.0) | ES 3.0 §5.3 | FULLY_VALIDATED | es20-mipmaps |
 | ES20.FLUSH_FINISH | 2.0 | sync | glFlush / glFinish | ES 3.0 §5.1 | FULLY_VALIDATED | es30-sync-objects |
-| ES20.LIGHTING.SHADER | 2.0 | shading | Shader-based lighting (directional/point/spot; Phong/Blinn-Phong) with normal matrix | n/a (composition) | FULLY_VALIDATED | es30-normal-mapping |
+| ES20.LIGHTING.SHADER | 2.0 | shading | Shader-based lighting (directional/point/spot; Phong/Blinn-Phong) with normal matrix | n/a (composition) | FULLY_VALIDATED | es30-normal-mapping, es30-post-processing |
 | ES20.LIGHTING.NORMAL_MAP | 2.0 | shading | Tangent-space normal mapping + specular maps (per-vertex tangents and handedness) | n/a (composition) | FULLY_VALIDATED | es30-normal-mapping |
-| ES20.CAMERA.MVP | 2.0 | shading | Model/view/projection matrices; perspective vs orthographic; camera movement | n/a (composition) | NOT_STARTED |  |
+| ES20.CAMERA.MVP | 2.0 | shading | Model/view/projection matrices; perspective vs orthographic; camera movement | n/a (composition) | FULLY_VALIDATED | es30-post-processing |
 | ES30.VAO.BASIC | 3.0 | vertex-input | Vertex array objects: gen/bind/delete/isVertexArray; per-VAO attribute state | ES 3.0 §2.11 | FULLY_VALIDATED | es20-culling-front-face, es20-vertex-attributes, es30-hello-triangle, es30-normal-mapping, es30-vertex-array-objects |
 | ES30.VAO.SWITCHING | 3.0 | vertex-input | Multiple VAOs with different configurations; ELEMENT_ARRAY_BUFFER is VAO state | ES 3.0 §2.11 | FULLY_VALIDATED | es20-indexed-drawing, es30-vertex-array-objects, es31-indirect-draw |
 | ES30.ATTRIB.INTEGER | 3.0 | vertex-input | glVertexAttribIPointer + ivec/uvec inputs; glVertexAttribI4*; glGetVertexAttribI* | ES 3.0 §2.8-2.9 | FULLY_VALIDATED | es30-vertex-array-objects, test-glsl300-builtins |
@@ -122,7 +122,7 @@
 | ES30.TEXTURE.SIZED_FORMATS | 3.0 | textures | Sized internal formats (normalized/snorm/integer/float/half/sRGB/packed) | ES 3.0 §3.8.3 Table 3.13 | FULLY_VALIDATED | es30-immutable-storage, es30-normal-mapping |
 | ES30.TEXTURE.INTEGER | 3.0 | textures | Integer textures with isampler/usampler (NEAREST only) | ES 3.0 §3.8.3 §3.8.13 | FULLY_VALIDATED | es30-integer-float-textures |
 | ES30.TEXTURE.FLOAT | 3.0 | textures | Float/half-float textures; filterability rules (R32F not filterable) | ES 3.0 Table 3.13 | FULLY_VALIDATED | es30-integer-float-textures |
-| ES30.TEXTURE.SRGB | 3.0 | textures | sRGB textures decode on sampling | ES 3.0 §3.8.16 | FULLY_VALIDATED | es30-srgb |
+| ES30.TEXTURE.SRGB | 3.0 | textures | sRGB textures decode on sampling | ES 3.0 §3.8.16 | FULLY_VALIDATED | es30-post-processing, es30-srgb |
 | ES30.TEXTURE.SHARED_EXPONENT | 3.0 | textures | RGB9_E5 and R11F_G11F_B10F | ES 3.0 §3.8.17 | FULLY_VALIDATED | es30-immutable-storage, es30-integer-float-textures |
 | ES30.TEXTURE.DEPTH | 3.0 | textures | Depth textures + comparison mode/func + sampler2DShadow | ES 3.0 §3.8.8 §3.8.15 | NOT_STARTED |  |
 | ES30.TEXTURE.DEPTH_STENCIL | 3.0 | textures | DEPTH24_STENCIL8 / DEPTH32F_STENCIL8 textures | ES 3.0 §3.8.12 | FULLY_VALIDATED | es31-stencil-texturing-and-level-queries |
@@ -143,7 +143,7 @@
 | ES30.FBO.LAYER | 3.0 | framebuffer | glFramebufferTextureLayer (3D / 2D array layers) | ES 3.0 §4.4.2 | FULLY_VALIDATED | es30-framebuffer-invalidate, es30-texture-3d-and-arrays |
 | ES30.FBO.INVALIDATE | 3.0 | framebuffer | glInvalidateFramebuffer / glInvalidateSubFramebuffer | ES 3.0 §4.5 | FULLY_VALIDATED | es30-framebuffer-invalidate |
 | ES30.FBO.CLEAR_BUFFER | 3.0 | framebuffer | glClearBuffer{fv iv uiv fi} per draw buffer | ES 3.0 §4.2.3 | FULLY_VALIDATED | es30-multiple-render-targets |
-| ES30.FBO.SRGB | 3.0 | framebuffer | sRGB render targets: encoding on write; FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING | ES 3.0 §4.1.8 | FULLY_VALIDATED | es30-srgb |
+| ES30.FBO.SRGB | 3.0 | framebuffer | sRGB render targets: encoding on write; FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING | ES 3.0 §4.1.8 | FULLY_VALIDATED | es30-post-processing, es30-srgb |
 | ES30.FBO.DEPTH_STENCIL_ATTACHMENT | 3.0 | framebuffer | DEPTH_STENCIL_ATTACHMENT point | ES 3.0 §4.4.2 | FULLY_VALIDATED | es20-framebuffer-objects, es30-multiple-render-targets |
 | ES30.FBO.INTEGER_TARGET | 3.0 | framebuffer | Integer color attachments + glClearBufferiv/uiv + readback | ES 3.0 §4.4.4 | FULLY_VALIDATED | es30-multiple-render-targets |
 | ES30.FBO.ATTACHMENT_QUERY | 3.0 | framebuffer | COMPONENT_TYPE / color sizes / TEXTURE_LAYER attachment queries | ES 3.0 §6.1.13 | FULLY_VALIDATED | es30-framebuffer-invalidate |

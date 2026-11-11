@@ -14,6 +14,7 @@
 
 #include "demo/check.hpp"
 
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <random>
@@ -78,6 +79,16 @@ namespace demo
         /// The GetProcAddress-style loader the runtime passed to metagl::Initialize (needed only by
         /// tests of meta-gl's reload path, e.g. metagl::RestoreCurrentContext).
         void* (*gl_loader)(const char*) = nullptr;
+        /// Seconds since the previous frame: wall-clock in interactive runs, a fixed 1/60 otherwise, so
+        /// headless/--validate runs stay deterministic.
+        double frame_seconds = 1.0 / 60.0;
+        /// Keys currently held down (ASCII, lower-case), for continuous movement such as WASD. Interactive only.
+        std::array<bool, 128> keys_held{};
+        [[nodiscard]] bool key_held(char key) const
+        {
+            const auto k = static_cast<unsigned char>(key);
+            return k < keys_held.size() && keys_held[k];
+        }
 
         /// Absolute path of a file in the demo source directory, e.g. "shaders/triangle.vert".
         [[nodiscard]] std::string asset_path(std::string_view relative) const;
@@ -114,8 +125,15 @@ namespace demo
         /// Runs after the last frame when --validate is given. Must record at least one check.
         virtual void validate(Env& env, Check& check) = 0;
         virtual void shutdown(Env& env) = 0;
-        /// Optional interactive input (ASCII key, lower-case).
+        /// Optional interactive input (ASCII key, lower-case), once per key press.
         virtual void on_key(Env& /*env*/, char /*key*/) {}
+        /// Optional mouse input: relative motion in pixels and wheel steps since the last frame.
+        struct Mouse
+        {
+            float dx = 0, dy = 0, wheel = 0;
+            bool left = false, right = false, middle = false;
+        };
+        virtual void on_mouse(Env& /*env*/, const Mouse& /*mouse*/) {}
     };
 
     enum class Outcome

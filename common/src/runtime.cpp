@@ -6,6 +6,7 @@
 
 #include <metagl/metagl.hpp>
 
+#include <algorithm>
 #include <charconv>
 #include <chrono>
 #include <cstdlib>
@@ -436,6 +437,7 @@ namespace demo
             const int frames = options.frames > 0 ? options.frames
                                : env.interactive  ? -1
                                                   : info.default_frames;
+            auto last_frame = std::chrono::steady_clock::now();
             for (int frame = 0; frames < 0 || frame < frames; ++frame)
             {
                 const detail::Events ev = platform->poll();
@@ -445,7 +447,22 @@ namespace demo
                     env.width = ev.width;
                     env.height = ev.height;
                 }
-                for (const char k : ev.keys) demo->on_key(env, k);
+                for (const char k : ev.keys)
+                {
+                    if (static_cast<unsigned char>(k) < env.keys_held.size()) env.keys_held[static_cast<unsigned char>(k)] = true;
+                    demo->on_key(env, k);
+                }
+                for (const char k : ev.keys_released)
+                    if (static_cast<unsigned char>(k) < env.keys_held.size()) env.keys_held[static_cast<unsigned char>(k)] = false;
+                if (ev.mouse_event)
+                    demo->on_mouse(env, Demo::Mouse{ev.mouse_dx, ev.mouse_dy, ev.wheel, ev.mouse_left, ev.mouse_right,
+                                                    ev.mouse_middle});
+                if (env.interactive)
+                {
+                    const auto now = std::chrono::steady_clock::now();
+                    env.frame_seconds = frame == 0 ? 1.0 / 60.0 : std::min(0.1, std::chrono::duration<double>(now - last_frame).count());
+                    last_frame = now;
+                }
 
                 demo->render(env, frame);
 

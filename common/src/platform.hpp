@@ -28,7 +28,11 @@ namespace demo::detail
         bool resized = false;
         int width = 0;
         int height = 0;
-        std::string keys;  ///< ASCII keys pressed since the last poll
+        std::string keys;           ///< ASCII keys pressed since the last poll
+        std::string keys_released;  ///< ASCII keys released since the last poll
+        float mouse_dx = 0, mouse_dy = 0, wheel = 0;
+        bool mouse_left = false, mouse_right = false, mouse_middle = false;
+        bool mouse_event = false;
     };
 
     class Platform

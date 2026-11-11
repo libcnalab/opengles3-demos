@@ -90,9 +90,28 @@ namespace demo::detail
                         else if (e.key.key < 128 && std::isprint(static_cast<int>(e.key.key)))
                             ev.keys.push_back(static_cast<char>(std::tolower(static_cast<int>(e.key.key))));
                         break;
+                    case SDL_EVENT_KEY_UP:
+                        if (e.key.key < 128 && std::isprint(static_cast<int>(e.key.key)))
+                            ev.keys_released.push_back(static_cast<char>(std::tolower(static_cast<int>(e.key.key))));
+                        break;
+                    case SDL_EVENT_MOUSE_MOTION:
+                        ev.mouse_dx += e.motion.xrel;
+                        ev.mouse_dy += e.motion.yrel;
+                        ev.mouse_event = true;
+                        break;
+                    case SDL_EVENT_MOUSE_WHEEL:
+                        ev.wheel += e.wheel.y;
+                        ev.mouse_event = true;
+                        break;
+                    case SDL_EVENT_MOUSE_BUTTON_DOWN:
+                    case SDL_EVENT_MOUSE_BUTTON_UP: ev.mouse_event = true; break;
                     default: break;
                     }
                 }
+                const SDL_MouseButtonFlags buttons = SDL_GetMouseState(nullptr, nullptr);
+                ev.mouse_left = (buttons & SDL_BUTTON_LMASK) != 0;
+                ev.mouse_right = (buttons & SDL_BUTTON_RMASK) != 0;
+                ev.mouse_middle = (buttons & SDL_BUTTON_MMASK) != 0;
                 return ev;
             }
 

@@ -7,6 +7,88 @@ and the runs where the matched driver passed it (XPASS). Spec quotes and explana
 
 | executable | check | match | XFAIL runs | XPASS runs | note |
 |---|---|---|---|---|---|
+| es20-clear-viewport-scissor | glViewport wider/taller than GL_MAX_VIEWPORT_DIMS is clamped to it (ES 3.0 §2.13.1) | ANGLE | angle:native |  |  |
+| es20-framebuffer-objects | a new renderbuffer has zero component sizes (initial state, Table 6.15) | ANGLE | angle:native |  |  |
+| es20-shader-compilation | VALIDATE_STATUS = FALSE: sampler2D and samplerCube both on unit 0 | ANGLE | angle:native |  |  |
+| es30-depth-textures | DEPTH24_STENCIL8 / UNSIGNED_INT_24_8: Dref outside [0, 1] is clamped before the comparison (§3.8.15.1), 40 lookups | ANGLE | angle:native |  |  |
+| es30-depth-textures | DEPTH_COMPONENT24 / UNSIGNED_INT: Dref outside [0, 1] is clamped before the comparison (§3.8.15.1), 72 lookups | ANGLE | angle:native |  |  |
+| es30-depth-textures | DEPTH_COMPONENT24 compare NONE, LINEAR / LINEAR: incomplete (§3.8.13) -> sampler2D returns (0, 0, 0, 1) (§3.9.2.1) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-depth-textures | DEPTH_COMPONENT24 compare NONE, min LINEAR, mag NEAREST: incomplete (§3.8.13) -> sampler2D returns (0, 0, 0, 1) (§3.9.2.1) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-depth-textures | DEPTH_COMPONENT24 compare NONE, min LINEAR_MIPMAP_NEAREST: incomplete (§3.8.13) -> sampler2D returns (0, 0, 0, 1) (§3.9.2.1) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-depth-textures | DEPTH_COMPONENT24 compare NONE, min NEAREST, mag LINEAR: incomplete (§3.8.13) -> sampler2D returns (0, 0, 0, 1) (§3.9.2.1) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-depth-textures | DEPTH_COMPONENT24 compare NONE, min NEAREST_MIPMAP_LINEAR: incomplete (§3.8.13) -> sampler2D returns (0, 0, 0, 1) (§3.9.2.1) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-depth-textures | DEPTH_COMPONENT32F compare NONE, LINEAR / LINEAR: incomplete (§3.8.13) -> sampler2D returns (0, 0, 0, 1) (§3.9.2.1) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-depth-textures | DEPTH_COMPONENT32F compare NONE, min LINEAR, mag NEAREST: incomplete (§3.8.13) -> sampler2D returns (0, 0, 0, 1) (§3.9.2.1) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-depth-textures | DEPTH_COMPONENT32F compare NONE, min LINEAR_MIPMAP_NEAREST: incomplete (§3.8.13) -> sampler2D returns (0, 0, 0, 1) (§3.9.2.1) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-depth-textures | DEPTH_COMPONENT32F compare NONE, min NEAREST, mag LINEAR: incomplete (§3.8.13) -> sampler2D returns (0, 0, 0, 1) (§3.9.2.1) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-depth-textures | DEPTH_COMPONENT32F compare NONE, min NEAREST_MIPMAP_LINEAR: incomplete (§3.8.13) -> sampler2D returns (0, 0, 0, 1) (§3.9.2.1) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-depth-textures | after the rejected GenerateMipmap the texture is still mipmap-incomplete (shadow lookup 0) | zink | zink:es-max zink:es-min |  |  |
+| es30-depth-textures | mipmap-incomplete DEPTH_COMPONENT32F (level 0 only, NEAREST_MIPMAP_NEAREST): shadow lookup returns 0 even with ALWAYS (§3.9.2.1) | zink | zink:es-max zink:es-min |  |  |
+| es30-etc2-eac | C.1.5 example: base 255 reaches exactly 1.0 with a positive modifier; modifier -3 gives 2020/2047 = 0.987 | ANGLE | angle:native |  |  |
+| es30-etc2-eac | C.1.7 example: multiplier 0: 480 - 10 = 470 | ANGLE | angle:native |  |  |
+| es30-etc2-eac | C.1.7 example: signed R11 60 x 8 - 160 = 320 (of 1023) | ANGLE | angle:native |  |  |
+| es30-etc2-eac | R11_EAC 12x4: all 48 texels match the Appendix C decoder (the exact 11-bit value (never truncated below 11 bits, C.1.5 / C.1.7); largest dev | ANGLE | angle:native |  |  |
+| es30-etc2-eac | RG11_EAC 4x4: all 16 texels match the Appendix C decoder (the exact 11-bit value (never truncated below 11 bits, C.1.5 / C.1.7); largest dev | ANGLE | angle:native |  |  |
+| es30-etc2-eac | RGB8_ETC2 (padded) 6x6: all 36 texels match the Appendix C decoder (exactly the 8-bit code / 255; largest deviation 138.000 units) | ANGLE | angle:native |  |  |
+| es30-etc2-eac | SIGNED_R11_EAC 12x4: all 48 texels match the Appendix C decoder (the exact 11-bit value (never truncated below 11 bits, C.1.5 / C.1.7); larg | ANGLE | angle:native |  |  |
+| es30-etc2-eac | SIGNED_RG11_EAC 4x4: all 16 texels match the Appendix C decoder (the exact 11-bit value (never truncated below 11 bits, C.1.5 / C.1.7); larg | ANGLE | angle:native |  |  |
+| es30-etc2-eac | glCompressedTexSubImage2D RGB8_ETC2 2x2 at (4, 4) of the 6x6 texture -> no error (width + xoffset = TEXTURE_WIDTH) | ANGLE | angle:native |  |  |
+| es30-etc2-eac | magnified picture: the 36 texels of the padded 6x6 RGB8_ETC2 cell match the CPU decoder | ANGLE | angle:native |  |  |
+| es30-framebuffer-blit-msaa | multisample RGBA8 -> SRGB8_ALPHA8: the formats are not identical -> INVALID_OPERATION | zink | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-framebuffer-invalidate | cells 11..13 (3D slices 1..3 copied with glBlitFramebuffer) equal their CPU patterns after re-rendering every image (rendering after invalid | ANGLE | angle:native |  |  |
+| es30-framebuffer-invalidate | cells 11..13 (3D slices 1..3 copied with glBlitFramebuffer) equal their CPU patterns after the end-of-frame invalidation of the default fram | ANGLE | angle:native |  |  |
+| es30-framebuffer-invalidate | default framebuffer: querying COLOR_ATTACHMENT0 (not BACK, DEPTH or STENCIL) -> INVALID_OPERATION | zink | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-framebuffer-invalidate | default framebuffer: querying DEPTH_ATTACHMENT (not BACK, DEPTH or STENCIL) -> INVALID_OPERATION | zink | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-framebuffer-invalidate | default framebuffer: querying DEPTH_STENCIL_ATTACHMENT (not BACK, DEPTH or STENCIL) -> INVALID_OPERATION | zink | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-framebuffer-invalidate | framebuffer object: COLOR_ATTACHMENT8 (= MAX_COLOR_ATTACHMENTS) -> INVALID_OPERATION | ANGLE | angle:native |  |  |
+| es30-framebuffer-invalidate | framebuffer object: attachment GL_BACK (a default framebuffer name) -> INVALID_ENUM | ANGLE | angle:native |  |  |
+| es30-integer-float-textures | R32I with RED_INTEGER / FLOAT -> INVALID_OPERATION (Table 3.2 lists only INT for R32I) | zink | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-integer-float-textures | RGB9_E5 (FLOAT data): texelFetch() returns the same exact words | ANGLE | angle:native |  |  |
+| es30-integer-float-textures | RGB9_E5 (FLOAT data): texture() returns all 64 texels as the exact 32-bit words (256 words compared) | ANGLE | angle:native |  |  |
+| es30-integer-float-textures | RGBA32F with RGBA_INTEGER / FLOAT -> INVALID_OPERATION | zink | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-integer-float-textures | a sampler2D and a usampler2D both on texture unit 0: the draw call fails with INVALID_OPERATION (2.12.9.7) | zink | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-multiple-render-targets | mapping {NONE, C1, NONE, C3}: attachments 0 and 2 keep their sentinel | ANGLE | angle:native |  |  |
+| es30-multiple-render-targets | mapping {NONE, C1, NONE, C3}: attachments 1 and 3 receive outputs 1 and 3 | ANGLE | angle:native |  |  |
+| es30-occlusion-queries | an ANY_SAMPLES_PASSED query object can be reused with ANY_SAMPLES_PASSED_CONSERVATIVE | Mesa | angle:native gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-occlusion-queries | deleting an active query does not end it: CURRENT_QUERY keeps the name and glEndQuery succeeds | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED of T0 behind the left block is FALSE as in the model | zink |  | zink:es-max zink:es-min |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED of T1 tall, above the right block is TRUE as in the model | zink |  | zink:es-max zink:es-min |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED of T2 in the street between the blocks is TRUE as in the model | zink |  | zink:es-max zink:es-min |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED of T3 behind the right block is FALSE as in the model | zink |  | zink:es-max zink:es-min |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED of T4 peeking past the left block is TRUE as in the model | zink |  | zink:es-max zink:es-min |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED of T5 close behind the left block is FALSE as in the model | zink |  | zink:es-max zink:es-min |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED result of T0 behind the left block is exactly FALSE (0) or TRUE (1) | zink |  | zink:es-max zink:es-min |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED result of T1 tall, above the right block is exactly FALSE (0) or TRUE (1) | zink | zink:es-max zink:es-min |  |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED result of T2 in the street between the blocks is exactly FALSE (0) or TRUE (1) | zink | zink:es-max zink:es-min |  |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED result of T3 behind the right block is exactly FALSE (0) or TRUE (1) | zink |  | zink:es-max zink:es-min |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED result of T4 peeking past the left block is exactly FALSE (0) or TRUE (1) | zink | zink:es-max zink:es-min |  |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED result of T5 close behind the left block is exactly FALSE (0) or TRUE (1) | zink |  | zink:es-max zink:es-min |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED_CONSERVATIVE of T1 tall, above the right block is TRUE because samples passed | zink |  | zink:es-max zink:es-min |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED_CONSERVATIVE of T2 in the street between the blocks is TRUE because samples passed | zink |  | zink:es-max zink:es-min |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED_CONSERVATIVE of T4 peeking past the left block is TRUE because samples passed | zink |  | zink:es-max zink:es-min |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED_CONSERVATIVE result of T0 behind the left block is exactly FALSE (0) or TRUE (1) | zink |  | zink:es-max zink:es-min |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED_CONSERVATIVE result of T1 tall, above the right block is exactly FALSE (0) or TRUE (1) | zink | zink:es-max zink:es-min |  |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED_CONSERVATIVE result of T2 in the street between the blocks is exactly FALSE (0) or TRUE (1) | zink | zink:es-max zink:es-min |  |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED_CONSERVATIVE result of T3 behind the right block is exactly FALSE (0) or TRUE (1) | zink |  | zink:es-max zink:es-min |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED_CONSERVATIVE result of T4 peeking past the left block is exactly FALSE (0) or TRUE (1) | zink | zink:es-max zink:es-min |  |  |
+| es30-occlusion-queries | scene, polled: ANY_SAMPLES_PASSED_CONSERVATIVE result of T5 close behind the left block is exactly FALSE (0) or TRUE (1) | zink |  | zink:es-max zink:es-min |  |
+| es30-occlusion-queries | scene, polled: every ANY_SAMPLES_PASSED query issued before an available one is available | zink | zink:es-max zink:es-min |  |  |
+| es30-occlusion-queries | scene, polled: every ANY_SAMPLES_PASSED_CONSERVATIVE query issued before an available one is available | zink | zink:es-max zink:es-min |  |  |
+| es30-pixel-buffer-objects | glReadPixels(RGBA_INTEGER, UNSIGNED_INT) into a pack buffer at byte offset 2 (not a multiple of 4) -> INVALID_OPERATION (4.3.2.4) | ANGLE | angle:native |  |  |
+| es30-transform-feedback | ... and the capture is still paused | ANGLE | angle:native |  |  |
+| es30-transform-feedback | ... and the current program did not change (a command that generates an error has no effect, section 2.5) | radeonsi | gpu:es-max gpu:es-min |  |  |
+| es30-transform-feedback | ES 3.0/3.1: glDrawArrays(LINE_LOOP) while capturing LINES -> INVALID_OPERATION | zink | gpu:es-min llvmpipe:es-min zink:es-min |  | es-min only: version-override artifact, not a driver deviation |
+| es30-transform-feedback | ES 3.0/3.1: glDrawArrays(LINE_STRIP) while capturing LINES -> INVALID_OPERATION | zink | gpu:es-min llvmpipe:es-min zink:es-min |  | es-min only: version-override artifact, not a driver deviation |
+| es30-transform-feedback | ES 3.0/3.1: glDrawArrays(TRIANGLE_FAN) while capturing TRIANGLES -> INVALID_OPERATION | zink | gpu:es-min llvmpipe:es-min zink:es-min |  | es-min only: version-override artifact, not a driver deviation |
+| es30-transform-feedback | ES 3.0/3.1: glDrawArrays(TRIANGLE_STRIP) while capturing TRIANGLES -> INVALID_OPERATION ("mode is not identical to primitiveMode") | zink | gpu:es-min llvmpipe:es-min zink:es-min |  | es-min only: version-override artifact, not a driver deviation |
+| es30-transform-feedback | glResumeTransformFeedback while another program is current -> INVALID_OPERATION | ANGLE | angle:native |  |  |
+| es31-framebuffer-no-attachments | 4 default samples: nothing outside the scissor box is touched: no pixel outside it is hit, the atomic behind gl_HelperInvocation never ran,  | llvmpipe | llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es31-framebuffer-no-attachments | control: the same triangle and scissor box on a 4-sample RGBA8 renderbuffer attachment: nothing outside the box is touched either | llvmpipe | llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es31-framebuffer-no-attachments | layout(early_fragment_tests) with a static write to gl_FragDepth fails to compile or to link (GLSL ES 3.10 sections 4.4.1, 1.3) | Mesa | angle:native gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es31-indirect-draw | glDrawArraysIndirect(TRIANGLES) with TRIANGLES feedback active: ES 3.1 section 10.5: error while transform feedback is active and not paused | Mesa | gpu:es-min llvmpipe:es-min zink:es-min |  | es-min only: version-override artifact, not a driver deviation |
+| es31-indirect-draw | glDrawElementsIndirect(TRIANGLES) with TRIANGLES feedback active: ES 3.1 section 10.5: error while transform feedback is active and not paus | Mesa | gpu:es-min llvmpipe:es-min zink:es-min |  | es-min only: version-override artifact, not a driver deviation |
+| es31-multisample-textures | glGenerateMipmap(TEXTURE_2D_MULTISAMPLE) -> INVALID_ENUM (section 8.14.4) | ANGLE | angle:native |  |  |
+| es31-multisample-textures | glGetTexLevelParameteriv(TEXTURE_2D_MULTISAMPLE, level 1) -> INVALID_VALUE (a multisample texture has no mipmaps) | ANGLE | angle:native |  |  |
 | es31-program-interface-query | ACTIVE_VARIABLES of block Params (5 entries) with count = 3: only the first three indices are written, length = 3 | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
 | es31-program-interface-query | PROGRAM_OUTPUT: "o_id[1]" is not a list entry | ANGLE | angle:native |  |  |
 | es31-program-interface-query | UNIFORM 'Params.basis': REFERENCED_BY_VERTEX/FRAGMENT = true/false | radeonsi | gpu:es-max gpu:es-min |  |  |
@@ -19,8 +101,12 @@ and the runs where the matched driver passed it (XPASS). Spec quotes and explana
 | es31-program-pipelines | glUseProgramStages with the name of a shader object -> INVALID_OPERATION | ANGLE | angle:native |  |  |
 | es31-program-pipelines | mutation: replacing the mediump fragment program makes it valid again (validated while ANOTHER, invalid pipeline is bound) | ANGLE | angle:native |  |  |
 | es31-program-pipelines | mutation: replacing the offending vertex program with a matching one makes the same pipeline valid again (validated while ANOTHER, invalid p | ANGLE | angle:native |  |  |
+| es31-separate-vertex-format | VERTEX_BINDING_OFFSET 2^33 + 8 queried with GetIntegeri_v is clamped to INT_MAX (section 2.2.2) | Mesa | angle:native gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es31-separate-vertex-format | glBindVertexBuffer with offset 2^33 + 8: VERTEX_BINDING_OFFSET is a 64-bit state value, GetInteger64i_v returns it exactly (Table 21.3) | Mesa | angle:native gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
 | es31-ssbo-std430 | a block of 4294967296 bytes (one uint more, > MAX_SHADER_STORAGE_BLOCK_SIZE = 4294967295) fails to link | ANGLE | angle:native |  |  |
 | es31-ssbo-std430 | glBindBufferRange with a negative offset -> INVALID_VALUE | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es31-stencil-texturing-and-level-queries | COMPRESSED_RGB8_ETC2 levels 0 and 1: TEXTURE_RED/GREEN/BLUE_TYPE = UNSIGNED_NORMALIZED (the type after decompression) | ANGLE | angle:native |  |  |
+| es31-stencil-texturing-and-level-queries | TEXTURE_2D_MULTISAMPLE level 1 -> INVALID_VALUE (the maximum level is zero) | ANGLE | angle:native |  |  |
 | test-glsl-language | [fragment] an identifier containing __ (my__value) is reserved but legal (§3.8): builds | ANGLE | angle:native |  |  |
 | test-glsl-language | [fragment] the l-value of an out argument is fixed when the argument is evaluated: store(arr[j], ++j) (§6.1.1) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min softpipe:es-max softpipe:es-min zink:es-max zink:es-min |  |  |
 | test-glsl-language | [fragment] the left side of an assignment is evaluated before the right side: y[j] = ++j (§5.8) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min softpipe:es-max softpipe:es-min zink:es-max zink:es-min |  |  |

@@ -74,7 +74,7 @@
 | environment (runtime check) | EGL 1.5 §3.5.2: a pbuffer has the requested `EGL_WIDTH`×`EGL_HEIGHT`; ES 3.0 §2.12.1: the initial viewport is the surface size | llvmpipe and zink (lavapipe): a surfaceless pbuffer from a 4-sample config (`EGL_SAMPLES` 4, `SAMPLE_BUFFERS` 1) yields a 0x0 default framebuffer; `glReadPixels` raises INVALID_OPERATION. radeonsi works. The runtime reports BLOCKED_ENVIRONMENT. So `ES30.MULTISAMPLE.DEFAULT` is exercised only on radeonsi, and es30-flat-centroid uses multisample renderbuffers instead |
 | `es30-occlusion-queries` | ES 3.0 §2.14: deleting an active query frees its name, but the object stays active until it is no longer active | `glDeleteQueries` on an active query ends it: `CURRENT_QUERY` reads 0 and the following `glEndQuery` raises INVALID_OPERATION. All Mesa drivers |
 | `es30-occlusion-queries` | ES 3.2 §4.2: an object created as ANY_SAMPLES_PASSED or ANY_SAMPLES_PASSED_CONSERVATIVE "may be reused for either target" | `glBeginQuery(ANY_SAMPLES_PASSED_CONSERVATIVE)` on an ANY_SAMPLES_PASSED object raises INVALID_OPERATION. All Mesa drivers |
-| `es30-occlusion-queries` | ES 3.0 §6.1.7: once a query reports available, all earlier queries of the same type are available; an occlusion result is boolean | zink (lavapipe), only after QUERY_RESULT_AVAILABLE has been polled to TRUE: QUERY_RESULT returns a partial sample count (e.g. 30), or 0 for a visible box, and earlier queries still report unavailable. Blocking reads are correct |
+| `es30-occlusion-queries` | ES 3.0 §6.1.7: once a query reports available, all earlier queries of the same type are available; an occlusion result is boolean | zink (lavapipe), only after QUERY_RESULT_AVAILABLE has been polled to TRUE: QUERY_RESULT returns a partial sample count (e.g. 30), or 0 for a visible box, and earlier queries still report unavailable. Blocking reads are correct. The polled behaviour is nondeterministic: in a given run many of the zink-matched polled checks pass (XPASS in generated/DEVIATIONS.md) |
 | **crash** (worked around) `es30-glsl-texture-functions` | correct execution of a valid shader | a fragment shader with a `switch` over about 80 texture-lookup cases segfaults in libgallium on the first draw on llvmpipe and zink (the llvmpipe backtrace shows a recursion about 80 frames deep). The demo compiles the shader six times, once per sampler family (`#define GROUP n`), so no check needs an XFAIL |
 | `es30-depth-textures` | ES 3.0 §3.8.13 / ES 3.2 §8.17: a sized depth(-stencil) texture with `TEXTURE_COMPARE_MODE` NONE and a non-NEAREST filter is incomplete, so it returns (0,0,0,1) | Mesa filters the texture and returns the filtered depth (e.g. 0.75). This affects 5 filter settings × 2 formats; no exposed extension relaxes the rule. All Mesa drivers |
 | `es30-depth-textures` | ES 3.0 §3.9.2.1: an incomplete texture returns 0 for a shadow sampler | zink: a mipmap-incomplete DEPTH_COMPONENT32F returns 1.0 (the ALWAYS result) |
@@ -96,6 +96,10 @@ token is implementation-dependent (ES 3.2 §9.4.2).
 Because of the softpipe miscompilation row, softpipe is not used as a general correctness oracle. It runs only where
 its native ES 3.1 boundary is informative (ES 3.2 executables must SKIP, plus version-gating tests
 that opt in with `"extra_drivers": ["softpipe"]`).
+
+Per-run evidence for every deviation check (which runs failed, which matched runs passed, and which are es-min
+override artifacts) is generated in [generated/DEVIATIONS.md](generated/DEVIATIONS.md). A 2026-11-11 audit of
+that table found every "Mesa"-matched deviation reproduced on radeonsi, llvmpipe and zink.
 
 These are reported as XFAIL only on the matching driver (`GL_VERSION` contains "Mesa", or
 `GL_RENDERER` contains "softpipe"). Every other driver gets the strict check. Consequence: demos that

@@ -364,6 +364,36 @@ def main():
             f.write("\n## Stale results (ignored)\n\n" + "\n".join(f"- {x}" for x in stale_report) + "\n")
         if problems:
             f.write("\n## Manifest problems\n\n" + "\n".join(f"- {p}" for p in problems) + "\n")
+    # Evidence for every known-deviation check: where it actually failed (XFAIL) or passed although matched (XPASS).
+    dev = defaultdict(lambda: {"match": "", "XFAIL": set(), "XPASS": set()})
+    for name, runs in results.items():
+        for r in runs:
+            parts = r.get("test_id", "").split(":")
+            if len(parts) != 3:
+                continue
+            run = f"{parts[1]}:{parts[2]}"
+            for c in r.get("demo_checks", []):
+                mt = re.search(r"(XFAIL|XPASS)[^']* on '([^']+)'", c.get("detail", ""))
+                if mt:
+                    e = dev[(name, c["what"])]
+                    e["match"] = mt.group(2)
+                    e[mt.group(1)].add(run)
+    dev_rows = []
+    for (name, what), e in sorted(dev.items()):
+        drivers_xfail = {x.split(":")[0] for x in e["XFAIL"]}
+        note = ""
+        if e["match"] == "Mesa" and not {"gpu", "llvmpipe", "zink"} <= drivers_xfail:
+            note = "matched 'Mesa' but not observed on every Mesa driver"
+        if e["XFAIL"] and all(x.endswith(":es-min") for x in e["XFAIL"]):
+            note = "es-min only: version-override artifact, not a driver deviation"
+        dev_rows.append([name, what.replace("|", "/")[:140], e["match"], " ".join(sorted(e["XFAIL"])),
+                         " ".join(sorted(e["XPASS"])), note])
+    with open(os.path.join(gen, "DEVIATIONS.md"), "w") as f:
+        f.write(header + "# Known-deviation evidence\n\n"
+                "Every check reported through `expect_or_known_deviation`, with the runs where it failed (XFAIL)\n"
+                "and the runs where the matched driver passed it (XPASS). Spec quotes and explanations:\n"
+                "[KNOWN_LIMITATIONS.md](../KNOWN_LIMITATIONS.md).\n\n"
+                + md_table(dev_rows, ["executable", "check", "match", "XFAIL runs", "XPASS runs", "note"]) + "\n")
     with open(os.path.join(gen, "FEATURE_STATUS.md"), "w") as f:
         f.write(header + "# Feature status\n\n" + md_table(feat_table, ["id", "ES", "category", "title", "spec", "status", "demos"]) + "\n")
     with open(os.path.join(gen, "GLSL_STATUS.md"), "w") as f:

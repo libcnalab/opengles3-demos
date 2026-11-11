@@ -1,0 +1,67 @@
+{
+  "name": "es32-debug-output",
+  "title": "Debug output: messages, groups and labels",
+  "min_es": "3.2",
+  "glsl": [
+    "320 es"
+  ],
+  "category": "es32",
+  "order": 4100,
+  "summary": "OpenGL ES 3.2 debug output in a debug context (EGL_CONTEXT_OPENGL_DEBUG, CONTEXT_FLAG_DEBUG_BIT): glDebugMessageCallback with a user pointer read back through glGetPointerv, DEBUG_OUTPUT and DEBUG_OUTPUT_SYNCHRONOUS, application messages through glDebugMessageInsert received with exact source/type/id/severity/length/text, glDebugMessageControl filtering by source, type, severity and id lists checked against a CPU model of the enabled state, the initial state (all enabled except LOW), the message log (GetDebugMessageLog, DEBUG_LOGGED_MESSAGES, overflow at MAX_DEBUG_LOGGED_MESSAGES), debug groups with per-group filter state and STACK_OVERFLOW/STACK_UNDERFLOW, and glObjectLabel/glGetObjectLabel for all 11 object namespaces plus glObjectPtrLabel for a sync object (truncation, MAX_LABEL_LENGTH, invalid names). A small scene annotated with a group and markers is drawn first; a panel shows pass/fail per area.",
+  "spec": [
+    "ES 3.2 §18 Debug Output: §18.1 Debug Messages (Tables 18.1 sources, 18.2 types, 18.3 severities), §18.2 Debug Message Callback, §18.3 Debug Message Log, §18.4 Controlling Debug Messages, §18.5 Externally Generated Messages, §18.6 Debug Groups, §18.7 Debug Labels (Table 18.4), §18.8 Asynchronous and Synchronous Debug Output, §18.9 Debug Output Queries",
+    "ES 3.2 §20.2 Pointer, String, and Related Context Queries (GetPointerv, CONTEXT_FLAGS / CONTEXT_FLAG_DEBUG_BIT)",
+    "ES 3.2 §2.3.1 Errors (Table 2.3: an erroneous command is ignored; \"the GL may also generate a debug output message\")",
+    "ES 3.2 §21 Tables 21.53 and 21.54 (Debug Output State, Implementation Dependent Debug Output State)",
+    "GLSL ES 3.10 §4.4.3 and §4.4.4 (layout(location) on default-block uniforms, layout(binding) on samplers), used by the scene shaders"
+  ],
+  "api": {
+    "glDebugMessageCallback": "messages reach the callback with the registered userParam (a pointer to the demo's sink), a second registration replaces function and pointer, NULL clears it and routes messages to the log, and the callback runs synchronously on the calling thread",
+    "glGetPointerv": "DEBUG_CALLBACK_FUNCTION and DEBUG_CALLBACK_USER_PARAM equal what was registered (function, user pointer, replacement, NULL); initially both NULL",
+    "glDebugMessageInsert": "every valid source (APPLICATION, THIRD_PARTY) x 9 types x 4 severities arrives with the exact source/type/id/severity/length/text; explicit length truncates; ids 0 and 0xFFFFFFFF; MAX_DEBUG_MESSAGE_LENGTH boundary (INVALID_VALUE at the limit, accepted just below); INVALID_ENUM for other sources, DONT_CARE type and severity; discarded without error when DEBUG_OUTPUT is disabled",
+    "glDebugMessageControl": "a CPU model of the per-message enabled state predicts the delivered ids after 9 successive source/type/severity filters (including DONT_CARE wildcards); id lists are per (source, type) namespace, independent of severity, ignore unknown ids, are overridden by a later severity-wide control, and with count 0 ids are ignored; INVALID_OPERATION and INVALID_VALUE cases leave the state unchanged; initial state enables everything except severity LOW",
+    "glGetDebugMessageLog": "with the callback unset: oldest-first order, count and bufSize limits (a message that does not fit stays), lengths include the terminator, concatenated strings, NULL arrays discard attributes but remove the messages, each array optional, negative bufSize with a log pointer -> INVALID_VALUE (returns 0, fetches nothing), overflow keeps the oldest MAX_DEBUG_LOGGED_MESSAGES",
+    "glPushDebugGroup": "generates a PUSH_GROUP message with the given source, id and text (NOTIFICATION), nested depth via DEBUG_GROUP_STACK_DEPTH, filter state inherited from the parent, MAX_DEBUG_GROUP_STACK_DEPTH - 1 pushes succeed then STACK_OVERFLOW, INVALID_ENUM for a source other than APPLICATION/THIRD_PARTY, INVALID_VALUE for an overlong null-terminated message",
+    "glPopDebugGroup": "generates a POP_GROUP message with the push's source and id (NOTIFICATION) in LIFO order, restores the parent's filter state, STACK_UNDERFLOW on the default group",
+    "glObjectLabel": "all 11 namespaces of Table 18.4 (buffer, shader, program, vertex array, query, program pipeline, sampler, texture, renderbuffer, framebuffer, transform feedback): null-terminated and explicit-length labels, NULL label removes it, MAX_LABEL_LENGTH boundary, two objects keep separate labels, INVALID_VALUE for never generated and deleted names",
+    "glGetObjectLabel": "initial empty label, exact text and length, bufSize truncation (at most bufSize-1 characters plus terminator, nothing written beyond), label NULL returns only the length, length NULL accepted, negative bufSize and invalid names -> INVALID_VALUE without writing the outputs",
+    "glObjectPtrLabel": "labels a fence sync object (same battery as glObjectLabel); a pointer that is not a sync object -> INVALID_VALUE",
+    "glGetObjectPtrLabel": "returns the sync object's label with the same truncation and length semantics; INVALID_VALUE for a non-sync pointer",
+    "glEnable": "DEBUG_OUTPUT and DEBUG_OUTPUT_SYNCHRONOUS: messages are generated again after Enable; IsEnabled follows",
+    "glDisable": "DEBUG_OUTPUT disabled: inserts are discarded without error, nothing reaches callback or log, the GL generates no error message",
+    "glIsEnabled": "DEBUG_OUTPUT initially TRUE in the debug context, DEBUG_OUTPUT_SYNCHRONOUS initially FALSE, both follow Enable/Disable",
+    "glGetIntegerv": "CONTEXT_FLAGS has CONTEXT_FLAG_DEBUG_BIT; DEBUG_GROUP_STACK_DEPTH, DEBUG_LOGGED_MESSAGES, DEBUG_NEXT_LOGGED_MESSAGE_LENGTH initial values and after every operation; MAX_DEBUG_MESSAGE_LENGTH, MAX_DEBUG_LOGGED_MESSAGES, MAX_DEBUG_GROUP_STACK_DEPTH, MAX_LABEL_LENGTH against the Table 21.54 minimums and used as the boundaries of the limit tests",
+    "glGetError": "every deliberately provoked error (over 100 cases) is compared with the defined code through check.expect_gl_error",
+    "glDrawArrays": "the labelled scene (flat triangle, textured quad) is probed pixel by pixel inside a debug group with markers",
+    "glUseProgram": "the scene program draws the triangle and the quad (pixels)",
+    "glUniform4f": "layout(location = 0) uniform vec4 u_color gives the triangle its colour (pixels)",
+    "glUniform1i": "layout(location = 1) uniform int u_mode switches the same program between flat colour and texture (pixels)",
+    "glTexStorage2D": "2x2 RGBA8 texture storage for the quad (pixels)",
+    "glTexSubImage2D": "the four texel colours appear at the four quadrants of the quad (pixels)"
+  },
+  "features": [
+    "ES32.DEBUG.OUTPUT",
+    "ES32.DEBUG.GROUPS",
+    "ES32.DEBUG.LABELS",
+    "ES32.DEBUG.POINTER",
+    "ES20.ERRORS.INVALID_ENUM",
+    "ES20.ERRORS.INVALID_VALUE",
+    "ES20.ERRORS.INVALID_OPERATION"
+  ],
+  "glsl_features": [
+    "GLSL310.LAYOUT.UNIFORM_LOCATION",
+    "GLSL310.LAYOUT.BINDING"
+  ],
+  "validation": [
+    "state-query",
+    "pixel-reference",
+    "negative",
+    "gl-error",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5",
+    "notes": "Viewed the 256x256 captures of gpu (radeonsi), llvmpipe and zink (visually identical): top part shows an orange flat triangle on the left and a quad with a 2x2 checker on the right (blue/yellow upper row, red/green lower row), five green squares in the strip below it, then a panel of 30 green cells (8 per row, last row has 6 green + 2 dark unused cells) with no red cell. Probed colours match the CPU expectation."
+  }
+}

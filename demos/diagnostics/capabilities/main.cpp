@@ -242,6 +242,7 @@ namespace
             else
                 std::cout << "     AllFunctionsLoaded() = " << mgl::AllFunctionsLoaded() << " (only required for ES 3.2)\n";
 
+            check_default_framebuffer(check);
             check_function_availability(v, check);
             check_extensions(check);
             check_limits(v, check);
@@ -259,6 +260,31 @@ namespace
         void shutdown(demo::Env& /*env*/) override {}
 
     private:
+        void check_default_framebuffer(demo::Check& check)
+        {
+            // With framebuffer 0 bound, attachments are named BACK / DEPTH / STENCIL (ES 3.0 §6.1.13).
+            // (Needs meta-gl's DefaultFramebufferQueryAttachment overload, gap G4.)
+            using A = mgl::DefaultFramebufferQueryAttachment;
+            using Q = mgl::FramebufferAttachmentParameter;
+            auto q = [](A a, Q p) {
+                GLint v = -1;
+                mgl::glGetFramebufferAttachmentParameteriv(mgl::FramebufferTarget::DrawFramebuffer, a, p, &v);
+                return v;
+            };
+            mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
+            check.expect(q(A::Back, Q::ObjectType) == GL_FRAMEBUFFER_DEFAULT && q(A::Depth, Q::ObjectType) == GL_FRAMEBUFFER_DEFAULT &&
+                             q(A::Stencil, Q::ObjectType) == GL_FRAMEBUFFER_DEFAULT,
+                         "default framebuffer BACK/DEPTH/STENCIL report OBJECT_TYPE = FRAMEBUFFER_DEFAULT");
+            const GLint r = q(A::Back, Q::RedSize), g = q(A::Back, Q::GreenSize), b = q(A::Back, Q::BlueSize), a = q(A::Back, Q::AlphaSize);
+            const GLint d = q(A::Depth, Q::DepthSize), st = q(A::Stencil, Q::StencilSize);
+            std::cout << std::format("     default framebuffer: RGBA {}/{}/{}/{}  depth {}  stencil {}  encoding {:#x}\n", r, g, b, a, d, st,
+                                     q(A::Back, Q::ColorEncoding));
+            check.expect(r == 8 && g == 8 && b == 8 && a == 8 && d >= 24 && st == 8,
+                         "default framebuffer sizes match the requested EGL config (RGBA8, depth >= 24, stencil 8)");
+            check.expect_eq(q(A::Back, Q::ColorEncoding), static_cast<GLint>(GL_LINEAR), "default framebuffer color encoding is LINEAR");
+            check.expect_no_gl_error("default-framebuffer attachment queries raised no error");
+        }
+
         void check_function_availability(demo::Version v, demo::Check& check)
         {
             int required = 0, missing = 0, beyond_available = 0, beyond = 0;

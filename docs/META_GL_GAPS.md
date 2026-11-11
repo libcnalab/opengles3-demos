@@ -1,7 +1,7 @@
 # meta-gl compatibility report
 
 meta-gl revision audited: `develop` @ `795bcdc` (v0.4.1). Fixes live on the local meta-gl branch
-`opengles3-demos/enum-gaps` (not pushed). The owner authorized meta-gl changes on 2026-11-11.
+`opengles3-demos/enum-gaps` (commits `146e171`, G4/G5 fix commit after it; not pushed). The owner authorized meta-gl changes on 2026-11-11.
 
 ## Audit method
 
@@ -53,6 +53,20 @@ meta-gl revision audited: `develop` @ `795bcdc` (v0.4.1). Fixes live on the loca
   expressible, and the alignment needed for a correct `glTexBufferRange` could not be queried.
 - **Fix:** added `BufferTarget::TextureBuffer`, `GetParameter::TextureBufferBinding`,
   `GetParameter::TextureBufferOffsetAlignment`.
+
+### G4 — default-framebuffer attachments could not be queried — FIXED
+- **Affected:** `metagl::glGetFramebufferAttachmentParameteriv`.
+- **Expected:** "If the default framebuffer is bound to target, then attachment must be BACK, identifying
+  the color buffer; DEPTH ...; or STENCIL" (ES 3.0 §6.1.13; ES 3.2 §9.2.3).
+- **Actual:** `FramebufferAttachment` holds only `*_ATTACHMENT` points (+ColorAttachment conversions);
+  `DefaultFramebufferAttachment` holds `GL_COLOR` (invalidation only). `GL_BACK` was not expressible.
+- **Found by:** the es20-blending work (it wanted the pbuffer's color encoding).
+- **Fix:** `enum class DefaultFramebufferQueryAttachment { Back, Depth, Stencil }` + an overload of
+  `glGetFramebufferAttachmentParameteriv`. Runtime evidence: `diagnostics-capabilities` queries
+  OBJECT_TYPE (= FRAMEBUFFER_DEFAULT), sizes and COLOR_ENCODING of the pbuffer on all drivers.
+
+### G5 — `to_string(DefaultFramebufferAttachment)` missing — FIXED
+- meta-gl's README promises `to_string()` for all enum classes; this one had none. Added (same commit).
 
 ## Observations (not defects; documented for users of the demos)
 

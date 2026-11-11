@@ -7,15 +7,15 @@
 | ES20.CONTEXT.STRINGS | 2.0 | context | GL_VENDOR/RENDERER/VERSION/SHADING_LANGUAGE_VERSION strings and version parsing | ES 3.0 §6.1.6 | FULLY_VALIDATED | diagnostics-capabilities |
 | ES20.ERRORS.GETERROR | 2.0 | errors | glGetError semantics: sticky flags; command ignored on error | ES 3.0 §2.5 | NOT_STARTED |  |
 | ES20.ERRORS.INVALID_ENUM | 2.0 | errors | GL_INVALID_ENUM generation (only reachable via raw casts through typed wrappers) | ES 3.0 §2.5 Table 2.3 | NOT_STARTED |  |
-| ES20.ERRORS.INVALID_VALUE | 2.0 | errors | GL_INVALID_VALUE generation (negative sizes/out-of-range indices) | ES 3.0 §2.5 | NOT_STARTED |  |
+| ES20.ERRORS.INVALID_VALUE | 2.0 | errors | GL_INVALID_VALUE generation (negative sizes/out-of-range indices) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-culling-front-face |
 | ES20.ERRORS.INVALID_OPERATION | 2.0 | errors | GL_INVALID_OPERATION generation (state-dependent misuse) | ES 3.0 §2.5 | NOT_STARTED |  |
 | ES20.ERRORS.INVALID_FB_OP | 2.0 | errors | GL_INVALID_FRAMEBUFFER_OPERATION on incomplete framebuffer | ES 3.0 §4.4.4 | NOT_STARTED |  |
 | ES20.VIEWPORT | 2.0 | transform | glViewport mapping NDC->window; MAX_VIEWPORT_DIMS | ES 3.0 §2.13.1 | NOT_STARTED |  |
 | ES20.DEPTH_RANGE | 2.0 | transform | glDepthRangef mapping of NDC z to window z | ES 3.0 §2.13.1 | NOT_STARTED |  |
 | ES20.CLIP.VOLUME | 2.0 | transform | Clip-volume clipping of primitives (-w<=x | y | NOT_STARTED |  |
 | ES20.COORDS.SYSTEMS | 2.0 | transform | Object->eye->clip->NDC->window coordinate chain (shader-based) | ES 3.0 §2.13 | NOT_STARTED |  |
-| ES20.SCISSOR | 2.0 | fragment-ops | Scissor test (glScissor + GL_SCISSOR_TEST) | ES 3.0 §4.1.2 | NOT_STARTED |  |
-| ES20.CLEAR.COLOR | 2.0 | framebuffer | glClear color + glClearColor | ES 3.0 §4.2.3 | FULLY_VALIDATED | es30-hello-triangle |
+| ES20.SCISSOR | 2.0 | fragment-ops | Scissor test (glScissor + GL_SCISSOR_TEST) | ES 3.0 §4.1.2 | FULLY_VALIDATED | es20-culling-front-face |
+| ES20.CLEAR.COLOR | 2.0 | framebuffer | glClear color + glClearColor | ES 3.0 §4.2.3 | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es30-hello-triangle |
 | ES20.CLEAR.DEPTH | 2.0 | framebuffer | glClear depth + glClearDepthf | ES 3.0 §4.2.3 | NOT_STARTED |  |
 | ES20.CLEAR.STENCIL | 2.0 | framebuffer | glClear stencil + glClearStencil | ES 3.0 §4.2.3 | NOT_STARTED |  |
 | ES20.CLEAR.SCISSORED | 2.0 | framebuffer | Clear honours scissor and write masks | ES 3.0 §4.2.3 | NOT_STARTED |  |
@@ -36,31 +36,31 @@
 | ES20.ATTRIB.INTERLEAVED | 2.0 | vertex-input | Interleaved vs planar layouts; stride and offset | ES 3.0 §2.9 | NOT_STARTED |  |
 | ES20.ATTRIB.QUERY | 2.0 | vertex-input | glGetVertexAttrib*/glGetVertexAttribPointerv state queries | ES 3.0 §6.1.10 | NOT_STARTED |  |
 | ES20.ATTRIB.CLIENT_ARRAYS | 2.0 | vertex-input | Client-memory vertex arrays on the default VAO (legal only with VAO 0) | ES 3.0 §2.9 §2.11 | NOT_STARTED |  |
-| ES20.BUFFER.VBO | 2.0 | buffers | Vertex buffer objects (ARRAY_BUFFER) glGenBuffers/glBindBuffer/glBufferData | ES 3.0 §2.10 | FULLY_VALIDATED | es30-hello-triangle |
+| ES20.BUFFER.VBO | 2.0 | buffers | Vertex buffer objects (ARRAY_BUFFER) glGenBuffers/glBindBuffer/glBufferData | ES 3.0 §2.10 | FULLY_VALIDATED | es20-culling-front-face, es30-hello-triangle |
 | ES20.BUFFER.IBO | 2.0 | buffers | Index buffers (ELEMENT_ARRAY_BUFFER) with UBYTE/USHORT/UINT indices | ES 3.0 §2.10.7 | NOT_STARTED |  |
 | ES20.BUFFER.SUBDATA | 2.0 | buffers | glBufferSubData partial updates | ES 3.0 §2.10.2 | NOT_STARTED |  |
 | ES20.BUFFER.REALLOC | 2.0 | buffers | glBufferData re-specification (orphaning) and size/usage queries | ES 3.0 §2.10.2 §6.1.9 | NOT_STARTED |  |
 | ES20.BUFFER.QUERY | 2.0 | buffers | glGetBufferParameteriv / glIsBuffer | ES 3.0 §6.1.9 | NOT_STARTED |  |
-| ES20.DRAW.ARRAYS | 2.0 | drawing | glDrawArrays | ES 3.0 §2.9.3 | FULLY_VALIDATED | es30-hello-triangle |
+| ES20.DRAW.ARRAYS | 2.0 | drawing | glDrawArrays | ES 3.0 §2.9.3 | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es30-hello-triangle |
 | ES20.DRAW.ELEMENTS | 2.0 | drawing | glDrawElements with index buffer | ES 3.0 §2.9.3 | NOT_STARTED |  |
 | ES20.DRAW.TOPOLOGY | 2.0 | drawing | Primitive types POINTS/LINES/LINE_LOOP/LINE_STRIP/TRIANGLES/STRIP/FAN | ES 3.0 §2.7.1 | NOT_STARTED |  |
 | ES20.DRAW.POINT_SIZE | 2.0 | drawing | gl_PointSize + ALIASED_POINT_SIZE_RANGE + gl_PointCoord | ES 3.0 §3.4 | NOT_STARTED |  |
 | ES20.DRAW.LINE_WIDTH | 2.0 | drawing | glLineWidth + ALIASED_LINE_WIDTH_RANGE (only 1.0 guaranteed) | ES 3.0 §3.5 | NOT_STARTED |  |
 | ES20.RASTER.INTERPOLATION | 2.0 | rasterization | Perspective-correct smooth interpolation of varyings | ES 3.0 §3.6.1 | FULLY_VALIDATED | es30-hello-triangle |
-| ES20.RASTER.FRONT_FACE | 2.0 | rasterization | glFrontFace + gl_FrontFacing | ES 3.0 §3.6.1 | NOT_STARTED |  |
-| ES20.RASTER.CULL | 2.0 | rasterization | glCullFace + GL_CULL_FACE | ES 3.0 §3.6.1 | NOT_STARTED |  |
+| ES20.RASTER.FRONT_FACE | 2.0 | rasterization | glFrontFace + gl_FrontFacing | ES 3.0 §3.6.1 | FULLY_VALIDATED | es20-culling-front-face |
+| ES20.RASTER.CULL | 2.0 | rasterization | glCullFace + GL_CULL_FACE | ES 3.0 §3.6.1 | FULLY_VALIDATED | es20-culling-front-face |
 | ES20.RASTER.POLYGON_OFFSET | 2.0 | rasterization | glPolygonOffset + POLYGON_OFFSET_FILL | ES 3.0 §3.6.2 | NOT_STARTED |  |
 | ES20.DEPTH.TEST | 2.0 | fragment-ops | Depth test enable + glDepthFunc (all 8 functions) | ES 3.0 §4.1.5 | NOT_STARTED |  |
 | ES20.DEPTH.MASK | 2.0 | fragment-ops | glDepthMask write mask | ES 3.0 §4.2.2 | NOT_STARTED |  |
 | ES20.STENCIL.TEST | 2.0 | fragment-ops | Stencil test glStencilFunc/glStencilOp (all ops incl. wrap) | ES 3.0 §4.1.4 | NOT_STARTED |  |
 | ES20.STENCIL.SEPARATE | 2.0 | fragment-ops | glStencilFuncSeparate/glStencilOpSeparate/glStencilMaskSeparate front vs back | ES 3.0 §4.1.4 | NOT_STARTED |  |
 | ES20.STENCIL.MASK | 2.0 | fragment-ops | glStencilMask write mask | ES 3.0 §4.2.2 | NOT_STARTED |  |
-| ES20.BLEND.FUNC | 2.0 | fragment-ops | glBlendFunc factors incl. constant color/alpha and SRC_ALPHA_SATURATE | ES 3.0 §4.1.7 | NOT_STARTED |  |
-| ES20.BLEND.SEPARATE | 2.0 | fragment-ops | glBlendFuncSeparate / glBlendEquationSeparate | ES 3.0 §4.1.7 | NOT_STARTED |  |
-| ES20.BLEND.EQUATION | 2.0 | fragment-ops | FUNC_ADD/SUBTRACT/REVERSE_SUBTRACT (MIN/MAX: ES 3.0) | ES 3.0 §4.1.7 | NOT_STARTED |  |
-| ES20.BLEND.COLOR | 2.0 | fragment-ops | glBlendColor constant | ES 3.0 §4.1.7 | NOT_STARTED |  |
+| ES20.BLEND.FUNC | 2.0 | fragment-ops | glBlendFunc factors incl. constant color/alpha and SRC_ALPHA_SATURATE | ES 3.0 §4.1.7 | FULLY_VALIDATED | es20-blending |
+| ES20.BLEND.SEPARATE | 2.0 | fragment-ops | glBlendFuncSeparate / glBlendEquationSeparate | ES 3.0 §4.1.7 | FULLY_VALIDATED | es20-blending |
+| ES20.BLEND.EQUATION | 2.0 | fragment-ops | FUNC_ADD/SUBTRACT/REVERSE_SUBTRACT (MIN/MAX: ES 3.0) | ES 3.0 §4.1.7 | FULLY_VALIDATED | es20-blending |
+| ES20.BLEND.COLOR | 2.0 | fragment-ops | glBlendColor constant | ES 3.0 §4.1.7 | FULLY_VALIDATED | es20-blending |
 | ES20.COLOR_MASK | 2.0 | fragment-ops | glColorMask per-channel write mask | ES 3.0 §4.2.2 | NOT_STARTED |  |
-| ES20.DITHER | 2.0 | fragment-ops | GL_DITHER enable state (effect implementation-dependent) | ES 3.0 §4.1.9 | NOT_STARTED |  |
+| ES20.DITHER | 2.0 | fragment-ops | GL_DITHER enable state (effect implementation-dependent) | ES 3.0 §4.1.9 | FULLY_VALIDATED | es20-blending |
 | ES20.SAMPLE_COVERAGE | 2.0 | multisample | glSampleCoverage + SAMPLE_ALPHA_TO_COVERAGE | ES 3.0 §4.1.3 | NOT_STARTED |  |
 | ES20.UNIFORM.SCALAR_VECTOR | 2.0 | uniforms | glUniform{1234}{f | i}[v] and glGetUniform* | FULLY_VALIDATED | es20-uniforms |
 | ES20.UNIFORM.MATRIX | 2.0 | uniforms | glUniformMatrix{234}fv (transpose must be GL_FALSE) | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-uniforms |
@@ -89,7 +89,7 @@
 | ES20.FLUSH_FINISH | 2.0 | sync | glFlush / glFinish | ES 3.0 §5.1 | NOT_STARTED |  |
 | ES20.LIGHTING.SHADER | 2.0 | shading | Shader-based lighting (directional/point/spot; Phong/Blinn-Phong) with normal matrix | n/a (composition) | NOT_STARTED |  |
 | ES20.CAMERA.MVP | 2.0 | shading | Model/view/projection matrices; perspective vs orthographic; camera movement | n/a (composition) | NOT_STARTED |  |
-| ES30.VAO.BASIC | 3.0 | vertex-input | Vertex array objects: gen/bind/delete/isVertexArray; per-VAO attribute state | ES 3.0 §2.11 | FULLY_VALIDATED | es30-hello-triangle |
+| ES30.VAO.BASIC | 3.0 | vertex-input | Vertex array objects: gen/bind/delete/isVertexArray; per-VAO attribute state | ES 3.0 §2.11 | FULLY_VALIDATED | es20-culling-front-face, es30-hello-triangle |
 | ES30.VAO.SWITCHING | 3.0 | vertex-input | Multiple VAOs with different configurations; ELEMENT_ARRAY_BUFFER is VAO state | ES 3.0 §2.11 | NOT_STARTED |  |
 | ES30.ATTRIB.INTEGER | 3.0 | vertex-input | glVertexAttribIPointer + ivec/uvec inputs; glVertexAttribI4*; glGetVertexAttribI* | ES 3.0 §2.8-2.9 | BUILD_PASSED | test-glsl300-builtins |
 | ES30.ATTRIB.PACKED | 3.0 | vertex-input | INT_2_10_10_10_REV / UNSIGNED_INT_2_10_10_10_REV and HALF_FLOAT attributes | ES 3.0 §2.9.2 | NOT_STARTED |  |
@@ -163,7 +163,7 @@
 | ES30.PROGRAM.FRAG_DATA_LOCATION | 3.0 | shaders | glGetFragDataLocation | ES 3.0 §3.9.2 | NOT_STARTED |  |
 | ES30.RASTER.FLAT | 3.0 | rasterization | flat qualifier + provoking vertex (last vertex in ES 3.0) | ES 3.0 §2.17 | NOT_STARTED |  |
 | ES30.RASTER.CENTROID | 3.0 | rasterization | centroid interpolation with multisampling | ES 3.0 §3.6.3 | NOT_STARTED |  |
-| ES30.BLEND.MINMAX | 3.0 | fragment-ops | MIN/MAX blend equations | ES 3.0 §4.1.7 | NOT_STARTED |  |
+| ES30.BLEND.MINMAX | 3.0 | fragment-ops | MIN/MAX blend equations | ES 3.0 §4.1.7 | FULLY_VALIDATED | es20-blending |
 | ES30.STATE.INDEXED | 3.0 | state | glGetIntegeri_v / glGetInteger64i_v / glGetInteger64v / glGetStringi(EXTENSIONS) | ES 3.0 §6.1.1 | FULLY_VALIDATED | diagnostics-capabilities |
 | ES30.MULTISAMPLE.DEFAULT | 3.0 | multisample | Multisampled default framebuffer; SAMPLES / SAMPLE_BUFFERS | ES 3.0 §3.3 | NOT_STARTED |  |
 | ES30.EXTENSIONS.REPORT | 3.0 | diagnostics | Extension enumeration via glGetStringi + capability/limit report | ES 3.0 §6.1.6 | FULLY_VALIDATED | diagnostics-capabilities |

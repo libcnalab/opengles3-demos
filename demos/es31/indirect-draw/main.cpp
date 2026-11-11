@@ -728,9 +728,18 @@ namespace
             mgl::glBufferSubData(mgl::BufferTarget::DrawIndirect, static_cast<GLintptr>(off_c1_), sizeof kC1Initial, &kC1Initial);
         }
 
-        // Compute pass: count the visible flags and write both commands. The barrier makes those buffer stores visible to
-        // the commands that Draw*Indirect sources from DRAW_INDIRECT_BUFFER (COMMAND_BARRIER_BIT) and to the map-and-read of
-        // validate() (BUFFER_UPDATE_BARRIER_BIT), ES 3.2 section 7.11.2.
+        // Compute pass: count the visible flags and write both commands. The barrier after the dispatch makes those buffer
+        // stores visible to the commands that Draw*Indirect sources from DRAW_INDIRECT_BUFFER (COMMAND_BARRIER_BIT) and to
+        // the map-and-read of validate() (BUFFER_UPDATE_BARRIER_BIT), ES 3.2 section 7.11.2.
+        //
+        // The barrier BEFORE the dispatch is just as necessary: the dispatch overwrites the commands that the previous
+        // Draw*Indirect calls read. Section 7.11.2: "Explicit synchronization is required to ensure that the effects of
+        // buffer and texture data stores performed by shaders will be visible to subsequent operations using the same
+        // objects and will not overwrite data still to be read by previously requested operations." SHADER_STORAGE_-
+        // BARRIER_BIT provides that: "assignments to ... shader buffer variables after the barrier will not execute until
+        // all memory accesses (e.g., loads, stores, texture fetches, vertex fetches) initiated prior to the barrier
+        // complete." Without it the second dispatch may rewrite the command before the first draws have read it (ANGLE on
+        // Vulkan does exactly that: both "3 visible" regions were drawn with the "5 visible" commands).
         void dispatch_commands(const Flags& flags) const
         {
             mgl::glBindBuffer(mgl::BufferTarget::ShaderStorage, flags_);
@@ -738,6 +747,7 @@ namespace
             mgl::glUseProgram(compute_);
             mgl::glUniform1ui(u_arrays_word_, static_cast<GLuint>(off_c0_ / sizeof(std::uint32_t)));
             mgl::glUniform1ui(u_elements_word_, static_cast<GLuint>(off_c1_ / sizeof(std::uint32_t)));
+            mgl::glMemoryBarrier(mgl::MemoryBarrierMask::ShaderStorage);
             mgl::glDispatchCompute(1, 1, 1);
             mgl::glMemoryBarrier(mgl::MemoryBarrierMask::Command | mgl::MemoryBarrierMask::BufferUpdate);
             mgl::glUseProgram(program_);

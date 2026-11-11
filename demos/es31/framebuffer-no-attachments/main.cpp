@@ -42,6 +42,16 @@ namespace mgl = metagl;
 
 namespace
 {
+    /// True when GL_RENDERER or GL_VERSION contains `needle` (selects the driver of a documented deviation).
+    bool renderer_has(std::string_view needle)
+    {
+        auto text = [](mgl::StringName n) {
+            const GLubyte* p = mgl::glGetString(n);
+            return std::string(p != nullptr ? reinterpret_cast<const char*>(p) : "");
+        };
+        return (text(mgl::StringName::Renderer) + " | " + text(mgl::StringName::Version)).find(needle) != std::string::npos;
+    }
+
     constexpr int kW = 64;  // the default size used by most runs
     constexpr int kH = 32;
     constexpr int kGuard = 32;  // extra columns and rows of the hit map: a fragment outside the framebuffer would land there
@@ -282,6 +292,7 @@ namespace
             prog_tri_image_ = make_prog(demo::build_program(env, "shaders/triangles.vert", "shaders/count_image.frag"));
 
             bad_source_ = env.load_text("shaders/bad_early_depth.frag");
+            rect_vert_source_ = env.load_text("shaders/rect.vert");
             max_fb_width_ = demo::get_integer(mgl::GetParameter::MaxFramebufferWidth);
             max_fb_height_ = demo::get_integer(mgl::GetParameter::MaxFramebufferHeight);
             max_fb_samples_ = demo::get_integer(mgl::GetParameter::MaxFramebufferSamples);
@@ -1031,15 +1042,23 @@ namespace
             bind_fbo(fbos_[4]);
             configure_default(kW, kH, samples, true);
             require_complete("multisample framebuffer with no attachments");
-            // ES 3.2 9.2.1: with FRAMEBUFFER_DEFAULT_SAMPLES non-zero the framebuffer "is considered to have sample buffers", and its number of
-            // samples is derived from the request like RenderbufferStorageMultisample's (not fewer): SAMPLE_BUFFERS = 1, SAMPLES >= 4.
+            // What the SAMPLE_BUFFERS / SAMPLES queries return here is not defined by the text, so only the rule that does apply is
+            // asserted. ES 3.2 9.2.1 says such a framebuffer "is considered to have sample buffers if and only if the value of
+            // FRAMEBUFFER_DEFAULT_SAMPLES is non-zero", which governs rasterization (checked below through the invocation counts). The
+            // section that defines the queried values, 9.2.3.1, derives them only from attached images: "the effective value of
+            // SAMPLES is equal to the value of RENDERBUFFER_SAMPLES or TEXTURE_SAMPLES (depending on the type of the attached
+            // images)", and neither ES 3.1/3.2 nor ARB_framebuffer_no_attachments adds a rule for a framebuffer without attachments.
+            // (An earlier version asserted SAMPLE_BUFFERS = 1 and SAMPLES >= 4 with a Mesa XFAIL; ANGLE reports 0 / 0 as well, and
+            // re-reading 9.2.3.1 showed that the expectation was an inference, not a rule.) What 9.2.3.1 does guarantee: "The
+            // effective value of SAMPLE_BUFFERS is one if SAMPLES is non-zero, and zero otherwise."
             const int sample_buffers = demo::get_integer(mgl::GetParameter::SampleBuffers);
             const int actual = demo::get_integer(mgl::GetParameter::Samples);
-            check.expect_or_known_deviation(sample_buffers == 1 && actual >= samples,
-                                            std::format("a framebuffer without attachments and FRAMEBUFFER_DEFAULT_SAMPLES = {} reports SAMPLE_BUFFERS = 1 and SAMPLES >= {} (ES 3.2 9.2.1)", samples, samples),
-                                            std::format("SAMPLE_BUFFERS {}, SAMPLES {}", sample_buffers, actual), "Mesa",
-                                            "ES 3.2 9.2.1: a framebuffer with no attachments 'is considered to have sample buffers if and only if the value of FRAMEBUFFER_DEFAULT_SAMPLES is non-zero'; "
-                                            "Mesa derives SAMPLE_BUFFERS / SAMPLES only from attachments and reports 0 / 0 (it does rasterize with the requested samples)");
+            std::cout << std::format("   [query] no attachments, FRAMEBUFFER_DEFAULT_SAMPLES = {}: SAMPLE_BUFFERS = {}, SAMPLES = {} (values not asserted)\n", samples,
+                                     sample_buffers, actual);
+            check.expect(actual >= 0 && sample_buffers == (actual != 0 ? 1 : 0),
+                         std::format("a framebuffer without attachments and FRAMEBUFFER_DEFAULT_SAMPLES = {}: SAMPLE_BUFFERS is 1 exactly when SAMPLES is non-zero (ES 3.2 9.2.3.1)", samples),
+                         std::format("SAMPLE_BUFFERS {}, SAMPLES {}", sample_buffers, actual));
+            check.expect_no_gl_error("the SAMPLE_BUFFERS / SAMPLES queries raise no error");
 
             // A single triangle covering the whole framebuffer, limited by the scissor box to [5,41) x [3,19): every pixel in the box has one
             // fragment with all its samples covered; no primitive edge crosses the box.
@@ -1215,12 +1234,34 @@ namespace
                              std::format("probe 0.5: {} fragments {} mismatches; probe 0.9: {} fragments {} mismatches", p1.observed.total, m1.mismatches, p2.observed.total, m2.mismatches));
             }
 
-            // GLSL ES 3.10 section 4.4.1: gl_FragDepth may not be written with early_fragment_tests.
+            // GLSL ES 3.10 section 4.4.1 (3.20 section 4.4.1.3, same words): with early_fragment_tests "it is an error to statically write to
+            // gl_FragDepth in the fragment shader". The text does not say compile-time error, and section 1.3 leaves the stage
+            // open: "there are many errors which may be detected either at compile or link time, depending on the
+            // implementation." So the check builds the shader together with a vertex shader and requires that compiling or
+            // linking fails.
             std::string log;
             const mgl::ShaderId bad = demo::compile_shader(mgl::ShaderType::Fragment, source_of_bad_early_depth(), log);
-            check.expect_or_known_deviation(bad.value == 0, "layout(early_fragment_tests) with a static write to gl_FragDepth fails to compile (GLSL ES 3.10 section 4.4.1)",
-                                            "the shader compiled", "Mesa", "GLSL ES 3.10 4.4.1: 'it is an error to statically write to gl_FragDepth' with early_fragment_tests; Mesa's compiler does not enforce it");
-            if (bad.value != 0) mgl::glDeleteShader(bad);
+            bool linked = false;
+            if (bad.value != 0)
+            {
+                std::string vlog;
+                const mgl::ShaderId vs = demo::compile_shader(mgl::ShaderType::Vertex, rect_vert_source_, vlog);
+                if (vs.value == 0) throw demo::Failure("shaders/rect.vert failed to compile:\n" + vlog);
+                const std::array<mgl::ShaderId, 2> both = {vs, bad};
+                std::string llog;
+                const mgl::ProgramId p = demo::link_program(both, llog);
+                linked = p.value != 0;
+                if (linked) mgl::glDeleteProgram(p);
+                mgl::glDeleteShader(vs);
+                mgl::glDeleteShader(bad);
+            }
+            std::cout << std::format("   note: early_fragment_tests + static gl_FragDepth write: compile {}, link {}\n", bad.value != 0 ? "succeeded" : "failed",
+                                     bad.value == 0 ? "not attempted" : (linked ? "succeeded" : "failed"));
+            const char* const driver = renderer_has("ANGLE") ? "ANGLE" : "Mesa";
+            check.expect_or_known_deviation(!linked, "layout(early_fragment_tests) with a static write to gl_FragDepth fails to compile or to link (GLSL ES 3.10 sections 4.4.1, 1.3)",
+                                            "the shader compiled and the program linked", driver,
+                                            std::format("GLSL ES 3.10 4.4.1: 'it is an error to statically write to gl_FragDepth' with early_fragment_tests; {} "
+                                                        "reports the error neither at compile nor at link time", driver));
         }
 
         std::string source_of_bad_early_depth() const { return bad_source_; }
@@ -1269,6 +1310,7 @@ namespace
         std::array<int, 2> max_viewport_{};
         int tri_on_edge_ = 0;
         std::string bad_source_;
+        std::string rect_vert_source_;
 
         Case full_, sub_, scissored_, small_viewport_, big_viewport_, neg_viewport_, triangles_, triangles_scissored_, attachment_wins_, detached_, helper_triangles_, helper_rect_;
         EarlySequence early_, late_;

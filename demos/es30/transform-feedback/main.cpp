@@ -1192,9 +1192,20 @@ namespace
             mgl::glPauseTransformFeedback();
             mgl::glUseProgram(prog_render_);
             check.expect_no_gl_error("glUseProgram of another program while paused is allowed");
+            // ES 3.0 2.15.2: INVALID_OPERATION "by ResumeTransformFeedback if the program object being used by the current
+            // transform feedback object is not active" (ES 3.2 12.2.2 keeps the rule), and an erroring command has no
+            // effect (2.5), so the capture stays paused. The ANGLE build in the matrix resumes without an error.
             mgl::glResumeTransformFeedback();
-            check.expect_gl_error(mgl::ErrorCode::InvalidOperation, "glResumeTransformFeedback while another program is current -> INVALID_OPERATION");
-            check.expect(current() == state(true, true), "... and the capture is still paused");
+            const mgl::ErrorCode resume_error = demo::drain_gl_errors();
+            const bool still_paused = current() == state(true, true);
+            constexpr std::string_view kAngleResume =
+                "ANGLE resumes transform feedback while a program other than the one that began it is current "
+                "(ES 3.0 2.15.2 / ES 3.2 12.2.2: INVALID_OPERATION)";
+            check.expect_or_known_deviation(resume_error == mgl::ErrorCode::InvalidOperation, "glResumeTransformFeedback while another program is current -> INVALID_OPERATION",
+                                            std::format("glGetError() = {}, expected GL_INVALID_OPERATION", demo::error_name(resume_error)), "ANGLE", kAngleResume);
+            check.expect_or_known_deviation(still_paused, "... and the capture is still paused", "", "ANGLE", kAngleResume);
+            // If the resume took effect, pause again so that the next step tests only the resume with the right program.
+            if (!still_paused) mgl::glPauseTransformFeedback();
             mgl::glUseProgram(prog_step_);
             mgl::glResumeTransformFeedback();
             check.expect_no_gl_error("with the original program current again, glResumeTransformFeedback succeeds");

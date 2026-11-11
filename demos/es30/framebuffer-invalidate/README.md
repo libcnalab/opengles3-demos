@@ -99,7 +99,7 @@ state is observed with draws of `flat.frag` (see below).
 
 ## Validation (`--validate`)
 
-299 checks in an ES 3.2 context (298 in a context that reports 3.0/3.1, where the cube-map `glFramebufferTextureLayer` assertion
+303 checks in an ES 3.2 context (302 in a context that reports 3.0/3.1, where the cube-map `glFramebufferTextureLayer` assertion
 is a printed note). The demo is built around one **subject** framebuffer: `COLOR_ATTACHMENT0` and `1` are RGBA8
 textures, `COLOR_ATTACHMENT2` an RGBA8 renderbuffer and `DEPTH_STENCIL_ATTACHMENT` a `DEPTH24_STENCIL8` renderbuffer. A scene
 fills it: the three color attachments with the `mrt.frag` patterns, depth/stencil with 0.25/stencil 1 in the left half and
@@ -158,6 +158,19 @@ fills it: the three color attachments with the `mrt.frag` patterns, depth/stenci
   `glFramebufferTextureLayer` rule of ES 3.0 / 3.1 (`INVALID_OPERATION`) is therefore not asserted.
 - `INVALID_ENUM` for a `target` that is not `FRAMEBUFFER` / `DRAW_FRAMEBUFFER` / `READ_FRAMEBUFFER` is not reachable through
   meta-gl's typed enums, hence not checked.
+
+ANGLE (2.1.17841, Vulkan backend), reported as XFAIL on "ANGLE":
+
+- **`glBlitFramebuffer` from a 3D texture slice reads slice 0.** Cells 11..13 show slice 0's pattern. The slices hold the right
+  images (a `glReadPixels` of the same attachment returns them, checked strictly), 2D array layers blit correctly, and a fresh
+  framebuffer object does not help. Nothing about invalidation is involved: these slices are never invalidated before the check.
+  The window check is therefore split into the 13 other cells (strict), the slice read-back (strict) and the three 3D blits.
+- **The two `glGetFramebufferAttachmentParameteriv` attachment errors are swapped**: `BACK` with a framebuffer object bound
+  raises `INVALID_OPERATION` (§9.2.3: `INVALID_ENUM`, it is not in Table 9.1) and `COLOR_ATTACHMENTm`, m >= `MAX_COLOR_ATTACHMENTS`,
+  raises `INVALID_ENUM` (§9.2.3: `INVALID_OPERATION`).
+- Not a deviation: with nothing at the depth and stencil points, querying `DEPTH_STENCIL_ATTACHMENT` raises `INVALID_OPERATION` on
+  ANGLE and returns `OBJECT_TYPE` = `NONE` on Mesa. The text supports both ("the same object must be bound to both" is not met;
+  the listed error is only for "different objects"), so either outcome is accepted.
 
 ## Pitfalls
 

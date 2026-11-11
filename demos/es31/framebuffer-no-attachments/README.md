@@ -91,8 +91,9 @@ off, then show what the depth buffer holds.
   total lies between 384 and 672. It prints the measured count (672 on all tested drivers, 288 of them for occluded fragments).
 * The result is the same either way: both variants leave the depth buffer holding A's 0.25, B's 0.75 where A is not in front and the cleared 1.0 elsewhere (the
   probes pass in exactly 1280 / 896 pixels). An occluded fragment shaded after the test must not write depth.
-* A shader that statically writes `gl_FragDepth` together with `early_fragment_tests` must fail to compile (GLSL ES 3.10 section 4.4.1). Mesa accepts it
-  (XFAIL, see below).
+* A shader that statically writes `gl_FragDepth` together with `early_fragment_tests` must fail to compile **or to link** (GLSL ES 3.10 section 4.4.1 calls it
+  "an error" without naming the stage, and section 1.3 lets errors be "detected either at compile or link time"), so the shader is compiled and linked with
+  `rect.vert`. Mesa and ANGLE accept both steps (XFAIL, see below).
 
 ## Helper invocations
 
@@ -124,12 +125,15 @@ stored, `unguarded` would exceed the coverage, so the equality can fail.
 * `INVALID_ENUM` for a bad `target` or `pname` cannot be provoked through meta-gl's typed enums and is not tested.
 * **Multisample.** `FRAMEBUFFER_DEFAULT_SAMPLES` = 4 is accepted and the framebuffer is complete; a covering triangle limited by a scissor box [5,41) x [3,19) produces
   between 1 and `MAX_FRAMEBUFFER_SAMPLES` invocations per pixel (section 7.11.1) inside the box. A single-sample control gives exactly 576. By section 9.2.1 the
-  framebuffer "is considered to have sample buffers" if samples are non-zero, but Mesa reports `SAMPLE_BUFFERS` = 0 and `SAMPLES` = 0 for it (XFAIL below). Also
+  framebuffer "is considered to have sample buffers" if samples are non-zero, which governs rasterization. What `glGetIntegerv(SAMPLE_BUFFERS / SAMPLES)` returns
+  for it is *not* defined: section 9.2.3.1, which defines the queried values, derives SAMPLES only from attached images. The values are printed, and only the
+  rule of 9.2.3.1 that does apply is asserted (`SAMPLE_BUFFERS` is 1 exactly when `SAMPLES` is non-zero). Mesa and ANGLE both report 0 / 0. An earlier
+  version asserted 1 / >= 4 with a Mesa XFAIL; that expectation was an inference, not a rule. Also
   on llvmpipe and zink (lavapipe) a multisample framebuffer shades the quad neighbours of a scissor box as ordinary invocations (XFAIL below).
 
 ## Validation summary
 
-70 checks, every one against the CPU model or the specification text; none is "the call returned". Negative controls: the full-quad hit map judged against the sub-rectangle's
+71 checks, every one against the CPU model or the specification text; none is "the call returned". Negative controls: the full-quad hit map judged against the sub-rectangle's
 model differs in 1472 pixels and the two-triangle map against the first triangle alone in the 73 sliver pixels; the test-design checks prove that
 B has occluded fragments (672 vs 384) and that helper candidates exist (125 and 108), so the exact equalities could fail; the single-sample control shows what the multisample
 run is compared against.
@@ -138,8 +142,7 @@ run is compared against.
 
 | Driver | Rule | Observed |
 |---|---|---|
-| all Mesa drivers | GLSL ES 3.10 4.4.1: `early_fragment_tests` + a static write to `gl_FragDepth` is an error | compiles |
-| all Mesa drivers | ES 3.2 9.2.1: no attachments and `FRAMEBUFFER_DEFAULT_SAMPLES` != 0: the framebuffer "is considered to have sample buffers" | `SAMPLE_BUFFERS` = 0, `SAMPLES` = 0 (rasterization is multisampled) |
+| all Mesa drivers, ANGLE | GLSL ES 3.10 4.4.1 / 1.3: `early_fragment_tests` + a static write to `gl_FragDepth` is an error, at compile or link time | compiles and links |
 | llvmpipe, zink on lavapipe | ES 3.2 7.11.1 (a fragment that fails the scissor test is not shaded) / GLSL ES 3.10 7.1.2 (helper stores have no effect) | in a **multisample** framebuffer (attachment-less or renderbuffer) the pixels outside a scissor box that share a 2 x 2 quad with it run with `gl_HelperInvocation` false and their atomics take effect (661 invocations for 576 pixels, 53 pixels outside the box hit); radeonsi and every single-sample run are exact |
 
 ## Pitfalls

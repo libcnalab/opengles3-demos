@@ -32,6 +32,7 @@
 #include <limits>
 #include <span>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -43,6 +44,16 @@ using demo::math::Vec4;
 
 namespace
 {
+    /// True when GL_RENDERER or GL_VERSION contains `needle` (selects the driver of a documented deviation).
+    bool renderer_has(std::string_view needle)
+    {
+        auto text = [](mgl::StringName n) {
+            const GLubyte* p = mgl::glGetString(n);
+            return std::string(p != nullptr ? reinterpret_cast<const char*>(p) : "");
+        };
+        return (text(mgl::StringName::Renderer) + " | " + text(mgl::StringName::Version)).find(needle) != std::string::npos;
+    }
+
     // ---------------------------------------------------------------------------------------------
     // Scene. World units; y is up, the camera looks straight down -z from kEye. Because the view
     // direction is exactly -z, every face that is perpendicular to z has ONE window depth, which keeps the
@@ -764,11 +775,20 @@ namespace
             const mgl::ErrorCode reuse_error = demo::drain_gl_errors();
             const GLint reuse_current = current(cons);
             if (reuse_current != 0) mgl::glEndQuery(cons);
+            // Re-verified because Mesa AND ANGLE both raise INVALID_OPERATION here: the reading stands. ES 3.0 §2.14 "There
+            // are two query types supported by the GL" (primitive and occlusion) and the error is for "an existing query
+            // object whose type does not match target"; ES 3.1 §4.2 (update of January 29, 2015) and ES 3.2 §4.2 add
+            // "occlusion query objects specified by either of the two targets ANY_SAMPLES_PASSED or ANY_SAMPLES_PASSED_-
+            // CONSERVATIVE may be reused for either target in future queries", and the change log states the intent:
+            // "make clear that occlusion query objects may be specified and reused with any mix of the two valid
+            // occlusion query targets (Bug 13342)". Both implementations key the type on the target (Mesa
+            // q->Target != target, ANGLE getType() != target), i.e. the wording before that clarification.
+            const char* const reuse_driver = renderer_has("ANGLE") ? "ANGLE" : "Mesa";
             check.expect_or_known_deviation(reuse_error == mgl::ErrorCode::NoError && reuse_current == id(qa),
                                             "an ANY_SAMPLES_PASSED query object can be reused with ANY_SAMPLES_PASSED_CONSERVATIVE",
-                                            std::format("glBeginQuery -> {}, CURRENT_QUERY = {}", demo::error_name(reuse_error), reuse_current), "Mesa",
-                                            "Mesa treats each occlusion target as its own query type and raises INVALID_OPERATION (ES 3.2 §4.2 allows "
-                                            "reusing an occlusion query object with either occlusion target)");
+                                            std::format("glBeginQuery -> {}, CURRENT_QUERY = {}", demo::error_name(reuse_error), reuse_current), reuse_driver,
+                                            std::format("{} treats each occlusion target as its own query type and raises INVALID_OPERATION (ES 3.2 §4.2 allows "
+                                                        "reusing an occlusion query object with either occlusion target, Bug 13342)", reuse_driver));
             check.expect_no_gl_error("the reuse attempt left no error behind");
             check.expect_eq(current(cons), 0, "no query is active after the reuse attempt");
             const mgl::QueryId never_generated{std::max({qa.value, qb.value, qc.value, qd.value, qe.value}) + 1000u};

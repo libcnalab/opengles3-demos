@@ -60,7 +60,6 @@ camera, lighting, normal mapping, post-processing, shadow mapping and deferred s
 debug-output, float-targets-and-indexed-blend, texture-buffer and cube-map-array.
 meta-gl G8 (transpose = GL_TRUE) is fixed on its branch (`3bb7411`).
 Running Claude subagents (worktrees under .claude/worktrees/):
-- es32 layered-rendering follow-up: scale the display cells with the window (merged otherwise)
 - es32 multisample-array-and-border-color (56)
 - es32 base-vertex-and-robustness (60)
 Still unassigned: 57 (ASTC + copy image), 59 (advanced blend + sample shading), 62 (glsl320 built-ins),

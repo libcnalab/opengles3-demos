@@ -1,0 +1,77 @@
+{
+  "name": "es32-base-vertex-and-robustness",
+  "title": "Base vertex drawing and robustness",
+  "min_es": "3.2",
+  "glsl": [
+    "320 es"
+  ],
+  "category": "es32",
+  "order": 4200,
+  "summary": "Ten quads and two strip quads in ONE vertex buffer, drawn from ONE element array buffer (a single quad pattern as ubyte/ushort/uint plus a strip) with glDrawElementsBaseVertex, glDrawRangeElementsBaseVertex and glDrawElementsInstancedBaseVertex: basevertex selects the mesh, gl_VertexID includes basevertex, instanced attributes ignore it, and the primitive restart index is compared before it is added - all against a CPU model with mutation and GPU negative controls. In a robust context (EGL_CONTEXT_OPENGL_ROBUST_ACCESS + LOSE_CONTEXT_ON_RESET): CONTEXT_FLAG_ROBUST_ACCESS_BIT, glGetGraphicsResetStatus, RESET_NOTIFICATION_STRATEGY, scissor-confined draws whose basevertex points past the buffer end (no error, no reset, later rendering correct), and the bounded queries glReadnPixels / glGetnUniform{f,i,ui}v with canary buffers (exact size, too small, zero, negative).",
+  "spec": [
+    "ES 3.2 §10.5 Drawing Commands Using Vertex Arrays (DrawElementsOneInstance: vertex ID = index + basevertex; DrawElementsBaseVertex, DrawRangeElementsBaseVertex, DrawElementsInstancedBaseVertex; DrawRangeElements errors)",
+    "ES 3.2 §10.3.2 Vertex Attribute Divisors (instanced attributes fetched by instance, not shifted by basevertex)",
+    "ES 3.2 §10.3.4 Primitive Restart (comparison occurs before the basevertex offset is added)",
+    "ES 3.2 §10.3.5 Robust Buffer Access (out-of-bounds vertex fetches: undefined values, no application failure)",
+    "ES 3.2 §11.1.3.9 Shader Inputs (gl_VertexID)",
+    "ES 3.2 §2.3.1 Errors (implicit sizei rule, ignored commands, untouched pointer outputs, choice among applicable errors)",
+    "ES 3.2 §2.3.2 Graphics Reset Recovery (GetGraphicsResetStatus, RESET_NOTIFICATION_STRATEGY)",
+    "ES 3.2 §7.12 Shader, Program, and Program Pipeline Queries (GetnUniform*: INVALID_OPERATION if the required size exceeds bufSize)",
+    "ES 3.2 §16.1.2 ReadPixels and ReadnPixels (bufSize errors)",
+    "ES 3.2 §20.2 Pointer, String, and Related Context Queries (CONTEXT_FLAGS, CONTEXT_FLAG_ROBUST_ACCESS_BIT)",
+    "ES 3.2 §13.8.2 Scissor Test (confines the out-of-bounds draws)",
+    "ES 3.2 appendix E.2 (vertex ID includes basevertex), appendix F.1 (core robust access excludes KHR_robust_buffer_access_behavior)",
+    "EGL 1.5 §3.7.1.5 Robust Buffer Access (creation fails if unsupported), §3.7.1.6 Reset Notification Strategy",
+    "GLSL ES 3.20 §7.1 Built-In Language Variables (gl_VertexID)"
+  ],
+  "api": {
+    "glDrawElementsBaseVertex": "meshes 1-3 with UNSIGNED_BYTE / UNSIGNED_SHORT / UNSIGNED_INT indices and basevertex 4/8/12, a gl_VertexID cell, and a TRIANGLE_STRIP with primitive restart (restart compared before basevertex; 254 + 1 = 255 does not restart) - every cell against the CPU model; basevertex 0 equals glDrawElements (mesh 0 appears) and basevertex 8 moves the same call to mesh 2 (pixels); INVALID_VALUE for count -1",
+    "glDrawRangeElementsBaseVertex": "start/end bound the indices before basevertex (start 0, end 3, basevertex 16 and 28) - mesh and gl_VertexID cells against the CPU model; INVALID_VALUE for end < start and count -1, with no drawing (cell (0,7) stays clear)",
+    "glDrawElementsInstancedBaseVertex": "4 instances of mesh 5 (basevertex 20) whose instanced attribute (offset + tint) is fetched by instance number, not shifted by basevertex, and 2 instances in a gl_VertexID cell - against the CPU model; INVALID_VALUE for instancecount -1",
+    "glDrawElements": "negative control: the same arguments without basevertex draw mesh 0 into the cell the base-vertex scene must leave clear",
+    "glVertexAttribIPointer": "a_index as an integer attribute; gl_VertexID == a_index turns the vertex-ID cells green (pixels)",
+    "glVertexAttribDivisor": "divisor 1 per-instance offset + tint; the 4 instances appear at the predicted cells with the predicted tints",
+    "glEnable": "PRIMITIVE_RESTART_FIXED_INDEX splits the ubyte strip at 255 (both strip quads complete, pixels); SCISSOR_TEST confines the out-of-bounds draws (all other cells match the model)",
+    "glGetGraphicsResetStatus": "NO_ERROR on the healthy robust context, also after the out-of-bounds draws",
+    "glGetIntegerv": "CONTEXT_FLAGS has CONTEXT_FLAG_ROBUST_ACCESS_BIT; RESET_NOTIFICATION_STRATEGY is one of the two §2.3.2 values and equals the requested LOSE_CONTEXT_ON_RESET",
+    "glReadnPixels": "exact bufSize (64 bytes) returns the same bytes as glReadPixels and nothing past bufSize (canary); bufSize 63 and 0 -> INVALID_OPERATION with the buffer untouched; bufSize -1 -> INVALID_VALUE/INVALID_OPERATION with the buffer untouched (XFAIL on Mesa); empty rectangle with bufSize 0 succeeds and writes nothing",
+    "glGetnUniformfv": "vec4 and mat2 (column-major): exact bufSize returns the uploaded values and nothing more, larger bufSize returns exactly 4 values, bufSize - 1 and bufSize = component count -> INVALID_OPERATION, negative -> INVALID_VALUE/INVALID_OPERATION, location -1 -> INVALID_OPERATION; params untouched on every error",
+    "glGetnUniformiv": "ivec3: the same battery (12 bytes)",
+    "glGetnUniformuiv": "uvec2 including 4000000000u: the same battery (8 bytes)",
+    "glUniform4f": "value read back exactly with glGetnUniformfv",
+    "glUniform3i": "value read back exactly with glGetnUniformiv",
+    "glUniform2ui": "value read back exactly with glGetnUniformuiv",
+    "glUniformMatrix2fv": "column-major mat2 read back exactly with glGetnUniformfv",
+    "glUniform1i": "u_mode switches the scene shader between colour and the gl_VertexID check (pixels)"
+  },
+  "features": [
+    "ES32.DRAW.BASE_VERTEX",
+    "ES32.ROBUST.READN",
+    "ES32.ROBUST.RESET_STATUS",
+    "ES32.ROBUST.BUFFER_ACCESS",
+    "ES32.CONTEXT.FLAGS",
+    "ES30.DRAW.PRIMITIVE_RESTART",
+    "ES30.ATTRIB.DIVISOR",
+    "ES20.ERRORS.INVALID_VALUE",
+    "ES20.ERRORS.INVALID_OPERATION"
+  ],
+  "glsl_features": [
+    "GLSL300.BUILTIN_VARS.VS",
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.LAYOUT.LOCATION",
+    "GLSL300.FRAG.OUTPUT"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "state-query",
+    "gl-error",
+    "negative",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-opus-5.5",
+    "notes": "Viewed the 256x256 captures of gpu (radeonsi), llvmpipe and zink (identical): dark blue-grey background with an 8x8 grid of 24 px squares. Top-left cell is empty (mesh 0 never drawn). Second row from the top: blue, orange, light green, yellow (meshes 1-4). Third: four cyan squares darkening left to right (instance tints 1, 3/4, 1/2, 1/4). Fourth: four green squares (gl_VertexID matched everywhere, no red). Fifth: light-blue and pink strip quads, both complete (no missing triangle at the restart). Sixth: one purple square over the robust-access cell, with no stray fragments around it or anywhere else."
+  }
+}

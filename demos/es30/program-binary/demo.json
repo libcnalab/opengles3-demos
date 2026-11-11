@@ -1,0 +1,61 @@
+{
+  "name": "es30-program-binary",
+  "title": "Program binaries",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es30",
+  "order": 385,
+  "summary": "glGetProgramBinary/glProgramBinary round trip into a fresh program (bit-identical Truchet image, uniforms reset, attribute assignment restored), corrupted/truncated binaries fail with LINK_STATUS FALSE, fallback relink, and the INVALID_ENUM/INVALID_VALUE/INVALID_OPERATION cases; handles NUM_PROGRAM_BINARY_FORMATS = 0.",
+  "spec": [
+    "ES 3.0 §2.12.4 Program Binaries (ES 3.2 §7.5; error lists in ES 3.2 §7.5 and §7.3 ProgramParameteri)",
+    "ES 3.0 §2.12.3 Program Objects (ProgramParameteri, UseProgram on an unsuccessfully linked program)",
+    "ES 3.0 §2.12.5 Vertex Attributes (BindAttribLocation)",
+    "ES 3.0 §2.5 GL Errors (INVALID_ENUM for a non-allowable enum, INVALID_VALUE for a negative sizei, erroring commands have no effect)",
+    "ES 3.0 §2.1.6.2 Conversion from Floating-Point to Normalized Fixed-Point (pixel tolerance)",
+    "ES 3.0 §6.1.12, Table 6.19 (PROGRAM_BINARY_LENGTH, PROGRAM_BINARY_RETRIEVABLE_HINT initial FALSE)",
+    "GLSL ES 3.00 §4.1.3 Integers (wrapping uint multiplication), §4.5.4 Default Precision Qualifiers"
+  ],
+  "api": {
+    "glGetProgramBinary": "length == PROGRAM_BINARY_LENGTH, binaryFormat in PROGRAM_BINARY_FORMATS, the binary reloads; bufSize < length, bufSize 0, never-linked, failed-link and failed-load programs -> INVALID_OPERATION with length/binaryFormat not written; with 0 formats -> INVALID_OPERATION on ES 3.2",
+    "glProgramBinary": "fresh program LINK_STATUS TRUE and renders a bit-identical image (CPU reference +-1); uniforms reset to 0/FALSE; a_pos restored to the linked assignment despite a decoy binding; 6 corrupted/truncated/over-long binaries -> no error, LINK_STATUS FALSE, length 0, previous load discarded; unlisted binaryFormat -> INVALID_ENUM (program stays linked); length -1 -> INVALID_VALUE; with 0 formats every format -> INVALID_ENUM",
+    "glProgramParameteri": "PROGRAM_BINARY_RETRIEVABLE_HINT TRUE becomes TRUE after the link; value 2 -> INVALID_VALUE (ES >= 3.1) and the hint is unchanged",
+    "glGetProgramiv": "PROGRAM_BINARY_LENGTH (== written length; 0 for unlinked / failed loads), PROGRAM_BINARY_RETRIEVABLE_HINT (initial FALSE), LINK_STATUS, ATTACHED_SHADERS after a failed load, ACTIVE_UNIFORMS/ACTIVE_ATTRIBUTES",
+    "glGetIntegerv": "NUM_PROGRAM_BINARY_FORMATS and PROGRAM_BINARY_FORMATS; the returned binaryFormat must be listed",
+    "glGetActiveUniform": "name/size/type of all 5 uniforms identical in the original and the reloaded program",
+    "glGetActiveAttrib": "name/size/type of a_pos identical in both programs",
+    "glGetAttribLocation": "reloaded program reports attribute 5 (decoy binding 2 ignored); fallback relink keeps the BindAttribLocation binding",
+    "glBindAttribLocation": "binding 5 in effect at link time is restored by glProgramBinary; survives a failed load",
+    "glGetFragDataLocation": "o_color location equal in both programs",
+    "glGetUniformfv": "u_scale reads (0,0) right after glProgramBinary",
+    "glGetUniformiv": "u_origin, u_cell, u_gray read 0 right after glProgramBinary (negative control: non-zero on the original)",
+    "glGetUniformuiv": "u_seed reads 0 right after glProgramBinary",
+    "glLinkProgram": "fallback: the same program object relinks from its attached shaders after a failed load and renders the reference image",
+    "glUseProgram": "a program whose binary load failed -> INVALID_OPERATION"
+  },
+  "features": [
+    "ES30.PROGRAM.BINARY",
+    "ES20.ATTRIB.BIND_LOCATION",
+    "ES20.ATTRIB.ACTIVE_QUERY",
+    "ES20.UNIFORM.ACTIVE_QUERY"
+  ],
+  "glsl_features": [
+    "GLSL300.VERSION",
+    "GLSL300.UNIFORM",
+    "GLSL300.OPERATORS.BITWISE",
+    "GLSL300.BUILTIN_VARS.FS",
+    "GLSL300.PRECISION.DEFAULT"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "gl-error",
+    "negative"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-opus-5.5",
+    "notes": "radeonsi 256x256 (and zink es-min): two identical Truchet halves separated by a thin dark gap; teal/sand/apricot/coral arcs in diagonal bands on a two-tone night-blue checker. Also viewed 800x800 and 333x777: pattern scales with the surface and fills it."
+  }
+}

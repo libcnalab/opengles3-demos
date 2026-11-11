@@ -52,7 +52,7 @@ def best(statuses):
 
 def load_manifests(repo):
     manifests = []
-    for pattern in ("demos/*/*/demo.json", "tests/*/*/demo.json", "shader-tests/*/demo.json", "tests/*/demo.json"):
+    for pattern in ("demos/*/*/demo.json", "tests/*/*/demo.json", "shader-tests/demo.json", "shader-tests/*/demo.json", "tests/*/demo.json"):
         for path in sorted(glob.glob(os.path.join(repo, pattern))):
             with open(path) as f:
                 m = json.load(f)

@@ -4,9 +4,11 @@
 | executable | min ES | category | title | status | runs |
 |---|---|---|---|---|---|
 | diagnostics-capabilities | 3.0 | diagnostics | Capabilities, limits and extensions | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS softpipe:es-max=PASS softpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| es20-clear-viewport-scissor | 3.0 | es20-foundations | Clear, viewport and scissor | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es20-shader-compilation | 3.0 | es20-foundations | Shader and program objects | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es20-vertex-attributes | 3.0 | es20-foundations | Vertex attributes | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es20-indexed-drawing | 3.0 | es20-foundations | Indexed drawing | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| es20-primitive-topology | 3.0 | es20-foundations | Primitive topology | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es20-uniforms | 3.0 | es20-foundations | Uniform variables | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es20-culling-front-face | 3.0 | es20-foundations | Face culling and front-face winding | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es20-depth-test | 3.0 | es20-foundations | Depth buffer test | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |

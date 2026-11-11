@@ -37,6 +37,7 @@ namespace demo
         case Outcome::SkipUnsupported: return "SKIP_UNSUPPORTED";
         case Outcome::BlockedEnvironment: return "BLOCKED_ENVIRONMENT";
         case Outcome::BlockedMetaGl: return "BLOCKED_META_GL";
+        case Outcome::Crashed: return "CRASHED";
         }
         return "FAIL";
     }
@@ -266,6 +267,14 @@ namespace demo
         Report rep;
         Check runtime_checks;
         Check demo_checks;
+
+        // A process that dies (driver crash, abort, timeout) never reaches finish(). Write a CRASHED result first;
+        // finish() overwrites it, so a CRASHED file means the run did not complete.
+        rep.outcome = Outcome::Crashed;
+        rep.reason = "the process ended before the run completed (crash, abort or timeout)";
+        write_json(options, info, rep, runtime_checks, demo_checks);
+        rep.reason.clear();
+        rep.outcome = Outcome::Fail;
 
         // --- 1. native context --------------------------------------------------------------
         bool windowed = !options.headless;

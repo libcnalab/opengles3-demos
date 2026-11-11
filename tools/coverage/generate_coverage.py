@@ -87,35 +87,42 @@ def load_results(result_dirs):
     return by_demo
 
 
-def newest_mtime(paths):
+CODE_EXT = (".cpp", ".hpp", ".h", ".cc", ".inl")
+
+
+def newest_mtime(paths, code=None):
+    """Newest mtime of the files under paths. code=True: only compiled sources; code=False: everything else
+    that affects a run (shaders, data, CMake glue); None: both. Documentation and manifests never count."""
     newest = 0.0
     for root in paths:
-        if os.path.isfile(root):
-            newest = max(newest, os.path.getmtime(root))
-            continue
-        for d, _, files in os.walk(root):
-            for fn in files:
-                if fn.endswith((".md", ".json")):  # documentation and manifests do not affect a run
-                    continue
-                newest = max(newest, os.path.getmtime(os.path.join(d, fn)))
+        files = [root] if os.path.isfile(root) else [os.path.join(d, fn) for d, _, fs in os.walk(root) for fn in fs]
+        for path in files:
+            if path.endswith((".md", ".json")):
+                continue
+            is_code = path.endswith(CODE_EXT)
+            if code is None or code == is_code:
+                newest = max(newest, os.path.getmtime(path))
     return newest
 
 
 def fresh_runs(m, runs, repo):
-    """Keep only results produced by the current executable, built after the newest relevant source.
+    """Keep only results produced by the current executable from current sources.
 
     A result counts as evidence only if (1) it records the executable that produced it, (2) that executable
-    still has the recorded mtime (not rebuilt since), and (3) no source of the demo, of common/ or of the
-    demo CMake glue is newer than the executable (the binary is not out of date)."""
-    src = newest_mtime([os.path.join(repo, m["_dir"]), os.path.join(repo, "common"),
-                        os.path.join(repo, "cmake", "OglesDemo.cmake")])
+    still has the recorded mtime (not rebuilt since), (3) no compiled source of the demo or of common/ is newer
+    than the executable, and (4) no run-time input (shaders, data, test registration in cmake/) is newer than the
+    run itself."""
+    roots = [os.path.join(repo, m["_dir"]), os.path.join(repo, "common")]
+    code_src = newest_mtime(roots, code=True)
+    run_src = max(newest_mtime(roots, code=False), newest_mtime([os.path.join(repo, "cmake", "OglesDemo.cmake")]))
     fresh, stale = [], []
     for r in runs:
         exe = r.get("executable", "")
         ok = bool(exe) and os.path.exists(exe)
         if ok:
-            cur = int(os.path.getmtime(exe))
-            ok = cur == int(r.get("executable_mtime", -1)) and src <= os.path.getmtime(exe) + 1
+            exe_mtime = os.path.getmtime(exe)
+            ok = (int(exe_mtime) == int(r.get("executable_mtime", -1)) and code_src <= exe_mtime + 1
+                  and run_src <= r.get("run_time", 0) + 1)
         (fresh if ok else stale).append(r)
     return fresh, stale
 
@@ -128,7 +135,7 @@ def demo_status(m, results, bin_dirs):
             return "STALE_RESULTS", runs
         return ("BUILD_PASSED" if built else "IMPLEMENTED_UNVERIFIED"), runs
     outcomes = [r["outcome"] for r in runs]
-    if "FAIL" in outcomes:
+    if "FAIL" in outcomes or "CRASHED" in outcomes:
         return "FAILED", runs
     passed = [r for r in runs if r["outcome"] == "PASS" and r.get("validated")]
     if not passed:

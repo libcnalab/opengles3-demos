@@ -114,8 +114,10 @@ Every result JSON records:
 - `version_override`, which holds the `MESA_GLES_VERSION_OVERRIDE` value for es-min runs;
 - every check with its detail.
 
-The coverage generator ignores a result when its executable was rebuilt after the run, or when a source of the
-demo (code, shaders, CMake glue) or `common/` is newer than the executable. Those results are listed under
+A run first writes a `CRASHED` result and replaces it when it finishes. A crash, abort or timeout therefore leaves
+`CRASHED` behind, and the generator treats that as a failure; the run cannot silently disappear.
+The coverage generator ignores a result when its executable was rebuilt after the run, or when compiled sources (demo or `common/`) are newer than the executable, or when run-time inputs
+(shaders, data, the CMake test registration) are newer than the run. Those results are listed under
 "Stale results" in COVERAGE_SUMMARY.md. The summary also states the source revision it was generated from.
 The generator lints every `api` claim: the entry point must be called by the executable's sources, directly or
 through a `common/` helper or a meta-gl convenience overload. The lint is name-based, so it is a heuristic; the

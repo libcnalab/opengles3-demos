@@ -8,8 +8,13 @@ and the runs where the matched driver passed it (XPASS). Spec quotes and explana
 | executable | check | match | XFAIL runs | XPASS runs | note |
 |---|---|---|---|---|---|
 | es20-clear-viewport-scissor | glViewport wider/taller than GL_MAX_VIEWPORT_DIMS is clamped to it (ES 3.0 §2.13.1) | ANGLE | angle:native |  |  |
+| es20-depth-test | gl_FragDepth is not remapped by DepthRangef(0.5, 1): 0.25 stays 0.25, EQUAL vs 0.5 fails (§3.9.2.3) | radeonsi | gpu:es-max gpu:es-min |  |  |
 | es20-framebuffer-objects | a new renderbuffer has zero component sizes (initial state, Table 6.15) | ANGLE | angle:native |  |  |
 | es20-shader-compilation | VALIDATE_STATUS = FALSE: sampler2D and samplerCube both on unit 0 | ANGLE | angle:native |  |  |
+| es20-state-queries-errors | [UnmapBuffer while unmapped] ... and returns FALSE | radeonsi | gpu:es-max gpu:es-min |  |  |
+| es30-buffer-mapping | cell 10 (glBufferData unmaps implicitly): glUnmapBuffer afterwards (nothing is mapped any more): returns FALSE | radeonsi | gpu:es-max gpu:es-min |  |  |
+| es30-buffer-mapping | cell 9 (failed Map / Flush / Unmap calls): glUnmapBuffer on an unmapped buffer: returns FALSE | radeonsi | gpu:es-max gpu:es-min |  |  |
+| es30-buffer-mapping | cell 9 (failed Map / Flush / Unmap calls): glUnmapBuffer with no buffer bound: returns FALSE | radeonsi | gpu:es-max gpu:es-min |  |  |
 | es30-depth-textures | DEPTH24_STENCIL8 / UNSIGNED_INT_24_8: Dref outside [0, 1] is clamped before the comparison (§3.8.15.1), 40 lookups | ANGLE | angle:native |  |  |
 | es30-depth-textures | DEPTH_COMPONENT24 / UNSIGNED_INT: Dref outside [0, 1] is clamped before the comparison (§3.8.15.1), 72 lookups | ANGLE | angle:native |  |  |
 | es30-depth-textures | DEPTH_COMPONENT24 compare NONE, LINEAR / LINEAR: incomplete (§3.8.13) -> sampler2D returns (0, 0, 0, 1) (§3.9.2.1) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
@@ -75,6 +80,14 @@ and the runs where the matched driver passed it (XPASS). Spec quotes and explana
 | es30-occlusion-queries | scene, polled: every ANY_SAMPLES_PASSED query issued before an available one is available | zink | zink:es-max zink:es-min |  |  |
 | es30-occlusion-queries | scene, polled: every ANY_SAMPLES_PASSED_CONSERVATIVE query issued before an available one is available | zink | zink:es-max zink:es-min |  |  |
 | es30-pixel-buffer-objects | glReadPixels(RGBA_INTEGER, UNSIGNED_INT) into a pack buffer at byte offset 2 (not a multiple of 4) -> INVALID_OPERATION (4.3.2.4) | ANGLE | angle:native |  |  |
+| es30-program-binary | binary with 16 extra bytes (length + 16): no error, LINK_STATUS FALSE, PROGRAM_BINARY_LENGTH 0 | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-program-binary | glGetProgramBinary on a failed load: length was not written (ES 3.0 §2.5) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-program-binary | glGetProgramBinary on a never-linked program: length was not written (ES 3.0 §2.5) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-program-binary | glGetProgramBinary with a too-small bufSize: length was not written (ES 3.0 §2.5) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-program-binary | the INVALID_ENUM call had no effect: the program is still linked | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-program-binary | the INVALID_VALUE call had no effect: the program is still linked | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-sync-objects | glGetSynciv with bufSize 0 reports length 0 ("the actual number of integers replaced is returned in length") | zink | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-texture-3d-and-arrays | glCopyTexSubImage3D copies a framebuffer that was painted by scissored glClear calls (command order) | zink | zink:es-max zink:es-min |  |  |
 | es30-transform-feedback | ... and the capture is still paused | ANGLE | angle:native |  |  |
 | es30-transform-feedback | ... and the current program did not change (a command that generates an error has no effect, section 2.5) | radeonsi | gpu:es-max gpu:es-min |  |  |
 | es30-transform-feedback | ES 3.0/3.1: glDrawArrays(LINE_LOOP) while capturing LINES -> INVALID_OPERATION | zink | gpu:es-min llvmpipe:es-min zink:es-min |  | es-min only: version-override artifact, not a driver deviation |
@@ -82,9 +95,16 @@ and the runs where the matched driver passed it (XPASS). Spec quotes and explana
 | es30-transform-feedback | ES 3.0/3.1: glDrawArrays(TRIANGLE_FAN) while capturing TRIANGLES -> INVALID_OPERATION | zink | gpu:es-min llvmpipe:es-min zink:es-min |  | es-min only: version-override artifact, not a driver deviation |
 | es30-transform-feedback | ES 3.0/3.1: glDrawArrays(TRIANGLE_STRIP) while capturing TRIANGLES -> INVALID_OPERATION ("mode is not identical to primitiveMode") | zink | gpu:es-min llvmpipe:es-min zink:es-min |  | es-min only: version-override artifact, not a driver deviation |
 | es30-transform-feedback | glResumeTransformFeedback while another program is current -> INVALID_OPERATION | ANGLE | angle:native |  |  |
+| es30-uniform-buffer-objects | B4: glBindBufferRange with a negative offset -> INVALID_VALUE | zink | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
 | es31-framebuffer-no-attachments | 4 default samples: nothing outside the scissor box is touched: no pixel outside it is hit, the atomic behind gl_HelperInvocation never ran,  | llvmpipe | llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
 | es31-framebuffer-no-attachments | control: the same triangle and scissor box on a 4-sample RGBA8 renderbuffer attachment: nothing outside the box is touched either | llvmpipe | llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
 | es31-framebuffer-no-attachments | layout(early_fragment_tests) with a static write to gl_FragDepth fails to compile or to link (GLSL ES 3.10 sections 4.4.1, 1.3) | Mesa | angle:native gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es31-image-load-store | glBindImageTexture with format R11F_G11F_B10F (not in Table 8.26) -> INVALID_VALUE | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es31-image-load-store | glBindImageTexture with format R16F (not in Table 8.26) -> INVALID_VALUE | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es31-image-load-store | glBindImageTexture with format R8 (not in Table 8.26) -> INVALID_VALUE | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es31-image-load-store | glBindImageTexture with format RG16F (not in Table 8.26) -> INVALID_VALUE | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es31-image-load-store | glBindImageTexture with format RG32F (not in Table 8.26) -> INVALID_VALUE | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es31-image-load-store | glBindImageTexture with format RG8 (not in Table 8.26) -> INVALID_VALUE | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
 | es31-indirect-draw | glDrawArraysIndirect(TRIANGLES) with TRIANGLES feedback active: ES 3.1 section 10.5: error while transform feedback is active and not paused | Mesa | gpu:es-min llvmpipe:es-min zink:es-min |  | es-min only: version-override artifact, not a driver deviation |
 | es31-indirect-draw | glDrawElementsIndirect(TRIANGLES) with TRIANGLES feedback active: ES 3.1 section 10.5: error while transform feedback is active and not paus | Mesa | gpu:es-min llvmpipe:es-min zink:es-min |  | es-min only: version-override artifact, not a driver deviation |
 | es31-multisample-textures | glGenerateMipmap(TEXTURE_2D_MULTISAMPLE) -> INVALID_ENUM (section 8.14.4) | ANGLE | angle:native |  |  |
@@ -107,9 +127,39 @@ and the runs where the matched driver passed it (XPASS). Spec quotes and explana
 | es31-ssbo-std430 | glBindBufferRange with a negative offset -> INVALID_VALUE | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
 | es31-stencil-texturing-and-level-queries | COMPRESSED_RGB8_ETC2 levels 0 and 1: TEXTURE_RED/GREEN/BLUE_TYPE = UNSIGNED_NORMALIZED (the type after decompression) | ANGLE | angle:native |  |  |
 | es31-stencil-texturing-and-level-queries | TEXTURE_2D_MULTISAMPLE level 1 -> INVALID_VALUE (the maximum level is zero) | ANGLE | angle:native |  |  |
+| es32-advanced-blend-and-sample-shading | SAMPLE_SHADING + MinSampleShading(1.0) right after a single-sample draw: an ordinary input = pixel + sample position (all 1024 samples, tole | radeonsi | gpu:es-max |  |  |
+| es32-base-vertex-and-robustness | glReadnPixels with bufSize -1 -> INVALID_VALUE (or the also applicable INVALID_OPERATION) | Mesa | gpu:es-max llvmpipe:es-max zink:es-max |  |  |
+| es32-base-vertex-and-robustness | glReadnPixels with bufSize -1 leaves the buffer untouched | Mesa | gpu:es-max llvmpipe:es-max zink:es-max |  |  |
+| es32-debug-output | ...and the PUSH_GROUP message string is null-terminated at that length | Mesa | gpu:es-max llvmpipe:es-max zink:es-max |  |  |
+| es32-debug-output | ...and the message string is null-terminated at that length (§18.1, §18.2) | Mesa | gpu:es-max llvmpipe:es-max zink:es-max |  |  |
+| es32-debug-output | buffer: the failed calls left the previous label in place (Table 2.3: INVALID_VALUE ignores the command) | Mesa | gpu:es-max llvmpipe:es-max zink:es-max |  |  |
+| es32-debug-output | framebuffer: the failed calls left the previous label in place (Table 2.3: INVALID_VALUE ignores the command) | Mesa | gpu:es-max llvmpipe:es-max zink:es-max |  |  |
+| es32-debug-output | program pipeline: the failed calls left the previous label in place (Table 2.3: INVALID_VALUE ignores the command) | Mesa | gpu:es-max llvmpipe:es-max zink:es-max |  |  |
+| es32-debug-output | program: the failed calls left the previous label in place (Table 2.3: INVALID_VALUE ignores the command) | Mesa | gpu:es-max llvmpipe:es-max zink:es-max |  |  |
+| es32-debug-output | query: the failed calls left the previous label in place (Table 2.3: INVALID_VALUE ignores the command) | Mesa | gpu:es-max llvmpipe:es-max zink:es-max |  |  |
+| es32-debug-output | renderbuffer: the failed calls left the previous label in place (Table 2.3: INVALID_VALUE ignores the command) | Mesa | gpu:es-max llvmpipe:es-max zink:es-max |  |  |
+| es32-debug-output | sampler: the failed calls left the previous label in place (Table 2.3: INVALID_VALUE ignores the command) | Mesa | gpu:es-max llvmpipe:es-max zink:es-max |  |  |
+| es32-debug-output | shader: the failed calls left the previous label in place (Table 2.3: INVALID_VALUE ignores the command) | Mesa | gpu:es-max llvmpipe:es-max zink:es-max |  |  |
+| es32-debug-output | sync: the failed calls left the previous label in place (Table 2.3: INVALID_VALUE ignores the command) | Mesa | gpu:es-max llvmpipe:es-max zink:es-max |  |  |
+| es32-debug-output | texture: the failed calls left the previous label in place (Table 2.3: INVALID_VALUE ignores the command) | Mesa | gpu:es-max llvmpipe:es-max zink:es-max |  |  |
+| es32-debug-output | transform feedback: the failed calls left the previous label in place (Table 2.3: INVALID_VALUE ignores the command) | Mesa | gpu:es-max llvmpipe:es-max zink:es-max |  |  |
+| es32-debug-output | vertex array: the failed calls left the previous label in place (Table 2.3: INVALID_VALUE ignores the command) | Mesa | gpu:es-max llvmpipe:es-max zink:es-max |  |  |
+| es32-float-targets-and-indexed-blend | glIsEnabled(BLEND) is TRUE when buffer zero is enabled, although buffer 1 is disabled (15.1.5.5) | radeonsi | gpu:es-max |  |  |
+| es32-float-targets-and-indexed-blend | scenario 5 buffer 0 (RGBA8): [on FuncAdd/FuncAdd(One,One / One,One) mask=TFTT] all 4096 pixels equal the CPU blend model | zink | zink:es-max |  |  |
+| es32-float-targets-and-indexed-blend | scenario 5 buffer 1 (RGBA16F): [on FuncAdd/FuncAdd(One,One / One,One) mask=TFTT] all 4096 pixels equal the CPU blend model | zink | zink:es-max |  |  |
+| es32-float-targets-and-indexed-blend | scenario 5 buffer 2 (R11F_G11F_B10F): [on FuncAdd/FuncAdd(One,One / One,One) mask=TFTT] all 4096 pixels equal the CPU blend model | zink | zink:es-max |  |  |
+| es32-float-targets-and-indexed-blend | scenario 5 buffer 3 (RGBA16F): [on FuncAdd/FuncAdd(One,One / One,One) mask=TFTT] all 4096 pixels equal the CPU blend model | zink | zink:es-max |  |  |
+| es32-geometry-shaders | max_vertices = 1024 x 128 output components = 131072 > MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS = 1024: LinkProgram fails (section 11.3.4.4) | Mesa | llvmpipe:es-max zink:es-max |  | matched 'Mesa' but not observed on every Mesa driver |
+| es32-geometry-shaders | max_vertices = 256 x 128 output components = 32768 > MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS = 4095: LinkProgram fails (section 11.3.4.4) | Mesa | gpu:es-max |  | matched 'Mesa' but not observed on every Mesa driver |
+| es32-layered-rendering | glFramebufferTextureLayer(cube map, layer 2) is accepted and attaches the cube map (cube map face +Y) | Mesa | gpu:es-max llvmpipe:es-max zink:es-max |  |  |
+| es32-multisample-array-and-border-color | TexParameteriv border component 0 is stored as exactly 0.0 (equation 2.2) | Mesa | gpu:es-max llvmpipe:es-max zink:es-max |  |  |
+| test-driver-crash-readpixels-none | COLOR0 = RG32I only, READ_BUFFER = NONE, RGBA_INTEGER / INT: child observes INVALID_OPERATION and exits normally (§4.3.2.1) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| test-driver-crash-readpixels-none | COLOR0 = RGBA8 + COLOR3 = RG32I, READ_BUFFER = NONE, RGBA / UNSIGNED_BYTE: child observes INVALID_OPERATION and exits normally (§4.3.2.1) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| test-driver-crash-readpixels-none | COLOR0 = RGBA8 + COLOR3 = RG32I, READ_BUFFER = NONE, RGBA_INTEGER / INT: child observes INVALID_OPERATION and exits normally (§4.3.2.1) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
 | test-glsl-language | [fragment] an identifier containing __ (my__value) is reserved but legal (§3.8): builds | ANGLE | angle:native |  |  |
 | test-glsl-language | [fragment] the l-value of an out argument is fixed when the argument is evaluated: store(arr[j], ++j) (§6.1.1) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min softpipe:es-max softpipe:es-min zink:es-max zink:es-min |  |  |
 | test-glsl-language | [fragment] the left side of an assignment is evaluated before the right side: y[j] = ++j (§5.8) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min softpipe:es-max softpipe:es-min zink:es-max zink:es-min |  |  |
 | test-glsl-language | [vertex] an identifier containing __ (my__value) is reserved but legal (§3.8): builds | ANGLE | angle:native |  |  |
 | test-glsl-language | [vertex] the l-value of an out argument is fixed when the argument is evaluated: store(arr[j], ++j) (§6.1.1) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min softpipe:es-max softpipe:es-min zink:es-max zink:es-min |  |  |
 | test-glsl-language | [vertex] the left side of an assignment is evaluated before the right side: y[j] = ++j (§5.8) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min softpipe:es-max softpipe:es-min zink:es-max zink:es-min |  |  |
+| test-glsl320-builtins | precise buffer block: compiles and links | Mesa | gpu:es-max llvmpipe:es-max zink:es-max |  |  |

@@ -3,7 +3,7 @@
 
 Result directories: build/debug/test-results
 
-Source revision: c316dbb (with uncommitted changes)
+Source revision: 0303e5f (with uncommitted changes)
 
 Only results from the current executables count. A result is ignored when its executable was
 rebuilt after the run, or when the demo's sources, `common/` or the CMake glue are newer than the
@@ -12,97 +12,35 @@ ES 3.2 driver, not conformance of a native ES 3.0/3.1 implementation (see VALIDA
 
 ## Core API entry points (by introducing ES version)
 
-| ES | total | passed | passed % | STALE_RESULTS | FAILED | VISUALLY_VERIFIED | FULLY_VALIDATED |
-|---|---|---|---|---|---|---|---|
-| 2.0 | 142 | 101 | 71% | 39 | 2 | 1 | 100 |
-| 3.0 | 104 | 65 | 62% | 38 | 1 | 0 | 65 |
-| 3.1 | 68 | 65 | 96% | 3 | 0 | 0 | 65 |
-| 3.2 | 44 | 0 | 0% | 44 | 0 | 0 | 0 |
+| ES | total | passed | passed % | FULLY_VALIDATED |
+|---|---|---|---|---|
+| 2.0 | 142 | 142 | 100% | 142 |
+| 3.0 | 104 | 104 | 100% | 104 |
+| 3.1 | 68 | 68 | 100% | 68 |
+| 3.2 | 44 | 44 | 100% | 44 |
 
 ## Semantic features (by introducing ES version)
 
-| ES | total | passed | passed % | DOCUMENTED_ONLY | STALE_RESULTS | FAILED | VISUALLY_VERIFIED | FULLY_VALIDATED |
-|---|---|---|---|---|---|---|---|---|
-| 2.0 | 87 | 43 | 49% | 1 | 42 | 1 | 4 | 39 |
-| 3.0 | 78 | 41 | 53% | 0 | 34 | 3 | 2 | 39 |
-| 3.1 | 30 | 19 | 63% | 0 | 11 | 0 | 0 | 19 |
-| 3.2 | 31 | 0 | 0% | 0 | 31 | 0 | 0 | 0 |
+| ES | total | passed | passed % | DOCUMENTED_ONLY | FAILED | VISUALLY_VERIFIED | FULLY_VALIDATED |
+|---|---|---|---|---|---|---|---|
+| 2.0 | 87 | 85 | 98% | 1 | 1 | 0 | 85 |
+| 3.0 | 78 | 75 | 96% | 0 | 3 | 2 | 73 |
+| 3.1 | 30 | 30 | 100% | 0 | 0 | 0 | 30 |
+| 3.2 | 31 | 31 | 100% | 0 | 0 | 0 | 31 |
 
 ## GLSL ES features (by language version)
 
-| GLSL | total | passed | passed % | STALE_RESULTS | FAILED | VISUALLY_VERIFIED | FULLY_VALIDATED |
-|---|---|---|---|---|---|---|---|
-| 100 | 4 | 4 | 100% | 0 | 0 | 0 | 4 |
-| 300 | 51 | 28 | 55% | 20 | 3 | 1 | 27 |
-| 310 | 23 | 11 | 48% | 12 | 0 | 0 | 11 |
-| 320 | 16 | 0 | 0% | 16 | 0 | 0 | 0 |
+| GLSL | total | passed | passed % | FULLY_VALIDATED |
+|---|---|---|---|---|
+| 100 | 4 | 4 | 100% | 4 |
+| 300 | 51 | 51 | 100% | 51 |
+| 310 | 23 | 23 | 100% | 23 |
+| 320 | 16 | 16 | 100% | 16 |
 
 ## Executables
 
 | status | count |
 |---|---|
 | FAILED | 2 |
-| FULLY_VALIDATED | 21 |
-| STALE_RESULTS | 58 |
+| FULLY_VALIDATED | 79 |
 | VISUALLY_VERIFIED | 1 |
-
-## Stale results (ignored)
-
-- diagnostics-capabilities: 9 stale result file(s) ignored
-- es20-blending: 7 stale result file(s) ignored
-- es20-copy-and-read-pixels: 7 stale result file(s) ignored
-- es20-cube-map: 7 stale result file(s) ignored
-- es20-culling-front-face: 7 stale result file(s) ignored
-- es20-depth-test: 7 stale result file(s) ignored
-- es20-indexed-drawing: 7 stale result file(s) ignored
-- es20-mipmaps: 7 stale result file(s) ignored
-- es20-primitive-topology: 7 stale result file(s) ignored
-- es20-state-queries-errors: 7 stale result file(s) ignored
-- es20-stencil-test: 7 stale result file(s) ignored
-- es20-textures-2d: 7 stale result file(s) ignored
-- es20-transformations-camera: 7 stale result file(s) ignored
-- es20-uniforms: 7 stale result file(s) ignored
-- es20-vertex-attributes: 7 stale result file(s) ignored
-- es30-buffer-mapping: 7 stale result file(s) ignored
-- es30-deferred-shading: 7 stale result file(s) ignored
-- es30-glsl-texture-functions: 7 stale result file(s) ignored
-- es30-hello-triangle: 7 stale result file(s) ignored
-- es30-immutable-storage: 6 stale result file(s) ignored
-- es30-instancing: 7 stale result file(s) ignored
-- es30-lighting: 7 stale result file(s) ignored
-- es30-normal-mapping: 7 stale result file(s) ignored
-- es30-post-processing: 7 stale result file(s) ignored
-- es30-program-binary: 6 stale result file(s) ignored
-- es30-sampler-objects: 7 stale result file(s) ignored
-- es30-shadow-mapping: 7 stale result file(s) ignored
-- es30-skybox-and-fog: 7 stale result file(s) ignored
-- es30-srgb: 7 stale result file(s) ignored
-- es30-sync-objects: 7 stale result file(s) ignored
-- es30-texture-3d-and-arrays: 7 stale result file(s) ignored
-- es30-texture-swizzle-lod: 7 stale result file(s) ignored
-- es30-uniform-buffer-objects: 7 stale result file(s) ignored
-- es30-vertex-array-objects: 7 stale result file(s) ignored
-- es31-compute-basics: 7 stale result file(s) ignored
-- es31-compute-indirect-and-to-render: 7 stale result file(s) ignored
-- es31-compute-particles: 7 stale result file(s) ignored
-- es31-compute-shared-memory: 7 stale result file(s) ignored
-- es31-image-load-store: 6 stale result file(s) ignored
-- es31-texture-gather: 7 stale result file(s) ignored
-- es32-advanced-blend-and-sample-shading: 5 stale result file(s) ignored
-- es32-astc-and-copy-image: 5 stale result file(s) ignored
-- es32-base-vertex-and-robustness: 5 stale result file(s) ignored
-- es32-cube-map-array: 5 stale result file(s) ignored
-- es32-debug-output: 5 stale result file(s) ignored
-- es32-float-targets-and-indexed-blend: 5 stale result file(s) ignored
-- es32-geometry-shaders: 5 stale result file(s) ignored
-- es32-layered-rendering: 5 stale result file(s) ignored
-- es32-multisample-array-and-border-color: 5 stale result file(s) ignored
-- es32-tessellation-domains: 5 stale result file(s) ignored
-- es32-tessellation-terrain: 5 stale result file(s) ignored
-- es32-texture-buffer: 5 stale result file(s) ignored
-- test-glsl300-builtins: 7 stale result file(s) ignored
-- test-glsl310-builtins: 9 stale result file(s) ignored
-- test-glsl320-builtins: 5 stale result file(s) ignored
-- test-driver-crash-readpixels-none: 7 stale result file(s) ignored
-- test-metagl-contracts: 7 stale result file(s) ignored
-- glsl-compile-tests: 9 stale result file(s) ignored

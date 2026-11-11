@@ -124,7 +124,8 @@ namespace demo
         Fail,
         SkipUnsupported,
         BlockedEnvironment,
-        BlockedMetaGl
+        BlockedMetaGl,
+        Crashed  // never returned: written to the result JSON at start-up and replaced when the run finishes
     };
 
     [[nodiscard]] std::string_view to_string(Outcome outcome);

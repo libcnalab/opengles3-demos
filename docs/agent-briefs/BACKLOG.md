@@ -4,7 +4,7 @@ The order follows `docs/DEMO_CATALOG.md`. Each line is one delegable task: direc
 followed by feature IDs. Claim an item by moving it to "In progress" with the agent and branch.
 
 ## In progress
-- ES 3.0 item 10 (Claude subagent); Codex from 22:05: items 18, 20, MSAA default framebuffer; then 62
+- GLSL language-rule coverage (Claude subagent); Codex from 22:05: items 18, 20, MSAA default framebuffer; then 62
 
 ## Done
 All Stage 1–4 foundation demos listed as implemented in DEMO_CATALOG.md (merged 2026-11-11).

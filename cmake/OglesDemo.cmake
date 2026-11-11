@@ -37,13 +37,36 @@ function(ogles_register_gl_tests)
         list(APPEND drivers softpipe)
     endif()
     list(REMOVE_DUPLICATES drivers)
+    # ANGLE: an independent GL front-end (Vulkan backend). It creates exactly the requested ES version, so its
+    # single mode "native" runs every executable at its min_es on a native context, without any version override.
+    if(OGLES3_ANGLE_DIR)
+        set(shim "${CMAKE_BINARY_DIR}/angle-shim")
+        if(NOT EXISTS "${shim}/libEGL.so.1")
+            # libEGL.so.1 is the soname the executables link (glvnd); the shim points it at ANGLE's libEGL.
+            file(MAKE_DIRECTORY "${shim}")
+            file(CREATE_LINK "${OGLES3_ANGLE_DIR}/libEGL.so" "${shim}/libEGL.so.1" SYMBOLIC)
+        endif()
+        if(NOT EXISTS "${shim}/libGLESv2.so")
+            # ANGLE's libEGL dlopens libGLESv2.so from its own (symlinked) directory.
+            file(CREATE_LINK "${OGLES3_ANGLE_DIR}/libGLESv2.so" "${shim}/libGLESv2.so" SYMBOLIC)
+        endif()
+        list(APPEND drivers angle)
+    endif()
     foreach(driver IN LISTS drivers)
-        foreach(mode IN LISTS modes)
+        set(driver_modes ${modes})
+        if(driver STREQUAL "angle")
+            set(driver_modes "native")
+        endif()
+        foreach(mode IN LISTS driver_modes)
             set(test_name "${T_BASE}:${driver}:${mode}")
             string(REPLACE ":" "_" file_stem "${test_name}")
             set(env "EGL_PLATFORM=surfaceless")
             if(driver STREQUAL "llvmpipe" OR driver STREQUAL "softpipe" OR driver STREQUAL "zink")
                 list(APPEND env "LIBGL_ALWAYS_SOFTWARE=1" "GALLIUM_DRIVER=${driver}")
+            elseif(driver STREQUAL "angle")
+                # Also preload libGLESv2 (as a native ANGLE application links it); without it eglInitialize fails.
+                set(env "OGLES3_EGL_PLATFORM=angle" "LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/angle-shim:${OGLES3_ANGLE_DIR}"
+                        "LD_PRELOAD=${OGLES3_ANGLE_DIR}/libGLESv2.so")
             elseif(NOT driver STREQUAL "gpu")
                 message(FATAL_ERROR "unknown OGLES3_TEST_DRIVERS entry '${driver}'")
             endif()
@@ -60,6 +83,10 @@ function(ogles_register_gl_tests)
                         --capture "${OGLES3_RESULTS_DIR}/${file_stem}.png"
                         --test-id "${test_name}"
                         ${T_ARGS})
+            if(driver STREQUAL "angle")
+                # With DISPLAY set (even empty) ANGLE picks its X11 path; unset it for the headless Vulkan display.
+                set_tests_properties("${test_name}" PROPERTIES ENVIRONMENT_MODIFICATION "DISPLAY=unset:")
+            endif()
             set_tests_properties("${test_name}" PROPERTIES
                 ENVIRONMENT "${env}"
                 SKIP_RETURN_CODE 77

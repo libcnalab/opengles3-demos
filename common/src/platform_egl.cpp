@@ -6,6 +6,7 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
+#include <cstdlib>
 #include <cstring>
 #include <format>
 #include <string_view>
@@ -69,7 +70,30 @@ namespace demo::detail
             bool create(const ContextRequest& req, std::string& error) override
             {
                 const char* client_ext = eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
-                if (has_extension(client_ext, "EGL_MESA_platform_surfaceless"))
+                // ANGLE (selected with OGLES3_EGL_PLATFORM=angle and an ANGLE libEGL on the library path): a
+                // headless Vulkan-backed display. This changes only the context provider; every GL call still
+                // goes through meta-gl.
+                const char* want = std::getenv("OGLES3_EGL_PLATFORM");
+                if (want != nullptr && std::string_view(want) == "angle")
+                {
+                    if (!has_extension(client_ext, "EGL_ANGLE_platform_angle"))
+                    {
+                        error = "OGLES3_EGL_PLATFORM=angle, but the loaded libEGL is not ANGLE (no EGL_ANGLE_platform_angle)";
+                        return false;
+                    }
+                    constexpr EGLenum kPlatformAngle = 0x3202;      // EGL_PLATFORM_ANGLE_ANGLE
+                    constexpr EGLint kPlatformAngleType = 0x3203;   // EGL_PLATFORM_ANGLE_TYPE_ANGLE
+                    constexpr EGLint kPlatformAngleVulkan = 0x3450; // EGL_PLATFORM_ANGLE_TYPE_VULKAN_ANGLE
+                    const EGLint angle_attribs[] = {kPlatformAngleType, kPlatformAngleVulkan, EGL_NONE};
+                    auto get_platform_display = reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(
+                        eglGetProcAddress("eglGetPlatformDisplayEXT"));
+                    if (get_platform_display != nullptr)
+                    {
+                        display_ = get_platform_display(kPlatformAngle, EGL_DEFAULT_DISPLAY, angle_attribs);
+                        platform_ = "angle-vulkan";
+                    }
+                }
+                else if (has_extension(client_ext, "EGL_MESA_platform_surfaceless"))
                 {
                     auto get_platform_display = reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(
                         eglGetProcAddress("eglGetPlatformDisplayEXT"));

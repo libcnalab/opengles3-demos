@@ -58,6 +58,21 @@ as notes. There is currently no native ES 3.0-only driver in the matrix (KNOWN_L
 All runs use `EGL_PLATFORM=surfaceless`, a fixed 256×256 surface, fixed `--seed 1`, and
 deterministic animation time (`frame / 60 s`).
 
+## ANGLE: an independent implementation (driver `angle`, mode `native`)
+Every Mesa driver shares Mesa's GL front-end (state tracker, GLSL compiler, validation). Their agreement is
+therefore not independent evidence. The `angle` driver runs the same executables through ANGLE: Google's
+GL ES front-end and GLSL translator, here with the Vulkan backend on RADV.
+- **Build used:** the one shipped with the Android SDK emulator (`~/Android/Sdk/emulator/lib64/gles_angle`,
+  ANGLE 2.1.17841, git 5fa2e61da947). It is auto-detected, or set with `-DOGLES3_ANGLE_DIR=`.
+- **How it is loaded:** only at the context-provider level. A shim makes `libEGL.so.1` resolve to ANGLE's libEGL,
+  `libGLESv2.so` is preloaded, and `OGLES3_EGL_PLATFORM=angle` selects `EGL_PLATFORM_ANGLE_ANGLE`
+  (Vulkan, headless). Every GL call still goes through meta-gl.
+- **Version:** the build exposes **ES 3.1 natively**. ES 3.2 executables are SKIP_UNSUPPORTED. The context is not
+  produced by a version override, so ANGLE gives the only native lower-version (3.1) evidence in the matrix.
+  ES 3.0 requests also return a 3.1 context, as EGL allows.
+- **Shared code:** the backend still runs on Mesa's RADV Vulkan driver. Rasterization and texture hardware are
+  shared with radeonsi; the API front-end and the shader compiler are not.
+
 ## Known driver deviations (XFAIL)
 
 When a driver demonstrably violates a normative rule, the test keeps the strict expectation and

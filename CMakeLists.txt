@@ -31,6 +31,10 @@ option(OGLES3_USE_INSTALLED_METAGL "Use find_package(meta-gl) instead of a sourc
 #              docs/VALIDATION.md)
 set(OGLES3_TEST_DRIVERS "gpu;llvmpipe;zink" CACHE STRING "Driver variants for CTest runs (gpu;llvmpipe;zink;softpipe)")
 option(OGLES3_TEST_SOFTPIPE "Register softpipe runs for min_es 3.2 executables and opted-in executables" ON)
+set(OGLES3_ANGLE_DIR "" CACHE PATH "Directory with an ANGLE libEGL.so/libGLESv2.so (Vulkan backend); adds an 'angle' driver to the CTest matrix")
+if(NOT OGLES3_ANGLE_DIR AND EXISTS "$ENV{HOME}/Android/Sdk/emulator/lib64/gles_angle/libEGL.so")
+    set(OGLES3_ANGLE_DIR "$ENV{HOME}/Android/Sdk/emulator/lib64/gles_angle" CACHE PATH "" FORCE)
+endif()
 option(OGLES3_TEST_MIN_VERSION "Also run every demo on a context limited to its minimum ES version (Mesa only)" ON)
 
 # --- meta-gl -------------------------------------------------------------------------------

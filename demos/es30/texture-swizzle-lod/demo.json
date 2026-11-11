@@ -1,0 +1,77 @@
+{
+  "name": "es30-texture-swizzle-lod",
+  "title": "Texture swizzle and shader-chosen level of detail",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es30",
+  "order": 220,
+  "summary": "TEXTURE_SWIZZLE_R/G/B/A applied to the Table 3.24 base colors of R8, RG8, LUMINANCE_ALPHA, ALPHA and RGBA8 textures and to every lookup function (texture state, not sampler state); textureLod, textureGrad, textureProj(Lod), textureSize and texelFetch counted from TEXTURE_BASE_LEVEL and clamped (or not) by MIN/MAX_LOD; texel offsets at the queried MIN/MAX_PROGRAM_TEXEL_OFFSET in five lookup functions; all against CPU models.",
+  "spec": [
+    "ES 3.0 §3.8.7 Texture Parameters (Table 3.20: swizzle legal values), §3.8.14 Texture State (initial swizzle), Tables 6.9 and 6.10 (per-texture vs per-sampler state)",
+    "ES 3.0 §3.9.2.1 Texture Access (swizzle applied to the Table 3.24 base color), Table 3.24",
+    "ES 3.0 §2.12.9.2 Texel Fetches, §2.12.9.3 Texture Size Query",
+    "ES 3.0 §3.8.10.1 Scale Factor and Level of Detail (equations 3.17-3.19: explicit LOD, clamping by MIN/MAX_LOD, texel offsets), §3.8.10.2 (Table 3.22 wrapping after the offset), §3.8.10.4 Mipmapping (equations 3.23-3.25, BASE_LEVEL/MAX_LEVEL)",
+    "ES 3.0 Table 6.31 (MIN_PROGRAM_TEXEL_OFFSET <= -8, MAX_PROGRAM_TEXEL_OFFSET >= 7)",
+    "ES 3.2 §8.10 Texture Parameters (INVALID_ENUM for an illegal enum value)",
+    "GLSL ES 3.00 §8.8 Texture Lookup Functions, §3.2 Character Set (line continuation)"
+  ],
+  "api": {
+    "glGenTextures": "R8, RG8, LUMINANCE_ALPHA, ALPHA, RGBA8 swizzle textures, the 64x16 ladder and the 13x13 chain",
+    "glBindTexture": "texture per cell; the swizzled RGBA8 texture bound to unit 3 together with a sampler",
+    "glActiveTexture": "unit 3 for the sampler cell; sampler uniform holds the unit index",
+    "glTexImage2D": "R8/RG8/LUMINANCE_ALPHA/ALPHA/RGBA8 4x4 uploads (Table 3.24 base colors observed through pixels), 7 hand-made ladder levels and 4 chain levels (observed through textureLod/texelFetch/textureSize)",
+    "glTexParameteri": "TEXTURE_SWIZZLE_R/G/B/A (typed overload) with all six legal values, observed in pixels of every lookup function; BASE_LEVEL / MAX_LEVEL / filters / wrap observed through level selection; illegal swizzle values -> INVALID_ENUM",
+    "glTexParameteriv": "vector form of TEXTURE_SWIZZLE_G read back",
+    "glTexParameterf": "TEXTURE_MIN_LOD / MAX_LOD clamp textureLod but not texelFetch (pixels), read back exactly",
+    "glGetTexParameteriv": "initial swizzle (RED, GREEN, BLUE, ALPHA), swizzle round trips, BASE_LEVEL / MAX_LEVEL round trips",
+    "glGetTexParameterfv": "MIN_LOD / MAX_LOD round trip",
+    "glGetIntegerv": "MIN_PROGRAM_TEXEL_OFFSET / MAX_PROGRAM_TEXEL_OFFSET (queried, checked against Table 6.31 and compiled into the offset shader as constants)",
+    "glGenSamplers": "one sampler object bound to unit 3 over the swizzled texture",
+    "glSamplerParameteri": "LINEAR filters and CLAMP_TO_EDGE of the sampler: the cell is smooth (bilinear CPU model) while the texture's swizzle still applies",
+    "glBindSampler": "sampler on unit 3 overrides the texture's filtering but not its swizzle",
+    "glDeleteSamplers": "cleanup",
+    "glUseProgram": "swizzle, lod and offset programs; every cell output depends on the program",
+    "glGetUniformLocation": "u_tex, u_lookup, u_func, u_lod, u_dx, u_dy, u_q, u_origin, u_off, u_size located",
+    "glUniform1i": "lookup function, offset selector, sampler unit and level size; observed through the pixels",
+    "glUniform1f": "explicit lod and projective coordinate q",
+    "glUniform2f": "explicit gradients dPdx / dPdy",
+    "glUniform2i": "window origin of the cell for texelFetch coordinates",
+    "glDrawArrays": "TRIANGLE_STRIP quad per cell from gl_VertexID; every pixel of every cell compared",
+    "glViewport": "per-cell viewports (16x16, 13x13, 6x6, 1x1 pixels): texel-for-pixel readouts depend on them",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE readback of every cell, compared with CPU models",
+    "glDeleteTextures": "cleanup, final glGetError == NO_ERROR",
+    "glDeleteProgram": "cleanup"
+  },
+  "features": [
+    "ES30.TEXTURE.SWIZZLE",
+    "ES30.TEXTURE.LOD_PARAMS"
+  ],
+  "glsl_features": [
+    "GLSL300.VERSION",
+    "GLSL300.PREPROCESSOR",
+    "GLSL300.UNIFORM",
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.FRAG.OUTPUT",
+    "GLSL300.TYPES.SAMPLERS",
+    "GLSL300.PRECISION.DEFAULT",
+    "GLSL300.BUILTIN_VARS.VS",
+    "GLSL300.BUILTIN_VARS.FS",
+    "GLSL300.FN.TEXTURE.BASIC",
+    "GLSL300.FN.TEXTURE.LOD",
+    "GLSL300.FN.TEXTURE.OFFSET",
+    "GLSL300.FN.TEXTURE.FETCH"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "gl-error",
+    "negative"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5 (subagent)",
+    "notes": "radeonsi es-max capture viewed at 4-6x (llvmpipe and zink captures differ by at most 1/255; es-min identical). Row 0: sixteen 16x16 cells; the R8 cells show a red ramp, a gray ramp and a solid red (alpha<-red, red<-1), RG8 shows red/green, swapped red/green and a gray/alpha ramp, the LUMINANCE_ALPHA cell looks identical to the RG8 (R,R,R,G) cell, then the black ALPHA cell and its gray version, the RGBA reference, the red/blue-swapped version, the rotated and the constant-channel versions and three more (B,G,R,A) cells identical to the swapped one. Row 1: one smooth (bilinear) swizzled cell. Row 2: solid level colors (blue, red, yellow, white, white, teal blend, yellow, olive blend, green, yellow, yellow, blue, magenta). Row 3: solid colors for the gradient and projective cells. Row 4: dark size-encoding cells. Row 5: three single pixels, then the 13x13 patterned level and its smaller levels. Rows 6-8: 13x13 / 6x6 patterned images, five per function: five mirrored images for texelFetchOffset, then shifted wrapped images and the clamped, streaky ones."
+  }
+}

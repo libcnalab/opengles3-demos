@@ -82,6 +82,9 @@ cmake --build --preset debug --target coverage           # regenerate coverage d
 
 ## Conventions
 
+- Compilation uses at most 8 CPU cores in total (owner's rule). The build presets set `jobs: 8`. When several
+  agents build in parallel, each passes `-j 2` (or a share such that the total stays <= 8).
+
 - C++23, `namespace mgl = metagl;`, typed enums/handles, no raw `GLenum` casts except where a
   test deliberately exercises an invalid value (and then only in `tests/negative`).
 - Warnings are errors in the `headless-ci` preset; keep the build warning-free.

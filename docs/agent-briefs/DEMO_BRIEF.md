@@ -66,7 +66,7 @@ edge boundary, accept either neighbour instead of skipping the pixel, keep every
 ## Build and test (inside your worktree)
 ```
 cmake --preset debug -DOGLES3_METAGL_SOURCE_DIR=/rv/data/development/github.com/libcna/meta-gl
-cmake --build --preset debug
+cmake --build --preset debug -j 2   # several agents build at once: keep the machine-wide total <= 8 cores
 ctest --preset debug -R '<demo-a>|<demo-b>' --output-on-failure
 ```
 Every matrix run (gpu, llvmpipe, zink × es-max, es-min) must PASS, and the build must have no warnings

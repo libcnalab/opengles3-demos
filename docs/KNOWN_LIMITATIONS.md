@@ -52,7 +52,6 @@
 | `es31-program-interface-query` | ES 3.2 §7.3.1: `glGetProgramResourceiv` writes at most `count` values; `length` = values written | for `ACTIVE_VARIABLES` with count 3 of 5 Mesa writes all 5 and returns 5 (buffer-overrun hazard). All Mesa drivers |
 | `es31-program-interface-query` | ES 3.2 §7.3.1 `REFERENCED_BY_*` | radeonsi reports a vertex-only uniform block as referenced by the fragment shader when the FS declares other blocks |
 | `es31-ssbo-std430` | ES 3.2 §6.1.1: negative `glBindBufferRange` offset → INVALID_VALUE | same as the UBO row: no error for alignment-multiple negative offsets. All Mesa drivers |
-| `es31-atomics` | GLSL ES 3.10 §4.4.5: an atomic counter without `binding` is bound to unit zero | Mesa rejects it ("atomic counters require explicit binding point", desktop ARB rule). All Mesa drivers |
 | `es31-framebuffer-no-attachments` | GLSL ES 3.10 §4.4.1: static `gl_FragDepth` write with `early_fragment_tests` is an error | compiles. All Mesa drivers |
 | `es31-framebuffer-no-attachments` | ES 3.2 §9.2.1: an attachment-less FBO has sample buffers iff `FRAMEBUFFER_DEFAULT_SAMPLES` ≠ 0 | `SAMPLE_BUFFERS`/`SAMPLES` read 0 with 4 default samples although rasterization is multisampled. All Mesa drivers |
 | `es31-framebuffer-no-attachments` | ES 3.2 §7.11.1, GLSL ES 3.10 §7.1.2: scissor-failed fragments are not shaded; helper invocations have no side effects | llvmpipe/zink (lavapipe), multisampled: pixels outside the scissor sharing a 2×2 quad run with `gl_HelperInvocation` false and their atomics take effect. radeonsi and single-sample runs exact |
@@ -85,7 +84,24 @@
 | **crash** (avoided) `shader-tests` | linking `#version 310 es` with `#version 100` must fail cleanly | under `MESA_GLES_VERSION_OVERRIDE=3.0`, that link segfaults in libgallium (gpu, llvmpipe, zink). The case runs only in `test-glsl-language` on ES ≥ 3.1 |
 | `test-glsl320-builtins` | GLSL ES 3.20 §4.3.9: a block's type qualifier "may optionally include layout qualifiers, the auxiliary storage qualifier patch, and the precise qualifier"; §4.9: precise on a block applies to each member | `layout(std430, binding = 2) precise writeonly buffer PreciseOut { ... };` (either qualifier order) fails with "syntax error, unexpected NEW_IDENTIFIER". All Mesa drivers |
 
-Not deviations (verified during integration): Mesa accepting `glGenerateMipmap` on R32F and unsized
+
+### ANGLE 2.1.17841 (Vulkan backend, ES 3.1), matched on "ANGLE"
+
+| Case | Rule | Observed |
+|---|---|---|
+| `es31-program-pipelines` | ES 3.2 §7.3/§7.4: `PROGRAM_SEPARABLE` takes effect only at the next successful link | same as Mesa: the flag set after the link is honoured immediately |
+| `es31-program-pipelines` | ES 3.2 §11.1.3.11: `ValidateProgramPipeline(p)` validates *p* against the current state | validates the currently bound pipeline instead of *p* (its info log names the bound pipeline's error) |
+| `es31-program-pipelines` | ES 3.2 §7.4: `UseProgramStages` with a shader-object name → INVALID_OPERATION | INVALID_VALUE |
+| `es31-program-interface-query` | ES 3.2 §7.3.1.1: a name identifying an array element other than the first ("a[1]") does not match | `"o_id[1]"` returns the index of the `o_id[0]` entry |
+| `es31-ssbo-std430` | ES 3.1/3.2 §7.8: a block larger than `MAX_SHADER_STORAGE_BLOCK_SIZE` "will fail to link" | the limit is 2^32-1 and a 2^32-byte block links |
+| `glsl-compile-tests`, `test-glsl-language` | GLSL ES 3.00 §3.8 / 3.10 §3.7: defining an identifier containing `__` "does not itself result in an error" | rejected with the GLSL ES 1.00 wording (also in `#version 310 es`); `__` macro names only warn, which conforms |
+| `glsl-compile-tests` | GLSL ES 3.00 §4.6.1: `invariant` "followed by a comma separated list of previously declared identifiers" | `invariant a, b;` is a syntax error |
+| `glsl-compile-tests` | GLSL ES 3.00 §4.6.1 + §1.3: `invariant` after a use must be reported by link time at the latest | compiles and links |
+| `glsl-compile-tests` | GLSL ES 3.00 §4.3.3: dFdx/dFdy/fwidth of a constant expression in an initializer return 0 (constant expression) | rejected ("assigning non-constant") |
+
+Not deviations (verified during integration): The earlier `es31-atomics` row ("Mesa rejects an atomic counter
+without binding") was our misreading: GLSL ES 3.20 §4.4.6 makes it a compile-time error (the change log calls it
+a clarification), and Mesa and ANGLE both reject it correctly. Further: Mesa accepting `glGenerateMipmap` on R32F and unsized
 `RGB + FLOAT` uploads is correct, because the contexts expose `GL_OES_texture_float_linear`,
 `GL_EXT_color_buffer_float` and `GL_OES_texture_float`. The ES 3.0 transform-feedback mode rule failing under
 `MESA_GLES_VERSION_OVERRIDE=3.0` is an artifact of the override, since Mesa remains an ES 3.2 driver. The

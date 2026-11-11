@@ -122,14 +122,14 @@
 | ES30.TEXTURE.SIZED_FORMATS | 3.0 | textures | Sized internal formats (normalized/snorm/integer/float/half/sRGB/packed) | ES 3.0 §3.8.3 Table 3.13 | FULLY_VALIDATED | es30-immutable-storage, es30-normal-mapping |
 | ES30.TEXTURE.INTEGER | 3.0 | textures | Integer textures with isampler/usampler (NEAREST only) | ES 3.0 §3.8.3 §3.8.13 | FULLY_VALIDATED | es30-integer-float-textures |
 | ES30.TEXTURE.FLOAT | 3.0 | textures | Float/half-float textures; filterability rules (R32F not filterable) | ES 3.0 Table 3.13 | FULLY_VALIDATED | es30-integer-float-textures |
-| ES30.TEXTURE.SRGB | 3.0 | textures | sRGB textures decode on sampling | ES 3.0 §3.8.16 | FULLY_VALIDATED | es30-etc2-eac, es30-post-processing, es30-srgb |
+| ES30.TEXTURE.SRGB | 3.0 | textures | sRGB textures decode on sampling | ES 3.0 §3.8.16 | FULLY_VALIDATED | es30-etc2-eac, es30-post-processing, es30-srgb, es32-astc-and-copy-image |
 | ES30.TEXTURE.SHARED_EXPONENT | 3.0 | textures | RGB9_E5 and R11F_G11F_B10F | ES 3.0 §3.8.17 | FULLY_VALIDATED | es30-immutable-storage, es30-integer-float-textures |
 | ES30.TEXTURE.DEPTH | 3.0 | textures | Depth textures + comparison mode/func + sampler2DShadow | ES 3.0 §3.8.8 §3.8.15 | FULLY_VALIDATED | es30-deferred-shading, es30-shadow-mapping |
 | ES30.TEXTURE.DEPTH_STENCIL | 3.0 | textures | DEPTH24_STENCIL8 / DEPTH32F_STENCIL8 textures | ES 3.0 §3.8.12 | FULLY_VALIDATED | es31-stencil-texturing-and-level-queries |
 | ES30.TEXTURE.SWIZZLE | 3.0 | textures | TEXTURE_SWIZZLE_R/G/B/A | ES 3.0 §3.8.7 | FULLY_VALIDATED | es30-texture-swizzle-lod |
 | ES30.TEXTURE.LOD_PARAMS | 3.0 | textures | TEXTURE_BASE_LEVEL/MAX_LEVEL/MIN_LOD/MAX_LOD | ES 3.0 §3.8.7 §3.8.10 | FULLY_VALIDATED | es20-mipmaps, es30-texture-swizzle-lod |
 | ES30.TEXTURE.ETC2_EAC | 3.0 | textures | ETC2/EAC compressed textures (required in ES 3.0) | ES 3.0 §3.8.6 Appendix C | FULLY_VALIDATED | es30-etc2-eac |
-| ES30.TEXTURE.COMPRESSED_QUERY | 3.0 | textures | NUM_COMPRESSED_TEXTURE_FORMATS / COMPRESSED_TEXTURE_FORMATS | ES 3.0 §6.1.3 | FULLY_VALIDATED | diagnostics-capabilities, es30-etc2-eac |
+| ES30.TEXTURE.COMPRESSED_QUERY | 3.0 | textures | NUM_COMPRESSED_TEXTURE_FORMATS / COMPRESSED_TEXTURE_FORMATS | ES 3.0 §6.1.3 | FULLY_VALIDATED | diagnostics-capabilities, es30-etc2-eac, es32-astc-and-copy-image |
 | ES30.TEXTURE.PIXEL_STORE | 3.0 | textures | UNPACK_ROW_LENGTH/SKIP_PIXELS/SKIP_ROWS/IMAGE_HEIGHT/SKIP_IMAGES; PACK_* | ES 3.0 §3.7.1 | FULLY_VALIDATED | es30-pixel-buffer-objects, es30-texture-3d-and-arrays |
 | ES30.TEXTURE.FORMAT_VALIDATION | 3.0 | textures | Invalid format/type/internalformat combinations rejected | ES 3.0 §3.8.3 | FULLY_VALIDATED | es30-immutable-storage |
 | ES30.TEXTURE.COMPLETENESS_INTEGER | 3.0 | textures | Integer/float texture completeness vs filter rules | ES 3.0 §3.8.13 | FULLY_VALIDATED | es30-integer-float-textures |
@@ -192,7 +192,7 @@
 | ES31.UNIFORM.EXPLICIT_LOCATION | 3.1 | uniforms | layout(location) on uniforms + MAX_UNIFORM_LOCATIONS | GLSL 3.10 §4.4.3 | FULLY_VALIDATED | es31-program-interface-query |
 | ES31.TEXTURE.GATHER | 3.1 | textures | textureGather / textureGatherOffset(s) + gather offset limits | GLSL 3.10 §8.9.3 | FULLY_VALIDATED | es31-texture-gather |
 | ES31.TEXTURE.MULTISAMPLE | 3.1 | textures | glTexStorage2DMultisample + sampler2DMS texelFetch + glGetMultisamplefv | ES 3.2 §8.8 | FULLY_VALIDATED | es31-multisample-textures, es32-advanced-blend-and-sample-shading |
-| ES31.TEXTURE.STENCIL_TEXTURING | 3.1 | textures | DEPTH_STENCIL_TEXTURE_MODE = STENCIL_INDEX sampling | ES 3.2 §8.16 | FULLY_VALIDATED | es31-stencil-texturing-and-level-queries |
+| ES31.TEXTURE.STENCIL_TEXTURING | 3.1 | textures | DEPTH_STENCIL_TEXTURE_MODE = STENCIL_INDEX sampling | ES 3.2 §8.16 | FULLY_VALIDATED | es31-stencil-texturing-and-level-queries, es32-astc-and-copy-image |
 | ES31.TEXTURE.LEVEL_QUERY | 3.1 | textures | glGetTexLevelParameteriv/fv | ES 3.2 §8.11.3 | FULLY_VALIDATED | es31-stencil-texturing-and-level-queries |
 | ES31.SAMPLE_MASK | 3.1 | multisample | glSampleMaski + SAMPLE_MASK | ES 3.2 §13.8.3 | FULLY_VALIDATED | es31-multisample-textures |
 | ES31.FBO.NO_ATTACHMENTS | 3.1 | framebuffer | Framebuffers without attachments (glFramebufferParameteri defaults) | ES 3.2 §9.2.1 | FULLY_VALIDATED | es31-framebuffer-no-attachments, es32-layered-rendering |
@@ -213,8 +213,8 @@
 | ES32.TEXTURE.CUBE_ARRAY | 3.2 | textures | Cube map array textures | ES 3.2 §8.5 | FULLY_VALIDATED | es32-cube-map-array |
 | ES32.TEXTURE.MS_ARRAY | 3.2 | textures | glTexStorage3DMultisample 2D multisample array | ES 3.2 §8.8 | FULLY_VALIDATED | es32-multisample-array-and-border-color |
 | ES32.TEXTURE.BORDER_COLOR | 3.2 | textures | CLAMP_TO_BORDER + TEXTURE_BORDER_COLOR + glTexParameterI*/SamplerParameterI* | ES 3.2 §8.10 §8.14.2 | FULLY_VALIDATED | es32-multisample-array-and-border-color |
-| ES32.TEXTURE.ASTC | 3.2 | textures | ASTC LDR compressed textures (required in ES 3.2) | ES 3.2 §8.7 | NOT_STARTED |  |
-| ES32.TEXTURE.COPY_IMAGE | 3.2 | textures | glCopyImageSubData between textures/renderbuffers | ES 3.2 §16.2.2 | NOT_STARTED |  |
+| ES32.TEXTURE.ASTC | 3.2 | textures | ASTC LDR compressed textures (required in ES 3.2) | ES 3.2 §8.7 | FULLY_VALIDATED | es32-astc-and-copy-image |
+| ES32.TEXTURE.COPY_IMAGE | 3.2 | textures | glCopyImageSubData between textures/renderbuffers | ES 3.2 §16.2.2 | FULLY_VALIDATED | es32-astc-and-copy-image |
 | ES32.FBO.FLOAT_TARGETS | 3.2 | framebuffer | Floating-point color-renderable formats (RGBA16F/32F/R11F_G11F_B10F) | ES 3.2 §9.4.3 | FULLY_VALIDATED | es32-float-targets-and-indexed-blend |
 | ES32.BLEND.INDEXED | 3.2 | fragment-ops | glEnablei/Disablei/IsEnabledi BLEND + glBlendFunci/Equationi/ColorMaski | ES 3.2 §15.1.5 | FULLY_VALIDATED | es32-float-targets-and-indexed-blend |
 | ES32.BLEND.ADVANCED | 3.2 | fragment-ops | Advanced blend equations (MULTIPLY...HSL_LUMINOSITY) + glBlendBarrier | ES 3.2 §15.1.5 | FULLY_VALIDATED | es32-advanced-blend-and-sample-shading |

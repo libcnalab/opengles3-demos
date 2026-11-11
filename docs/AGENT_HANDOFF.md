@@ -61,13 +61,11 @@ float-targets-and-indexed-blend, texture-buffer, cube-map-array, geometry-shader
 tessellation-domains and tessellation-terrain.
 meta-gl G8 (transpose = GL_TRUE) is fixed on its branch (`3bb7411`).
 Running Claude subagents (worktrees under .claude/worktrees/):
-- es32 astc-and-copy-image (57)
 - es30 skybox-and-fog (3D showcase)
 - es30 flat-centroid (17)
 Still unassigned: 62 (glsl320 built-ins), 35 (glsl310 built-ins),
 ES 3.0 items 10, 14, 16-20, 3D fog and skybox.
-Entry points still without evidence (2026-11-11 17:00): CopyImageSubData (57),
-SampleCoverage (17).
+Entry points still without evidence (2026-11-11 17:00): SampleCoverage (17).
 
 ## Parallel work / Codex
 

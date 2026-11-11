@@ -107,6 +107,12 @@ partial-matrix case, but the harness still needs a working mock context to prove
 (e.g. compressed) internalformat, and that error cannot be tested without a raw cast. Same class as O1. Found by
 es30-etc2-eac (the case is left untested). Possible additive fix: a `CompressedInternalFormat` overload.
 
+### O10 — `glCopyImageSubData` cannot express a renderbuffer with a non-zero level
+The typed `RenderbufferId` overloads take no level, and the `TextureTarget` compatibility overload has no
+`RENDERBUFFER` value. So the ES 3.2 §8.3 rule "for renderbuffers, this value must be zero" (INVALID_VALUE)
+cannot be tested without a raw cast. The typed design is sound; this affects only negative tests. Found by
+es32-astc-and-copy-image.
+
 ### Note — arbitrary sample masks
 `SampleMaskValue` (for `glSampleMaski`) has only `None` and `All`. Since it is a registered 32-bit bitfield
 (`all_bits = 0xFFFFFFFF`), a chosen mask is formed with `static_cast<SampleMaskValue>(bits)`. Every value is

@@ -1,0 +1,89 @@
+{
+  "name": "es32-advanced-blend-and-sample-shading",
+  "title": "Advanced blend equations and sample shading",
+  "min_es": "3.2",
+  "glsl": [
+    "320 es"
+  ],
+  "category": "es32",
+  "order": 4600,
+  "summary": "All 15 advanced blend equations (MULTIPLY, SCREEN, OVERLAY, DARKEN, LIGHTEN, COLORDODGE, COLORBURN, HARDLIGHT, SOFTLIGHT, DIFFERENCE, EXCLUSION, HSL_HUE, HSL_SATURATION, HSL_COLOR, HSL_LUMINOSITY) blend two overlapping premultiplied discs (alpha 0.45 .. 0.9) over a premultiplied gradient backdrop (alpha 0.45 .. 0.95), separated by glBlendBarrier, each shader declaring layout(blend_support_<equation>) or blend_support_all_equations; every texel is compared with a CPU implementation of ES 3.2 section 15.1.5.3 (Tables 15.3/15.4 and the HSL pseudocode), and the draw-time errors (no or the wrong qualifier, two draw buffers) and the INVALID_ENUM of BlendEquationSeparate are provoked. Sample shading is read back per sample with texelFetch(sampler2DMS): gl_SampleID, gl_NumSamples, gl_SampleMaskIn, gl_SamplePosition against glGetMultisamplefv, the sample qualifier, MinSampleShading 1.0 and 0.5, interpolateAtSample/Offset/Centroid; the picture shows the blend grid over a checkerboard and a ring pattern shaded per pixel and per sample.",
+  "spec": [
+    "ES 3.2 §15.1.5 Blending, §15.1.5.1 Blend Equation (BlendEquation accepts Tables 15.1, 15.3 and 15.4; INVALID_ENUM from BlendEquationSeparate for anything outside Table 15.1; advanced equations computed with at least the smaller of the destination precision and 16-bit float), §15.1.5.3 Advanced Blend Equations (premultiplied inputs, p0/p1/p2, Table 15.3, Table 15.4 and the HSL pseudocode, single color buffer and fragment color zero, INVALID_OPERATION for multiple draw buffers and for a fragment shader without the matching blend_support qualifier while blending is enabled, BlendBarrier and blending passes), §15.1.5.5 Blending State",
+    "ES 3.2 §2.3.1 Errors (a command that generates an error is ignored), Appendix A.1 Repeatability and A.3 Invariance Rules (the backdrop is re-drawn to read the destination)",
+    "ES 3.2 §13.4 Multisampling (GetMultisamplefv SAMPLE_POSITION in [0, 1], INVALID_VALUE for index >= SAMPLES, inputs qualified sample in are evaluated at the sample location), §13.4.1 Sample Shading (SAMPLE_SHADING, MinSampleShading clamped to [0, 1], at least max(ceil(mss x samples), 1) unique input sets, fraction 1.0 evaluates each sample at its location)",
+    "ES 3.2 §14.1 Fragment Shader Variables (centroid/sample interpolation, interpolateAtCentroid/Sample/Offset, MIN/MAX_FRAGMENT_INTERPOLATION_OFFSET and FRAGMENT_INTERPOLATION_OFFSET_BITS), Table 21.41 (MAX_SAMPLES >= 4, interpolation offset limits -0.5 / +0.5 - 1 ULP / 4 bits), Table 21.8 (SAMPLE_SHADING FALSE, MIN_SAMPLE_SHADING_VALUE 0)",
+    "ES 3.2 §8.8 Multisample Textures (TexStorage2DMultisample), §9.2.3.1 Multisample Queries (SAMPLES), §11.1.3.3 Multisample Texel Fetches (the sample number of texelFetch is the GetMultisamplefv index), §15.2.1 Selecting Buffers for Writing (DrawBuffers), §16.1.2 ReadPixels",
+    "GLSL ES 3.20 §4.4.2 Output Layout Qualifiers (Fragment Outputs: blend_support_* and blend_support_all_equations), §4.3.4 Input Variables (auxiliary qualifiers may differ between stages, the fragment shader's win), §4.5 Interpolation Qualifiers (centroid, sample), §4.7.1 Range and Precision (mediump relative precision 2^-10 for gl_SamplePosition)",
+    "GLSL ES 3.20 §7.1.5 Fragment Shader Special Variables (gl_SampleID, gl_SamplePosition, gl_SampleMaskIn, gl_NumSamples; static use of gl_SampleID or gl_SamplePosition makes the shader run per sample), §8.14.2 Interpolation Functions, §8.9.2 Texel Lookup Functions (texelFetch on sampler2DMS), §8.9.1 (textureSize)"
+  ],
+  "api": {
+    "glBlendEquation": "all 15 advanced equations: each grid cell (backdrop, disc A, glBlendBarrier, disc B) equals the CPU model of section 15.1.5.3 in every texel; BLEND_EQUATION_RGB and BLEND_EQUATION_ALPHA both report the equation; with every equation a draw raises INVALID_OPERATION without blend_support or with another equation's qualifier, and none with its own qualifier or blend_support_all_equations; FUNC_ADD control",
+    "glBlendEquationSeparate": "(MULTIPLY, FUNC_ADD) and (FUNC_ADD, HSL_COLOR) raise INVALID_ENUM and leave BLEND_EQUATION_RGB/ALPHA at FUNC_REVERSE_SUBTRACT",
+    "glBlendBarrier": "between the backdrop and disc A and between the overlapping discs A and B: the 174 texels covered by both discs in each cell equal the sequential composition; no error",
+    "glBlendFunc": "(ZERO, ONE_MINUS_SRC_COLOR) is current while the advanced equations blend and has no effect on the compared results (the equations use no factors)",
+    "glEnable": "BLEND (the draw-time errors require it; the control cell with BLEND disabled replaces), SAMPLE_SHADING (per-sample inputs read back), IsEnabled TRUE",
+    "glDisable": "BLEND (an advanced equation with a shader without blend_support draws without error and replaces), SAMPLE_SHADING (IsEnabled FALSE), DITHER",
+    "glIsEnabled": "SAMPLE_SHADING initially FALSE, TRUE after glEnable, FALSE after glDisable",
+    "glMinSampleShading": "1.0: an ordinary input equals pixel + glGetMultisamplefv position for all 1024 samples; 0.5: at least ceil(0.5 x 4) distinct inputs in every pixel; 0.25 read back, 1.5 and -0.5 clamped to 1.0 and 0.0",
+    "glGetFloatv": "MIN_SAMPLE_SHADING_VALUE (initial 0, 0.25, clamped values), MIN_FRAGMENT_INTERPOLATION_OFFSET <= -0.5, MAX_FRAGMENT_INTERPOLATION_OFFSET >= 0.5 - 2^-bits; the offsets used for interpolateAtOffset reach both limits",
+    "glGetIntegerv": "BLEND_EQUATION_RGB / BLEND_EQUATION_ALPHA for 15 equations and after the rejected BlendEquationSeparate; MAX_SAMPLES >= 4; SAMPLES of the multisample framebuffers (= gl_NumSamples read back); FRAGMENT_INTERPOLATION_OFFSET_BITS >= 4",
+    "glGetMultisamplefv": "SAMPLE_POSITION of every sample in [0, 1] and equal to gl_SamplePosition, to sample-qualified inputs, to interpolateAtSample and to MinSampleShading(1.0) inputs; INVALID_VALUE for index = SAMPLES",
+    "glGetInternalformativ": "TEXTURE_2D_MULTISAMPLE / RGBA8 NUM_SAMPLE_COUNTS and SAMPLES choose the sample count (4 where offered); the allocated textures report that count",
+    "glTexStorage2DMultisample": "16 x 16 and two 32 x 32 RGBA8 textures with fixed sample locations: complete framebuffers, every sample read back with texelFetch",
+    "glTexStorage2D": "RGBA8 targets (grid, two-attachment scratch, sample strip) read back with glReadPixels",
+    "glFramebufferTexture2D": "TEXTURE_2D color attachments 0 and 1, TEXTURE_2D_MULTISAMPLE attachments; completeness checked",
+    "glDrawBuffers": "{COLOR0, COLOR1} and {NONE, COLOR1} make advanced-equation draws fail with INVALID_OPERATION; {COLOR0, NONE} and FUNC_ADD with two buffers draw without error",
+    "glClearBufferfv": "fills color attachment 0 before the rejected draw; the readback shows it unchanged",
+    "glReadPixels": "grid, backdrop, sample strips and the window region of the grid compared with CPU references",
+    "glDrawArrays": "TRIANGLE_STRIP quads and a TRIANGLES triangle for the centroid test; INVALID_OPERATION cases of section 15.1.5.3",
+    "glUniform2fv": "u_corner: the corners of every quad and of the centroid triangle (in pixels), verified through the interpolated positions",
+    "glUniform1i": "u_disc, u_index (interpolateAtSample sample number), sampler units, composite mode",
+    "glUniform2f": "u_offset (interpolateAtOffset), disc centres, cell origins, region rectangles",
+    "glUniform1f": "u_radius, u_scale (position encoding)"
+  },
+  "features": [
+    "ES32.BLEND.ADVANCED",
+    "ES32.SAMPLE.SHADING",
+    "ES32.SAMPLE.INTERPOLATION",
+    "ES31.TEXTURE.MULTISAMPLE",
+    "ES30.FBO.MRT",
+    "ES30.FBO.CLEAR_BUFFER",
+    "ES20.BLEND.EQUATION",
+    "ES20.BLEND.FUNC",
+    "ES20.FBO.RENDER_TO_TEXTURE",
+    "ES20.READPIXELS",
+    "ES20.DRAW.ARRAYS",
+    "ES20.ERRORS.INVALID_ENUM",
+    "ES20.ERRORS.INVALID_VALUE",
+    "ES20.ERRORS.INVALID_OPERATION",
+    "ES20.ERRORS.GETERROR"
+  ],
+  "glsl_features": [
+    "GLSL320.VERSION",
+    "GLSL320.BLEND_EQUATION_LAYOUT",
+    "GLSL320.SAMPLE_VARS",
+    "GLSL320.FN.INTERPOLATE_AT",
+    "GLSL310.FN.TEXTURE_MS",
+    "GLSL300.PREPROCESSOR",
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.UNIFORM",
+    "GLSL300.FRAG.OUTPUT",
+    "GLSL300.PRECISION.DEFAULT",
+    "GLSL300.CONTROL_FLOW",
+    "GLSL300.BUILTIN_VARS.FS"
+  ],
+  "validation": [
+    "readback",
+    "pixel-reference",
+    "state-query",
+    "gl-error",
+    "negative",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-opus-5.5",
+    "notes": "256x256 captures of radeonsi, llvmpipe and zink viewed (they look identical), plus 800x800, 640x480 and 333x777 on all three. Top 5/8: a 4x4 grid of 64x40 cells separated by dark lines. Each cell has a rainbow backdrop (red to violet from left to right, brighter upwards) that fades into the grey checkerboard towards the right (alpha 0.95 to 0.45), a left disc and an overlapping right disc. The cells differ as expected: MULTIPLY and DARKEN give a dark lens, SCREEN and LIGHTEN brighten, COLORDODGE has a pale glowing lens, COLORBURN a nearly black lens, DIFFERENCE turns the lens magenta-red, the HSL cells keep the backdrop brightness but change hue or saturation, and the control cell (bottom right) shows the raw discs, a violet-blue disc A under a yellow disc B. Bottom 3/8: three ring panels. Left: blocky aliased rings with moire (per-pixel shading). Middle: the same rings with grey-olive in-between texels at the fine outer rings (per-sample shading, averaged). Right: each texel split into 2x2 sample sub-cells, showing the sub-pixel ring structure. At 333x777 and 640x480 everything is stretched to fill the surface, with no gaps and no unexpected black or magenta pixels."
+  }
+}

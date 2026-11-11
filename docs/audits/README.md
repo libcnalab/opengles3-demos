@@ -13,3 +13,16 @@ every finding is checked against the spec text, fixed or rejected with a reason,
 | [es31](2026-11-11-codex-es31.md) | 1 WEAK (framebuffer-no-attachments derivative tolerance) | accepted; observation or justified bound |
 | [es32](2026-11-11-codex-es32.md) | 2 BUG (cube-map-array at 333x777; float-targets fixed 256x256 viewport), 1 WEAK (geometry-shaders §11.3.4.4 is conditional) | accepted; size fixes; the conditional link rule becomes an observation and its KNOWN_LIMITATIONS row goes |
 | [tests](2026-11-11-codex-tests.md) | 3 BUG (undefined -17/5; ES 2.0 transpose text; UNDEFINED_BEHAVIOR claimed), 3 WEAK (unverified API claims) | accepted; fixed in 75a64c8 |
+
+## 2026-11-11: Codex educational review (EDUCATION_REVIEW_BRIEF.md), 4 groups
+
+Most demos were rated "good". Actionable items:
+- **Accepted:** 1 WRONG (srgb: "8-bit images are stored in sRGB") and 9 CONFUSING/POLISH: buffer-mapping zero-copy
+  wording; deferred-shading cost claim and read-first pointer; multisample-default-framebuffer, uniform-buffer-objects
+  and vertex-attributes read-first routes; post-processing pass list; shadow-mapping wording and comparison-vs-filter
+  note; sync-objects "without synchronization"; glsl-texture-functions overview pointer.
+- **Rejected:** texture-3d-and-arrays "layer rounding" — the README matches ES 3.0 §3.8.10.2,
+  `l = clamp(⌊r + 0.5⌋, 0, dt − 1)`.
+
+Reports: [es20](2026-11-11-codex-review-es20.md), [es30a](2026-11-11-codex-review-es30a.md),
+[es30b](2026-11-11-codex-review-es30b.md), [es31/es32](2026-11-11-codex-review-es31-32.md).

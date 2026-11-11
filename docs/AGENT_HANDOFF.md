@@ -92,11 +92,18 @@ independent validation, then education.
 - Codex audit findings: fix them autonomously after verifying each against the spec, run the full matrix, commit
   locally, and summarise in the morning.
 
+**Since 22:00**
+- Codex phase 6 audit: 19 findings, all accepted and fixed (docs/audits/README.md).
+- The deviation matcher no longer lets ANGLE's backend name excuse ANGLE (this unmasked one lavapipe case).
+- Codex educational review: 10 accepted, 1 rejected; README fixes delegated.
+- tools/sweep_sizes.sh: the window-size sweep on llvmpipe found 25 executables failing at 333x777 / 1000x200 /
+  200x1000. List: docs/agent-briefs/size-sweep-failures.txt.
+- Full matrix after the audit fixes: 563/563.
+
 **Running**
-- (done) A Claude subagent on meta-gl O8: a mock loader so meta-gl's own contract death tests prove their contracts.
-  Branch opengles3-demos/enum-gaps, not pushed yet; the integrator reviews and pushes.
-- Codex phase 6 audits: background job from 22:05, three waves of two (es20+es31, es32+es30a, es30b+tests), -j 1.
-  Reports go to ../opengles3-demos-worktrees/audit-*.report.md. Triage each finding against the spec.
+- Claude: README fixes from the educational review (docs only).
+- Claude, three size-sweep fix agents: ES 2.0 group (8), ES 3.0 group (7), ES 3.1/3.2 group (6), each -j 2.
+After they finish: merge, then run the full matrix, `tools/sweep_sizes.sh` and the coverage target, and commit.
 
 ## Parallel work / Codex
 

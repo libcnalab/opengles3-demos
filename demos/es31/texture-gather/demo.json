@@ -1,0 +1,73 @@
+{
+  "name": "es31-texture-gather",
+  "title": "textureGather and textureGatherOffset",
+  "min_es": "3.1",
+  "glsl": [
+    "310 es",
+    "320 es"
+  ],
+  "category": "es31",
+  "order": 510,
+  "summary": "textureGather on 2D, 2D array and cube textures: every component selection, the texel order of figure 8.7, wrap modes at the edges, textureGatherOffset up to the queried MIN/MAX_PROGRAM_TEXTURE_GATHER_OFFSET, shadow samplers (comparison results), integer samplers, swizzle, incomplete textures and the compile-time constant rules; every result compared exactly with a CPU model on textures whose texels are all distinct.",
+  "spec": [
+    "ES 3.2 §8.14.2 Coordinate Wrapping and Texel Selection (the gather rules, figure 8.7, table 8.21 wrap(), textureGatherOffset limits, incomplete textures)",
+    "ES 3.2 §8.13 Cube Map Texture Selection (table 8.20), §8.13.1 Seamless Cube Map Filtering",
+    "ES 3.2 §8.17 Texture Completeness, §8.20.1 Depth Texture Comparison Mode (table 8.22), §8.10 Texture Parameters (swizzle, wrap, filters)",
+    "ES 3.2 chapter 21 Implementation Dependent Values (MIN/MAX_PROGRAM_TEXTURE_GATHER_OFFSET, MIN/MAX_PROGRAM_TEXEL_OFFSET)",
+    "ES 3.2 §8.5 Texture Image Specification, §8.18 Immutable-Format Texture Images",
+    "GLSL ES 3.10 §8.9.3 Texture Gather Functions, §8.9.2 Texel Lookup Functions (textureOffset: constant offsets), §4.7.4 Default Precision Qualifiers",
+    "GLSL ES 3.20 §8.9.4 Texture Gather Functions (textureGatherOffsets, non-constant offsets), used only on an ES 3.2 context"
+  ],
+  "api": {
+    "glGenTextures": "nine source textures and three result targets",
+    "glBindTexture": "2D, 2D array, cube map textures bound to unit 0 for every gather",
+    "glActiveTexture": "unit 0 selected for every gather",
+    "glTexStorage2D": "immutable RGBA8, RGBA8I, RGBA32UI, DEPTH_COMPONENT16 and cube map images: gathered back texel by texel",
+    "glTexStorage3D": "RGBA8 and DEPTH_COMPONENT16 2D array images with three layers",
+    "glTexSubImage2D": "8 x 8 RGBA8 / RGBA8I (BYTE) / RGBA32UI (UNSIGNED_INT) / depth (UNSIGNED_SHORT) uploads and the six cube faces: every gathered value equals the uploaded texel",
+    "glTexSubImage3D": "array layers uploaded one at a time: gathers of layers 0, 1, 2 equal the uploaded layers",
+    "glTexImage2D": "a mutable texture with only level 0 and the default NEAREST_MIPMAP_LINEAR filter is incomplete: it gathers (0, 0, 0, 1)",
+    "glTexParameteri": "TEXTURE_WRAP_S/T (CLAMP_TO_EDGE, REPEAT, MIRRORED_REPEAT), MIN/MAG_FILTER (ignored by gather), TEXTURE_SWIZZLE_R/G/B/A (applied before the component is selected, incl. ZERO and ONE), TEXTURE_COMPARE_MODE/FUNC (shadow results change with the function): each changes the gathered image exactly as the CPU model predicts",
+    "glGetIntegerv": "MIN/MAX_PROGRAM_TEXTURE_GATHER_OFFSET and MIN/MAX_PROGRAM_TEXEL_OFFSET: the relations of section 8.14.2; the queried extremes are then used as constant offsets",
+    "glCompileShader": "a non-constant comp argument and a non-constant textureGatherOffset offset are rejected by the GLSL ES 3.10 compiler; the constant forms compile",
+    "glUseProgram": "one program per shader variant (component, offset, sampler type)",
+    "glGetUniformLocation": "u_tex, u_size, u_layer, u_ref located; their effects are visible in the gathered images",
+    "glUniform1i": "sampler unit and the array layer / cube face; layer coordinates 7 and -3 are clamped to the last and the first layer",
+    "glUniform1f": "u_size (texel scale) and the shadow reference depth",
+    "glDrawArrays": "one full-viewport triangle per gather, each fragment one footprint query",
+    "glGenFramebuffers": "RGBA8, RGBA32I and RGBA32UI result framebuffers",
+    "glBindFramebuffer": "results rendered into single-sample targets, window as the draw framebuffer of the blits",
+    "glFramebufferTexture2D": "the result textures attached as color 0",
+    "glCheckFramebufferStatus": "result framebuffers complete",
+    "glClearBufferfv": "sentinel (0.3, 0.6, 0.9, 0.5) before every float gather: a draw that wrote nothing would fail the exact comparison",
+    "glClearBufferiv": "sentinel -7777 / 7777 before every signed integer gather",
+    "glClearBufferuiv": "sentinel 0xDEADBEEF before every unsigned integer gather",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE for float results, RGBA_INTEGER/INT and RGBA_INTEGER/UNSIGNED_INT for integer results: compared exactly with the CPU model",
+    "glBlitFramebuffer": "sixteen result images stretched NEAREST into the window cells; every block read back and compared with the model",
+    "glViewport": "the gather region (9 x 9 footprints, or 7 x 7 for cube maps) selected per draw",
+    "glClear": "window background and the alpha-only clear (color mask) that makes the window opaque",
+    "glColorMask": "alpha-only mask: the clear writes alpha 1 and leaves the blitted colors untouched (verified by the window check)",
+    "glClearColor": "window background",
+    "glDisable": "DITHER disabled so that 8-bit results are exact",
+    "glDeleteTextures": "cleanup, final glGetError == NO_ERROR",
+    "glDeleteFramebuffers": "cleanup",
+    "glDeleteProgram": "cleanup"
+  },
+  "features": [
+    "ES31.TEXTURE.GATHER"
+  ],
+  "glsl_features": [
+    "GLSL310.FN.TEXTURE_GATHER"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "state-query",
+    "negative"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5 (subagent)",
+    "notes": "256x256 radeonsi es-max capture viewed (llvmpipe and zink captures are byte-identical to it). A 4x4 grid of 64x64 cells separated by a thin dark margin, every cell filled by a 9x9 block image (7x7 for the cube cell), nothing empty and no stray pixels. Rows 1-3 (CLAMP_TO_EDGE, REPEAT, MIRRORED_REPEAT) x comp 0..3 are smooth ramp gradients in different directions and tints (beige/olive, blue-violet, olive with a magenta edge strip, white/yellow with blue and green edges) that differ between comps and show distinct seam strips along the edges where the footprints wrap; the CLAMP cells differ from the REPEAT and MIRROR cells only in the outermost rows and columns. Last row: the array-layer cell (olive gradient with a blue strip on one edge), the cube-face cell (olive gradient), the shadow gather as a 9x9 mosaic of black, white, red, green, blue, cyan, magenta and yellow blocks (every channel 0 or 1, as expected), and the offset (2,-3) cell as a gradient shifted by whole blocks."
+  }
+}

@@ -1,0 +1,172 @@
+#version 310 es
+// One shader storage block "Probe" with sixteen members that exercise the packing rules, declared with
+// a layout that the application chooses by defining LAYOUT before the first line is compiled
+// (std430 or std140). The same shader runs in two modes:
+//   u_write == 0  VERIFY: every member is compared with the value the application packed into the buffer at the
+//                 offsets of ITS layout calculator; flags[m] = 1 when member m reads back correctly, else 0.
+//   u_write == 1  WRITE : the shader stores the value of every member; the application then reads the whole buffer
+//                 back and compares it byte for byte with an image built from its calculator.
+// The value of logical scalar s of element e of field j of member m is  m*10000 + e*1000 + j*100 + s  (negated for
+// the int member). Every value is unique and exactly representable as a float.
+#ifndef LAYOUT
+#define LAYOUT std430
+#endif
+precision highp float;
+precision highp int;
+
+layout(local_size_x = 32) in;
+
+struct Pair  { float a; float b; };        // std430: alignment 4, size 8      std140: alignment 16, size 16
+struct Combo { float f; vec3 v; };         // both: alignment 16 (the vec3), size 32
+
+layout(LAYOUT, binding = 0) buffer Probe
+{
+    float  f;                              //  1
+    vec3   v3;                             //  2
+    float  after_v3;                       //  3
+    vec2   v2;                             //  4
+    float  farr[3];                        //  5  array of scalars: stride 4 (std430) / 16 (std140)
+    vec2   v2arr[3];                       //  6  array of vec2:    stride 8 (std430) / 16 (std140)
+    vec3   v3arr[2];                       //  7  array of vec3:    stride 16 in both
+    int    i;                              //  8
+    uvec2  uv2;                            //  9
+    mat2   m2;                             // 10  column stride 8 (std430) / 16 (std140)
+    mat3   m3;                             // 11  column stride 16 in both
+    mat3x2 m3x2;                           // 12  three vec2 columns: stride 8 / 16
+    layout(row_major) mat2x3 m2x3r;        // 13  three row vectors of two components: stride 8 / 16
+    Pair   pairs[2];                       // 14  array of structures: stride 8 (std430) / 16 (std140)
+    Combo  combo;                          // 15
+    float  tail;                           // 16
+} p;
+
+layout(std430, binding = 1) buffer Result
+{
+    uint flags[];
+} res;
+
+uniform int u_write;
+
+float V(int m, int e, int j, int s)  { return float(m * 10000 + e * 1000 + j * 100 + s); }
+int   VI(int m, int e, int j, int s) { return -(m * 10000 + e * 1000 + j * 100 + s); }
+uint  VU(int m, int e, int j, int s) { return uint(m * 10000 + e * 1000 + j * 100 + s); }
+
+void main()
+{
+    int  m  = int(gl_GlobalInvocationID.x);
+    bool wr = u_write != 0;
+    bool ok = true;
+    switch (m)
+    {
+    case 1:
+    {
+        float x = V(1, 0, 0, 0);
+        if (wr) p.f = x; else ok = p.f == x;
+        break;
+    }
+    case 2:
+    {
+        vec3 x = vec3(V(2, 0, 0, 0), V(2, 0, 0, 1), V(2, 0, 0, 2));
+        if (wr) p.v3 = x; else ok = p.v3 == x;
+        break;
+    }
+    case 3:
+    {
+        float x = V(3, 0, 0, 0);
+        if (wr) p.after_v3 = x; else ok = p.after_v3 == x;
+        break;
+    }
+    case 4:
+    {
+        vec2 x = vec2(V(4, 0, 0, 0), V(4, 0, 0, 1));
+        if (wr) p.v2 = x; else ok = p.v2 == x;
+        break;
+    }
+    case 5:
+        for (int e = 0; e < 3; ++e)
+        {
+            float x = V(5, e, 0, 0);
+            if (wr) p.farr[e] = x; else ok = ok && p.farr[e] == x;
+        }
+        break;
+    case 6:
+        for (int e = 0; e < 3; ++e)
+        {
+            vec2 x = vec2(V(6, e, 0, 0), V(6, e, 0, 1));
+            if (wr) p.v2arr[e] = x; else ok = ok && p.v2arr[e] == x;
+        }
+        break;
+    case 7:
+        for (int e = 0; e < 2; ++e)
+        {
+            vec3 x = vec3(V(7, e, 0, 0), V(7, e, 0, 1), V(7, e, 0, 2));
+            if (wr) p.v3arr[e] = x; else ok = ok && p.v3arr[e] == x;
+        }
+        break;
+    case 8:
+    {
+        int x = VI(8, 0, 0, 0);
+        if (wr) p.i = x; else ok = p.i == x;
+        break;
+    }
+    case 9:
+    {
+        uvec2 x = uvec2(VU(9, 0, 0, 0), VU(9, 0, 0, 1));
+        if (wr) p.uv2 = x; else ok = p.uv2 == x;
+        break;
+    }
+    case 10:
+    {
+        mat2 x = mat2(V(10, 0, 0, 0), V(10, 0, 0, 1), V(10, 0, 0, 2), V(10, 0, 0, 3));
+        if (wr) p.m2 = x; else ok = p.m2 == x;
+        break;
+    }
+    case 11:
+    {
+        mat3 x = mat3(V(11, 0, 0, 0), V(11, 0, 0, 1), V(11, 0, 0, 2),
+                      V(11, 0, 0, 3), V(11, 0, 0, 4), V(11, 0, 0, 5),
+                      V(11, 0, 0, 6), V(11, 0, 0, 7), V(11, 0, 0, 8));
+        if (wr) p.m3 = x; else ok = p.m3 == x;
+        break;
+    }
+    case 12:
+    {
+        mat3x2 x = mat3x2(V(12, 0, 0, 0), V(12, 0, 0, 1), V(12, 0, 0, 2),
+                          V(12, 0, 0, 3), V(12, 0, 0, 4), V(12, 0, 0, 5));
+        if (wr) p.m3x2 = x; else ok = p.m3x2 == x;
+        break;
+    }
+    case 13:
+    {
+        mat2x3 x = mat2x3(V(13, 0, 0, 0), V(13, 0, 0, 1), V(13, 0, 0, 2),
+                          V(13, 0, 0, 3), V(13, 0, 0, 4), V(13, 0, 0, 5));
+        if (wr) p.m2x3r = x; else ok = p.m2x3r == x;
+        break;
+    }
+    case 14:
+        for (int e = 0; e < 2; ++e)
+        {
+            float a = V(14, e, 0, 0);
+            float b = V(14, e, 1, 0);
+            if (wr) { p.pairs[e].a = a; p.pairs[e].b = b; }
+            else ok = ok && p.pairs[e].a == a && p.pairs[e].b == b;
+        }
+        break;
+    case 15:
+    {
+        float f = V(15, 0, 0, 0);
+        vec3  v = vec3(V(15, 0, 1, 0), V(15, 0, 1, 1), V(15, 0, 1, 2));
+        if (wr) { p.combo.f = f; p.combo.v = v; }
+        else ok = p.combo.f == f && p.combo.v == v;
+        break;
+    }
+    case 16:
+    {
+        float x = V(16, 0, 0, 0);
+        if (wr) p.tail = x; else ok = p.tail == x;
+        break;
+    }
+    default:
+        return;
+    }
+    if (!wr) res.flags[m] = ok ? 1u : 0u;
+}

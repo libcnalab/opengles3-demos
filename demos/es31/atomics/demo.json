@@ -1,0 +1,76 @@
+{
+  "name": "es31-atomics",
+  "title": "Atomic counters and atomic memory functions",
+  "min_es": "3.1",
+  "glsl": [
+    "310 es"
+  ],
+  "category": "es31",
+  "order": 240,
+  "summary": "Atomic counters (layout binding/offset incl. inherited offsets and arrays, increment/decrement/read, wrap-around, glBufferSubData initialisation, glBindBufferRange, ATOMIC_COUNTER_BUFFER program interface queries) and atomicAdd/Min/Max/And/Or/Xor/Exchange/CompSwap on buffer and shared variables under heavy contention (65536 invocations on the same words) with exactly known final values, set-property checks for the order-dependent operations, two stream compactions validated as sets, fragment-stage atomic counters, and displays drawn by shaders that read the atomic results.",
+  "spec": [
+    "ES 3.2 \u00a77.7 Atomic Counter Buffers (\u00a77.7.1 Atomic Counter Buffer Object Storage, \u00a77.7.2 Atomic Counter Buffer Bindings)",
+    "ES 3.2 \u00a77.8 Shader Buffer Variables and Shader Storage Blocks",
+    "ES 3.2 \u00a77.3.1 Program Interfaces (ATOMIC_COUNTER_BUFFER and UNIFORM interfaces, Table 7.2), \u00a77.3.1.1 Naming Active Resources",
+    "ES 3.2 \u00a76.1.1 Binding Buffer Objects to Indexed Targets, \u00a76.6.1 Indexed Buffer Object Limits and Binding Queries (Table 6.5)",
+    "ES 3.2 \u00a77.11.1 Shader Memory Access Ordering, \u00a77.11.2 Shader Memory Access Synchronization, \u00a711.1.3.6 Atomic Counter Access",
+    "GLSL ES 3.10 \u00a74.1.7.3 Atomic Counters, \u00a74.1.8 Structures, \u00a74.4.5 Opaque Uniform Layout Qualifiers, \u00a74.4.6 Atomic Counter Layout Qualifiers",
+    "GLSL ES 3.10 \u00a74.3.8 Shared Variables, \u00a78.10 Atomic-Counter Functions, \u00a78.11 Atomic Memory Functions, \u00a78.14 Shader Invocation Control Functions"
+  ],
+  "api": {
+    "glDispatchCompute": "counters, memory atomics, compaction and scatter shaders: 512 groups of 128 invocations on the same words; all results compared with exact CPU values or set properties",
+    "glBindBufferBase": "ATOMIC_COUNTER_BUFFER binding 0 (counters of the heavy run, compaction pointer, fragment counters) and SSBO bindings 0-2; indexed BINDING/START/SIZE read back; index >= MAX_ATOMIC_COUNTER_BUFFER_BINDINGS -> INVALID_VALUE; buffer 0 unbinds",
+    "glBindBufferRange": "ATOMIC_COUNTER_BUFFER range (offset 16, size 32) in a 64-byte buffer: counters are exact and the canary words around the range are untouched; START 16 / SIZE 32 read back; offset 2, size 0, index >= MAX -> INVALID_VALUE and the binding is unchanged",
+    "glBufferData": "atomic counter buffers, accumulator, input, output and mask buffers (observed through the exact results)",
+    "glBufferSubData": "every counter is initialised at its offset (5000, 1000, 1000000, 0xFFFFFFF0, ...): the final values are exact functions of those initial values; the compaction pointer is reset with it",
+    "glMapBufferRange": "MAP_READ of ATOMIC_COUNTER_BUFFER and SHADER_STORAGE_BUFFER data after the dispatches",
+    "glUnmapBuffer": "returns TRUE for every read mapping",
+    "glGenBuffers": "sixteen buffers",
+    "glBindBuffer": "ATOMIC_COUNTER_BUFFER / SHADER_STORAGE_BUFFER general bindings for uploads, sub-updates and mappings",
+    "glDeleteBuffers": "cleanup, final glGetError == NO_ERROR",
+    "glGetIntegeri_v": "ATOMIC_COUNTER_BUFFER_BINDING of bound and out-of-range indices (INVALID_VALUE); MAX_COMPUTE_WORK_GROUP_SIZE/COUNT[0] against the ES 3.1 minimums",
+    "glGetInteger64i_v": "ATOMIC_COUNTER_BUFFER_START and ATOMIC_COUNTER_BUFFER_SIZE after glBindBufferBase/Range; out-of-range index -> INVALID_VALUE",
+    "glGetIntegerv": "MAX_ATOMIC_COUNTER_BUFFER_BINDINGS/SIZE, MAX_{COMPUTE,FRAGMENT,VERTEX,COMBINED}_ATOMIC_COUNTER(_BUFFERS), MAX_COMPUTE_WORK_GROUP_INVOCATIONS against the spec minimums; the general ATOMIC_COUNTER_BUFFER_BINDING equals the bound buffer",
+    "glGetProgramiv": "ACTIVE_ATOMIC_COUNTER_BUFFERS = 1 for the counters program",
+    "glGetProgramInterfaceiv": "ATOMIC_COUNTER_BUFFER interface: ACTIVE_RESOURCES 1, MAX_NUM_ACTIVE_VARIABLES 7",
+    "glGetProgramResourceIndex": "the seven counter uniforms are found by name (\"c_hist[0]\" for the array)",
+    "glGetProgramResourceiv": "ATOMIC_COUNTER_BUFFER: BUFFER_BINDING 0, BUFFER_DATA_SIZE >= 32, NUM_ACTIVE_VARIABLES 7, ACTIVE_VARIABLES, REFERENCED_BY_COMPUTE/FRAGMENT_SHADER; UNIFORM: ATOMIC_COUNTER_BUFFER_INDEX, OFFSET (incl. the inherited 20), ARRAY_SIZE, ARRAY_STRIDE 4, TYPE, BLOCK_INDEX -1, LOCATION -1",
+    "glGetActiveUniform": "c_odd is reported with type UNSIGNED_INT_ATOMIC_COUNTER",
+    "glGetUniformLocation": "an atomic counter has location -1; the ordinary uniforms (u_n, u_phase, ...) are active",
+    "glUseProgram": "counters, memory, racy, two compaction, scatter, strip, histogram and panel programs",
+    "glUniform1ui": "u_n, u_phase, u_ticket0, u_dec0, u_wrap0, u_count: the results are exact functions of these values",
+    "glUniform1f": "u_scale / u_y0 (histogram bar height) and u_x0 (panel origin): probed in the framebuffer",
+    "glDrawArrays": "fullscreen triangle for the strip, the histogram and the two panels: the fragment shaders read SSBOs written by atomics; 16 cells, 16 bars and 2 x 16384 pixels probed; fragment counters count exactly 16384 fragments",
+    "glViewport": "one viewport per display",
+    "glClear": "COLOR_BUFFER_BIT; areas above the bars keep the clear colour",
+    "glClearColor": "background pixels equal the clear colour",
+    "glDisable": "DITHER, for exact colours",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE readback of strip cells, bars and both panels",
+    "glCompileShader": "layout-rule experiments: a counter at binding MAX_ATOMIC_COUNTER_BUFFER_BINDINGS, an offset without binding and an atomic_uint in a structure are rejected; all shaders of the demo compile",
+    "glLinkProgram": "overlapping counter offsets are rejected; min(MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS, MAX_ATOMIC_COUNTER_BUFFER_BINDINGS) bindings link",
+    "glDeleteProgram": "cleanup"
+  },
+  "features": [
+    "ES31.ATOMIC.COUNTERS",
+    "ES31.ATOMIC.MEMORY",
+    "ES20.BUFFER.SUBDATA",
+    "ES20.ERRORS.INVALID_VALUE"
+  ],
+  "glsl_features": [
+    "GLSL310.ATOMIC_COUNTERS",
+    "GLSL310.FN.ATOMIC_MEMORY"
+  ],
+  "validation": [
+    "readback",
+    "pixel-reference",
+    "state-query",
+    "gl-error",
+    "negative",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5",
+    "notes": "Viewed gpu es-max (build/debug/test-results/es31-atomics_gpu_es-max.png, 256x256) and zink es-max (identical). Top 16-px strip: 12 green cells with dark separators, 4 dark unused cells. Middle: a 16-bar histogram falling off from a tall blue bar (bin 0, 100 px) to a bar about 1 px high, colours fading blue to orange, no gaps in the tallest bars except the 1-px separators. Bottom: two identical 128x128 panels of concentric yellow/dark rings (a lit disc in the centre, rings thinning outwards) - the compacted ring pattern from the atomic-counter append (left) and the SSBO atomicAdd append (right); no stray pixels or seams between the panels."
+  }
+}

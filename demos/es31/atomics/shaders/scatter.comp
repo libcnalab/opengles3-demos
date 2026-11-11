@@ -1,0 +1,24 @@
+#version 310 es
+// Turns a compacted list back into a mask: kept[idx[slot]] = 1 for every slot below the count. The indices in
+// the list are unique, so the plain stores do not race. The mask is what the fragment shader draws.
+precision highp float;
+precision highp int;
+
+layout(local_size_x = 128) in;
+
+layout(std430, binding = 1) readonly buffer Out
+{
+    uint n;
+    uint idx[16384];
+    uint val[16384];
+} src;
+
+layout(std430, binding = 2) buffer Kept { uint kept[]; } dst;
+
+uniform uint u_count;   // the number of elements appended (read back from the counter or from Out.n)
+
+void main()
+{
+    uint slot = gl_GlobalInvocationID.x;
+    if (slot < u_count) dst.kept[src.idx[slot]] = 1u;
+}

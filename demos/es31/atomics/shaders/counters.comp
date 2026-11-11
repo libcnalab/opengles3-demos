@@ -1,0 +1,86 @@
+#version 310 es
+// Atomic counters (GLSL ES 3.10 sections 4.4.6 and 8.10) under heavy contention: every invocation of every work
+// group hits the same few 32-bit words. All counters live in ONE atomic counter buffer, binding point 0:
+//
+//   offset  0  c_ticket   one increment per invocation; the value it returns is the invocation's "ticket"
+//   offset  4  c_inc      16 increments per invocation, the return values are ignored
+//   offset  8  c_dec      one decrement per invocation (atomicCounterDecrement returns the NEW value)
+//   offset 12  c_wrap     starts just below 2^32: the increments wrap around to zero
+//   offset 16  c_updown   +1 then -1 per invocation: the net effect is nothing, whatever the interleaving
+//   offset 20  c_odd      (no offset in the layout: inherited, 16 + 4) incremented by odd invocations only
+//   offset 24  c_hist[2]  an ARRAY of counters (stride 4): [0] once and [1] twice per invocation
+//
+// Eight counters, 32 bytes: exactly the minimums MAX_COMPUTE_ATOMIC_COUNTERS and MAX_ATOMIC_COUNTER_BUFFER_SIZE.
+//
+// Phase 0 (u_phase == 0) updates the counters and records every returned value in an SSBO as a histogram:
+// seen[k] counts how many invocations received the k-th possible return value. If the operations are atomic,
+// every value is returned exactly once, so every entry ends up exactly 1 (order does not matter).
+// Phase 1 (u_phase == 1) runs after glMemoryBarrier(ATOMIC_COUNTER_BARRIER_BIT) and only READS the counters with
+// atomicCounter(); nothing modifies them any more, so every invocation must read the same final value.
+precision highp float;
+precision highp int;
+
+layout(local_size_x = 128) in;
+
+layout(binding = 0, offset = 0)  uniform atomic_uint c_ticket;
+layout(binding = 0, offset = 4)  uniform atomic_uint c_inc;
+layout(binding = 0, offset = 8)  uniform atomic_uint c_dec;
+layout(binding = 0, offset = 12) uniform atomic_uint c_wrap;
+layout(binding = 0, offset = 16) uniform atomic_uint c_updown;
+layout(binding = 0)              uniform atomic_uint c_odd;
+layout(binding = 0, offset = 24) uniform atomic_uint c_hist[2];
+
+layout(std430, binding = 0) buffer Seen  { uint seen[]; }   sn;   // 3 * u_n entries: tickets, decrements, wrap-around
+layout(std430, binding = 1) buffer Reads { uint reads[]; }  rd;   // phase 1: u_n copies of c_inc, then the eight counters
+
+uniform uint u_n;        // number of invocations
+uniform uint u_phase;    // 0: update, 1: read
+uniform uint u_ticket0;  // initial value of c_ticket
+uniform uint u_dec0;     // initial value of c_dec
+uniform uint u_wrap0;    // initial value of c_wrap
+
+void main()
+{
+    uint i = gl_GlobalInvocationID.x;
+    if (u_phase == 0u)
+    {
+        // The value BEFORE the increment: u_ticket0, u_ticket0 + 1, ... each handed out exactly once.
+        uint t = atomicCounterIncrement(c_ticket) - u_ticket0;
+        if (t < u_n) atomicAdd(sn.seen[t], 1u);
+
+        for (uint k = 0u; k < 16u; ++k) atomicCounterIncrement(c_inc);
+
+        // The value AFTER the decrement: u_dec0 - 1, u_dec0 - 2, ... each returned exactly once.
+        uint d = u_dec0 - 1u - atomicCounterDecrement(c_dec);
+        if (d < u_n) atomicAdd(sn.seen[u_n + d], 1u);
+
+        // Starts at u_wrap0 = 0xFFFFFFF0: the first 16 return values are below 2^32, the rest wrap around zero.
+        uint w = atomicCounterIncrement(c_wrap) - u_wrap0;   // unsigned subtraction wraps too
+        if (w < u_n) atomicAdd(sn.seen[2u * u_n + w], 1u);
+
+        atomicCounterIncrement(c_updown);
+        atomicCounterDecrement(c_updown);
+
+        if ((i & 1u) == 1u) atomicCounterIncrement(c_odd);
+
+        // Atomic counter arrays may only be indexed with dynamically uniform expressions: the loop counters are.
+        for (int k = 0; k < 2; ++k)
+            for (int j = 0; j <= k; ++j)
+                atomicCounterIncrement(c_hist[k]);
+    }
+    else
+    {
+        rd.reads[i] = atomicCounter(c_inc);
+        if (i == 0u)
+        {
+            rd.reads[u_n + 0u] = atomicCounter(c_ticket);
+            rd.reads[u_n + 1u] = atomicCounter(c_inc);
+            rd.reads[u_n + 2u] = atomicCounter(c_dec);
+            rd.reads[u_n + 3u] = atomicCounter(c_wrap);
+            rd.reads[u_n + 4u] = atomicCounter(c_updown);
+            rd.reads[u_n + 5u] = atomicCounter(c_odd);
+            rd.reads[u_n + 6u] = atomicCounter(c_hist[0]);
+            rd.reads[u_n + 7u] = atomicCounter(c_hist[1]);
+        }
+    }
+}

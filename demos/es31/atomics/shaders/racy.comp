@@ -1,0 +1,21 @@
+#version 310 es
+// The mistake atomics exist to prevent: a plain read-modify-write of one word by many invocations. Nothing makes
+// "read, add, write" indivisible, so increments are lost. The application only PRINTS how many were lost - the
+// outcome is not defined by the specification - next to the exact result atomicAdd gives.
+precision highp float;
+precision highp int;
+
+layout(local_size_x = 128) in;
+
+layout(std430, binding = 0) buffer Racy
+{
+    uint racy_word;   // incremented without atomics
+    uint safe_word;   // incremented with atomicAdd
+} r;
+
+void main()
+{
+    uint old = r.racy_word;
+    r.racy_word = old + 1u;
+    atomicAdd(r.safe_word, 1u);
+}

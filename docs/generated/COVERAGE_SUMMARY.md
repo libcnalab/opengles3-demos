@@ -14,12 +14,12 @@ Result directories: build/debug/test-results
 
 ## Semantic features (by introducing ES version)
 
-| ES | total | passed | passed % | NOT_STARTED | FULLY_VALIDATED |
-|---|---|---|---|---|---|
-| 2.0 | 87 | 86 | 99% | 1 | 86 |
-| 3.0 | 78 | 77 | 99% | 1 | 77 |
-| 3.1 | 30 | 30 | 100% | 0 | 30 |
-| 3.2 | 31 | 31 | 100% | 0 | 31 |
+| ES | total | passed | passed % | NOT_STARTED | VISUALLY_VERIFIED | FULLY_VALIDATED |
+|---|---|---|---|---|---|---|
+| 2.0 | 87 | 86 | 99% | 1 | 0 | 86 |
+| 3.0 | 78 | 78 | 100% | 0 | 1 | 77 |
+| 3.1 | 30 | 30 | 100% | 0 | 0 | 30 |
+| 3.2 | 31 | 31 | 100% | 0 | 0 | 31 |
 
 ## GLSL ES features (by language version)
 
@@ -35,3 +35,4 @@ Result directories: build/debug/test-results
 | status | count |
 |---|---|
 | FULLY_VALIDATED | 80 |
+| VISUALLY_VERIFIED | 1 |

@@ -35,6 +35,7 @@
 | es30-glsl-texture-functions | 3.0 | es30 | GLSL ES 3.00 texture lookup and derivative functions | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-framebuffer-blit-msaa | 3.0 | es30 | Framebuffer blits and multisample resolve | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-flat-centroid | 3.0 | es30 | Flat shading, centroid and sample coverage | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| es30-multisample-default-framebuffer | 3.0 | es30 | Multisampled default framebuffer | VISUALLY_VERIFIED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=BLOCKED_ENVIRONMENT llvmpipe:es-min=BLOCKED_ENVIRONMENT zink:es-max=BLOCKED_ENVIRONMENT zink:es-min=BLOCKED_ENVIRONMENT |
 | es30-framebuffer-invalidate | 3.0 | es30 | Framebuffer invalidation and attachment queries | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-buffer-mapping | 3.0 | es30 | Buffer mapping and copying | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-uniform-buffer-objects | 3.0 | es30 | Uniform buffer objects | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |

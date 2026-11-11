@@ -76,6 +76,16 @@ is listed in `docs/KNOWN_LIMITATIONS.md`. Checks are never loosened to make a dr
   variance (e.g. exact rasterization of edge pixels, LOD selection details).
 - Undefined results (feedback loops, out-of-bounds without robustness) are documented, not tested.
 
+## Suite-wide assumptions beyond the normative text
+- **Multisample resolve is a convex combination of the samples.** ES 3.0 §4.3.3 says only that the samples are
+  "converted to a single sample" in an implementation-dependent manner. Three demos rely on the resolve being a
+  weighted average of the samples: es30-framebuffer-blit-msaa, es30-flat-centroid (resolved bands) and
+  es30-multisample-default-framebuffer (bounds, seam sums, coverage area). The checks that depend on it are:
+  - resolved values lie between the sample colours;
+  - a pixel whose samples are all equal resolves to that value.
+  Both READMEs state the assumption. A conformant implementation that resolves differently would fail these
+  checks without violating the spec.
+
 ## Coverage status definitions
 
 See `tools/coverage/generate_coverage.py` (single source of truth):

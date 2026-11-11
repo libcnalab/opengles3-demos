@@ -1,0 +1,71 @@
+{
+  "name": "es32-tessellation-domains",
+  "title": "Tessellation domains, spacings and winding",
+  "min_es": "3.2",
+  "glsl": [
+    "320 es"
+  ],
+  "category": "es32",
+  "order": 4100,
+  "summary": "The fixed-function tessellation primitive generator: triangle, quad and isoline domains with equal / fractional odd / fractional even spacing, cw/ccw and point_mode, driven by a TCS that writes gl_TessLevelOuter/Inner, per-patch outputs and uses gl_InvocationID and barrier(). The TES output is captured with transform feedback and compared with a CPU implementation of ES 3.2 section 11.2.2 (exact for equal_spacing, structure and counts for fractional spacings), plus the program queries, patch-size rules, level clamping and discarding, and the defined errors. A 3x3 gallery of bumped, wireframed patches shows the result.",
+  "spec": [
+    "ES 3.2 \u00a710.1.12 Separate Patches (PatchParameteri PATCH_VERTICES, patch size initially 3, trailing vertices ignored, INVALID_VALUE range)",
+    "ES 3.2 \u00a711.2 Tessellation (errors: PATCHES with and without an active tessellation program), \u00a711.2.1 Tessellation Control Shaders (output patch size, per-patch outputs, gl_InvocationID, barrier ordering), \u00a711.2.2 Tessellation Primitive Generation with Figures 11.1-11.4 (discarding, clamping and rounding of levels, equal / fractional spacing, cw / ccw, point_mode) and \u00a711.2.2.1 / \u00a711.2.2.2 / \u00a711.2.2.3 (triangle, quad, isoline subdivision), \u00a711.2.3 Tessellation Evaluation Shaders (gl_TessCoord, gl_TessLevel*, gl_PatchVerticesIn, gl_PrimitiveID)",
+    "ES 3.2 \u00a77.12 Shader, Program, and Program Pipeline Queries (TESS_CONTROL_OUTPUT_VERTICES, TESS_GEN_MODE / SPACING / VERTEX_ORDER / POINT_MODE and their INVALID_OPERATION errors)",
+    "ES 3.2 \u00a712.1 The Last Vertex Processing Stage, \u00a712.2.2 Transform Feedback Primitive Capture and Table 12.1 (the tessellation primitive type decides the legal BeginTransformFeedback mode), \u00a712.3 Primitive Queries (PRIMITIVES_GENERATED, TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN)",
+    "ES 3.2 \u00a713.1 Discarding Primitives Before Rasterization (RASTERIZER_DISCARD for the captures), \u00a713.5 Points (point size is 1.0 unless the last vertex processing stage is a vertex shader), \u00a713.7.1 Basic Polygon Rasterization (FrontFace / CullFace with the generated winding), Tables 21.45 / 21.46 (MAX_TESS_GEN_LEVEL >= 64, MAX_PATCH_VERTICES >= 32)",
+    "GLSL ES 3.20 \u00a74.4.1 Input Layout Qualifiers (Tessellation Evaluation Inputs: primitive mode, vertex spacing, ordering, point_mode and their defaults), \u00a74.4.2 Output Layout Qualifiers (Tessellation Control Outputs: vertices = N), \u00a74.3.4 / \u00a74.3.6 (patch in / patch out), \u00a77.1.2 and \u00a77.1.3 Tessellation Control / Evaluation Shader Special Variables (gl_TessCoord obeys x == 1.0 - (1.0 - x)), \u00a78.15 Shader Invocation Control Functions (barrier)"
+  ],
+  "api": {
+    "glPatchParameteri": "PATCH_VERTICES 3, 4, 5 and MAX_PATCH_VERTICES give TCS gl_PatchVerticesIn (captured per vertex) and the number of patches of a PATCHES draw, trailing vertices that do not fill a patch are ignored; 0, -1 and MAX_PATCH_VERTICES + 1 -> INVALID_VALUE and the patch size stays unchanged",
+    "glDrawArrays": "mode PATCHES: transform-feedback counts and gl_TessCoord sets equal the CPU model, the gallery pixels match; TRIANGLES / POINTS with a tessellation program and PATCHES without one -> INVALID_OPERATION; PATCHES while transform feedback has a mismatching primitive mode -> INVALID_OPERATION",
+    "glCreateProgram": "tessellation programs (VS + TCS + TES [+ GS] + FS) are created and linked for dozens of layout variants, all of which run",
+    "glAttachShader": "TessControl, TessEvaluation and Geometry shaders attach to the same program as vertex and fragment shaders; the programs run",
+    "glLinkProgram": "links with the TCS output patch size from 3 up to MAX_PATCH_VERTICES; layout(vertices = MAX_PATCH_VERTICES + 1), vertices = 0 and a TES without a primitive mode do not link",
+    "glGetProgramiv": "TESS_CONTROL_OUTPUT_VERTICES, TESS_GEN_MODE, TESS_GEN_SPACING, TESS_GEN_VERTEX_ORDER, TESS_GEN_POINT_MODE compared with the layout of 19 programs (defaults equal_spacing / ccw included); the same queries on a program without tessellation shaders -> INVALID_OPERATION",
+    "glTransformFeedbackVaryings": "captures the TES outputs (gl_TessCoord, levels, patch outputs, gl_Position) that all CPU comparisons read",
+    "glBeginTransformFeedback": "TRIANGLES for triangles/quads, LINES for isolines, POINTS for point_mode work; the wrong mode makes the draw raise INVALID_OPERATION (Table 12.1)",
+    "glEndTransformFeedback": "ends every capture; the records are read back",
+    "glBindBufferBase": "TRANSFORM_FEEDBACK_BUFFER binding of the capture buffer",
+    "glBeginQuery": "PRIMITIVES_GENERATED and TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN run together and equal the CPU triangle / line / point counts",
+    "glEndQuery": "ends both queries of every capture",
+    "glGetQueryObjectuiv": "the two primitive counts compared with the CPU model (0 for discarded patches)",
+    "glMapBufferRange": "reads the captured TES output for the CPU comparison",
+    "glUnmapBuffer": "after every read",
+    "glGetIntegerv": "MAX_TESS_GEN_LEVEL (>= 64) and MAX_PATCH_VERTICES (>= 32) from which the clamping rules and the largest patch are derived and verified",
+    "glUniform4f": "gl_TessLevelOuter of the TCS: changing it changes the captured vertex and triangle counts as the CPU predicts",
+    "glUniform2f": "gl_TessLevelInner of the TCS, same verification",
+    "glUniform1f": "per-gl_PrimitiveID level bias (3 patches in one draw get levels 1, 2, 3), dome height and radius of the TES",
+    "glUniformMatrix4fv": "model-view-projection: captured gl_Position equals the CPU projection of the CPU-evaluated TES position; gallery dots land on CPU-projected pixels",
+    "glFrontFace": "with CULL_FACE(BACK), the generated cw / ccw winding is drawn or culled in all four combinations",
+    "glCullFace": "BACK culls exactly the triangles whose generated winding is opposite to FrontFace",
+    "glEnable": "CULL_FACE: with it enabled the generated cw / ccw triangles are drawn or culled as the cull probe predicts",
+    "glBufferData": "the patch vertex buffers (3, 4, 5 and MAX_PATCH_VERTICES vertices per patch) reach the TCS/TES: captured gl_Position and centroids match the CPU",
+    "glVertexAttribPointer": "position and tag attributes of the patch vertices (tag of vertex 0 captured in the TES)",
+    "glReadPixels": "gallery probes: dot pixels at CPU-projected vertices, orientation colours, isolines, culling probe"
+  },
+  "features": [
+    "ES32.TESS.TRIANGLES",
+    "ES32.TESS.QUADS",
+    "ES32.TESS.ISOLINES",
+    "ES32.TESS.SPACING_WINDING",
+    "ES32.TESS.PATCH_PARAM"
+  ],
+  "glsl_features": [
+    "GLSL320.TESS.CONTROL",
+    "GLSL320.TESS.EVAL"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "state-query",
+    "negative",
+    "negative-control",
+    "gl-error"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5",
+    "notes": "256x256 radeonsi capture viewed (llvmpipe and zink identical in structure): a 3x3 gallery of bump-shaped patches on a dark blue background. Row 1 triangles (teal, teal-front ccw / orange cw / teal), row 2 quads (orange cw / teal ccw / orange cw), row 3 isolines (four green lines over a faint dome). Every generated vertex is a white dot; wireframe lines visible; in the fractional columns the dots bunch toward the middle of the edges, as fractional spacing prescribes, while the equal column has evenly spaced dots. A 768x768 render confirmed the structure and the 3D shading."
+  }
+}

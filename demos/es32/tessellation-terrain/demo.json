@@ -1,0 +1,70 @@
+{
+  "name": "es32-tessellation-terrain",
+  "title": "Tessellated terrain with dynamic LOD",
+  "min_es": "3.2",
+  "glsl": [
+    "320 es"
+  ],
+  "category": "es32",
+  "order": 4110,
+  "summary": "A fly-over of a height-map terrain drawn with 256 quad patches: the TCS sets every edge's tessellation level from its distance to the camera (crack-free, fractional_odd_spacing), the TES displaces the vertices with an R16F height map, the fragment shader lights each pixel from the same map; glPrimitiveBoundingBox / gl_BoundingBox must not change the image. Validated with transform feedback (levels, triangle counts, vertex heights, shared edges, LOD vs distance), a CPU ray cast of the captured triangles against a CPU lighting model, the MAX_TESS_* limits and a bit-identical image with three bounding box variants.",
+  "spec": [
+    "ES 3.2 §10.1.12 Separate Patches (PATCHES draws of 4-vertex patches), §11.2.1 Tessellation Control Shaders (texture access in the TCS, per-patch outputs), §11.2.2 / §11.2.2.2 Tessellation Primitive Generation and Quad Tessellation (fractional_odd_spacing rounding, outer levels, inner mesh, Figure 11.3), §11.2.3 Tessellation Evaluation Shaders (texture access in the TES)",
+    "ES 3.2 §13.2 Primitive Bounding Box (PrimitiveBoundingBox, gl_BoundingBox overrides the state, a correct box cannot change the result), Table 21.6 (PRIMITIVE_BOUNDING_BOX state, initial (-1,-1,-1,1,1,1,1,1))",
+    "ES 3.2 §12.2.2 Transform Feedback Primitive Capture and §12.3 Primitive Queries (PRIMITIVES_GENERATED, TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN), §7.12 (TESS_CONTROL_OUTPUT_VERTICES, TESS_GEN_*), Tables 21.45 / 21.46 / 21.50 (MAX_TESS_GEN_LEVEL, MAX_PATCH_VERTICES, MAX_TESS_* limits)",
+    "ES 3.2 §8.5 Texture Image Specification / §8.18 Immutable-Format Texture Images (glTexStorage2D with R16F, HALF_FLOAT upload), §11.1.3.1 texelFetch in vertex-like stages",
+    "GLSL ES 3.20 §4.4.1 (Tessellation Evaluation Inputs: quads, fractional_odd_spacing, ccw), §4.4.2 (Tessellation Control Outputs: vertices = 4), §7.1.2 Tessellation Control Shader Special Variables (gl_TessLevelOuter / Inner, gl_BoundingBox), §7.1.3 Tessellation Evaluation Shader Special Variables (gl_TessCoord), §8.9.2 Texel Lookup Functions (texelFetch)"
+  ],
+  "api": {
+    "glPrimitiveBoundingBox": "state read back with glGetFloatv; a loose correct box set with it, and an absurdly small one that a TCS gl_BoundingBox overrides, both leave the rendered image bit-identical to the default box; the initial value is restored after each use",
+    "glGetFloatv": "PRIMITIVE_BOUNDING_BOX: initial value (-1,-1,-1,1,1,1,1,1) and the value set by glPrimitiveBoundingBox",
+    "glGetIntegerv": "MAX_TESS_GEN_LEVEL, MAX_PATCH_VERTICES, MAX_TESS_PATCH_COMPONENTS and the 19 TCS / TES MAX_TESS_* limits against the minimums of Tables 21.45 / 21.46; the LOD ceiling is checked against MAX_TESS_GEN_LEVEL - 1",
+    "glGetInteger64v": "MAX_UNIFORM_BLOCK_SIZE and MAX_COMBINED_TESS_{CONTROL,EVALUATION}_UNIFORM_COMPONENTS against the Table 21.50 formula",
+    "glGetProgramiv": "TESS_CONTROL_OUTPUT_VERTICES = 4, TESS_GEN_MODE = QUADS, TESS_GEN_SPACING = FRACTIONAL_ODD, TESS_GEN_VERTEX_ORDER = CCW, TESS_GEN_POINT_MODE = FALSE for the three terrain programs",
+    "glPatchParameteri": "PATCH_VERTICES = 4: the 1024 patch vertices form 256 patches (every gl_PrimitiveID 0..255 appears in the capture)",
+    "glDrawArrays": "mode PATCHES draws the terrain (pixels match the CPU lighting model), is captured with transform feedback (counts, levels, positions) and drawn again with a geometry shader for the wireframe",
+    "glTexStorage2D": "immutable R16F height map, 256 x 256 texels; every captured vertex height equals the CPU height from the same texels",
+    "glTexSubImage2D": "uploads the CPU-generated height map as RED / HALF_FLOAT (the exact binary16 bits the CPU model reads)",
+    "glTexParameteri": "NEAREST min / mag filters make the single-level texture complete: texelFetch in the TCS, TES and FS returns the heights (an incomplete texture would give zeros)",
+    "glActiveTexture": "unit 0 holds the height map for all stages",
+    "glBindTexture": "binds the height map; its texels reach the TCS (LOD distance), the TES (displacement) and the FS (normals)",
+    "glUniform1i": "the sampler u_heightmap = 0 reaches three shader stages",
+    "glUniform1f": "u_lod_scale and u_max_level change the tessellation levels exactly as the CPU formula predicts",
+    "glUniform2f": "u_height_range (the gl_BoundingBox computation) and u_viewport (sky gradient)",
+    "glUniform3f": "u_lod_eye: moving the LOD viewpoint changes the triangle count to the CPU-predicted values; u_cam_eye drives the fog verified by the pixel probes",
+    "glUniformMatrix4fv": "view-projection: ray-cast pixels and captured positions agree with the CPU camera",
+    "glTransformFeedbackVaryings": "captures world position, tess coordinates, patch level and gl_TessLevel* of the TES output",
+    "glBeginTransformFeedback": "TRIANGLES capture of the tessellated terrain (up to 18224 triangles)",
+    "glEndTransformFeedback": "ends every capture before the buffer is mapped",
+    "glBindBufferBase": "TRANSFORM_FEEDBACK_BUFFER binding of the capture buffer",
+    "glBeginQuery": "PRIMITIVES_GENERATED and TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN: equal, and equal to the CPU triangle count for four LOD viewpoints (9954, 4608, 512, 18224 triangles)",
+    "glEndQuery": "ends both queries",
+    "glGetQueryObjectuiv": "the primitive counts compared with the section 11.2.2 count computed from the CPU levels",
+    "glMapBufferRange": "reads the captured records for the CPU checks",
+    "glUnmapBuffer": "after every read",
+    "glBufferData": "patch corner vertices and the capture buffer (sized from the CPU triangle count)",
+    "glVertexAttribPointer": "patch corner positions (x, z) reach the TCS: the levels computed from them match the CPU formula",
+    "glReadPixels": "the rendered frame: 1008 terrain and 1157 sky probe pixels against the CPU model; three bounding box variants compared pixel by pixel"
+  },
+  "features": [
+    "ES32.TESS.QUADS",
+    "ES32.TESS.LIMITS",
+    "ES32.PRIMITIVE_BOUNDING_BOX"
+  ],
+  "glsl_features": [
+    "GLSL320.TESS.CONTROL",
+    "GLSL320.TESS.EVAL",
+    "GLSL320.PRIMITIVE_BOUNDING_BOX"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "state-query",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5",
+    "notes": "256x256 radeonsi capture viewed (llvmpipe and zink differ by at most one grey level): a blue sky gradient above an alpine landscape with snow-capped rock, green slopes and flat lakes; the left half shows the translucent wireframe of the tessellated patches (coarser triangles on the far mountains, finer near the camera, no cracks between patches), the right half the lit surface. Also viewed at 640x640 and at five other points of the fly-over."
+  }
+}

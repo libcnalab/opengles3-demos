@@ -149,6 +149,12 @@ one continuous picture: a checkerboard floor with a blue sphere, a gold torus, a
 dark purple sky, lit by a warm and a cool light. At larger sizes (`--width 640 --height 480`) and with keys `1` to `7` the
 individual looks fill the window.
 
+**Minimum size: 128 × 128.** On a smaller surface the demo reports SKIP. The object outlines in the Sobel map are a few
+pixels wide at any size, so their share of the image grows as the surface shrinks. The sanity check "the edge map has
+strong edges on a small part of the image" allows less than a third. That share is 16 % at 256 × 256, 28.1 % at
+128 × 128 and 32.6 % at 100 × 100, and it exceeds a third below that (96 × 96, 98 × 98, and any height up to 94
+failed on llvmpipe). The old 64 × 64 guard admitted those sizes. 128 leaves a margin of five percentage points.
+
 ## Validation (`--validate`, 256 x 256, after 45 frames)
 
 The runtime checks (`glGetError` clean after init, after the frame, after shutdown) apply as usual. The demo records 38
@@ -163,6 +169,13 @@ checks:
   checked in the RGBA8 scene (the exact value) and in the `SRGB8_ALPHA8` scene (the stored bytes against the sRGB encoding
   of the exact value, equation 4.1). A second comparison checks the whole sRGB image against the encoding of the RGBA8
   image with a per-pixel tolerance derived from the quantization of the 8-bit linear image (below).
+- **Dark values are covered.** That comparison matters most for dark channel values (below 8/255 linear), where the
+  RGBA8 target is coarse. How many the image must contain comes from the CPU model, not from a measured share. The CPU
+  classifies every pixel with the probe rules above (unoccluded sky, or unoccluded floor away from square edges) and
+  evaluates its exact value v. Each channel with `255 v + 1 < 7.5` must be stored as a byte below 8, because the scene
+  checks hold bytes to `255 v ± 1`. The check requires all of these channels to be dark. The image must therefore hold
+  at least that many dark values; the objects and the unclassified pixels can only add to it. At 256 × 256 the model
+  predicts 21 008 of the 26 234 dark values in the image; at 1000 × 200 it predicts 26 470 of 34 911.
 - **Depth.** The depth texture is read through `depth_dump.frag` (ES 3.0 has no depth `glReadPixels`) and compared at the
   floor probes with the analytic window-space depth `0.5 ((f+n)/(f-n) - 2fn / ((f-n) z)) + 0.5`; sky pixels must keep the
   cleared depth 1.0.

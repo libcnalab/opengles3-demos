@@ -45,6 +45,12 @@ the right cluster blue, green, red. The "over" operator is not commutative, so t
 different colors, and the figure makes that visible. The backdrop shows through everywhere, as it
 must for `Cs*As + Cd*(1-As)`.
 
+The layout follows the surface: the sheet spans the width and the composite area takes the rest. On
+a tall surface (composite area taller than wide) the two clusters are stacked, the first one on top;
+otherwise they sit side by side. Each cluster stays in its own half, and when a half is smaller than
+116 px in either direction the cluster shrinks with it, so the clusters never overlap. **Minimum
+surface: 192x192** (smaller surfaces report `SKIP_UNSUPPORTED`).
+
 ## Central calls
 
 | Call | Role |

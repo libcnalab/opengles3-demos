@@ -1,0 +1,50 @@
+#version 310 es
+// Writes two indirect draw commands into the buffer that glDrawArraysIndirect / glDrawElementsIndirect
+// read afterwards (DRAW_INDIRECT_BUFFER). The same buffer object is bound as a shader storage buffer, so
+// the shader can address it as an array of 32-bit words:
+//
+//   DrawArraysIndirectCommand    { count, instanceCount, first, reservedMustBeZero }          4 words
+//   DrawElementsIndirectCommand  { count, instanceCount, firstIndex, baseVertex, reservedMustBeZero }  5 words
+//
+// The instance count is "GPU-driven": the number of non-zero entries in a second buffer of flags (think of
+// a visibility test). One invocation does all the work, so the result does not depend on invocation order.
+layout(local_size_x = 1) in;
+
+layout(std430, binding = 0) buffer Commands
+{
+    uint words[];
+} cmds;
+
+layout(std430, binding = 1) readonly buffer Flags
+{
+    uint visible[];
+} flags;
+
+uniform uint u_arrays_word;    // word index of the DrawArraysIndirectCommand to write
+uniform uint u_elements_word;  // word index of the DrawElementsIndirectCommand to write
+
+void main()
+{
+    uint n = 0u;
+    for (uint i = 0u; i < uint(flags.visible.length()); ++i)
+    {
+        if (flags.visible[i] != 0u)
+        {
+            ++n;
+        }
+    }
+
+    // arrays: a triangle strip of 4 vertices starting at vertex 11, n instances
+    cmds.words[u_arrays_word + 0u] = 4u;   // count
+    cmds.words[u_arrays_word + 1u] = n;    // instanceCount
+    cmds.words[u_arrays_word + 2u] = 11u;  // first
+    cmds.words[u_arrays_word + 3u] = 0u;   // reservedMustBeZero
+
+    // elements: the whole diamond (6 indices) for up to 3 instances, its upper half (3 indices) for more
+    bool many = n > 3u;
+    cmds.words[u_elements_word + 0u] = many ? 3u : 6u;  // count
+    cmds.words[u_elements_word + 1u] = n;               // instanceCount
+    cmds.words[u_elements_word + 2u] = many ? 9u : 0u;  // firstIndex
+    cmds.words[u_elements_word + 3u] = 4u;              // baseVertex (int stored as uint bits)
+    cmds.words[u_elements_word + 4u] = 0u;              // reservedMustBeZero
+}

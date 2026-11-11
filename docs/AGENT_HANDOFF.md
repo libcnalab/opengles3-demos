@@ -73,10 +73,14 @@ cmake --build --preset debug --target coverage
 - **GPU safety:** ANGLE runs on lavapipe; GPU-faulting cases are opt-in only.
 - Archived reports are in docs/audits/.
 
-**Running**
+**Done after 23:50**
+- The Codex diff review found 5 issues (4 dishonest minimum sizes, 1 tuned threshold); all are fixed.
+- Sanitizer Mesa matrix: 480/480.
+- Full matrix 563/563; size sweep clean.
+
+**Previously running (done)**
 - Codex independent review of every demo changed after the audit (`git diff 5bd59a6..HEAD`), per
   docs/agent-briefs/DIFF_REVIEW_BRIEF.md. Three groups; reports in ../opengles3-demos-worktrees/diffreview-*/DIFF_REVIEW.md.
-- Sanitizer build plus Mesa matrix (`-E :angle:`).
 
 **Known follow-ups**
 - es20-clear-viewport-scissor and es20-primitive-topology draw their 64-px panel gallery at native size, so larger

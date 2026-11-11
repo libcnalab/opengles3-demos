@@ -39,5 +39,15 @@ bite. Findings, all accepted:
 - **WEAK:** es30-post-processing's dark-channel floor was lowered from w*h/4 to w*h/8 on an observation, not a
   derivation.
 
+Disposition:
+- **Minimum sizes** are now either computed from the CPU model or stated, and minimum−1 SKIPs:
+  - es20-cube-map uses a computed minimum;
+  - es20-mipmaps uses 8x15, and a query-row bug was fixed;
+  - es30-instancing probes are chosen from the model with a guaranteed margin;
+  - es32-cube-map-array uses a computed minimum.
+- **Dark-channel floor:** now derived from the CPU model. Its guard was raised to 128x128 because of a separate Sobel
+  sanity check.
+- **Result:** full matrix 563/563 and the size sweep is clean.
+
 Reports: [es20+tests](2026-11-11-codex-diffreview-es20-tests.md), [es30](2026-11-11-codex-diffreview-es30.md),
 [es31/es32](2026-11-11-codex-diffreview-es31-32.md).

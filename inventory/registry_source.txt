@@ -1,0 +1,3 @@
+source: https://registry.khronos.org/OpenGL/xml/gl.xml
+sha256: b9ca2cfa5c676e901c20d34af3407f1687cde0f1336a5ff7a8974d04c7494ad3
+extracted: 2026-11-11

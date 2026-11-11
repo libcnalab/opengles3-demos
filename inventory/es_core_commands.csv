@@ -1,0 +1,359 @@
+name,introduced,feature,params
+glActiveTexture,2.0,GL_ES_VERSION_2_0,GLenum texture
+glAttachShader,2.0,GL_ES_VERSION_2_0,GLuint program; GLuint shader
+glBindAttribLocation,2.0,GL_ES_VERSION_2_0,GLuint program; GLuint index; const GLchar *name
+glBindBuffer,2.0,GL_ES_VERSION_2_0,GLenum target; GLuint buffer
+glBindFramebuffer,2.0,GL_ES_VERSION_2_0,GLenum target; GLuint framebuffer
+glBindRenderbuffer,2.0,GL_ES_VERSION_2_0,GLenum target; GLuint renderbuffer
+glBindTexture,2.0,GL_ES_VERSION_2_0,GLenum target; GLuint texture
+glBlendColor,2.0,GL_ES_VERSION_2_0,GLfloat red; GLfloat green; GLfloat blue; GLfloat alpha
+glBlendEquation,2.0,GL_ES_VERSION_2_0,GLenum mode
+glBlendEquationSeparate,2.0,GL_ES_VERSION_2_0,GLenum modeRGB; GLenum modeAlpha
+glBlendFunc,2.0,GL_ES_VERSION_2_0,GLenum sfactor; GLenum dfactor
+glBlendFuncSeparate,2.0,GL_ES_VERSION_2_0,GLenum sfactorRGB; GLenum dfactorRGB; GLenum sfactorAlpha; GLenum dfactorAlpha
+glBufferData,2.0,GL_ES_VERSION_2_0,GLenum target; GLsizeiptr size; const void *data; GLenum usage
+glBufferSubData,2.0,GL_ES_VERSION_2_0,GLenum target; GLintptr offset; GLsizeiptr size; const void *data
+glCheckFramebufferStatus,2.0,GL_ES_VERSION_2_0,GLenum target
+glClear,2.0,GL_ES_VERSION_2_0,GLbitfield mask
+glClearColor,2.0,GL_ES_VERSION_2_0,GLfloat red; GLfloat green; GLfloat blue; GLfloat alpha
+glClearDepthf,2.0,GL_ES_VERSION_2_0,GLfloat d
+glClearStencil,2.0,GL_ES_VERSION_2_0,GLint s
+glColorMask,2.0,GL_ES_VERSION_2_0,GLboolean red; GLboolean green; GLboolean blue; GLboolean alpha
+glCompileShader,2.0,GL_ES_VERSION_2_0,GLuint shader
+glCompressedTexImage2D,2.0,GL_ES_VERSION_2_0,GLenum target; GLint level; GLenum internalformat; GLsizei width; GLsizei height; GLint border; GLsizei imageSize; const void *data
+glCompressedTexSubImage2D,2.0,GL_ES_VERSION_2_0,GLenum target; GLint level; GLint xoffset; GLint yoffset; GLsizei width; GLsizei height; GLenum format; GLsizei imageSize; const void *data
+glCopyTexImage2D,2.0,GL_ES_VERSION_2_0,GLenum target; GLint level; GLenum internalformat; GLint x; GLint y; GLsizei width; GLsizei height; GLint border
+glCopyTexSubImage2D,2.0,GL_ES_VERSION_2_0,GLenum target; GLint level; GLint xoffset; GLint yoffset; GLint x; GLint y; GLsizei width; GLsizei height
+glCreateProgram,2.0,GL_ES_VERSION_2_0,
+glCreateShader,2.0,GL_ES_VERSION_2_0,GLenum type
+glCullFace,2.0,GL_ES_VERSION_2_0,GLenum mode
+glDeleteBuffers,2.0,GL_ES_VERSION_2_0,GLsizei n; const GLuint *buffers
+glDeleteFramebuffers,2.0,GL_ES_VERSION_2_0,GLsizei n; const GLuint *framebuffers
+glDeleteProgram,2.0,GL_ES_VERSION_2_0,GLuint program
+glDeleteRenderbuffers,2.0,GL_ES_VERSION_2_0,GLsizei n; const GLuint *renderbuffers
+glDeleteShader,2.0,GL_ES_VERSION_2_0,GLuint shader
+glDeleteTextures,2.0,GL_ES_VERSION_2_0,GLsizei n; const GLuint *textures
+glDepthFunc,2.0,GL_ES_VERSION_2_0,GLenum func
+glDepthMask,2.0,GL_ES_VERSION_2_0,GLboolean flag
+glDepthRangef,2.0,GL_ES_VERSION_2_0,GLfloat n; GLfloat f
+glDetachShader,2.0,GL_ES_VERSION_2_0,GLuint program; GLuint shader
+glDisable,2.0,GL_ES_VERSION_2_0,GLenum cap
+glDisableVertexAttribArray,2.0,GL_ES_VERSION_2_0,GLuint index
+glDrawArrays,2.0,GL_ES_VERSION_2_0,GLenum mode; GLint first; GLsizei count
+glDrawElements,2.0,GL_ES_VERSION_2_0,GLenum mode; GLsizei count; GLenum type; const void *indices
+glEnable,2.0,GL_ES_VERSION_2_0,GLenum cap
+glEnableVertexAttribArray,2.0,GL_ES_VERSION_2_0,GLuint index
+glFinish,2.0,GL_ES_VERSION_2_0,
+glFlush,2.0,GL_ES_VERSION_2_0,
+glFramebufferRenderbuffer,2.0,GL_ES_VERSION_2_0,GLenum target; GLenum attachment; GLenum renderbuffertarget; GLuint renderbuffer
+glFramebufferTexture2D,2.0,GL_ES_VERSION_2_0,GLenum target; GLenum attachment; GLenum textarget; GLuint texture; GLint level
+glFrontFace,2.0,GL_ES_VERSION_2_0,GLenum mode
+glGenBuffers,2.0,GL_ES_VERSION_2_0,GLsizei n; GLuint *buffers
+glGenFramebuffers,2.0,GL_ES_VERSION_2_0,GLsizei n; GLuint *framebuffers
+glGenRenderbuffers,2.0,GL_ES_VERSION_2_0,GLsizei n; GLuint *renderbuffers
+glGenTextures,2.0,GL_ES_VERSION_2_0,GLsizei n; GLuint *textures
+glGenerateMipmap,2.0,GL_ES_VERSION_2_0,GLenum target
+glGetActiveAttrib,2.0,GL_ES_VERSION_2_0,GLuint program; GLuint index; GLsizei bufSize; GLsizei *length; GLint *size; GLenum *type; GLchar *name
+glGetActiveUniform,2.0,GL_ES_VERSION_2_0,GLuint program; GLuint index; GLsizei bufSize; GLsizei *length; GLint *size; GLenum *type; GLchar *name
+glGetAttachedShaders,2.0,GL_ES_VERSION_2_0,GLuint program; GLsizei maxCount; GLsizei *count; GLuint *shaders
+glGetAttribLocation,2.0,GL_ES_VERSION_2_0,GLuint program; const GLchar *name
+glGetBooleanv,2.0,GL_ES_VERSION_2_0,GLenum pname; GLboolean *data
+glGetBufferParameteriv,2.0,GL_ES_VERSION_2_0,GLenum target; GLenum pname; GLint *params
+glGetError,2.0,GL_ES_VERSION_2_0,
+glGetFloatv,2.0,GL_ES_VERSION_2_0,GLenum pname; GLfloat *data
+glGetFramebufferAttachmentParameteriv,2.0,GL_ES_VERSION_2_0,GLenum target; GLenum attachment; GLenum pname; GLint *params
+glGetIntegerv,2.0,GL_ES_VERSION_2_0,GLenum pname; GLint *data
+glGetProgramInfoLog,2.0,GL_ES_VERSION_2_0,GLuint program; GLsizei bufSize; GLsizei *length; GLchar *infoLog
+glGetProgramiv,2.0,GL_ES_VERSION_2_0,GLuint program; GLenum pname; GLint *params
+glGetRenderbufferParameteriv,2.0,GL_ES_VERSION_2_0,GLenum target; GLenum pname; GLint *params
+glGetShaderInfoLog,2.0,GL_ES_VERSION_2_0,GLuint shader; GLsizei bufSize; GLsizei *length; GLchar *infoLog
+glGetShaderPrecisionFormat,2.0,GL_ES_VERSION_2_0,GLenum shadertype; GLenum precisiontype; GLint *range; GLint *precision
+glGetShaderSource,2.0,GL_ES_VERSION_2_0,GLuint shader; GLsizei bufSize; GLsizei *length; GLchar *source
+glGetShaderiv,2.0,GL_ES_VERSION_2_0,GLuint shader; GLenum pname; GLint *params
+glGetString,2.0,GL_ES_VERSION_2_0,GLenum name
+glGetTexParameterfv,2.0,GL_ES_VERSION_2_0,GLenum target; GLenum pname; GLfloat *params
+glGetTexParameteriv,2.0,GL_ES_VERSION_2_0,GLenum target; GLenum pname; GLint *params
+glGetUniformLocation,2.0,GL_ES_VERSION_2_0,GLuint program; const GLchar *name
+glGetUniformfv,2.0,GL_ES_VERSION_2_0,GLuint program; GLint location; GLfloat *params
+glGetUniformiv,2.0,GL_ES_VERSION_2_0,GLuint program; GLint location; GLint *params
+glGetVertexAttribPointerv,2.0,GL_ES_VERSION_2_0,GLuint index; GLenum pname; void **pointer
+glGetVertexAttribfv,2.0,GL_ES_VERSION_2_0,GLuint index; GLenum pname; GLfloat *params
+glGetVertexAttribiv,2.0,GL_ES_VERSION_2_0,GLuint index; GLenum pname; GLint *params
+glHint,2.0,GL_ES_VERSION_2_0,GLenum target; GLenum mode
+glIsBuffer,2.0,GL_ES_VERSION_2_0,GLuint buffer
+glIsEnabled,2.0,GL_ES_VERSION_2_0,GLenum cap
+glIsFramebuffer,2.0,GL_ES_VERSION_2_0,GLuint framebuffer
+glIsProgram,2.0,GL_ES_VERSION_2_0,GLuint program
+glIsRenderbuffer,2.0,GL_ES_VERSION_2_0,GLuint renderbuffer
+glIsShader,2.0,GL_ES_VERSION_2_0,GLuint shader
+glIsTexture,2.0,GL_ES_VERSION_2_0,GLuint texture
+glLineWidth,2.0,GL_ES_VERSION_2_0,GLfloat width
+glLinkProgram,2.0,GL_ES_VERSION_2_0,GLuint program
+glPixelStorei,2.0,GL_ES_VERSION_2_0,GLenum pname; GLint param
+glPolygonOffset,2.0,GL_ES_VERSION_2_0,GLfloat factor; GLfloat units
+glReadPixels,2.0,GL_ES_VERSION_2_0,GLint x; GLint y; GLsizei width; GLsizei height; GLenum format; GLenum type; void *pixels
+glReleaseShaderCompiler,2.0,GL_ES_VERSION_2_0,
+glRenderbufferStorage,2.0,GL_ES_VERSION_2_0,GLenum target; GLenum internalformat; GLsizei width; GLsizei height
+glSampleCoverage,2.0,GL_ES_VERSION_2_0,GLfloat value; GLboolean invert
+glScissor,2.0,GL_ES_VERSION_2_0,GLint x; GLint y; GLsizei width; GLsizei height
+glShaderBinary,2.0,GL_ES_VERSION_2_0,GLsizei count; const GLuint *shaders; GLenum binaryFormat; const void *binary; GLsizei length
+glShaderSource,2.0,GL_ES_VERSION_2_0,GLuint shader; GLsizei count; const GLchar *const*string; const GLint *length
+glStencilFunc,2.0,GL_ES_VERSION_2_0,GLenum func; GLint ref; GLuint mask
+glStencilFuncSeparate,2.0,GL_ES_VERSION_2_0,GLenum face; GLenum func; GLint ref; GLuint mask
+glStencilMask,2.0,GL_ES_VERSION_2_0,GLuint mask
+glStencilMaskSeparate,2.0,GL_ES_VERSION_2_0,GLenum face; GLuint mask
+glStencilOp,2.0,GL_ES_VERSION_2_0,GLenum fail; GLenum zfail; GLenum zpass
+glStencilOpSeparate,2.0,GL_ES_VERSION_2_0,GLenum face; GLenum sfail; GLenum dpfail; GLenum dppass
+glTexImage2D,2.0,GL_ES_VERSION_2_0,GLenum target; GLint level; GLint internalformat; GLsizei width; GLsizei height; GLint border; GLenum format; GLenum type; const void *pixels
+glTexParameterf,2.0,GL_ES_VERSION_2_0,GLenum target; GLenum pname; GLfloat param
+glTexParameterfv,2.0,GL_ES_VERSION_2_0,GLenum target; GLenum pname; const GLfloat *params
+glTexParameteri,2.0,GL_ES_VERSION_2_0,GLenum target; GLenum pname; GLint param
+glTexParameteriv,2.0,GL_ES_VERSION_2_0,GLenum target; GLenum pname; const GLint *params
+glTexSubImage2D,2.0,GL_ES_VERSION_2_0,GLenum target; GLint level; GLint xoffset; GLint yoffset; GLsizei width; GLsizei height; GLenum format; GLenum type; const void *pixels
+glUniform1f,2.0,GL_ES_VERSION_2_0,GLint location; GLfloat v0
+glUniform1fv,2.0,GL_ES_VERSION_2_0,GLint location; GLsizei count; const GLfloat *value
+glUniform1i,2.0,GL_ES_VERSION_2_0,GLint location; GLint v0
+glUniform1iv,2.0,GL_ES_VERSION_2_0,GLint location; GLsizei count; const GLint *value
+glUniform2f,2.0,GL_ES_VERSION_2_0,GLint location; GLfloat v0; GLfloat v1
+glUniform2fv,2.0,GL_ES_VERSION_2_0,GLint location; GLsizei count; const GLfloat *value
+glUniform2i,2.0,GL_ES_VERSION_2_0,GLint location; GLint v0; GLint v1
+glUniform2iv,2.0,GL_ES_VERSION_2_0,GLint location; GLsizei count; const GLint *value
+glUniform3f,2.0,GL_ES_VERSION_2_0,GLint location; GLfloat v0; GLfloat v1; GLfloat v2
+glUniform3fv,2.0,GL_ES_VERSION_2_0,GLint location; GLsizei count; const GLfloat *value
+glUniform3i,2.0,GL_ES_VERSION_2_0,GLint location; GLint v0; GLint v1; GLint v2
+glUniform3iv,2.0,GL_ES_VERSION_2_0,GLint location; GLsizei count; const GLint *value
+glUniform4f,2.0,GL_ES_VERSION_2_0,GLint location; GLfloat v0; GLfloat v1; GLfloat v2; GLfloat v3
+glUniform4fv,2.0,GL_ES_VERSION_2_0,GLint location; GLsizei count; const GLfloat *value
+glUniform4i,2.0,GL_ES_VERSION_2_0,GLint location; GLint v0; GLint v1; GLint v2; GLint v3
+glUniform4iv,2.0,GL_ES_VERSION_2_0,GLint location; GLsizei count; const GLint *value
+glUniformMatrix2fv,2.0,GL_ES_VERSION_2_0,GLint location; GLsizei count; GLboolean transpose; const GLfloat *value
+glUniformMatrix3fv,2.0,GL_ES_VERSION_2_0,GLint location; GLsizei count; GLboolean transpose; const GLfloat *value
+glUniformMatrix4fv,2.0,GL_ES_VERSION_2_0,GLint location; GLsizei count; GLboolean transpose; const GLfloat *value
+glUseProgram,2.0,GL_ES_VERSION_2_0,GLuint program
+glValidateProgram,2.0,GL_ES_VERSION_2_0,GLuint program
+glVertexAttrib1f,2.0,GL_ES_VERSION_2_0,GLuint index; GLfloat x
+glVertexAttrib1fv,2.0,GL_ES_VERSION_2_0,GLuint index; const GLfloat *v
+glVertexAttrib2f,2.0,GL_ES_VERSION_2_0,GLuint index; GLfloat x; GLfloat y
+glVertexAttrib2fv,2.0,GL_ES_VERSION_2_0,GLuint index; const GLfloat *v
+glVertexAttrib3f,2.0,GL_ES_VERSION_2_0,GLuint index; GLfloat x; GLfloat y; GLfloat z
+glVertexAttrib3fv,2.0,GL_ES_VERSION_2_0,GLuint index; const GLfloat *v
+glVertexAttrib4f,2.0,GL_ES_VERSION_2_0,GLuint index; GLfloat x; GLfloat y; GLfloat z; GLfloat w
+glVertexAttrib4fv,2.0,GL_ES_VERSION_2_0,GLuint index; const GLfloat *v
+glVertexAttribPointer,2.0,GL_ES_VERSION_2_0,GLuint index; GLint size; GLenum type; GLboolean normalized; GLsizei stride; const void *pointer
+glViewport,2.0,GL_ES_VERSION_2_0,GLint x; GLint y; GLsizei width; GLsizei height
+glBeginQuery,3.0,GL_ES_VERSION_3_0,GLenum target; GLuint id
+glBeginTransformFeedback,3.0,GL_ES_VERSION_3_0,GLenum primitiveMode
+glBindBufferBase,3.0,GL_ES_VERSION_3_0,GLenum target; GLuint index; GLuint buffer
+glBindBufferRange,3.0,GL_ES_VERSION_3_0,GLenum target; GLuint index; GLuint buffer; GLintptr offset; GLsizeiptr size
+glBindSampler,3.0,GL_ES_VERSION_3_0,GLuint unit; GLuint sampler
+glBindTransformFeedback,3.0,GL_ES_VERSION_3_0,GLenum target; GLuint id
+glBindVertexArray,3.0,GL_ES_VERSION_3_0,GLuint array
+glBlitFramebuffer,3.0,GL_ES_VERSION_3_0,GLint srcX0; GLint srcY0; GLint srcX1; GLint srcY1; GLint dstX0; GLint dstY0; GLint dstX1; GLint dstY1; GLbitfield mask; GLenum filter
+glClearBufferfi,3.0,GL_ES_VERSION_3_0,GLenum buffer; GLint drawbuffer; GLfloat depth; GLint stencil
+glClearBufferfv,3.0,GL_ES_VERSION_3_0,GLenum buffer; GLint drawbuffer; const GLfloat *value
+glClearBufferiv,3.0,GL_ES_VERSION_3_0,GLenum buffer; GLint drawbuffer; const GLint *value
+glClearBufferuiv,3.0,GL_ES_VERSION_3_0,GLenum buffer; GLint drawbuffer; const GLuint *value
+glClientWaitSync,3.0,GL_ES_VERSION_3_0,GLsync sync; GLbitfield flags; GLuint64 timeout
+glCompressedTexImage3D,3.0,GL_ES_VERSION_3_0,GLenum target; GLint level; GLenum internalformat; GLsizei width; GLsizei height; GLsizei depth; GLint border; GLsizei imageSize; const void *data
+glCompressedTexSubImage3D,3.0,GL_ES_VERSION_3_0,GLenum target; GLint level; GLint xoffset; GLint yoffset; GLint zoffset; GLsizei width; GLsizei height; GLsizei depth; GLenum format; GLsizei imageSize; const void *data
+glCopyBufferSubData,3.0,GL_ES_VERSION_3_0,GLenum readTarget; GLenum writeTarget; GLintptr readOffset; GLintptr writeOffset; GLsizeiptr size
+glCopyTexSubImage3D,3.0,GL_ES_VERSION_3_0,GLenum target; GLint level; GLint xoffset; GLint yoffset; GLint zoffset; GLint x; GLint y; GLsizei width; GLsizei height
+glDeleteQueries,3.0,GL_ES_VERSION_3_0,GLsizei n; const GLuint *ids
+glDeleteSamplers,3.0,GL_ES_VERSION_3_0,GLsizei count; const GLuint *samplers
+glDeleteSync,3.0,GL_ES_VERSION_3_0,GLsync sync
+glDeleteTransformFeedbacks,3.0,GL_ES_VERSION_3_0,GLsizei n; const GLuint *ids
+glDeleteVertexArrays,3.0,GL_ES_VERSION_3_0,GLsizei n; const GLuint *arrays
+glDrawArraysInstanced,3.0,GL_ES_VERSION_3_0,GLenum mode; GLint first; GLsizei count; GLsizei instancecount
+glDrawBuffers,3.0,GL_ES_VERSION_3_0,GLsizei n; const GLenum *bufs
+glDrawElementsInstanced,3.0,GL_ES_VERSION_3_0,GLenum mode; GLsizei count; GLenum type; const void *indices; GLsizei instancecount
+glDrawRangeElements,3.0,GL_ES_VERSION_3_0,GLenum mode; GLuint start; GLuint end; GLsizei count; GLenum type; const void *indices
+glEndQuery,3.0,GL_ES_VERSION_3_0,GLenum target
+glEndTransformFeedback,3.0,GL_ES_VERSION_3_0,
+glFenceSync,3.0,GL_ES_VERSION_3_0,GLenum condition; GLbitfield flags
+glFlushMappedBufferRange,3.0,GL_ES_VERSION_3_0,GLenum target; GLintptr offset; GLsizeiptr length
+glFramebufferTextureLayer,3.0,GL_ES_VERSION_3_0,GLenum target; GLenum attachment; GLuint texture; GLint level; GLint layer
+glGenQueries,3.0,GL_ES_VERSION_3_0,GLsizei n; GLuint *ids
+glGenSamplers,3.0,GL_ES_VERSION_3_0,GLsizei count; GLuint *samplers
+glGenTransformFeedbacks,3.0,GL_ES_VERSION_3_0,GLsizei n; GLuint *ids
+glGenVertexArrays,3.0,GL_ES_VERSION_3_0,GLsizei n; GLuint *arrays
+glGetActiveUniformBlockName,3.0,GL_ES_VERSION_3_0,GLuint program; GLuint uniformBlockIndex; GLsizei bufSize; GLsizei *length; GLchar *uniformBlockName
+glGetActiveUniformBlockiv,3.0,GL_ES_VERSION_3_0,GLuint program; GLuint uniformBlockIndex; GLenum pname; GLint *params
+glGetActiveUniformsiv,3.0,GL_ES_VERSION_3_0,GLuint program; GLsizei uniformCount; const GLuint *uniformIndices; GLenum pname; GLint *params
+glGetBufferParameteri64v,3.0,GL_ES_VERSION_3_0,GLenum target; GLenum pname; GLint64 *params
+glGetBufferPointerv,3.0,GL_ES_VERSION_3_0,GLenum target; GLenum pname; void **params
+glGetFragDataLocation,3.0,GL_ES_VERSION_3_0,GLuint program; const GLchar *name
+glGetInteger64i_v,3.0,GL_ES_VERSION_3_0,GLenum target; GLuint index; GLint64 *data
+glGetInteger64v,3.0,GL_ES_VERSION_3_0,GLenum pname; GLint64 *data
+glGetIntegeri_v,3.0,GL_ES_VERSION_3_0,GLenum target; GLuint index; GLint *data
+glGetInternalformativ,3.0,GL_ES_VERSION_3_0,GLenum target; GLenum internalformat; GLenum pname; GLsizei count; GLint *params
+glGetProgramBinary,3.0,GL_ES_VERSION_3_0,GLuint program; GLsizei bufSize; GLsizei *length; GLenum *binaryFormat; void *binary
+glGetQueryObjectuiv,3.0,GL_ES_VERSION_3_0,GLuint id; GLenum pname; GLuint *params
+glGetQueryiv,3.0,GL_ES_VERSION_3_0,GLenum target; GLenum pname; GLint *params
+glGetSamplerParameterfv,3.0,GL_ES_VERSION_3_0,GLuint sampler; GLenum pname; GLfloat *params
+glGetSamplerParameteriv,3.0,GL_ES_VERSION_3_0,GLuint sampler; GLenum pname; GLint *params
+glGetStringi,3.0,GL_ES_VERSION_3_0,GLenum name; GLuint index
+glGetSynciv,3.0,GL_ES_VERSION_3_0,GLsync sync; GLenum pname; GLsizei count; GLsizei *length; GLint *values
+glGetTransformFeedbackVarying,3.0,GL_ES_VERSION_3_0,GLuint program; GLuint index; GLsizei bufSize; GLsizei *length; GLsizei *size; GLenum *type; GLchar *name
+glGetUniformBlockIndex,3.0,GL_ES_VERSION_3_0,GLuint program; const GLchar *uniformBlockName
+glGetUniformIndices,3.0,GL_ES_VERSION_3_0,GLuint program; GLsizei uniformCount; const GLchar *const*uniformNames; GLuint *uniformIndices
+glGetUniformuiv,3.0,GL_ES_VERSION_3_0,GLuint program; GLint location; GLuint *params
+glGetVertexAttribIiv,3.0,GL_ES_VERSION_3_0,GLuint index; GLenum pname; GLint *params
+glGetVertexAttribIuiv,3.0,GL_ES_VERSION_3_0,GLuint index; GLenum pname; GLuint *params
+glInvalidateFramebuffer,3.0,GL_ES_VERSION_3_0,GLenum target; GLsizei numAttachments; const GLenum *attachments
+glInvalidateSubFramebuffer,3.0,GL_ES_VERSION_3_0,GLenum target; GLsizei numAttachments; const GLenum *attachments; GLint x; GLint y; GLsizei width; GLsizei height
+glIsQuery,3.0,GL_ES_VERSION_3_0,GLuint id
+glIsSampler,3.0,GL_ES_VERSION_3_0,GLuint sampler
+glIsSync,3.0,GL_ES_VERSION_3_0,GLsync sync
+glIsTransformFeedback,3.0,GL_ES_VERSION_3_0,GLuint id
+glIsVertexArray,3.0,GL_ES_VERSION_3_0,GLuint array
+glMapBufferRange,3.0,GL_ES_VERSION_3_0,GLenum target; GLintptr offset; GLsizeiptr length; GLbitfield access
+glPauseTransformFeedback,3.0,GL_ES_VERSION_3_0,
+glProgramBinary,3.0,GL_ES_VERSION_3_0,GLuint program; GLenum binaryFormat; const void *binary; GLsizei length
+glProgramParameteri,3.0,GL_ES_VERSION_3_0,GLuint program; GLenum pname; GLint value
+glReadBuffer,3.0,GL_ES_VERSION_3_0,GLenum src
+glRenderbufferStorageMultisample,3.0,GL_ES_VERSION_3_0,GLenum target; GLsizei samples; GLenum internalformat; GLsizei width; GLsizei height
+glResumeTransformFeedback,3.0,GL_ES_VERSION_3_0,
+glSamplerParameterf,3.0,GL_ES_VERSION_3_0,GLuint sampler; GLenum pname; GLfloat param
+glSamplerParameterfv,3.0,GL_ES_VERSION_3_0,GLuint sampler; GLenum pname; const GLfloat *param
+glSamplerParameteri,3.0,GL_ES_VERSION_3_0,GLuint sampler; GLenum pname; GLint param
+glSamplerParameteriv,3.0,GL_ES_VERSION_3_0,GLuint sampler; GLenum pname; const GLint *param
+glTexImage3D,3.0,GL_ES_VERSION_3_0,GLenum target; GLint level; GLint internalformat; GLsizei width; GLsizei height; GLsizei depth; GLint border; GLenum format; GLenum type; const void *pixels
+glTexStorage2D,3.0,GL_ES_VERSION_3_0,GLenum target; GLsizei levels; GLenum internalformat; GLsizei width; GLsizei height
+glTexStorage3D,3.0,GL_ES_VERSION_3_0,GLenum target; GLsizei levels; GLenum internalformat; GLsizei width; GLsizei height; GLsizei depth
+glTexSubImage3D,3.0,GL_ES_VERSION_3_0,GLenum target; GLint level; GLint xoffset; GLint yoffset; GLint zoffset; GLsizei width; GLsizei height; GLsizei depth; GLenum format; GLenum type; const void *pixels
+glTransformFeedbackVaryings,3.0,GL_ES_VERSION_3_0,GLuint program; GLsizei count; const GLchar *const*varyings; GLenum bufferMode
+glUniform1ui,3.0,GL_ES_VERSION_3_0,GLint location; GLuint v0
+glUniform1uiv,3.0,GL_ES_VERSION_3_0,GLint location; GLsizei count; const GLuint *value
+glUniform2ui,3.0,GL_ES_VERSION_3_0,GLint location; GLuint v0; GLuint v1
+glUniform2uiv,3.0,GL_ES_VERSION_3_0,GLint location; GLsizei count; const GLuint *value
+glUniform3ui,3.0,GL_ES_VERSION_3_0,GLint location; GLuint v0; GLuint v1; GLuint v2
+glUniform3uiv,3.0,GL_ES_VERSION_3_0,GLint location; GLsizei count; const GLuint *value
+glUniform4ui,3.0,GL_ES_VERSION_3_0,GLint location; GLuint v0; GLuint v1; GLuint v2; GLuint v3
+glUniform4uiv,3.0,GL_ES_VERSION_3_0,GLint location; GLsizei count; const GLuint *value
+glUniformBlockBinding,3.0,GL_ES_VERSION_3_0,GLuint program; GLuint uniformBlockIndex; GLuint uniformBlockBinding
+glUniformMatrix2x3fv,3.0,GL_ES_VERSION_3_0,GLint location; GLsizei count; GLboolean transpose; const GLfloat *value
+glUniformMatrix2x4fv,3.0,GL_ES_VERSION_3_0,GLint location; GLsizei count; GLboolean transpose; const GLfloat *value
+glUniformMatrix3x2fv,3.0,GL_ES_VERSION_3_0,GLint location; GLsizei count; GLboolean transpose; const GLfloat *value
+glUniformMatrix3x4fv,3.0,GL_ES_VERSION_3_0,GLint location; GLsizei count; GLboolean transpose; const GLfloat *value
+glUniformMatrix4x2fv,3.0,GL_ES_VERSION_3_0,GLint location; GLsizei count; GLboolean transpose; const GLfloat *value
+glUniformMatrix4x3fv,3.0,GL_ES_VERSION_3_0,GLint location; GLsizei count; GLboolean transpose; const GLfloat *value
+glUnmapBuffer,3.0,GL_ES_VERSION_3_0,GLenum target
+glVertexAttribDivisor,3.0,GL_ES_VERSION_3_0,GLuint index; GLuint divisor
+glVertexAttribI4i,3.0,GL_ES_VERSION_3_0,GLuint index; GLint x; GLint y; GLint z; GLint w
+glVertexAttribI4iv,3.0,GL_ES_VERSION_3_0,GLuint index; const GLint *v
+glVertexAttribI4ui,3.0,GL_ES_VERSION_3_0,GLuint index; GLuint x; GLuint y; GLuint z; GLuint w
+glVertexAttribI4uiv,3.0,GL_ES_VERSION_3_0,GLuint index; const GLuint *v
+glVertexAttribIPointer,3.0,GL_ES_VERSION_3_0,GLuint index; GLint size; GLenum type; GLsizei stride; const void *pointer
+glWaitSync,3.0,GL_ES_VERSION_3_0,GLsync sync; GLbitfield flags; GLuint64 timeout
+glActiveShaderProgram,3.1,GL_ES_VERSION_3_1,GLuint pipeline; GLuint program
+glBindImageTexture,3.1,GL_ES_VERSION_3_1,GLuint unit; GLuint texture; GLint level; GLboolean layered; GLint layer; GLenum access; GLenum format
+glBindProgramPipeline,3.1,GL_ES_VERSION_3_1,GLuint pipeline
+glBindVertexBuffer,3.1,GL_ES_VERSION_3_1,GLuint bindingindex; GLuint buffer; GLintptr offset; GLsizei stride
+glCreateShaderProgramv,3.1,GL_ES_VERSION_3_1,GLenum type; GLsizei count; const GLchar *const*strings
+glDeleteProgramPipelines,3.1,GL_ES_VERSION_3_1,GLsizei n; const GLuint *pipelines
+glDispatchCompute,3.1,GL_ES_VERSION_3_1,GLuint num_groups_x; GLuint num_groups_y; GLuint num_groups_z
+glDispatchComputeIndirect,3.1,GL_ES_VERSION_3_1,GLintptr indirect
+glDrawArraysIndirect,3.1,GL_ES_VERSION_3_1,GLenum mode; const void *indirect
+glDrawElementsIndirect,3.1,GL_ES_VERSION_3_1,GLenum mode; GLenum type; const void *indirect
+glFramebufferParameteri,3.1,GL_ES_VERSION_3_1,GLenum target; GLenum pname; GLint param
+glGenProgramPipelines,3.1,GL_ES_VERSION_3_1,GLsizei n; GLuint *pipelines
+glGetBooleani_v,3.1,GL_ES_VERSION_3_1,GLenum target; GLuint index; GLboolean *data
+glGetFramebufferParameteriv,3.1,GL_ES_VERSION_3_1,GLenum target; GLenum pname; GLint *params
+glGetMultisamplefv,3.1,GL_ES_VERSION_3_1,GLenum pname; GLuint index; GLfloat *val
+glGetProgramInterfaceiv,3.1,GL_ES_VERSION_3_1,GLuint program; GLenum programInterface; GLenum pname; GLint *params
+glGetProgramPipelineInfoLog,3.1,GL_ES_VERSION_3_1,GLuint pipeline; GLsizei bufSize; GLsizei *length; GLchar *infoLog
+glGetProgramPipelineiv,3.1,GL_ES_VERSION_3_1,GLuint pipeline; GLenum pname; GLint *params
+glGetProgramResourceIndex,3.1,GL_ES_VERSION_3_1,GLuint program; GLenum programInterface; const GLchar *name
+glGetProgramResourceLocation,3.1,GL_ES_VERSION_3_1,GLuint program; GLenum programInterface; const GLchar *name
+glGetProgramResourceName,3.1,GL_ES_VERSION_3_1,GLuint program; GLenum programInterface; GLuint index; GLsizei bufSize; GLsizei *length; GLchar *name
+glGetProgramResourceiv,3.1,GL_ES_VERSION_3_1,GLuint program; GLenum programInterface; GLuint index; GLsizei propCount; const GLenum *props; GLsizei count; GLsizei *length; GLint *params
+glGetTexLevelParameterfv,3.1,GL_ES_VERSION_3_1,GLenum target; GLint level; GLenum pname; GLfloat *params
+glGetTexLevelParameteriv,3.1,GL_ES_VERSION_3_1,GLenum target; GLint level; GLenum pname; GLint *params
+glIsProgramPipeline,3.1,GL_ES_VERSION_3_1,GLuint pipeline
+glMemoryBarrier,3.1,GL_ES_VERSION_3_1,GLbitfield barriers
+glMemoryBarrierByRegion,3.1,GL_ES_VERSION_3_1,GLbitfield barriers
+glProgramUniform1f,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLfloat v0
+glProgramUniform1fv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; const GLfloat *value
+glProgramUniform1i,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLint v0
+glProgramUniform1iv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; const GLint *value
+glProgramUniform1ui,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLuint v0
+glProgramUniform1uiv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; const GLuint *value
+glProgramUniform2f,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLfloat v0; GLfloat v1
+glProgramUniform2fv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; const GLfloat *value
+glProgramUniform2i,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLint v0; GLint v1
+glProgramUniform2iv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; const GLint *value
+glProgramUniform2ui,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLuint v0; GLuint v1
+glProgramUniform2uiv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; const GLuint *value
+glProgramUniform3f,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLfloat v0; GLfloat v1; GLfloat v2
+glProgramUniform3fv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; const GLfloat *value
+glProgramUniform3i,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLint v0; GLint v1; GLint v2
+glProgramUniform3iv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; const GLint *value
+glProgramUniform3ui,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLuint v0; GLuint v1; GLuint v2
+glProgramUniform3uiv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; const GLuint *value
+glProgramUniform4f,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLfloat v0; GLfloat v1; GLfloat v2; GLfloat v3
+glProgramUniform4fv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; const GLfloat *value
+glProgramUniform4i,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLint v0; GLint v1; GLint v2; GLint v3
+glProgramUniform4iv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; const GLint *value
+glProgramUniform4ui,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLuint v0; GLuint v1; GLuint v2; GLuint v3
+glProgramUniform4uiv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; const GLuint *value
+glProgramUniformMatrix2fv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; GLboolean transpose; const GLfloat *value
+glProgramUniformMatrix2x3fv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; GLboolean transpose; const GLfloat *value
+glProgramUniformMatrix2x4fv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; GLboolean transpose; const GLfloat *value
+glProgramUniformMatrix3fv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; GLboolean transpose; const GLfloat *value
+glProgramUniformMatrix3x2fv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; GLboolean transpose; const GLfloat *value
+glProgramUniformMatrix3x4fv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; GLboolean transpose; const GLfloat *value
+glProgramUniformMatrix4fv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; GLboolean transpose; const GLfloat *value
+glProgramUniformMatrix4x2fv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; GLboolean transpose; const GLfloat *value
+glProgramUniformMatrix4x3fv,3.1,GL_ES_VERSION_3_1,GLuint program; GLint location; GLsizei count; GLboolean transpose; const GLfloat *value
+glSampleMaski,3.1,GL_ES_VERSION_3_1,GLuint maskNumber; GLbitfield mask
+glTexStorage2DMultisample,3.1,GL_ES_VERSION_3_1,GLenum target; GLsizei samples; GLenum internalformat; GLsizei width; GLsizei height; GLboolean fixedsamplelocations
+glUseProgramStages,3.1,GL_ES_VERSION_3_1,GLuint pipeline; GLbitfield stages; GLuint program
+glValidateProgramPipeline,3.1,GL_ES_VERSION_3_1,GLuint pipeline
+glVertexAttribBinding,3.1,GL_ES_VERSION_3_1,GLuint attribindex; GLuint bindingindex
+glVertexAttribFormat,3.1,GL_ES_VERSION_3_1,GLuint attribindex; GLint size; GLenum type; GLboolean normalized; GLuint relativeoffset
+glVertexAttribIFormat,3.1,GL_ES_VERSION_3_1,GLuint attribindex; GLint size; GLenum type; GLuint relativeoffset
+glVertexBindingDivisor,3.1,GL_ES_VERSION_3_1,GLuint bindingindex; GLuint divisor
+glBlendBarrier,3.2,GL_ES_VERSION_3_2,
+glBlendEquationSeparatei,3.2,GL_ES_VERSION_3_2,GLuint buf; GLenum modeRGB; GLenum modeAlpha
+glBlendEquationi,3.2,GL_ES_VERSION_3_2,GLuint buf; GLenum mode
+glBlendFuncSeparatei,3.2,GL_ES_VERSION_3_2,GLuint buf; GLenum srcRGB; GLenum dstRGB; GLenum srcAlpha; GLenum dstAlpha
+glBlendFunci,3.2,GL_ES_VERSION_3_2,GLuint buf; GLenum src; GLenum dst
+glColorMaski,3.2,GL_ES_VERSION_3_2,GLuint index; GLboolean r; GLboolean g; GLboolean b; GLboolean a
+glCopyImageSubData,3.2,GL_ES_VERSION_3_2,GLuint srcName; GLenum srcTarget; GLint srcLevel; GLint srcX; GLint srcY; GLint srcZ; GLuint dstName; GLenum dstTarget; GLint dstLevel; GLint dstX; GLint dstY; GLint dstZ; GLsizei srcWidth; GLsizei srcHeight; GLsizei srcDepth
+glDebugMessageCallback,3.2,GL_ES_VERSION_3_2,GLDEBUGPROC callback; const void *userParam
+glDebugMessageControl,3.2,GL_ES_VERSION_3_2,GLenum source; GLenum type; GLenum severity; GLsizei count; const GLuint *ids; GLboolean enabled
+glDebugMessageInsert,3.2,GL_ES_VERSION_3_2,GLenum source; GLenum type; GLuint id; GLenum severity; GLsizei length; const GLchar *buf
+glDisablei,3.2,GL_ES_VERSION_3_2,GLenum target; GLuint index
+glDrawElementsBaseVertex,3.2,GL_ES_VERSION_3_2,GLenum mode; GLsizei count; GLenum type; const void *indices; GLint basevertex
+glDrawElementsInstancedBaseVertex,3.2,GL_ES_VERSION_3_2,GLenum mode; GLsizei count; GLenum type; const void *indices; GLsizei instancecount; GLint basevertex
+glDrawRangeElementsBaseVertex,3.2,GL_ES_VERSION_3_2,GLenum mode; GLuint start; GLuint end; GLsizei count; GLenum type; const void *indices; GLint basevertex
+glEnablei,3.2,GL_ES_VERSION_3_2,GLenum target; GLuint index
+glFramebufferTexture,3.2,GL_ES_VERSION_3_2,GLenum target; GLenum attachment; GLuint texture; GLint level
+glGetDebugMessageLog,3.2,GL_ES_VERSION_3_2,GLuint count; GLsizei bufSize; GLenum *sources; GLenum *types; GLuint *ids; GLenum *severities; GLsizei *lengths; GLchar *messageLog
+glGetGraphicsResetStatus,3.2,GL_ES_VERSION_3_2,
+glGetObjectLabel,3.2,GL_ES_VERSION_3_2,GLenum identifier; GLuint name; GLsizei bufSize; GLsizei *length; GLchar *label
+glGetObjectPtrLabel,3.2,GL_ES_VERSION_3_2,const void *ptr; GLsizei bufSize; GLsizei *length; GLchar *label
+glGetPointerv,3.2,GL_ES_VERSION_3_2,GLenum pname; void **params
+glGetSamplerParameterIiv,3.2,GL_ES_VERSION_3_2,GLuint sampler; GLenum pname; GLint *params
+glGetSamplerParameterIuiv,3.2,GL_ES_VERSION_3_2,GLuint sampler; GLenum pname; GLuint *params
+glGetTexParameterIiv,3.2,GL_ES_VERSION_3_2,GLenum target; GLenum pname; GLint *params
+glGetTexParameterIuiv,3.2,GL_ES_VERSION_3_2,GLenum target; GLenum pname; GLuint *params
+glGetnUniformfv,3.2,GL_ES_VERSION_3_2,GLuint program; GLint location; GLsizei bufSize; GLfloat *params
+glGetnUniformiv,3.2,GL_ES_VERSION_3_2,GLuint program; GLint location; GLsizei bufSize; GLint *params
+glGetnUniformuiv,3.2,GL_ES_VERSION_3_2,GLuint program; GLint location; GLsizei bufSize; GLuint *params
+glIsEnabledi,3.2,GL_ES_VERSION_3_2,GLenum target; GLuint index
+glMinSampleShading,3.2,GL_ES_VERSION_3_2,GLfloat value
+glObjectLabel,3.2,GL_ES_VERSION_3_2,GLenum identifier; GLuint name; GLsizei length; const GLchar *label
+glObjectPtrLabel,3.2,GL_ES_VERSION_3_2,const void *ptr; GLsizei length; const GLchar *label
+glPatchParameteri,3.2,GL_ES_VERSION_3_2,GLenum pname; GLint value
+glPopDebugGroup,3.2,GL_ES_VERSION_3_2,
+glPrimitiveBoundingBox,3.2,GL_ES_VERSION_3_2,GLfloat minX; GLfloat minY; GLfloat minZ; GLfloat minW; GLfloat maxX; GLfloat maxY; GLfloat maxZ; GLfloat maxW
+glPushDebugGroup,3.2,GL_ES_VERSION_3_2,GLenum source; GLuint id; GLsizei length; const GLchar *message
+glReadnPixels,3.2,GL_ES_VERSION_3_2,GLint x; GLint y; GLsizei width; GLsizei height; GLenum format; GLenum type; GLsizei bufSize; void *data
+glSamplerParameterIiv,3.2,GL_ES_VERSION_3_2,GLuint sampler; GLenum pname; const GLint *param
+glSamplerParameterIuiv,3.2,GL_ES_VERSION_3_2,GLuint sampler; GLenum pname; const GLuint *param
+glTexBuffer,3.2,GL_ES_VERSION_3_2,GLenum target; GLenum internalformat; GLuint buffer
+glTexBufferRange,3.2,GL_ES_VERSION_3_2,GLenum target; GLenum internalformat; GLuint buffer; GLintptr offset; GLsizeiptr size
+glTexParameterIiv,3.2,GL_ES_VERSION_3_2,GLenum target; GLenum pname; const GLint *params
+glTexParameterIuiv,3.2,GL_ES_VERSION_3_2,GLenum target; GLenum pname; const GLuint *params
+glTexStorage3DMultisample,3.2,GL_ES_VERSION_3_2,GLenum target; GLsizei samples; GLenum internalformat; GLsizei width; GLsizei height; GLsizei depth; GLboolean fixedsamplelocations

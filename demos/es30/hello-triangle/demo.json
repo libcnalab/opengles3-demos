@@ -1,0 +1,76 @@
+{
+  "name": "es30-hello-triangle",
+  "title": "Hello Triangle",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es30",
+  "order": 10,
+  "summary": "Minimal complete ES 3.0 program: VBO + VAO + GLSL ES 3.00 program + glDrawArrays, validated against a CPU barycentric reference.",
+  "spec": [
+    "ES 3.0 §2.9 Vertex Arrays (2.9.3 Drawing Commands)",
+    "ES 3.0 §2.10 Buffer Objects",
+    "ES 3.0 §2.11 Vertex Array Objects",
+    "ES 3.0 §2.12.1 Shader Objects, §2.12.3 Program Objects, §2.12.5 Vertex Attributes",
+    "ES 3.0 §3.6.1 Basic Polygon Rasterization (attribute interpolation)",
+    "ES 3.0 §4.2.3 Clearing the Buffers",
+    "ES 3.0 §4.3.2 Reading Pixels",
+    "GLSL ES 3.00 §4.3.4 Input Variables, §4.3.6 Output Variables, §4.3.8 Layout Qualifiers, §4.5.4 Default Precision Qualifiers"
+  ],
+  "api": {
+    "glCreateShader": "vertex + fragment shader created; compile status checked",
+    "glShaderSource": "source uploaded (string_view overload, explicit length)",
+    "glCompileShader": "COMPILE_STATUS == GL_TRUE required",
+    "glGetShaderiv": "COMPILE_STATUS queried",
+    "glCreateProgram": "program used for the validated draw",
+    "glAttachShader": "both stages attached before link",
+    "glLinkProgram": "LINK_STATUS == GL_TRUE required",
+    "glGetProgramiv": "LINK_STATUS queried",
+    "glDetachShader": "shaders detached after link",
+    "glDeleteShader": "deleted after detach",
+    "glUseProgram": "GL_CURRENT_PROGRAM verified",
+    "glGenBuffers": "VBO feeding the validated draw",
+    "glBindBuffer": "ARRAY_BUFFER binding captured by attrib pointers",
+    "glBufferData": "vertex data observed through rendered colors",
+    "glGenVertexArrays": "VAO used for the validated draw",
+    "glBindVertexArray": "GL_VERTEX_ARRAY_BINDING verified",
+    "glEnableVertexAttribArray": "both attributes sourced from the buffer",
+    "glVertexAttribPointer": "interleaved stride/offset; stride read back with glGetVertexAttribiv",
+    "glGetVertexAttribiv": "VERTEX_ATTRIB_ARRAY_STRIDE == sizeof(Vertex)",
+    "glDrawArrays": "TRIANGLES; interior pixels match CPU reference",
+    "glViewport": "full-surface viewport maps NDC to the probed pixels",
+    "glClearColor": "corner pixels equal the clear color",
+    "glClear": "COLOR_BUFFER_BIT",
+    "glGetIntegerv": "CURRENT_PROGRAM, VERTEX_ARRAY_BINDING",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE readback of the default framebuffer",
+    "glDeleteVertexArrays": "cleanup, final glGetError == NO_ERROR",
+    "glDeleteBuffers": "cleanup",
+    "glDeleteProgram": "cleanup"
+  },
+  "features": [
+    "ES30.VAO.BASIC",
+    "ES20.DRAW.ARRAYS",
+    "ES20.BUFFER.VBO",
+    "ES20.SHADER.COMPILE_LINK",
+    "ES20.RASTER.INTERPOLATION",
+    "ES20.CLEAR.COLOR"
+  ],
+  "glsl_features": [
+    "GLSL300.VERSION",
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.LAYOUT.LOCATION",
+    "GLSL300.FRAG.OUTPUT",
+    "GLSL300.PRECISION.DEFAULT"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "gl-error"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-opus-5.5",
+    "notes": "256x256 radeonsi capture: upright triangle, R bottom-left, G bottom-right, B top, smooth gradients, dark-blue background."
+  }
+}

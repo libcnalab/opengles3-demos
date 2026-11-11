@@ -1,0 +1,48 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 23, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "description": "Debug build, all demos, CTest matrix (gpu + llvmpipe, es-max + es-min)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "release",
+      "displayName": "Release",
+      "inherits": "debug",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "sanitize",
+      "displayName": "Debug + ASan/UBSan (CPU side only)",
+      "inherits": "debug",
+      "cacheVariables": { "OGLES3_SANITIZE": "ON" }
+    },
+    {
+      "name": "headless-ci",
+      "displayName": "Headless CI (llvmpipe only, warnings as errors, no SDL3)",
+      "inherits": "debug",
+      "cacheVariables": {
+        "OGLES3_WERROR": "ON",
+        "OGLES3_WITH_SDL3": "OFF",
+        "OGLES3_TEST_DRIVERS": "llvmpipe"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "debug", "configurePreset": "debug" },
+    { "name": "release", "configurePreset": "release" },
+    { "name": "sanitize", "configurePreset": "sanitize" },
+    { "name": "headless-ci", "configurePreset": "headless-ci" }
+  ],
+  "testPresets": [
+    { "name": "debug", "configurePreset": "debug", "output": { "outputOnFailure": true }, "execution": { "jobs": 4 } },
+    { "name": "release", "configurePreset": "release", "output": { "outputOnFailure": true }, "execution": { "jobs": 4 } },
+    { "name": "sanitize", "configurePreset": "sanitize", "output": { "outputOnFailure": true }, "execution": { "jobs": 2 } },
+    { "name": "headless-ci", "configurePreset": "headless-ci", "output": { "outputOnFailure": true }, "execution": { "jobs": 4 } }
+  ]
+}

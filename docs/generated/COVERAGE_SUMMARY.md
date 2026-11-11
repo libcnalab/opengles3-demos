@@ -10,28 +10,28 @@ Result directories: build/debug/test-results
 | 2.0 | 142 | 140 | 99% | 2 | 140 |
 | 3.0 | 104 | 100 | 96% | 4 | 100 |
 | 3.1 | 68 | 68 | 100% | 0 | 68 |
-| 3.2 | 44 | 19 | 43% | 25 | 19 |
+| 3.2 | 44 | 21 | 48% | 23 | 21 |
 
 ## Semantic features (by introducing ES version)
 
 | ES | total | passed | passed % | NOT_STARTED | FULLY_VALIDATED |
 |---|---|---|---|---|---|
 | 2.0 | 87 | 82 | 94% | 5 | 82 |
-| 3.0 | 78 | 71 | 91% | 7 | 71 |
+| 3.0 | 78 | 72 | 92% | 6 | 72 |
 | 3.1 | 30 | 30 | 100% | 0 | 30 |
-| 3.2 | 31 | 7 | 23% | 24 | 7 |
+| 3.2 | 31 | 9 | 29% | 22 | 9 |
 
 ## GLSL ES features (by language version)
 
 | GLSL | total | passed | passed % | NOT_STARTED | FULLY_VALIDATED |
 |---|---|---|---|---|---|
 | 100 | 4 | 0 | 0% | 4 | 0 |
-| 300 | 51 | 35 | 69% | 16 | 35 |
+| 300 | 51 | 36 | 71% | 15 | 36 |
 | 310 | 23 | 17 | 74% | 6 | 17 |
-| 320 | 16 | 1 | 6% | 15 | 1 |
+| 320 | 16 | 3 | 19% | 13 | 3 |
 
 ## Executables
 
 | status | count |
 |---|---|
-| FULLY_VALIDATED | 53 |
+| FULLY_VALIDATED | 57 |

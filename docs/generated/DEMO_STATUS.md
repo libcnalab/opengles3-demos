@@ -37,6 +37,8 @@
 | es30-transform-feedback | 3.0 | es30 | Transform feedback: capture, objects, pause/resume, queries | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-sync-objects | 3.0 | es30 | Sync objects: fences, client and server waits, flush and finish | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-normal-mapping | 3.0 | es30 | Normal mapping: tangent space, specular map, mip chains | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| es30-deferred-shading | 3.0 | es30 | Deferred shading: G-buffer (MRT) + 48 moving point lights | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| es30-shadow-mapping | 3.0 | es30 | Shadow Mapping | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-post-processing | 3.0 | es30 | Post-processing: gamma, blur, Sobel, bloom, depth of field | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es31-compute-basics | 3.1 | es31 | Compute shaders: dispatch, built-ins, limits | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es31-compute-shared-memory | 3.1 | es31 | Compute shaders: shared memory and barriers | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
@@ -54,5 +56,7 @@
 | es31-program-interface-query | 3.1 | es31 | Program interface queries | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es32-float-targets-and-indexed-blend | 3.2 | es32 | Float render targets and indexed blending | FULLY_VALIDATED | gpu:es-max=PASS llvmpipe:es-max=PASS softpipe:es-max=SKIP_UNSUPPORTED zink:es-max=PASS |
 | es32-debug-output | 3.2 | es32 | Debug output: messages, groups and labels | FULLY_VALIDATED | gpu:es-max=PASS llvmpipe:es-max=PASS softpipe:es-max=SKIP_UNSUPPORTED zink:es-max=PASS |
+| es32-texture-buffer | 3.2 | es32 | Buffer textures | FULLY_VALIDATED | gpu:es-max=PASS llvmpipe:es-max=PASS softpipe:es-max=SKIP_UNSUPPORTED zink:es-max=PASS |
+| es32-cube-map-array | 3.2 | es32 | Cube map array textures | FULLY_VALIDATED | gpu:es-max=PASS llvmpipe:es-max=PASS softpipe:es-max=SKIP_UNSUPPORTED zink:es-max=PASS |
 | test-metagl-contracts | 3.0 | tests | meta-gl contracts | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | test-glsl300-builtins | 3.0 | tests | GLSL ES 3.00 built-in functions (numeric) | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |

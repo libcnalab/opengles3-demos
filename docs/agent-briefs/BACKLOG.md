@@ -3,8 +3,8 @@
 The order follows `docs/DEMO_CATALOG.md`. Each line is one delegable task: directory → executable,
 followed by feature IDs. Claim an item by moving it to "In progress" with the agent and branch.
 
-## In progress
-(none)
+## In progress (Claude subagents, batch 4, started 2026-11-11)
+- ES 3.1 items 21+22, 23+24, 25+26, 27+28, 29+30, 31+32, 33+34
 
 ## Done
 All Stage 1–4 foundation demos listed as implemented in DEMO_CATALOG.md (merged 2026-11-11).

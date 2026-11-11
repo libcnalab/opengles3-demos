@@ -1,0 +1,62 @@
+{
+  "name": "es30-occlusion-queries",
+  "title": "Occlusion queries: culling hidden towers behind a city block",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es30",
+  "order": 480,
+  "summary": "Occlusion culling in a small city block: after the front buildings are drawn, the bounding box of each of six towers is depth-tested (color and depth writes off) inside an ANY_SAMPLES_PASSED query and only towers whose query passed are drawn; culled towers appear as red x-ray boxes. ANY_SAMPLES_PASSED and ANY_SAMPLES_PASSED_CONSERVATIVE results are compared with a CPU visibility model in five configurations (blocking and polled reads, occluders pushed behind, removed, depth cleared to 0), together with QUERY_RESULT_AVAILABLE ordering, CURRENT_QUERY, glIsQuery before and after the first glBeginQuery, deleting an active query and every INVALID_OPERATION case of the query API.",
+  "spec": [
+    "ES 3.0 §2.14 Asynchronous Queries",
+    "ES 3.0 §4.1.6 Occlusion Queries",
+    "ES 3.0 §6.1.7 Asynchronous Queries (IsQuery, GetQueryiv, GetQueryObjectuiv), Table 6.23 Query Object State",
+    "ES 3.0 Appendix D.1.3 Deleted Object and Object Name Lifetimes",
+    "ES 3.2 §4.2 Query Objects and Asynchronous Queries and Appendix E.2 (occlusion query objects may be reused for either occlusion target)",
+    "ES 3.0 §4.1.5 Depth Buffer Test, §4.2.2 Fine Control of Buffer Updates, §4.1.7 Blending",
+    "ES 3.0 §3.5.1 Basic Line Segment Rasterization, §3.6.1 Basic Polygon Rasterization (probe margins), §2.1.6.2 (tolerances)",
+    "ES 3.0 §2.5 GL Errors",
+    "GLSL ES 3.00 §4.3.4 Input Variables, §4.3.5 Uniform, §4.3.6 Output Variables, §4.3.8 Layout Qualifiers"
+  ],
+  "api": {
+    "glGenQueries": "5 + 12 names; distinct and non-zero; glIsQuery FALSE and glGetQueryObjectuiv INVALID_OPERATION until the first glBeginQuery",
+    "glBeginQuery": "ANY_SAMPLES_PASSED and ANY_SAMPLES_PASSED_CONSERVATIVE around each tower box (results compared with the CPU model); creates the object (glIsQuery TRUE) and sets CURRENT_QUERY; INVALID_OPERATION for an active target, the other occlusion target while one is active, a name active on another target, id 0, a never-generated name, a deleted name, an occlusion object on the primitives target and a primitives object on an occlusion target; a failed call creates and activates nothing; an occlusion and a primitives query active together; reuse of an occlusion object on the other occlusion target (strict, Mesa XFAIL)",
+    "glEndQuery": "results become available; CURRENT_QUERY back to 0; INVALID_OPERATION without an active query; ends a deleted active query (strict, Mesa XFAIL)",
+    "glGetQueryObjectuiv": "QUERY_RESULT exactly 0/1 and equal to the CPU model (blocking and after polling); QUERY_RESULT_AVAILABLE becomes TRUE by polling alone and earlier queries are available once a later one is; INVALID_OPERATION for an active query (both pnames), a generated-but-unused name and a deleted name; a query with no draw is FALSE; a primitives query without transform feedback is 0",
+    "glGetQueryiv": "CURRENT_QUERY 0 outside Begin/End and the active name inside, for ANY_SAMPLES_PASSED, ANY_SAMPLES_PASSED_CONSERVATIVE and TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN; unchanged by failed glBeginQuery calls",
+    "glIsQuery": "FALSE for 0, a generated name before its first glBeginQuery, a never-generated name and deleted names; TRUE inside and after Begin/End",
+    "glDeleteQueries": "deleting an active query raises no error and frees the name at once (glIsQuery FALSE, glBeginQuery INVALID_OPERATION); 0, unused and already deleted names are ignored without error",
+    "glClearDepthf": "depth cleared to 0.0 makes every ANY_SAMPLES_PASSED FALSE (negative control)",
+    "glDepthFunc": "LESS: towers behind the occluders' front faces report FALSE, towers in front of pushed-back occluders TRUE",
+    "glBlendFuncSeparate": "SRC_ALPHA/ONE_MINUS_SRC_ALPHA for color, ZERO/ONE for alpha: the culled overlay probe equals the CPU blend of the occluder color (+-2) with alpha 255",
+    "glCullFace": "BACK with FRONT_FACE CCW: the culled overlay is blended exactly once per pixel (a second layer would fail the probe)",
+    "glDrawArrays": "unit cube as TRIANGLES (boxes, towers, occluders, ground) and LINES (overlay outline); query results and probe pixels",
+    "glUniformMatrix4fv": "per-box MVP; projected positions match the CPU model the query results are compared with",
+    "glUniform4f": "tower, occluder and overlay colors observed at probe pixels",
+    "glUniform3f": "light direction; shaded colors match the CPU Lambert model",
+    "glUniform1f": "u_lit selects shaded towers or the unshaded overlay; both probed"
+  },
+  "features": [
+    "ES30.QUERY.OCCLUSION",
+    "ES30.QUERY.OBJECTS",
+    "ES20.ERRORS.INVALID_OPERATION"
+  ],
+  "glsl_features": [
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.LAYOUT.LOCATION",
+    "GLSL300.UNIFORM",
+    "GLSL300.FRAG.OUTPUT"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "gl-error",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-opus-5.5 (subagent)",
+    "notes": "Viewed the gpu es-max and zink es-min CTest captures (256x256) and own captures at 800x800 (zink), 640x480 (zink), 333x777 (gpu) and 1200x200 (llvmpipe). Light blue sky over a dark ground plane, two grey front buildings with darker shaded side faces. Visible: the tall yellow tower rising above the right block, the green tower in the street gap and the orange tower peeking out past the left block's right edge (its left part correctly cut off by the block). Culled: two towers behind the left block and one behind the right block appear only as translucent red x-ray boxes with red wireframe outlines over the grey facades, nothing of their own colors. gpu, llvmpipe and zink differ only by +-1 in the overlay color and at line pixels. Portrait and 6:1 surfaces show the whole block centred with sky and ground filling the rest; the horizon is straight."
+  }
+}

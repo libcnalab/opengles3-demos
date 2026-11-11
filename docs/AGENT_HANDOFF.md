@@ -14,11 +14,17 @@ _Keep this file current. It is the first thing any agent reads._
 - Phase 1: CMake + presets, meta-gl via `add_subdirectory`, `common/` runtime (EGL pbuffer +
   SDL3 window, CLI, checks, PNG capture), CTest matrix, result
   JSON, coverage generator, docs.
-- Demos: `es30-hello-triangle`, `es20-shader-compilation` (FULLY_VALIDATED, captures viewed).
+- Demos (all FULLY_VALIDATED, captures viewed): `es30-hello-triangle`, `es20-shader-compilation`,
+  `es20-uniforms` (all 42 glUniform* variants), `es20-textures-2d`, `diagnostics-capabilities`.
+- Tests: `glsl-compile-tests` (shader-tests/), `test-metagl-contracts` (fork/SIGABRT death tests +
+  context-loss cycle).
 - `shader-tests/` (`glsl-compile-tests`): 37 data-driven GLSL ES 1.00-3.20 compile/link cases with
   `@expect/@min-es/@spec/@feature/@xfail` annotations; two Mesa deviations recorded as XFAIL.
-- Test matrix extended to 4 drivers (gpu, llvmpipe, softpipe = native ES 3.1, zink). Finding: the
-  `MESA_GLES_VERSION_OVERRIDE` es-min runs lower only the API version; docs corrected accordingly.
+- Test matrix: gpu, llvmpipe, zink × es-max/es-min; softpipe (native ES 3.1) only for ES 3.2
+  executables and opt-ins (`extra_drivers`), because it miscompiles complex shaders.
+- Findings so far: es-min override lowers only the API version; Mesa accepts a comment before
+  `#version` and non-flat integer VS outputs; softpipe MAX_SAMPLES = 1 and a miscompilation
+  (all in KNOWN_LIMITATIONS.md).
 
 ## Environment (reference machine)
 

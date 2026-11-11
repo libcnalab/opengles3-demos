@@ -52,6 +52,7 @@
 | es31-separate-vertex-format | 3.1 | es31 | Separate vertex format and vertex buffer bindings | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es31-program-pipelines | 3.1 | es31 | Separable programs and program pipelines | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es31-program-interface-query | 3.1 | es31 | Program interface queries | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| es32-float-targets-and-indexed-blend | 3.2 | es32 | Float render targets and indexed blending | FULLY_VALIDATED | gpu:es-max=PASS llvmpipe:es-max=PASS softpipe:es-max=SKIP_UNSUPPORTED zink:es-max=PASS |
 | es32-debug-output | 3.2 | es32 | Debug output: messages, groups and labels | FULLY_VALIDATED | gpu:es-max=PASS llvmpipe:es-max=PASS softpipe:es-max=SKIP_UNSUPPORTED zink:es-max=PASS |
 | test-metagl-contracts | 3.0 | tests | meta-gl contracts | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | test-glsl300-builtins | 3.0 | tests | GLSL ES 3.00 built-in functions (numeric) | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |

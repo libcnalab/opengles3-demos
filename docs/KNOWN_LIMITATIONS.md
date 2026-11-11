@@ -60,11 +60,16 @@
 | `es32-debug-output` | ES 3.2 §18.1/§18.2: the callback receives a null-terminated message of `length` characters | with an explicit shorter `length` in `glDebugMessageInsert`/`glPushDebugGroup`, Mesa passes the caller's pointer unterminated at `length`. Read callback messages by `length`. All Mesa drivers |
 | `es32-debug-output` | ES 3.2 Table 2.3: a command raising INVALID_VALUE is ignored | a label of `MAX_LABEL_LENGTH` characters raises INVALID_VALUE but is still stored (all 11 namespaces + sync). All Mesa drivers |
 
+| `es32-float-targets-and-indexed-blend` | ES 3.2 §15.1.5.5: `IsEnabled(BLEND)` reports draw buffer 0 | radeonsi returns FALSE when only draw buffer 0 has blending enabled via `glEnablei`; llvmpipe/zink conform |
+| `es32-float-targets-and-indexed-blend` | ES 3.2 §15.2.2: masked color components are not written | zink (lavapipe) with blending enabled and `glColorMask(T,F,T,T)` on all buffers blends and stores G; other mask combinations misbehave too (exact trigger not isolated) |
+
 Not deviations (verified during integration): Mesa accepting `glGenerateMipmap` on R32F and unsized
 `RGB + FLOAT` uploads is correct, because the contexts expose `GL_OES_texture_float_linear`,
 `GL_EXT_color_buffer_float` and `GL_OES_texture_float`. The ES 3.0 transform-feedback mode rule failing under
 `MESA_GLES_VERSION_OVERRIDE=3.0` is an artifact of the override, since Mesa remains an ES 3.2 driver. The
-sRGB decode accuracy is not specified, so it is measured but not asserted.
+sRGB decode accuracy is not specified, so it is measured but not asserted. An RGB32F color attachment reported as
+`FRAMEBUFFER_UNSUPPORTED` (instead of `INCOMPLETE_ATTACHMENT`) is allowed: with two violated clauses the returned
+token is implementation-dependent (ES 3.2 §9.4.2).
 
 Because of the softpipe miscompilation row, softpipe is not used as a general correctness oracle. It runs only where
 its native ES 3.1 boundary is informative (ES 3.2 executables must SKIP, plus version-gating tests

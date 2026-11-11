@@ -1579,16 +1579,15 @@ namespace
                 if (strict)
                 {
                     // 9.4.1: "If attachment is COLOR_ATTACHMENTi, then image must have a color-renderable internal format", else the
-                    // attachment point is not attachment complete: FRAMEBUFFER_INCOMPLETE_ATTACHMENT (9.4.2).
-                    const std::string what = std::format("{} texture as COLOR_ATTACHMENT0: FRAMEBUFFER_INCOMPLETE_ATTACHMENT (not color-renderable, 9.4.1)", nr.name);
+                    // attachment point is not attachment complete: FRAMEBUFFER_INCOMPLETE_ATTACHMENT (9.4.2). An implementation may
+                    // also reject the format combination under FRAMEBUFFER_UNSUPPORTED, and "if more than one clause is violated, it
+                    // is implementation-dependent which value will be returned" (9.4.2). Both statuses are therefore correct; the
+                    // framebuffer must not be complete. (Mesa returns UNSUPPORTED for RGB32F.)
+                    const std::string what = std::format("{} texture as COLOR_ATTACHMENT0: incomplete (INCOMPLETE_ATTACHMENT or UNSUPPORTED, 9.4.1/9.4.2)", nr.name);
                     const std::string detail = std::format("status {}", demo::framebuffer_status_name(st));
-                    const bool ok = st == mgl::FramebufferStatus::IncompleteAttachment;
-                    if (nr.mesa_reports_unsupported)
-                        check.expect_or_known_deviation(ok, what, detail, "Mesa",
-                                                        "Mesa reports FRAMEBUFFER_UNSUPPORTED (the driver refuses the format) where ES 3.2 9.4.1/9.4.2 require "
-                                                        "FRAMEBUFFER_INCOMPLETE_ATTACHMENT for a texture that is not color-renderable");
-                    else
-                        check.expect(ok, what, detail);
+                    const bool ok = st == mgl::FramebufferStatus::IncompleteAttachment || st == mgl::FramebufferStatus::Unsupported;
+                    (void)nr.mesa_reports_unsupported;
+                    check.expect(ok, what, detail);
                     check.expect(rb_error == mgl::ErrorCode::InvalidEnum,
                                  std::format("glRenderbufferStorage({}): INVALID_ENUM (not color-, depth- or stencil-renderable, 9.2.4)", nr.name),
                                  std::format("glGetError() = {}", demo::error_name(rb_error)));

@@ -89,11 +89,11 @@
 | GLSL320.INTERFACE_BLOCKS_IO | 320 | interface | in/out interface blocks between stages + gl_PerVertex | GLSL ES 3.20 §4.3.9 | render | FULLY_VALIDATED | es32-geometry-shaders, es32-layered-rendering, glsl-compile-tests |
 | GLSL320.SAMPLE_VARS | 320 | multisample | gl_SampleID gl_SamplePosition gl_SampleMaskIn gl_SampleMask + sample qualifier | GLSL ES 3.20 §7.1.5 §4.5 | render | FULLY_VALIDATED | es32-advanced-blend-and-sample-shading, glsl-compile-tests |
 | GLSL320.FN.INTERPOLATE_AT | 320 | builtins | interpolateAtCentroid interpolateAtSample interpolateAtOffset | GLSL ES 3.20 §8.14.2 | render | FULLY_VALIDATED | es32-advanced-blend-and-sample-shading, glsl-compile-tests |
-| GLSL320.FN.IMAGE_ATOMIC | 320 | builtins | imageAtomicAdd/Min/Max/And/Or/Xor/Exchange/CompSwap (r32i/r32ui; Exchange r32f) | GLSL ES 3.20 §8.12 | compute-check | NOT_STARTED |  |
+| GLSL320.FN.IMAGE_ATOMIC | 320 | builtins | imageAtomicAdd/Min/Max/And/Or/Xor/Exchange/CompSwap (r32i/r32ui; Exchange r32f) | GLSL ES 3.20 §8.12 | compute-check | FULLY_VALIDATED | test-glsl320-builtins |
 | GLSL320.TYPES.NEW_SAMPLERS | 320 | types | samplerBuffer imageBuffer samplerCubeArray(Shadow) imageCubeArray sampler2DMSArray | GLSL ES 3.20 §4.1.7 | render | FULLY_VALIDATED | es32-cube-map-array, es32-multisample-array-and-border-color, es32-texture-buffer |
 | GLSL320.PRIMITIVE_BOUNDING_BOX | 320 | tessellation | gl_BoundingBox output | GLSL ES 3.20 §7.1.2 | render | FULLY_VALIDATED | es32-tessellation-terrain |
 | GLSL320.BLEND_EQUATION_LAYOUT | 320 | interface | layout(blend_support_*) for advanced blending | GLSL ES 3.20 §4.4.2 | render | FULLY_VALIDATED | es32-advanced-blend-and-sample-shading |
-| GLSL320.PRECISE | 320 | precision | precise qualifier | GLSL ES 3.20 §4.9 | compile | NOT_STARTED |  |
+| GLSL320.PRECISE | 320 | precision | precise qualifier | GLSL ES 3.20 §4.9 | compile | FULLY_VALIDATED | test-glsl320-builtins |
 | GLSL320.TEXTURE_BUFFER_FETCH | 320 | builtins | texelFetch(samplerBuffer) + textureSize | GLSL ES 3.20 §8.9 | render | FULLY_VALIDATED | es32-texture-buffer |
 | GLSL320.STAGE_COMBINATIONS | 320 | interface | Legal/illegal stage combinations at link (TES without TCS etc.) | ES 3.2 §7.3 | negative | FULLY_VALIDATED | es32-geometry-shaders, glsl-compile-tests |
-| GLSL320.FN.FMA | 320 | builtins | fma | GLSL ES 3.20 §8.3 | compute-check | NOT_STARTED |  |
+| GLSL320.FN.FMA | 320 | builtins | fma | GLSL ES 3.20 §8.3 | compute-check | FULLY_VALIDATED | test-glsl320-builtins |

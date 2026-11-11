@@ -83,6 +83,7 @@
 | `shader-tests/glsl300` texture2D case | GLSL ES 3.00 §8.8 lists only the new lookup functions; §6.1 requires a prototype or definition before a call | `texture2D()` compiles in a `#version 300 es` shader. All Mesa drivers |
 | `shader-tests/glsl300` ternary l-value case | GLSL ES 3.00 §5.8: "The ternary operator (?:) is also not allowed as an l-value" | `(c ? a : b) = 1.0` compiles. All Mesa drivers |
 | **crash** (avoided) `shader-tests` | linking `#version 310 es` with `#version 100` must fail cleanly | under `MESA_GLES_VERSION_OVERRIDE=3.0`, that link segfaults in libgallium (gpu, llvmpipe, zink). The case runs only in `test-glsl-language` on ES ≥ 3.1 |
+| `test-glsl320-builtins` | GLSL ES 3.20 §4.3.9: a block's type qualifier "may optionally include layout qualifiers, the auxiliary storage qualifier patch, and the precise qualifier"; §4.9: precise on a block applies to each member | `layout(std430, binding = 2) precise writeonly buffer PreciseOut { ... };` (either qualifier order) fails with "syntax error, unexpected NEW_IDENTIFIER". All Mesa drivers |
 
 Not deviations (verified during integration): Mesa accepting `glGenerateMipmap` on R32F and unsized
 `RGB + FLOAT` uploads is correct, because the contexts expose `GL_OES_texture_float_linear`,

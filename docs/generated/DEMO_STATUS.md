@@ -81,3 +81,4 @@
 | test-glsl300-builtins | 3.0 | tests | GLSL ES 3.00 built-in functions (numeric) | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | test-glsl310-builtins | 3.1 | tests | GLSL ES 3.10 built-in functions and arrays of arrays | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS softpipe:es-max=PASS softpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | test-glsl-language | 3.0 | tests | GLSL ES language rules at run time | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS softpipe:es-max=PASS softpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| test-glsl320-builtins | 3.2 | tests | GLSL ES 3.20 image atomics, fma and precise | FULLY_VALIDATED | gpu:es-max=PASS llvmpipe:es-max=PASS softpipe:es-max=SKIP_UNSUPPORTED zink:es-max=PASS |

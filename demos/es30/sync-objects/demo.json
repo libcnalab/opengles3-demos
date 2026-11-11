@@ -1,0 +1,70 @@
+{
+  "name": "es30-sync-objects",
+  "title": "Sync objects: fences, client and server waits, flush and finish",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es30",
+  "order": 400,
+  "summary": "Fence sync objects: a two-slot vertex buffer ring rewritten with MAP_UNSYNCHRONIZED_BIT and guarded by fences (every pixel of 16 cells checked), the legal results of glClientWaitSync, glWaitSync with TIMEOUT_IGNORED, glGetSynciv properties, glFlush and glFinish observed through fence status, an asynchronous glReadPixels into a pixel pack buffer polled with a fence, MAX_SERVER_WAIT_TIMEOUT, object lifetime and the errors the specification defines.",
+  "spec": [
+    "ES 3.0 §5.1 Flush and Finish",
+    "ES 3.0 §5.2 Sync Objects and Fences, Table 5.1, §5.2.1 Waiting for Sync Objects, §5.2.2 Signalling",
+    "ES 3.0 §6.1.8 Sync Object Queries, Table 6.29 (MAX_SERVER_WAIT_TIMEOUT), §6.1.2 Data Conversions",
+    "ES 3.0 §2.10.3 Mapping and Unmapping Buffer Data (MAP_UNSYNCHRONIZED_BIT), §4.3.2 Reading Pixels (pixel pack buffer)",
+    "ES 3.0 §2.5 GL Errors",
+    "GLSL ES 3.00 §7.1 Vertex Shader Special Variables (gl_VertexID)"
+  ],
+  "api": {
+    "glFenceSync": "fences after every ring update, after heavy draws and 32 back to back; returned names are non-zero, distinct and glIsSync TRUE",
+    "glClientWaitSync": "legal result sets (timeout 0: ALREADY_SIGNALED/TIMEOUT_EXPIRED; 50 ms with flush: loop until signaled, never WAIT_FAILED), ALREADY_SIGNALED for any timeout once signaled including 2^64-1, WAIT_FAILED + INVALID_VALUE for 0 and deleted names, polling guarded readback",
+    "glWaitSync": "TIMEOUT_IGNORED raises no error and the draw queued behind it executes (pixel compared); timeout 0, 1 s and 2^64-2 -> INVALID_VALUE; null and deleted names -> INVALID_VALUE",
+    "glGetSynciv": "OBJECT_TYPE = SYNC_FENCE, SYNC_CONDITION, SYNC_FLAGS = 0, SYNC_STATUS through creation, glFlush, glFinish and waits; bufSize 2 / 0 and a null length; nothing written and INVALID_VALUE for 0 and deleted names",
+    "glIsSync": "TRUE for fences, FALSE for 0 and immediately after glDeleteSync",
+    "glDeleteSync": "unsignaled fences can be deleted (no error, name invalid at once); 0 is ignored; a deleted name -> INVALID_VALUE",
+    "glFlush": "after glFlush a fence of a heavy draw becomes SIGNALED within a bounded poll of glGetSynciv alone",
+    "glFinish": "the fence created just before it is SIGNALED on the first query and glClientWaitSync(0) returns ALREADY_SIGNALED",
+    "glGetInteger64v": "MAX_SERVER_WAIT_TIMEOUT >= 0",
+    "glGetIntegerv": "MAX_SERVER_WAIT_TIMEOUT returned clamped to the int range",
+    "glMapBufferRange": "MAP_WRITE_BIT | MAP_UNSYNCHRONIZED_BIT rewrites of the ring buffers (every pixel compared); a read mapping of the pixel pack buffer is compared with the heavy draw's color",
+    "glUnmapBuffer": "returns TRUE for every ring update",
+    "glBufferData": "ring buffers created empty and rewritten; the pixel pack buffer pre-filled with 0xA5 (the negative control)",
+    "glReadPixels": "RGBA / UNSIGNED_BYTE into a pixel pack buffer; the data equals the heavy draw's color once the fence is signaled",
+    "glDrawArrays": "ring rectangles (TRIANGLE_STRIP) and the full-viewport heavy triangle; pixels compared",
+    "glGenVertexArrays": "two ring-slot VAOs and one without attributes",
+    "glBindVertexArray": "VAO switching selects the ring slot drawn",
+    "glEnableVertexAttribArray": "position and color of the ring rectangles; observed through pixels",
+    "glVertexAttribPointer": "position (offset 0) and color (offset 8), stride 20; observed through pixels",
+    "glDeleteVertexArrays": "cleanup, final glGetError == NO_ERROR",
+    "glUniform1i": "u_iterations (loop count of the heavy shader)",
+    "glUniform1f": "u_zero = 0.0 keeps the heavy shader's output exactly u_color",
+    "glUniform4f": "u_color of the heavy draw: the pixel pack buffer and the center pixel equal it",
+    "glDeleteBuffers": "cleanup"
+  },
+  "features": [
+    "ES30.SYNC.FENCE",
+    "ES30.SYNC.ERRORS",
+    "ES20.FLUSH_FINISH",
+    "ES30.BUFFER.PBO_PACK",
+    "ES20.ERRORS.INVALID_VALUE"
+  ],
+  "glsl_features": [
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.LAYOUT.LOCATION",
+    "GLSL300.BUILTIN_VARS.VS",
+    "GLSL300.UNIFORM"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "state-query",
+    "gl-error",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5",
+    "notes": "Viewed the gpu, llvmpipe and zink es-max captures (256x256, identical; 0/255 deviation in every cell). A 4x4 grid of 64x64 cells on the dark-blue clear color, each holding exactly one axis-aligned rectangle of its own size, position and color (sixteen distinct colors; cell 0, the top left, is a small dim gray square, e.g. cell 3 a mint rectangle near the top edge, cell 11 a red-orange one), no rectangle touches or crosses a cell border, neighbouring cells never repeat a rectangle, and there are no stray marks or leftover pixels from the heavy full-viewport draws that validate() issues (the image is re-rendered at the end)."
+  }
+}

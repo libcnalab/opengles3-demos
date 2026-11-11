@@ -4,7 +4,7 @@ The order follows `docs/DEMO_CATALOG.md`. Each line is one delegable task: direc
 followed by feature IDs. Claim an item by moving it to "In progress" with the agent and branch.
 
 ## In progress
-- ES 3.2 item 57; ES 3.0 items 16, 17; es30-skybox-and-fog (3D) (Claude subagents)
+- ES 3.2 item 57; ES 3.0 item 17; es30-skybox-and-fog (3D) (Claude subagents)
 
 ## Done
 All Stage 1–4 foundation demos listed as implemented in DEMO_CATALOG.md (merged 2026-11-11).

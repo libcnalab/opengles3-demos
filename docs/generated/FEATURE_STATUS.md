@@ -29,8 +29,8 @@
 | ES20.SHADER.BINARY | 2.0 | shaders | glShaderBinary + SHADER_BINARY_FORMATS (may legitimately be empty) | ES 3.0 §2.12.2 | FULLY_VALIDATED | es20-shader-compilation |
 | ES20.PROGRAM.VALIDATE | 2.0 | shaders | glValidateProgram + VALIDATE_STATUS (e.g. sampler type conflict on one unit) | ES 3.0 §2.12.3 §2.12.9 | FULLY_VALIDATED | es20-shader-compilation |
 | ES20.PROGRAM.ATTACHED | 2.0 | shaders | glGetAttachedShaders / ATTACHED_SHADERS | ES 3.0 §6.1.12 | FULLY_VALIDATED | es20-shader-compilation |
-| ES20.ATTRIB.BIND_LOCATION | 2.0 | vertex-input | glBindAttribLocation before link vs glGetAttribLocation | ES 3.0 §2.12.5 | FULLY_VALIDATED | es20-vertex-attributes |
-| ES20.ATTRIB.ACTIVE_QUERY | 2.0 | vertex-input | glGetActiveAttrib enumeration (name/type/size) | ES 3.0 §2.12.5 | FULLY_VALIDATED | es20-vertex-attributes |
+| ES20.ATTRIB.BIND_LOCATION | 2.0 | vertex-input | glBindAttribLocation before link vs glGetAttribLocation | ES 3.0 §2.12.5 | FULLY_VALIDATED | es20-vertex-attributes, es30-program-binary |
+| ES20.ATTRIB.ACTIVE_QUERY | 2.0 | vertex-input | glGetActiveAttrib enumeration (name/type/size) | ES 3.0 §2.12.5 | FULLY_VALIDATED | es20-vertex-attributes, es30-program-binary |
 | ES20.ATTRIB.CONSTANT | 2.0 | vertex-input | Current (constant) generic attribute values glVertexAttrib*f[v] | ES 3.0 §2.8 | FULLY_VALIDATED | es20-vertex-attributes |
 | ES20.ATTRIB.FORMATS | 2.0 | vertex-input | Attribute types BYTE/UBYTE/SHORT/USHORT/FLOAT/FIXED with normalized flag | ES 3.0 §2.9 Table 2.4 | FULLY_VALIDATED | es20-vertex-attributes |
 | ES20.ATTRIB.INTERLEAVED | 2.0 | vertex-input | Interleaved vs planar layouts; stride and offset | ES 3.0 §2.9 | FULLY_VALIDATED | es20-vertex-attributes, es30-vertex-array-objects, es31-separate-vertex-format |
@@ -65,7 +65,7 @@
 | ES20.UNIFORM.SCALAR_VECTOR | 2.0 | uniforms | glUniform{1234}{f | i}[v] and glGetUniform* | FULLY_VALIDATED | es20-uniforms |
 | ES20.UNIFORM.MATRIX | 2.0 | uniforms | glUniformMatrix{234}fv (transpose must be GL_FALSE) | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-transformations-camera, es20-uniforms, es30-lighting |
 | ES20.UNIFORM.ARRAY_STRUCT | 2.0 | uniforms | Uniform arrays and structs (element/member locations) | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-uniforms |
-| ES20.UNIFORM.ACTIVE_QUERY | 2.0 | uniforms | glGetActiveUniform enumeration | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-uniforms |
+| ES20.UNIFORM.ACTIVE_QUERY | 2.0 | uniforms | glGetActiveUniform enumeration | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-uniforms, es30-program-binary |
 | ES20.TEXTURE.2D | 2.0 | textures | 2D textures: glGenTextures/glBindTexture/glTexImage2D/glActiveTexture | ES 3.0 §3.8.1 §3.8.3 | FULLY_VALIDATED | es20-textures-2d, es30-normal-mapping |
 | ES20.TEXTURE.SUBIMAGE | 2.0 | textures | glTexSubImage2D updates | ES 3.0 §3.8.5 | FULLY_VALIDATED | es20-textures-2d |
 | ES20.TEXTURE.COPY | 2.0 | textures | glCopyTexImage2D / glCopyTexSubImage2D from framebuffer | ES 3.0 §3.8.5 | FULLY_VALIDATED | es20-copy-and-read-pixels |
@@ -160,7 +160,7 @@
 | ES30.QUERY.OBJECTS | 3.0 | queries | glGenQueries/glIsQuery/glBeginQuery/glEndQuery/glGetQueryiv/glGetQueryObjectuiv availability | ES 3.0 §2.14 §6.1.7 | FULLY_VALIDATED | es30-transform-feedback, es32-geometry-shaders |
 | ES30.SYNC.FENCE | 3.0 | sync | glFenceSync/glClientWaitSync/glWaitSync/glGetSynciv/glIsSync/glDeleteSync | ES 3.0 §5.2 | FULLY_VALIDATED | es30-sync-objects |
 | ES30.SYNC.ERRORS | 3.0 | sync | Invalid sync usage (flags/timeout) errors | ES 3.0 §5.2 | FULLY_VALIDATED | es30-sync-objects |
-| ES30.PROGRAM.BINARY | 3.0 | shaders | glGetProgramBinary/glProgramBinary + PROGRAM_BINARY_RETRIEVABLE_HINT + fallback | ES 3.0 §2.12.4 | NOT_STARTED |  |
+| ES30.PROGRAM.BINARY | 3.0 | shaders | glGetProgramBinary/glProgramBinary + PROGRAM_BINARY_RETRIEVABLE_HINT + fallback | ES 3.0 §2.12.4 | FULLY_VALIDATED | es30-program-binary |
 | ES30.PROGRAM.FRAG_DATA_LOCATION | 3.0 | shaders | glGetFragDataLocation | ES 3.0 §3.9.2 | FULLY_VALIDATED | es30-multiple-render-targets |
 | ES30.RASTER.FLAT | 3.0 | rasterization | flat qualifier + provoking vertex (last vertex in ES 3.0) | ES 3.0 §2.17 | NOT_STARTED |  |
 | ES30.RASTER.CENTROID | 3.0 | rasterization | centroid interpolation with multisampling | ES 3.0 §3.6.3 | NOT_STARTED |  |

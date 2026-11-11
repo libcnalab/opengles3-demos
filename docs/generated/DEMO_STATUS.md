@@ -37,6 +37,7 @@
 | es30-buffer-mapping | 3.0 | es30 | Buffer mapping and copying | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-uniform-buffer-objects | 3.0 | es30 | Uniform buffer objects | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-transform-feedback | 3.0 | es30 | Transform feedback: capture, objects, pause/resume, queries | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| es30-program-binary | 3.0 | es30 | Program binaries | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-sync-objects | 3.0 | es30 | Sync objects: fences, client and server waits, flush and finish | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-normal-mapping | 3.0 | es30 | Normal mapping: tangent space, specular map, mip chains | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-deferred-shading | 3.0 | es30 | Deferred shading: G-buffer (MRT) + 48 moving point lights | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |

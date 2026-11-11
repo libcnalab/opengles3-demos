@@ -43,6 +43,7 @@
 #include <functional>
 #include <initializer_list>
 #include <iostream>
+#include <map>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -465,6 +466,21 @@ namespace
     // ---------------------------------------------------------------------------------------------
     enum : std::size_t { kRgb, kSrgb, kPunch, kSrgbPunch, kRgba, kSrgba, kR11, kSignedR11, kRg11, kSignedRg11, kArray, kPad, kTexCount };
 
+    // Documented ANGLE deviations (docs/KNOWN_LIMITATIONS.md). The checks stay strict on every other driver.
+    constexpr std::string_view kAngle = "ANGLE";
+    constexpr std::string_view kAngleSubImage =
+        "ANGLE rejects a glCompressedTexSubImage2D whose width/height is not a multiple of 4 unless it covers the whole level; "
+        "ES 3.0 §3.8.6 / ES 3.2 §8.7 allow it when width + xoffset (height + yoffset) equals the level size";
+    constexpr std::string_view kAnglePadded =
+        "consequence of the rejected glCompressedTexSubImage2D at (4, 4): the 6x6 texture keeps its placeholder block";
+    constexpr std::string_view kAngleUnsigned11 =
+        "ANGLE extends the 11-bit EAC value to 16 bits by x << 5 (zero fill) instead of the bit replication of C.1.5, so it "
+        "returns x * 32 / 65535 instead of x / 2047 (up to 0.97 units low; 2047 reads 0.99953, not 1.0 as equation C.2 requires)";
+    constexpr std::string_view kAngleSigned11 =
+        "ANGLE's signed EAC values are 4 codes too far from zero in the direction of the base codeword (positive base: +4, "
+        "negative base: -4) unless clamped, as if the +4 (+0.5 x 8) of the unsigned equation C.4 were applied to the magnitude; "
+        "C.8 has no such term (C.1.7 worked example: 320, ANGLE 324). The 11-bit value is also zero-filled to 16 bits";
+
     // RGB8_ETC2 blocks shared by several textures.
     const std::uint64_t kIndividual = enc_individual(14, 3, 8, 2, 9, 13, 0, 5, 0, {"0123", "1230", "2301", "3012"});
     // Differential: the base color (231, 8, 16) and modifier 29 of the C.1.1 example; dB (+3) != dG (+2).
@@ -701,7 +717,7 @@ namespace
                 record("glCompressedTexImage2D RGB8_ETC2 6x6 (32 bytes)");
                 const std::vector<std::uint8_t> block = bytes({kHModeLt});
                 mgl::glCompressedTexSubImage2D(TT::Texture2D, 0, 4, 4, 2, 2, CIF::Rgb8Etc2, 8, block.data());
-                record("glCompressedTexSubImage2D RGB8_ETC2 2x2 at (4, 4) of the 6x6 texture");
+                pad_sub_error_ = demo::drain_gl_errors();  // checked in validate() (a documented ANGLE deviation)
             }
             // NEAREST, no mipmaps (the default NEAREST_MIPMAP_LINEAR would make the textures incomplete).
             for (std::size_t n = 0; n < kTexCount; ++n)
@@ -783,6 +799,9 @@ namespace
         {
             for (const auto& [what, error] : upload_errors_)
                 check.expect(error == mgl::ErrorCode::NoError, std::format("{} -> no error", what), demo::error_name(error));
+            check.expect_or_known_deviation(pad_sub_error_ == mgl::ErrorCode::NoError,
+                                            "glCompressedTexSubImage2D RGB8_ETC2 2x2 at (4, 4) of the 6x6 texture -> no error (width + xoffset = TEXTURE_WIDTH)",
+                                            demo::error_name(pad_sub_error_), kAngle, kAngleSubImage);
 
             check_picture(env, check);  // reads the window before anything else is drawn
             check_format_queries(check);
@@ -830,9 +849,9 @@ namespace
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
             const std::vector<std::uint8_t> px = demo::read_rgba8(0, 0, env.width, env.height);
             const Grid g = grid_for(env.width, env.height, static_cast<int>(cells_.size()));
-            int probes = 0, bad = 0;
+            int probes = 0, bad = 0, pad_probes = 0, pad_bad = 0;
             double max_dev = 0;
-            std::string first;
+            std::string first, pad_first;
             for (std::size_t c = 0; c < cells_.size(); ++c)
             {
                 const Cell& cell = cells_[c];
@@ -871,6 +890,16 @@ namespace
                                 if (dev < best) best = dev, best_want = want;
                                 ok = ok || dev <= tol;
                             }
+                        if (cell.tex == kPad)
+                        {
+                            // Reported separately: on ANGLE this cell is wrong only because its sub-image upload was rejected.
+                            ++pad_probes;
+                            if (!ok && pad_bad++ == 0)
+                                pad_first = std::format("texel ({}, {}) at pixel ({}, {}): got ({}, {}, {}, {}) want ({:.1f}, {:.1f}, {:.1f}, 255)",
+                                                        cell.tx + ti, cell.ty + tj, x, y, px[at], px[at + 1], px[at + 2], px[at + 3], 255 * best_want[0],
+                                                        255 * best_want[1], 255 * best_want[2]);
+                            continue;
+                        }
                         ++probes;
                         max_dev = std::max(max_dev, best);
                         if (!ok && bad++ == 0)
@@ -882,10 +911,23 @@ namespace
             std::cout << std::format("   note: picture {}x{}, {} cells, largest deviation from the prediction {:.2f} (8-bit steps)\n", env.width, env.height,
                                      cells_.size(), max_dev);
             check.expect(probes > 400 && bad == 0,
-                         std::format("magnified picture: all {} texels of the {} cells (NEAREST) match the CPU decoder (exact codes exact, computed "
-                                     "values within 1/255)",
-                                     probes, cells_.size()),
+                         std::format("magnified picture: all {} texels of the {} cells other than the padded 6x6 one (NEAREST) match the CPU decoder "
+                                     "(exact codes exact, computed values within 1/255)",
+                                     probes, cells_.size() - 1),
                          std::format("{} wrong; first: {}", bad, first));
+            expect_padded(check, pad_probes == 36 && pad_bad == 0,
+                          std::format("magnified picture: the {} texels of the padded 6x6 RGB8_ETC2 cell match the CPU decoder", pad_probes),
+                          std::format("{} wrong; first: {}", pad_bad, pad_first));
+        }
+
+        /// A check of the padded 6x6 texture. It is labelled as the ANGLE deviation only when the sub-image upload into
+        /// it was actually rejected; if that upload succeeded, a wrong texel is a plain failure on every driver.
+        void expect_padded(demo::Check& check, bool ok, std::string_view what, std::string_view detail) const
+        {
+            if (pad_sub_error_ == mgl::ErrorCode::NoError)
+                check.expect(ok, what, detail);
+            else
+                check.expect_or_known_deviation(ok, what, detail, kAngle, kAnglePadded);
         }
 
         void check_format_queries(demo::Check& check)
@@ -1109,6 +1151,40 @@ namespace
             return {bad, max_dev};
         }
 
+        /// Diagnosis of a failed 11-bit comparison (printed, not asserted). Reads each component back as if the 11-bit
+        /// value had been zero-filled to a 16-bit normalized value (x << 5, i.e. v * 65535 / 32, or v * 32767 / 32 for the
+        /// signed formats) and histograms the offset of that value from the decoder's 11-bit code x. All offsets 0: the
+        /// codes are right and only the 11-bit -> float conversion differs; other offsets: the decoded code differs.
+        std::string eleven_bit_models(std::size_t tex) const
+        {
+            const TexDesc& t = textures_[tex];
+            const bool is_signed = t.kind == Kind::SignedR11 || t.kind == Kind::SignedRg11;
+            const std::size_t channels = (t.kind == Kind::Rg11 || t.kind == Kind::SignedRg11) ? 2 : 1;
+            const double full = is_signed ? 32767.0 : 65535.0;
+            std::map<long, int> offsets;
+            int other = 0;
+            for (int l = 0; l < t.layers; ++l)
+                for (int j = 0; j < t.h; ++j)
+                    for (int i = 0; i < t.w; ++i)
+                    {
+                        const Expect e = expect_texel(t, l, i, j, Mut::None);
+                        const std::array<float, 4> g = got(tex, l, i, j);
+                        for (std::size_t c = 0; c < channels; ++c)
+                        {
+                            const double as_zero_filled = static_cast<double>(g[c]) * full / 32.0;
+                            const double d = as_zero_filled - static_cast<double>(std::lround(e.v[c] * e.unit[c]));
+                            if (std::abs(d - std::round(d)) <= 0.02)
+                                ++offsets[std::lround(d)];
+                            else
+                                ++other;
+                        }
+                    }
+            std::string s = std::format("components read as an 11-bit value zero-filled to 16 bits (x * 32 / {}), offset from the decoder's code:", full);
+            for (const auto& [offset, count] : offsets) s += std::format(" {:+} x{}", offset, count);
+            if (other > 0) s += std::format(", not of that form x{}", other);
+            return s;
+        }
+
         void check_exact(demo::Check& check)
         {
             for (std::size_t n = 0; n < kTexCount; ++n)
@@ -1120,10 +1196,17 @@ namespace
                 const std::string tolerance = t.srgb ? "RGB within 1/255 after the sRGB decode, alpha exact"
                                               : eleven ? "the exact 11-bit value (never truncated below 11 bits, C.1.5 / C.1.7)"
                                                        : "exactly the 8-bit code / 255";
-                check.expect(bad == 0,
-                             std::format("{} {}x{}{}: all {} texels match the Appendix C decoder ({}; largest deviation {:.3f} units)", t.name, t.w, t.h,
-                                         t.layers > 1 ? std::format("x{}", t.layers) : "", t.w * t.h * t.layers, tolerance, max_dev),
-                             std::format("{} texels wrong; first: {}", bad, first));
+                const std::string what = std::format("{} {}x{}{}: all {} texels match the Appendix C decoder ({}; largest deviation {:.3f} units)", t.name,
+                                                     t.w, t.h, t.layers > 1 ? std::format("x{}", t.layers) : "", t.w * t.h * t.layers, tolerance, max_dev);
+                std::string detail = std::format("{} texels wrong; first: {}", bad, first);
+                if (eleven && bad > 0) detail += "; " + eleven_bit_models(n);
+                const bool is_signed = t.kind == Kind::SignedR11 || t.kind == Kind::SignedRg11;
+                if (n == kPad)
+                    expect_padded(check, bad == 0, what, detail);
+                else if (eleven)
+                    check.expect_or_known_deviation(bad == 0, what, detail, kAngle, is_signed ? kAngleSigned11 : kAngleUnsigned11);
+                else
+                    check.expect(bad == 0, what, detail);
             }
         }
 
@@ -1162,12 +1245,15 @@ namespace
             check.expect_eq(code11(kR11, 0, 1, 2047.0), 668L, "C.1.5 example: R11 103 x 8 + 4 - 160 = 668 (of 2047)");
             check.expect_eq(code11(kR11, 4, 1, 2047.0), 818L, "C.1.5 example: multiplier 0 acts as 1/8: 828 - 10 = 818");
             // C.1.7: base 60, table 13, multiplier 2 -> 320; multiplier 0 -> 470.
-            check.expect_eq(code11(kSignedR11, 0, 1, 1023.0), 320L, "C.1.7 example: signed R11 60 x 8 - 160 = 320 (of 1023)");
-            check.expect_eq(code11(kSignedR11, 4, 1, 1023.0), 470L, "C.1.7 example: multiplier 0: 480 - 10 = 470");
+            const long c17 = code11(kSignedR11, 0, 1, 1023.0), c17_zero = code11(kSignedR11, 4, 1, 1023.0);
+            check.expect_or_known_deviation(c17 == 320L, "C.1.7 example: signed R11 60 x 8 - 160 = 320 (of 1023)", std::format("actual={} expected=320", c17),
+                                            kAngle, kAngleSigned11);
+            check.expect_or_known_deviation(c17_zero == 470L, "C.1.7 example: multiplier 0: 480 - 10 = 470", std::format("actual={} expected=470", c17_zero),
+                                            kAngle, kAngleSigned11);
             // C.1.5 "reaches 1.0": base 255, multiplier 1, table 15: modifiers 2, 4, 6, 8 give 1.0; -3 gives 0.987.
-            check.expect(got(kR11, 0, 8, 1)[0] == 1.0f && code11(kR11, 8, 0, 2047.0) == 2020,
-                         "C.1.5 example: base 255 reaches exactly 1.0 with a positive modifier; modifier -3 gives 2020/2047 = 0.987",
-                         std::format("{} / {}", got(kR11, 0, 8, 1)[0], code11(kR11, 8, 0, 2047.0)));
+            check.expect_or_known_deviation(got(kR11, 0, 8, 1)[0] == 1.0f && code11(kR11, 8, 0, 2047.0) == 2020,
+                                            "C.1.5 example: base 255 reaches exactly 1.0 with a positive modifier; modifier -3 gives 2020/2047 = 0.987",
+                                            std::format("{} / {}", got(kR11, 0, 8, 1)[0], code11(kR11, 8, 0, 2047.0)), kAngle, kAngleUnsigned11);
         }
 
         void check_negative_controls(demo::Check& check)
@@ -1202,6 +1288,7 @@ namespace
         std::vector<Cell> cells_;
         std::array<std::vector<std::vector<std::array<float, 4>>>, kTexCount> readback_{};
         std::vector<std::pair<std::string, mgl::ErrorCode>> upload_errors_;
+        mgl::ErrorCode pad_sub_error_ = mgl::ErrorCode::NoError;
         std::array<mgl::TextureId, kTexCount> tex_{};
         mgl::TextureId scratch_2d_{}, scratch_3d_{};
         mgl::ProgramId show_{}, probe_{};

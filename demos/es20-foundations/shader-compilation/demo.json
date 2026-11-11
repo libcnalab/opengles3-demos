@@ -38,7 +38,7 @@
     "glUseProgram": "INVALID_OPERATION for an unlinked program; current program survives deletion",
     "glDeleteProgram": "deferred while current (glIsProgram TRUE, still renders), deleted when replaced",
     "glIsProgram": "TRUE while current-and-flagged, FALSE afterwards",
-    "glValidateProgram": "FALSE for sampler2D+samplerCube on one unit, TRUE after fixing the unit",
+    "glValidateProgram": "FALSE for sampler2D+samplerCube on one unit (strict, ANGLE XFAIL), TRUE after fixing the unit",
     "glGetShaderPrecisionFormat": "all 6 precision types x 2 stages meet GLSL ES 3.00 minimums",
     "glReleaseShaderCompiler": "compilation still succeeds afterwards",
     "glShaderBinary": "unsupported format -> INVALID_ENUM",

@@ -204,6 +204,10 @@ Verified at 128x128, 256x256, 640x480, 800x800, 333x777, 1280x400 and 150x600 on
   format and says nothing about filters. The checks stay strict and are reported as XFAIL on "Mesa".
 - **zink** returns 1.0 (the `ALWAYS` result) for a shadow lookup on a mipmap-incomplete depth texture instead of the
   0 required by §3.9.2.1. radeonsi and llvmpipe return 0. Reported as XFAIL on "zink".
+- **ANGLE** (Vulkan backend) does not clamp `Dref` to [0, 1] for `DEPTH_COMPONENT24` and `DEPTH24_STENCIL8`
+  (`DEPTH_COMPONENT16` is clamped): `LESS` with `Dref = -0.5` against `Dt = 0` returns 1. §3.8.15.1 (ES 3.2 §8.20.1):
+  *"If the texture's internal format indicates a fixed-point depth texture, then Dt and Dref are clamped to the range
+  [0, 1]"*. Reported as XFAIL on "ANGLE" for the two 24-bit formats only.
 
 ## Pitfalls
 

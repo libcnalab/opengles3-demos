@@ -1679,10 +1679,16 @@ namespace
             }
             mgl::glTexParameter(TT::Texture2D, mgl::TextureCompareMode::None);
             mgl::glTexParameter(TT::Texture2D, CF::Lequal);
-            check.expect(clamp_bad == 0,
-                         std::format("{}: Dref outside [0, 1] is {} before the comparison (§3.8.15.1), {} lookups", info.label,
-                                     fmt.is_float ? "NOT clamped" : "clamped", clamp_total),
-                         std::format("{} mismatches; {}", clamp_bad, clamp_first));
+            const std::string clamp_what = std::format("{}: Dref outside [0, 1] is {} before the comparison (§3.8.15.1), {} lookups", info.label,
+                                                       fmt.is_float ? "NOT clamped" : "clamped", clamp_total);
+            const std::string clamp_detail = std::format("{} mismatches; {}", clamp_bad, clamp_first);
+            if (fmt.is_float || fmt.min_bits != 24)  // the deviation is limited to the 24-bit fixed-point formats
+                check.expect(clamp_bad == 0, clamp_what, clamp_detail);
+            else
+                check.expect_or_known_deviation(clamp_bad == 0, clamp_what, clamp_detail, "ANGLE",
+                                                "ANGLE (Vulkan backend) does not clamp Dref for DEPTH_COMPONENT24 and DEPTH24_STENCIL8 (DEPTH_COMPONENT16 "
+                                                "is clamped): \"If the texture's internal format indicates a fixed-point depth texture, then Dt "
+                                                "and Dref are clamped to the range [0, 1]\" (ES 3.0 §3.8.15.1, ES 3.2 §8.20.1)");
         }
         check.expect(func_readback, "glGetTexParameteriv(TEXTURE_COMPARE_FUNC) reads back each of the eight functions");
     }

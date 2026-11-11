@@ -1020,9 +1020,13 @@ namespace
             {
                 mgl::glViewport(0, 0, s.max_viewport[0] + 1000, s.max_viewport[1] + 1000);
                 const State t = query_state();
-                check.expect(t.viewport[2] == s.max_viewport[0] && t.viewport[3] == s.max_viewport[1],
-                             "glViewport wider/taller than GL_MAX_VIEWPORT_DIMS is clamped to it (ES 3.0 §2.13.1)",
-                             std::format("stored {}x{}, max {}x{}", t.viewport[2], t.viewport[3], s.max_viewport[0], s.max_viewport[1]));
+                // The clamp happens "when specified", so GL_VIEWPORT (the state) returns the clamped size.
+                check.expect_or_known_deviation(
+                    t.viewport[2] == s.max_viewport[0] && t.viewport[3] == s.max_viewport[1],
+                    "glViewport wider/taller than GL_MAX_VIEWPORT_DIMS is clamped to it (ES 3.0 §2.13.1)",
+                    std::format("stored {}x{}, max {}x{}", t.viewport[2], t.viewport[3], s.max_viewport[0], s.max_viewport[1]), "ANGLE",
+                    "ANGLE keeps the unclamped size in the GL_VIEWPORT state, although viewport width and height \"are clamped to "
+                    "implementation-dependent maximums when specified\" (ES 3.0 §2.13.1, ES 3.2 §12.6.1)");
                 check.expect_no_gl_error("clamping an oversized viewport raises no GL error");
             }
 

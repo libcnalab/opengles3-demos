@@ -121,3 +121,12 @@ Every texture is read twice: with `texture()` at the texel center and with `texe
 - A bilinear lookup next to `FLT_MAX` and `-FLT_MAX` can overflow in `a + w * (b - a)` and return NaN even at weight 0 (llvmpipe). The data keeps the two extremes apart.
 - Denormal floats may be flushed to zero by an implementation (2.1.3: "preserved or forced to zero"); the data contains only normal values.
 - Reading a float texture exactly needs the integer render target: `RGBA32F` as a *render* target needs an extension in core ES 3.0.
+
+## Known driver deviations (XFAIL)
+
+- **ANGLE**: `RGB9_E5` uploaded as `FLOAT` data. For 4 of the 64 texels ANGLE stores a shared exponent one larger than the
+  procedure of §3.8.3.2 (ES 3.2 §8.5.2) gives, so its components lose their last mantissa bit (texel (0, 0): green
+  230/2048 instead of 229/2048). The 4 texels are exactly the ones for which `floor(ln(maxc))` and `floor(log2(maxc))`
+  differ. The procedure is normative (`exp_p = max(-B - 1, floor(log2(maxc))) + 1 + B`, then round-to-nearest
+  mantissas) and §3.8.17 decodes the stored bits exactly, so the exact comparison stays and is XFAIL on "ANGLE". Packed
+  `UNSIGNED_INT_5_9_9_9_REV` words pass unchanged.

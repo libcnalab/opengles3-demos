@@ -188,3 +188,21 @@ ctest --preset debug -R es30-etc2-eac
 - **There is no ES internal-format query for compressed formats.** `glGetInternalformativ` accepts
   only renderable formats (ES 3.0 §6.1.15). `TEXTURE_COMPRESSED` exists only as a texture level
   query, and only from ES 3.1.
+
+## Known driver deviations (XFAIL)
+
+Measured on ANGLE 2.1.17841 (Vulkan backend on RADV, which has no native ETC2, so ANGLE decodes on upload). Every
+check stays strict and is reported as XFAIL on "ANGLE":
+
+- `glCompressedTexSubImage2D` of a 2x2 region at (4, 4) of the 6x6 texture fails with `INVALID_OPERATION`. §3.8.6
+  (ES 3.2 §8.7) allows a width or height that is not a multiple of 4 when `width + xoffset` (`height + yoffset`) equals
+  the level size. The padded texture's comparisons (picture cell and exact readback) fail as a consequence and are
+  XFAIL for the same reason; the picture check of all other cells stays strict on ANGLE.
+- `R11_EAC` / `RG11_EAC`: every 11-bit code is right, but it is widened to 16 bits as `x << 5` (zero fill), so the
+  texture returns `x * 32 / 65535` instead of `x / 2047` (2047 reads 0.99953, not 1.0). Equation C.2 defines the value
+  (2047 represents 1.0), and C.1.5 allows wider representations only through bit replication. The failing check prints a
+  histogram of the offsets of the readback from the decoder's code under the zero-fill reading (all `+0` on ANGLE).
+- `SIGNED_R11_EAC` / `SIGNED_RG11_EAC`: unclamped values are 4 codes too far from zero in the direction of the base
+  codeword (C.1.7 worked example: 320, ANGLE 324; 470, ANGLE 474), as if the `+4` of the unsigned equation C.4 were
+  applied. Equation C.8 has no such term (the Khronos Data Format Specification: "the signed version does not add 0.5
+  to the base codeword"). This is a decode error, not a conversion choice.

@@ -16,8 +16,10 @@ _Keep this file current. It is the first thing any agent reads._
   JSON, coverage generator, docs.
 - Demos (all FULLY_VALIDATED, captures viewed): `es30-hello-triangle`, `es20-shader-compilation`,
   `es20-uniforms` (all 42 glUniform* variants), `es20-textures-2d`, `diagnostics-capabilities`.
-- Tests: `glsl-compile-tests` (shader-tests/), `test-metagl-contracts` (fork/SIGABRT death tests +
-  context-loss cycle).
+- Merged from subagents: `es20-blending`, `es20-culling-front-face`.
+- Tests: `glsl-compile-tests` (44 cases), `test-metagl-contracts` (fork/SIGABRT death tests +
+  context-loss cycle), `test-glsl300-builtins` (42 numeric built-in cases via transform feedback).
+- meta-gl gaps G1–G5 fixed on meta-gl branch `opengles3-demos/enum-gaps` (`146e171`, `4021048`).
 - `shader-tests/` (`glsl-compile-tests`): 37 data-driven GLSL ES 1.00-3.20 compile/link cases with
   `@expect/@min-es/@spec/@feature/@xfail` annotations; two Mesa deviations recorded as XFAIL.
 - Test matrix: gpu, llvmpipe, zink × es-max/es-min; softpipe (native ES 3.1) only for ES 3.2
@@ -53,11 +55,21 @@ cmake --build --preset debug --target coverage
 5. Stage 3–4 (textures, framebuffers, ES 3.0 data paths), then `glsl300-builtins` via transform feedback.
 6. `diagnostics-capabilities`.
 
+## In flight (2026-11-11 ~14:30)
+
+Claude subagents in `.claude/worktrees/agent-*` (branches `worktree-agent-*`), one per pair of demos:
+clear-viewport-scissor + primitive-topology; vertex-attributes + indexed-drawing; depth-test +
+stencil-test; mipmaps + cube-map; framebuffer-objects + copy-and-read-pixels; vertex-array-objects +
+instancing; multiple-render-targets + sampler-objects. Integration procedure: merge the branch, re-run
+`ctest -R <names>` on the full matrix (zink was added after the first batch branched), view the
+captures, fix or report issues, regenerate coverage, remove the worktree.
+
 ## Parallel work / Codex
 
 From ~2026-11-11 22:00 CET the Codex weekly limit resets; the owner wants Codex CLI used heavily.
-Delegate **one demo per Codex task** in its own worktree (`git worktree add ../ogl3-wt-<name> -b demo/<name>`),
-giving it AGENTS.md, this file, the hello-triangle demo as the template, and the exact feature IDs.
+Use `tools/agents/codex_demo.sh <name> <task-file>`: it creates `../opengles3-demos-worktrees/<name>`
+on branch `codex/<name>` and runs `codex exec` (workspace-write sandbox, high reasoning effort) with
+`docs/agent-briefs/DEMO_BRIEF.md`. Take tasks in order from `docs/agent-briefs/BACKLOG.md`.
 The integrating agent reviews, runs the full matrix, views the capture, and merges.
 
 ## Known issues / open questions

@@ -655,18 +655,53 @@ namespace
         {
             bind_read(kDefaultFbo);
             const Image win = read_image(kWindow, kWindow);
-            std::size_t bad_cells = 0;
-            std::string first;
+            // Cells 11..13 are slices 1..3 of the 3D texture, blitted from a read framebuffer whose attachment is
+            // glFramebufferTextureLayer(volume, 0, slice). They are judged separately so that a driver which blits the
+            // wrong slice does not hide the result of every other cell.
+            auto is_3d_blit = [](int cell) { return cell >= 11 && cell <= 13; };
+            std::size_t bad_cells = 0, bad_3d = 0;
+            std::string first, first_3d;
             for (int cell = 0; cell < kCells; ++cell)
             {
                 const Image got = crop(win, (cell % 4) * kSize, (3 - cell / 4) * kSize, kSize, kSize);
                 const Image want = cell < 14 ? pattern_image(kPalette[static_cast<std::size_t>(cell)], kSize) : mrt_image(cell - 14);
                 // The patterns are computed in float and stored as 8 bits: equation 2.3 allows either of the two closest values (tolerance 1).
                 const Diff d = compare(got, want, 1);
-                if (d.bad != 0 && bad_cells++ == 0) first = std::format("cell {}: {}", cell, d.first);
+                if (d.bad == 0) continue;
+                if (is_3d_blit(cell))
+                {
+                    if (bad_3d++ == 0) first_3d = std::format("cell {}: {}", cell, d.first);
+                }
+                else if (bad_cells++ == 0)
+                    first = std::format("cell {}: {}", cell, d.first);
             }
-            check.expect(bad_cells == 0, std::format("all 16 cells of the window equal their CPU patterns {}", when),
+            check.expect(bad_cells == 0, std::format("the 13 cells other than 3D slices 1..3 equal their CPU patterns {}", when),
                          bad_cells == 0 ? "tolerance 1 per channel" : std::format("{} bad cells, {}", bad_cells, first));
+
+            // The slices themselves, read with glReadPixels through a framebuffer that has only that slice attached:
+            // this separates "the slice holds the right image" from "glBlitFramebuffer read the right slice".
+            std::size_t bad_slices = 0;
+            std::string first_slice;
+            bind_read(view_);
+            mgl::glReadBuffer(mgl::to_read_buffer(mgl::ColorAttachment::Color0));
+            for (int slice = 0; slice < 4; ++slice)
+            {
+                attach_layer(mgl::FramebufferTarget::ReadFramebuffer, volume_, 0, slice);
+                const Diff d = compare(read_image(kSize, kSize), pattern_image(kPalette[static_cast<std::size_t>(10 + slice)], kSize), 1);
+                if (d.bad != 0 && bad_slices++ == 0) first_slice = std::format("slice {}: {}", slice, d.first);
+            }
+            mgl::glFramebufferTexture2D(mgl::FramebufferTarget::ReadFramebuffer, kAttC0, mgl::TextureTarget::Texture2D, mgl::TextureId{0}, 0);
+            check.expect(bad_slices == 0, std::format("glReadPixels of 3D slices 0..3 returns each slice's own pattern {}", when),
+                         bad_slices == 0 ? "tolerance 1 per channel" : std::format("{} bad slices, {}", bad_slices, first_slice));
+
+            // ES 3.0 section 4.3.3: BlitFramebuffer copies from the read buffer of the read framebuffer, and section
+            // 4.4.2.4 makes that the 2D image `layer` of the 3D texture. Nothing about the source is undefined here (the
+            // slices were not invalidated). The ANGLE build in the matrix blits slice 0 for every slice of a 3D texture
+            // (glReadPixels of the same attachment is right, 2D array layers blit correctly).
+            check.expect_or_known_deviation(bad_3d == 0, std::format("cells 11..13 (3D slices 1..3 copied with glBlitFramebuffer) equal their CPU patterns {}", when),
+                                            bad_3d == 0 ? "tolerance 1 per channel" : std::format("{} bad cells, {}", bad_3d, first_3d), "ANGLE",
+                                            "ANGLE (Vulkan) glBlitFramebuffer from a 3D texture slice attached with glFramebufferTextureLayer reads "
+                                            "slice 0 for every slice (ES 3.0 sections 4.3.3, 4.4.2.4)");
         }
 
         // ==========================================================================================
@@ -891,18 +926,51 @@ namespace
             expect_query_error(check, kAttDepthStencil, P::ObjectType, mgl::ErrorCode::InvalidOperation,
                                "a renderbuffer at DEPTH and nothing at STENCIL: querying DEPTH_STENCIL_ATTACHMENT -> INVALID_OPERATION");
             mgl::glFramebufferRenderbuffer(mgl::FramebufferTarget::Framebuffer, kAttDepth, mgl::RenderbufferTarget::Renderbuffer, mgl::RenderbufferId{0});
-            expect_query(check, kAttDepthStencil, P::ObjectType, GL_NONE, "nothing at DEPTH and STENCIL: DEPTH_STENCIL_ATTACHMENT has OBJECT_TYPE = NONE");
+            // Nothing at either point. The text does not settle this case: "the same object must be bound to both the depth
+            // and stencil attachment points" is not met when no object is bound (ANGLE: INVALID_OPERATION), while the
+            // only listed error is for "different objects are bound to the depth and stencil attachment points"
+            // (Mesa: no error, OBJECT_TYPE = NONE, like either point queried alone). Both outcomes are accepted; anything
+            // else (another error, or no error with a value other than NONE) fails.
+            {
+                (void)demo::drain_gl_errors();
+                const GLint v = query(kAttDepthStencil, P::ObjectType);
+                const mgl::ErrorCode e = demo::drain_gl_errors();
+                std::cout << std::format("  [query] nothing at DEPTH and STENCIL: DEPTH_STENCIL_ATTACHMENT OBJECT_TYPE -> {}, value {:#x} (not asserted which)\n",
+                                         demo::error_name(e), v);
+                check.expect((e == mgl::ErrorCode::NoError && v == GL_NONE) || e == mgl::ErrorCode::InvalidOperation,
+                             "nothing at DEPTH and STENCIL: DEPTH_STENCIL_ATTACHMENT reports OBJECT_TYPE = NONE or raises INVALID_OPERATION",
+                             std::format("glGetError() = {}, value {:#x}", demo::error_name(e), v));
+            }
 
             // (d) which attachment arguments are legal for which framebuffer (the table of 6.1.13's errors).
             const int max_color = demo::get_integer(mgl::GetParameter::MaxColorAttachments);
             expect_query_error(check, mgl::FramebufferAttachment::None, P::ObjectType, mgl::ErrorCode::InvalidEnum, "framebuffer object: attachment GL_NONE is not in Table 4.6 -> INVALID_ENUM");
-            expect_error(check, mgl::ErrorCode::InvalidEnum, "framebuffer object: attachment GL_BACK (a default framebuffer name) -> INVALID_ENUM", [&] {
+            // ES 3.0.6 section 6.1.13 / ES 3.2 section 9.2.3 Errors: "An
+            // INVALID_ENUM error is generated if a framebuffer object is bound to target, attachment is not one of the
+            // attachments in table 4.6, and attachment is not COLOR_ATTACHMENTm where m is greater than or equal to
+            // the value of MAX_COLOR_ATTACHMENTS" and "An INVALID_OPERATION error is generated if a framebuffer object
+            // is bound to target and attachment is COLOR_ATTACHMENTm where m is greater than or equal to the value of
+            // MAX_COLOR_ATTACHMENTS." Both texts are explicit. The ANGLE build in the matrix swaps the two errors
+            // (dEQP's negative state test accepts either error for BACK, so it does not catch this).
+            {
+                (void)demo::drain_gl_errors();
                 GLint v = 0;
                 mgl::glGetFramebufferAttachmentParameteriv(mgl::FramebufferTarget::Framebuffer, mgl::DefaultFramebufferQueryAttachment::Back, P::ObjectType, &v);
-            });
+                const mgl::ErrorCode e = demo::drain_gl_errors();
+                check.expect_or_known_deviation(e == mgl::ErrorCode::InvalidEnum, "framebuffer object: attachment GL_BACK (a default framebuffer name) -> INVALID_ENUM",
+                                                std::format("glGetError() = {}, expected GL_INVALID_ENUM", demo::error_name(e)), "ANGLE",
+                                                "ANGLE raises INVALID_OPERATION for BACK with a framebuffer object bound (ES 3.2 section 9.2.3: INVALID_ENUM)");
+            }
             if (max_color < 32)
-                expect_query_error(check, mgl::to_framebuffer_attachment(kColor[static_cast<std::size_t>(max_color)]), P::ObjectType, mgl::ErrorCode::InvalidOperation,
-                                   std::format("framebuffer object: COLOR_ATTACHMENT{} (= MAX_COLOR_ATTACHMENTS) -> INVALID_OPERATION", max_color));
+            {
+                (void)demo::drain_gl_errors();
+                const GLint v = query(mgl::to_framebuffer_attachment(kColor[static_cast<std::size_t>(max_color)]), P::ObjectType);
+                const mgl::ErrorCode e = demo::drain_gl_errors();
+                check.expect_or_known_deviation(e == mgl::ErrorCode::InvalidOperation,
+                                                std::format("framebuffer object: COLOR_ATTACHMENT{} (= MAX_COLOR_ATTACHMENTS) -> INVALID_OPERATION", max_color),
+                                                std::format("glGetError() = {}, expected GL_INVALID_OPERATION, value {}", demo::error_name(e), v), "ANGLE",
+                                                "ANGLE raises INVALID_ENUM for COLOR_ATTACHMENTm, m >= MAX_COLOR_ATTACHMENTS (ES 3.2 section 9.2.3: INVALID_OPERATION)");
+            }
             bind_both(kDefaultFbo);
             GLint object_type = -1, depth_size = -1;
             mgl::glGetFramebufferAttachmentParameteriv(mgl::FramebufferTarget::Framebuffer, mgl::DefaultFramebufferQueryAttachment::Back, P::ObjectType, &object_type);

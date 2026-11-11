@@ -83,7 +83,7 @@ and `glReadBuffer`, which also accept the non-color members (`None`, `Back`, `De
 
 ## Validation (`--validate`)
 
-80 checks. All of them are observable behavior compared with a CPU model or a defined error; none only checks that a call returns.
+81 checks. All of them are observable behavior compared with a CPU model or a defined error; none only checks that a call returns.
 
 - **The four attachments** are read back completely (16384 pixels each) and compared with the CPU
   model of `mrt.frag`: exactly for `RGBA32UI` and `RG32I` (including values above 2^31 and next to
@@ -133,6 +133,11 @@ and `glReadBuffer`, which also accept the non-color members (`None`, `Back`, `De
   locations itself. This is not checked here. (The existing `glsl300/multiple-outputs-need-locations` shader test
   expects `build-fail` and passes only because its program has no vertex shader.)
 - **Duplicate and out-of-range locations are rejected at link time,** not at compile time as §3.9.2.3 words it. The demo accepts either stage.
+- **ANGLE (Vulkan backend): `glDrawBuffers` on the bound framebuffer is not applied to the next draw.** After
+  `{C0, NONE, C2, NONE}` (drawn), a clear with all four buffers and `{NONE, C1, NONE, C3}`, `DRAW_BUFFERi` reads back the new
+  mapping, but the draw writes outputs 0 and 2 to attachments 0 and 2, as with the previous draw's mapping. Re-binding the
+  framebuffer before the draw makes the new mapping take effect, so this is a missed state update, not a reading of §4.2.1.
+  The two mapping checks are XFAIL on "ANGLE".
 - The error code of an illegal `glClearBuffer*` enum (`INVALID_ENUM`) cannot be provoked, because meta-gl's typed buffer enums only
   contain legal values.
 

@@ -46,6 +46,7 @@
 #include <limits>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace mgl = metagl;
@@ -53,6 +54,16 @@ using demo::Rgba8;
 
 namespace
 {
+    /// True when GL_RENDERER or GL_VERSION contains `needle` (selects the driver of a documented deviation).
+    bool renderer_has(std::string_view needle)
+    {
+        auto text = [](mgl::StringName n) {
+            const GLubyte* p = mgl::glGetString(n);
+            return std::string(p != nullptr ? reinterpret_cast<const char*>(p) : "");
+        };
+        return (text(mgl::StringName::Renderer) + " | " + text(mgl::StringName::Version)).find(needle) != std::string::npos;
+    }
+
     constexpr int kCols = 4;
     constexpr int kRows = 3;
     constexpr std::array<std::uint8_t, 4> kClear8 = {20, 30, 50, 255};
@@ -966,12 +977,19 @@ namespace
                 mgl::glBindVertexBuffer(9, scratch_[0], kBigOffset, 8);
                 const std::int64_t exact = binding_offset64(9);
                 const int clamped = binding_i(mgl::GetParameter::VertexBindingOffset, 9);
+                // Re-verified because Mesa AND ANGLE both return 8: ES 3.1/3.2 section 10.7 (Required State) lists "k 64-bit
+                // integer vertex binding offsets", Table 21.3 names GetInteger64i_v as the query, offset is an intptr with
+                // no upper limit in the errors of BindVertexBuffer, and section 2.2.2 ends: "if a value is so large in
+                // magnitude that it cannot be represented by the returned data type, then the nearest value representable
+                // using that type is returned." Both implementations answer the 64-bit query from 32-bit storage of the
+                // query path (meta-gl passes GLintptr and GLint64 through unchanged).
+                const char* const driver = renderer_has("ANGLE") ? "ANGLE" : "Mesa";
                 check.expect_or_known_deviation(exact == static_cast<std::int64_t>(kBigOffset),
                                                 "glBindVertexBuffer with offset 2^33 + 8: VERTEX_BINDING_OFFSET is a 64-bit state value, GetInteger64i_v returns it exactly (Table 21.3)",
-                                                std::format("returned {}", exact), "Mesa", "Mesa returns only the low 32 bits of VERTEX_BINDING_OFFSET");
+                                                std::format("returned {}", exact), driver, std::format("{} returns only the low 32 bits of VERTEX_BINDING_OFFSET", driver));
                 check.expect_or_known_deviation(clamped == INT_MAX,
                                                 "VERTEX_BINDING_OFFSET 2^33 + 8 queried with GetIntegeri_v is clamped to INT_MAX (section 2.2.2)",
-                                                std::format("returned {}", clamped), "Mesa", "Mesa truncates the 64-bit offset to 32 bits instead of clamping");
+                                                std::format("returned {}", clamped), driver, std::format("{} truncates the 64-bit offset to 32 bits instead of clamping", driver));
                 mgl::glBindVertexBuffer(9, mgl::BufferId{0}, 0, 16);
             }
 

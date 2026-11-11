@@ -54,7 +54,8 @@ row 0 at the bottom). Small textures are magnified so each texel is several pixe
 - **Alignment of the offset to the type.** The offset must be a multiple of the size of the data type (`UNSIGNED_BYTE` 1,
   `UNSIGNED_SHORT_4_4_4_4` 2, `UNSIGNED_INT` 4); otherwise `INVALID_OPERATION` (§3.7.2.1, §4.3.2.4). The checks use
   offset 3 vs 4 for 4_4_4_4 uploads and offset 2 vs 4 for a 4-byte `RGBA_INTEGER`/`UNSIGNED_INT` pack into an `RGBA8UI`
-  framebuffer (the pair ES 3.0 requires for unsigned-integer buffers).
+  framebuffer (the pair ES 3.0 requires for unsigned-integer buffers). ANGLE (Vulkan backend) enforces the rule for unpack
+  buffers but accepts the misaligned pack offset with no error; that one check is XFAIL on "ANGLE".
 - **Range checks.** If the transfer "would access memory beyond the size of the buffer", the error is
   `INVALID_OPERATION`. The demo finds the boundary exactly: a 4096-byte image from a 4096-byte buffer works, from a
   4095-byte buffer, or from offset 1, it does not; with `ROW_LENGTH 32` and `SKIP_ROWS` the footprint is

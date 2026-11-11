@@ -136,7 +136,12 @@ and from every outline segment.
   `CURRENT_QUERY` reads 0 and the following `glEndQuery` raises `INVALID_OPERATION`.
 - **Mesa (all drivers): occlusion objects cannot switch occlusion targets.** ES 3.2 §4.2 (clarifying the ES 3.0 rule):
   "occlusion query objects specified by either of the two targets ANY_SAMPLES_PASSED or ANY_SAMPLES_PASSED_CONSERVATIVE
-  may be reused for either target". Mesa raises `INVALID_OPERATION` ("target mismatch").
+  may be reused for either target". Mesa raises `INVALID_OPERATION` ("target mismatch"), and so does ANGLE (XFAIL on "ANGLE").
+  Because two independent implementations agree, the reading was re-checked: ES 3.0 §2.14 already says "There are two query
+  types supported by the GL" (primitive and occlusion), and the ES 3.1 change log (update of January 29, 2015, repeated in
+  ES 3.2 Appendix E.2) states the intent: "make clear that occlusion query objects may be specified and reused with any mix of
+  the two valid occlusion query targets (Bug 13342)". Both implementations key the type on the target. ANGLE does keep a
+  deleted active query active, as §2.14 requires.
 - **zink: polled results.** Once `QUERY_RESULT_AVAILABLE` has been polled to TRUE, `QUERY_RESULT` returns a partial
   sample count (for example 30 or 196 for a box covering thousands of pixels, and 0 for a visible box) instead of the
   samples-boolean; `glFinish` does not change it. zink also reports earlier queries unavailable while a later one is

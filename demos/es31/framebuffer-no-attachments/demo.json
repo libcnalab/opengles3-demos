@@ -59,7 +59,7 @@
     "glReadBuffer": "COLOR_ATTACHMENT0 of the read framebuffer for the image readback",
     "glGenTextures": "image textures",
     "glDeleteTextures": "cleanup",
-    "glGetIntegerv": "MAX_FRAMEBUFFER_WIDTH / HEIGHT / SAMPLES (>= 2048 / 2048 / 4), MAX_VIEWPORT_DIMS, SAMPLES and SAMPLE_BUFFERS (XFAIL on Mesa: 0 / 0 for a framebuffer with default samples and no attachment)",
+    "glGetIntegerv": "MAX_FRAMEBUFFER_WIDTH / HEIGHT / SAMPLES (>= 2048 / 2048 / 4), MAX_VIEWPORT_DIMS, SAMPLES and SAMPLE_BUFFERS of a framebuffer with default samples and no attachment: printed, and SAMPLE_BUFFERS = (SAMPLES != 0) asserted (ES 3.2 9.2.3.1 defines the queried values only from attachments)",
     "glDeleteProgram": "cleanup"
   },
   "features": [

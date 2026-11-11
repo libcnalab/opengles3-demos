@@ -69,7 +69,7 @@ specification demands is a multiple of 4 bytes (`sizeof(uint)`).
 | `glDrawElementsIndirect(mode, type, offset)` | draws from a `DrawElementsIndirectCommand` at `offset`; indices come from the element buffer of the VAO |
 | `glBufferSubData` | rewrites a whole command or a single word between draws; the next draw uses the new values |
 | `glBindBufferBase(SHADER_STORAGE_BUFFER, 0, buf)` + `glDispatchCompute` | lets a shader write the commands: the *same buffer object* is the SSBO of the compute shader |
-| `glMemoryBarrier(COMMAND_BARRIER_BIT)` | required between the compute stores and a draw that sources the commands (§7.11.2). The demo also sets `BUFFER_UPDATE_BARRIER_BIT`, which covers the mapped read-back of the commands |
+| `glMemoryBarrier(COMMAND_BARRIER_BIT)` | required between the compute stores and a draw that sources the commands (§7.11.2). The demo also sets `BUFFER_UPDATE_BARRIER_BIT`, which covers the mapped read-back of the commands, and issues `SHADER_STORAGE_BARRIER_BIT` before each dispatch so that its stores wait for the earlier draws that read the commands |
 | `glGetIntegerv(DRAW_INDIRECT_BUFFER_BINDING)` | reads the binding back |
 
 ## Spec
@@ -137,6 +137,12 @@ invocation does all the work, so the result does not depend on invocation order.
 - **The barrier is not optional.** Without `COMMAND_BARRIER_BIT` the stores of the compute shader are not guaranteed to be
   visible to `Draw*Indirect` (§7.11.2). On a desktop-class driver the missing barrier often "works", so a correct picture
   is no proof that the barrier is there; the demo can only show that the barrier version works.
+- **A barrier is also needed *before* a dispatch that rewrites commands still to be read.** §7.11.2: explicit
+  synchronization is required so that shader stores "will not overwrite data still to be read by previously requested
+  operations". The second dispatch rewrites the commands the first two compute-written draws use, so the demo issues
+  `glMemoryBarrier(SHADER_STORAGE_BARRIER_BIT)` before each dispatch ("assignments to ... shader buffer variables after
+  the barrier will not execute until all memory accesses ... initiated prior to the barrier complete"). Without it, ANGLE
+  on Vulkan drew both "3 visible" regions with the "5 visible" commands; Mesa happened to serialize the two.
 - **`indirect` is an offset, not a pointer.** `glDrawArraysIndirect(mode, nullptr)` means offset 0 only because a buffer is bound.
   With `DRAW_INDIRECT_BUFFER` 0 the call is an error, not a client-memory read (ES 3.1 has no client-side indirect commands).
 - **`firstIndex` is not a byte offset.** For `UNSIGNED_INT` indices it is multiplied by 4, for `UNSIGNED_BYTE` by 1.

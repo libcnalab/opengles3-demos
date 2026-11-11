@@ -500,10 +500,21 @@ namespace
             set_sentinels();
             const std::array<mgl::DrawBuffer, 4> odd = {kNone, kC1, kNone, kC3};
             mgl::glDrawBuffers(odd);
+            expect_draw_buffers(check, {kNone, kC1, kNone, kC3}, "glDrawBuffers(NONE, C1, NONE, C3): DRAW_BUFFERi read back");
             draw_mrt(kSize);
             const Diff s0 = diff_attachment(0, true), w1 = diff_attachment(1, false), s2 = diff_attachment(2, true), w3 = diff_attachment(3, false);
-            check.expect(s0.bad == 0 && s2.bad == 0, "mapping {NONE, C1, NONE, C3}: attachments 0 and 2 keep their sentinel", describe(s0) + describe(s2));
-            check.expect(w1.bad == 0 && w3.bad == 0, "mapping {NONE, C1, NONE, C3}: attachments 1 and 3 receive outputs 1 and 3", describe(w1) + describe(w3));
+            // ES 3.0 section 4.2.1: "the draw buffers being defined correspond in order to the respective fragment
+            // colors" - nothing here is implementation-dependent. The ANGLE build in the matrix reports the new
+            // DRAW_BUFFERi (checked above) but its draw still uses the mapping of the previous draw on this
+            // framebuffer ({C0, NONE, C2, NONE}); re-binding the framebuffer before the draw makes it take effect,
+            // so it is a missed state update, not a different reading of the rule.
+            constexpr std::string_view kAngleStale =
+                "ANGLE (Vulkan) keeps the previous draw's output-to-attachment mapping after glDrawBuffers on the bound "
+                "framebuffer object although DRAW_BUFFERi reads back the new mapping (ES 3.0 section 4.2.1)";
+            check.expect_or_known_deviation(s0.bad == 0 && s2.bad == 0, "mapping {NONE, C1, NONE, C3}: attachments 0 and 2 keep their sentinel",
+                                            describe(s0) + describe(s2), "ANGLE", kAngleStale);
+            check.expect_or_known_deviation(w1.bad == 0 && w3.bad == 0, "mapping {NONE, C1, NONE, C3}: attachments 1 and 3 receive outputs 1 and 3",
+                                            describe(w1) + describe(w3), "ANGLE", kAngleStale);
         }
 
         // A shader with a single output bound to location 1 and glGetFragDataLocation of it.

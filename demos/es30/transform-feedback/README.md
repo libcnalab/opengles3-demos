@@ -114,6 +114,10 @@ the capture, or the capture's output buffers, can drive it.
   capturing but still makes the rejected program current (ES 3.0 §2.5: a command that generates an error has no effect). On an
   ES 3.0/3.1 context Mesa accepts `TRIANGLE_STRIP`, `TRIANGLE_FAN`, `LINE_STRIP` and `LINE_LOOP` draws while capturing triangles
   or lines (it implements the ES 3.2 rule in every version; `MESA_GLES_VERSION_OVERRIDE` changes only the reported version).
+  ANGLE (Vulkan backend) resumes a paused capture while a program other than the one that began it is current, although
+  ES 3.0 §2.15.2 (and ES 3.2 §12.2.2) require `INVALID_OPERATION` "by ResumeTransformFeedback if the program object being used by
+  the current transform feedback object is not active". When that happens the demo pauses again, so the following check
+  (resume with the original program) still tests only its own rule.
 
 ## Run
 

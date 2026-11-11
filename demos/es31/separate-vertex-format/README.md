@@ -127,7 +127,11 @@ undefined values for them (§10.3.1).
 
 Known deviation reported by the demo (Mesa, all three drivers): `VERTEX_BINDING_OFFSET` is a 64-bit state value (Table 21.3,
 `GetInteger64i_v`) but a binding offset of 2^33 + 8 reads back as 8; the demo also asserts that `GetIntegeri_v` clamps it to
-`INT_MAX` (§2.2.2). Both are `expect_or_known_deviation` checks on "Mesa".
+`INT_MAX` (§2.2.2). Both are `expect_or_known_deviation` checks on "Mesa", and on "ANGLE", which returns 8 as well. Because two
+independent implementations agree, the reading was re-checked: §10.7 (Required State) lists "k 64-bit integer vertex binding
+offsets", Table 21.3 names `GetInteger64i_v` as the query, `BindVertexBuffer` takes an `intptr` offset with no upper limit among its
+errors, and §2.2.2 ends with "if a value is so large in magnitude that it cannot be represented by the returned data type, then the
+nearest value representable using that type is returned". meta-gl passes `GLintptr` and `GLint64` through unchanged.
 
 ## Pitfalls
 

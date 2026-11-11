@@ -830,8 +830,20 @@ namespace
 
                 // A 4-byte type needs an offset that is a multiple of 4 (3.7.2.1, 4.3.2.4): 2 is rejected, 4 is fine.
                 make_buffer(mgl::BufferTarget::PixelPack, pbo, size, kFill, mgl::BufferUsage::StreamRead);
-                expect_error(check, mgl::ErrorCode::InvalidOperation, "glReadPixels(RGBA_INTEGER, UNSIGNED_INT) into a pack buffer at byte offset 2 (not a multiple of 4) -> INVALID_OPERATION (4.3.2.4)",
-                             [] { mgl::glReadPixels(0, 0, 4, 4, mgl::PixelFormat::RgbaInteger, mgl::PixelType::UnsignedInt, pack_offset(2)); });
+                // ES 3.0 4.3.2.4: "If a pixel pack buffer object is bound and data is not evenly divisible by the number of
+                // basic machine units needed to store in memory the corresponding GL data type from table 3.4 for the type
+                // parameter, an INVALID_OPERATION error results." The ANGLE build in the matrix applies this rule to
+                // unpack buffers (checked below) but not to glReadPixels into a pack buffer.
+                {
+                    (void)demo::drain_gl_errors();
+                    mgl::glReadPixels(0, 0, 4, 4, mgl::PixelFormat::RgbaInteger, mgl::PixelType::UnsignedInt, pack_offset(2));
+                    const mgl::ErrorCode e = demo::drain_gl_errors();
+                    check.expect_or_known_deviation(e == mgl::ErrorCode::InvalidOperation,
+                                                    "glReadPixels(RGBA_INTEGER, UNSIGNED_INT) into a pack buffer at byte offset 2 (not a multiple of 4) -> INVALID_OPERATION (4.3.2.4)",
+                                                    std::format("glGetError() = {}, expected GL_INVALID_OPERATION", demo::error_name(e)), "ANGLE",
+                                                    "ANGLE accepts a pack-buffer offset that is not a multiple of the size of the type's GL data type "
+                                                    "(ES 3.0 4.3.2.4 requires INVALID_OPERATION; the unpack rule of 3.7.2.1 is enforced)");
+                }
                 expect_error(check, mgl::ErrorCode::NoError, "... and at byte offset 4 it succeeds",
                              [] { mgl::glReadPixels(0, 0, 2, 2, mgl::PixelFormat::RgbaInteger, mgl::PixelType::UnsignedInt, pack_offset(4)); });
                 mgl::glBindBuffer(mgl::BufferTarget::PixelPack, mgl::BufferId{0});

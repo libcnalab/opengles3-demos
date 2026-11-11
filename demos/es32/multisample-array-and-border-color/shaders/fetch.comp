@@ -1,0 +1,41 @@
+#version 320 es
+// Reads every sample of every texel of every layer of a 2D multisample array texture with
+// texelFetch(gsampler2DMSArray, ivec3(x, y, layer), sample) and stores it as four integers 0..255.
+// main.cpp inserts the defines after the #version line:
+//   SAMPLER    sampler2DMSArray | isampler2DMSArray | usampler2DMSArray
+//   KIND_FLOAT | KIND_INT | KIND_UINT
+// One invocation per (x, y, layer); the loop runs over the samples.
+precision highp float;
+precision highp int;
+
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 1) in;
+
+layout(binding = 0) uniform highp SAMPLER u_ms;
+uniform highp ivec3 u_size;     // the size the CPU expects (width, height, layers); used for indexing
+uniform highp int u_samples;    // TEXTURE_SAMPLES of the texture
+
+layout(std430, binding = 0) writeonly buffer Result
+{
+    ivec4 size;       // textureSize(u_ms): (width, height, layers), checked by the CPU
+    uvec4 texel[];    // index ((layer * samples + sample) * height + y) * width + x
+} result;
+
+void main()
+{
+    ivec3 c = ivec3(gl_GlobalInvocationID);
+    if (c == ivec3(0))
+        result.size = ivec4(textureSize(u_ms), 0);
+    if (any(greaterThanEqual(c, u_size)))
+        return;
+    for (int s = 0; s < u_samples; ++s)
+    {
+        int index = ((c.z * u_samples + s) * u_size.y + c.y) * u_size.x + c.x;
+#if defined(KIND_FLOAT)
+        result.texel[index] = uvec4(round(texelFetch(u_ms, c, s) * 255.0));
+#elif defined(KIND_INT)
+        result.texel[index] = uvec4(texelFetch(u_ms, c, s) + 128);
+#else
+        result.texel[index] = texelFetch(u_ms, c, s);
+#endif
+    }
+}

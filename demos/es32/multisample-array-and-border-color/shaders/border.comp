@@ -1,0 +1,40 @@
+#version 320 es
+// Looks a 2D texture up at a list of coordinates, many of them outside [0, 1], and stores the raw
+// result bits. main.cpp inserts the defines after the #version line:
+//   SAMPLER    sampler2D | isampler2D | usampler2D | sampler2DShadow
+//   KIND_FLOAT | KIND_INT | KIND_UINT | KIND_SHADOW
+// Compute shaders have no derivatives, so the lookup uses textureLod(..., 0.0): level 0, and with
+// TEXTURE_MIN_FILTER = TEXTURE_MAG_FILTER the filter does not depend on the level of detail.
+precision highp float;
+precision highp int;
+
+layout(local_size_x = 64) in;
+
+layout(binding = 0) uniform highp SAMPLER u_tex;
+uniform highp uint u_count;
+
+layout(std430, binding = 0) readonly buffer Probes
+{
+    vec4 probe[];     // (s, t, depth reference for shadow lookups, unused)
+};
+layout(std430, binding = 1) writeonly buffer Results
+{
+    uvec4 result[];
+};
+
+void main()
+{
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= u_count)
+        return;
+    vec4 p = probe[i];
+#if defined(KIND_SHADOW)
+    result[i] = uvec4(floatBitsToUint(textureLod(u_tex, vec3(p.xy, p.z), 0.0)), 0u, 0u, 0u);
+#elif defined(KIND_FLOAT)
+    result[i] = floatBitsToUint(textureLod(u_tex, p.xy, 0.0));
+#elif defined(KIND_INT)
+    result[i] = uvec4(textureLod(u_tex, p.xy, 0.0));  // int -> uint keeps the bit pattern
+#else
+    result[i] = textureLod(u_tex, p.xy, 0.0);
+#endif
+}

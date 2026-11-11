@@ -47,22 +47,22 @@
     {
       "name": "debug",
       "configurePreset": "debug",
-      "jobs": 8
+      "jobs": 6
     },
     {
       "name": "release",
       "configurePreset": "release",
-      "jobs": 8
+      "jobs": 6
     },
     {
       "name": "sanitize",
       "configurePreset": "sanitize",
-      "jobs": 8
+      "jobs": 6
     },
     {
       "name": "headless-ci",
       "configurePreset": "headless-ci",
-      "jobs": 8
+      "jobs": 6
     }
   ],
   "testPresets": [

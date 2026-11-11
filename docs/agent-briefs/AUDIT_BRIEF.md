@@ -41,7 +41,7 @@ Spec text (greppable): `/tmp/claude-1000/-rv-data-development-github-com-libcnal
 
 ## How
 Build once (`cmake --preset debug -DOGLES3_METAGL_SOURCE_DIR=/rv/data/development/github.com/libcna/meta-gl &&
-cmake --build --preset debug -j 2`; ALWAYS `-j 2`: CPU limit). Run individual demos with
+cmake --build --preset debug -j 1`; ALWAYS `-j 1`: machine-wide CPU limit of 6 cores). Run individual demos with
 `./build/debug/bin/<demo> --headless --validate`. If the GPU is not reachable in your sandbox, use
 `LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe EGL_PLATFORM=surfaceless`.
 

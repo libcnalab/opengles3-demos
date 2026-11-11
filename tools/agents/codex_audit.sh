@@ -10,7 +10,7 @@ mkdir -p "$wt_root"
 [ -d "$wt" ] || git -C "$repo" worktree add -q "$wt" -b "codex/$name" main
 prompt="You are auditing part of the opengles3-demos project (current directory is a git worktree).
 Read docs/agent-briefs/AUDIT_BRIEF.md completely and follow it exactly. meta-gl lives at
-/rv/data/development/github.com/libcna/meta-gl (read-only). CPU LIMIT: build with -j 2 only.
+/rv/data/development/github.com/libcna/meta-gl (read-only). CPU LIMIT: build with -j 1 only (machine-wide limit 6 cores).
 Do NOT modify any files except that you may write your report; do not commit.
 
 YOUR GROUP (audit every one of these directories):

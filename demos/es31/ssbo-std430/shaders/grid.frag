@@ -13,6 +13,7 @@ layout(std430, binding = 0) readonly buffer Flags
 } f;
 
 uniform int  u_cell;         // cell width in pixels
+uniform int  u_row_y;        // window y of the bottom pixel row of this grid row (its viewport)
 uniform uint u_expect_mask;  // bit m set: member m is expected to verify
 
 out vec4 o_color;
@@ -20,7 +21,7 @@ out vec4 o_color;
 void main()
 {
     // A one-pixel dark border on the left and bottom edge of every cell keeps neighbouring cells apart.
-    if (int(gl_FragCoord.x) % u_cell == 0 || int(gl_FragCoord.y) % u_cell == 0)
+    if (int(gl_FragCoord.x) % u_cell == 0 || int(gl_FragCoord.y) == u_row_y)
     {
         o_color = vec4(0.06, 0.07, 0.10, 1.0);
         return;

@@ -19,12 +19,17 @@ a result back to launch the next stage, which is what the demo shows in three se
 
 ## What the image shows
 
-A 256 x 256 window, four 128 x 128 cells (named as they appear in the capture PNG, whose first row is the top of the window):
+Four cells, each half of the window in both directions (128 x 128 in the default 256 x 256 window; named as they appear in the
+capture PNG, whose first row is the top of the window). The layout follows the window size; the minimum is **128 x 128**, so
+that every cell holds the whole 64 x 64 image at one pixel per texel, and smaller windows are skipped. The images and the buffer
+of the ByRegion pipelines are addressed by `gl_FragCoord`, so they are allocated from the window size (the buffer rows are
+`u_stride` = window width words apart). Beyond about 650 pixels across, the green channel of the buffer ramp
+(`v / 256 / 28`) saturates; the red channel (`v % 256`) still differs from pixel to pixel and is compared.
 
 | Cell | Content |
 |---|---|
-| top left | the compute-generated ring: of 8 sectors the shader keeps those with `(s * 7 + 2) % 5 < 3`, i.e. five triangles, each with a palette color derived from the `uint` sector attribute |
-| top right | a 64 x 64 image painted by an indirectly dispatched grid of 8 x 8 work groups (shown at 2 pixels per texel): orange tiles with an x-ramp, blue tiles with a y-ramp, a white texel at the origin of every group |
+| top left | the compute-generated ring, drawn into the largest centered square of the cell: of 8 sectors the shader keeps those with `(s * 7 + 2) % 5 < 3`, i.e. five triangles, each with a palette color derived from the `uint` sector attribute |
+| top right | a 64 x 64 image painted by an indirectly dispatched grid of 8 x 8 work groups (shown from the bottom-left corner of the cell at the largest integer number of pixels per texel that fits, 2 at 256 x 256): orange tiles with an x-ramp, blue tiles with a y-ramp, a white texel at the origin of every group |
 | bottom left | five fragment-shader passes over one `r32ui` image (init, three read-modify-write passes, a final pass that turns the value into a color), `glMemoryBarrierByRegion(SHADER_IMAGE_ACCESS)` between them: stripes of 8 pixels |
 | bottom right | upper strip: `imageStore` to an `r32f` image, then `texelFetch` of the same pixel (`TEXTURE_FETCH`), an XOR pattern; lower strip: a buffer store, then a buffer load of the same pixel (`SHADER_STORAGE`), a diagonal ramp |
 
@@ -66,7 +71,7 @@ command, `star.vert` reads `vec2` and `uint` attributes. `chain.frag`, `tex_a.fr
   equal the CPU model (the measured difference is below 3e-7 NDC, the check allows 1e-3 because `sin`/`cos` accuracy is not specified); the junk vertices are untouched; the five triangle centroids have their palette colors; the three culled sectors, the center and a gap show
   the clear color (8-bit result, +-1). A negative control requires a drawn centroid to differ from the clear color.
 - **Indirectly filled image (3).** `img_setup.comp` wrote `(8, 8, 1)`; all 4096 texels equal the CPU model (+-1, 8-bit quantization); six probes of the top-right cell.
-- **ByRegion pipelines (6).** All 16384 pixels of the image chain, all 8192 of the texel-fetch strip and all 8192 of the buffer strip equal the CPU model within 1; a control shows that a model that skipped three of the five passes differs at every pixel; no error for the six legal bits and for
+- **ByRegion pipelines (6).** All pixels of the image chain (16384 at 256 x 256), of the texel-fetch strip (8192) and of the buffer strip (8192) equal the CPU model within 1; a control shows that a model that skipped three of the five passes differs at every pixel; no error for the six legal bits and for
   `ALL_BARRIER_BITS`.
 - **Compaction chain (6).** The GPU counted 761 active elements of 1000 and wrote `(12, 1, 1)`; `glDispatchComputeIndirect(0)` launched exactly 12 groups and 768 invocations; the 761 squares are in the output in list order and the 263 words behind them keep their sentinel; a
   direct dispatch of a single group, the mutation, leaves 697 words wrong, so the comparison can fail.

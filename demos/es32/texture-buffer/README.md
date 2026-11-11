@@ -30,6 +30,11 @@ A 256 × 256 frame (frame 19 of the animation, time = frame/60 s):
 - **Bottom 32 rows: a strip with one 4-pixel cell per instance**, drawn by a fragment shader that `texelFetch`es the same two textures. Upper half: the colour texels (a rainbow); lower half: the material texels
   (grey 0.25 / 0.5 / 0.75; the diagonal stripes of the grid show as a repeating pattern).
 
+**Other window sizes.** The strip stays 32 rows high and its 64 cells share the width; the scene fills the rest. The camera's
+45° field of view spans the *shorter* side of the scene area, so a tall window shows the whole grid instead of cropping it at
+the sides. The minimum window is **128 × 96** (strip cells of 2 pixels, a scene 64 pixels high); smaller windows are skipped.
+When the scene is too small to give the 3000 compared probes at every third pixel, every pixel is probed instead.
+
 The three textures are three **ranges of one buffer object** (`glTexBufferRange`): the transforms at offset 0, the colours and the materials at offsets rounded up to
 `TEXTURE_BUFFER_OFFSET_ALIGNMENT`, each preceded by a guard gap of sentinel bytes. A wrong offset reads garbage and shows up in the picture.
 
@@ -96,7 +101,7 @@ All references are computed on the CPU from the bytes that were uploaded; no sto
 - **Compile rules (7).** One control shader with the three samplers and an `imageBuffer` compiles; six shaders do not: no precision on `samplerBuffer`; `texelFetch` with a `lod`; `texelFetch` with an `ivec2`;
   `textureSize` with a `lod`; `texture()` on a `samplerBuffer`; `samplerBuffer` in `#version 310 es`.
 - **Scene (6).** *Strip:* all 64 colour texels (±1 for the 8-bit output) and 64 material texels (±1 for the 127.5 tie) read in a fragment shader; negative control: a strip model shifted by one instance fails everywhere.
-  *Cubes:* a ray caster written for this check (rotated boxes, nearest hit, the same light and materials) predicts the colour of every third pixel of the scene (about 6100 probes, 1600 of them on cubes, all 64 instances
+  *Cubes:* a ray caster written for this check (rotated boxes, nearest hit, the same light and materials) predicts the colour of every third pixel of the scene (every pixel in a scene too small for 3000 probes that way) (about 6100 probes, 1600 of them on cubes, all 64 instances
   visible, top and side faces). A probe is used only if the hit (instance and face) is the same when every cube is grown and shrunk by 0.01 world units (a fifth of a pixel); this excludes silhouettes and cube edges, where the rasterizer may
   go either way. The worst difference is 1 (8-bit rounding), and the tolerance is 1. Negative control: the same top-face probes against a model whose colours come from the neighbouring instance disagree.
   *Update:* `glBufferSubData(TEXTURE_BUFFER)` of one colour texel changes that instance's pixel to the new colour in the next frame, and writing the old colour back restores it.

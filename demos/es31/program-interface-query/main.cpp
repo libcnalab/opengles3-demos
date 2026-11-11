@@ -20,10 +20,11 @@
 // application never calls glUniform1i for a sampler or glUniformBlockBinding), and the compute program is run
 // with buffers that the application laid out from the *queried* offsets and strides.
 //
-// Picture (256x256). Upper half: 8 cells of 64x64 pixels, one per resource group of the gfx program (see
-// shaders/query.frag). Strip at y = 96..127: a patch drawn through the highest legal explicit uniform
-// location (MAX_UNIFORM_LOCATIONS - 1). Lower 96 rows: the "check matrix" - one 8x8 cell per recorded check
-// of validate(), grouped by interface, green = passed. It is painted after all checks ran.
+// Picture (any size, laid out in fractions of the surface; at 256x256 the cells are 64x64). Upper half: 8
+// cells (4 x 2), one per resource group of the gfx program (see shaders/query.frag). Strip from 3/8 to 1/2
+// of the height, first 1/8 of the width: a patch drawn through the highest legal explicit uniform location
+// (MAX_UNIFORM_LOCATIONS - 1). Lower 3/8: the "check matrix" - one small cell per recorded check of
+// validate(), grouped by interface, green = passed. It is painted after all checks ran.
 
 #include <demo/gl_util.hpp>
 #include <demo/runtime.hpp>
@@ -55,7 +56,12 @@ namespace
 
     constexpr GLint kAnyLocation = -2;  // "a valid location (>= 0), assigned by the linker"
     constexpr int kGridColumns = 4;
-    constexpr int kCellPx = 64;
+    constexpr int kGridRows = 2;
+    constexpr int kMinSurface = 64;  // smallest width/height: 16-pixel cells, probes 4 pixels inside every edge
+
+    // The explicit-location patch: x in [0, W/8), y in [3H/8, H/2). Below it, the check matrix.
+    struct PatchRect { int x, y, w, h; };
+    PatchRect patch_rect(const demo::Env& env) { const int y0 = 3 * env.height / 8; return {0, y0, env.width / 8, env.height / 2 - y0}; }
     constexpr std::array<float, 4> kClear = {0.10f, 0.10f, 0.12f, 1.0f};
 
     // ---------------------------------------------------------------------------------------------------
@@ -375,6 +381,8 @@ namespace
         // =============================================================================================
         void init(demo::Env& env) override
         {
+            if (env.width < kMinSurface || env.height < kMinSurface)
+                throw demo::Skip(std::format("needs a surface of at least {0} x {0} pixels (the cell probes sit a quarter cell inside each edge)", kMinSurface));
             // ---- gfx: vertex + fragment, with transform feedback varyings chosen BEFORE the link ---------
             {
                 const mgl::ShaderId vs = compile(mgl::ShaderType::Vertex, env.load_text("shaders/query.vert"), "query.vert");
@@ -513,9 +521,10 @@ namespace
             // ---- the patch through the highest explicit location ---------------------------------------------
             mgl::glUseProgram(edge_);
             mgl::glUniform1f(mgl::UniformLocation{max_locations_ - 1}, 0.75f);
+            const PatchRect pr = patch_rect(env);
             mgl::glEnable(mgl::Capability::ScissorTest);
-            mgl::glViewport(0, 96, 32, 32);
-            mgl::glScissor(0, 96, 32, 32);
+            mgl::glViewport(pr.x, pr.y, pr.w, pr.h);
+            mgl::glScissor(pr.x, pr.y, pr.w, pr.h);
             mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 3);
             mgl::glDisable(mgl::Capability::ScissorTest);
             mgl::glViewport(0, 0, env.width, env.height);
@@ -655,21 +664,23 @@ namespace
             }};
             for (const Probe& p : probes)
             {
-                const demo::Rgba8 got = demo::read_pixel(probe_x(p), probe_y(p));
+                const demo::Rgba8 got = demo::read_pixel(probe_x(p, env), probe_y(p, env));
                 bool same = true;
                 for (std::size_t c = 0; c < 4; ++c)
                     if (std::abs(int{got[c]} - int{p.expected[c]}) > 1) same = false;  // 8-bit quantization +-1
-                rec.ok(same, p.what, std::format("pixel({},{}) = {} expected {}", probe_x(p), probe_y(p), demo::format_rgba(got), demo::format_rgba(p.expected)));
+                rec.ok(same, p.what, std::format("pixel({},{}) = {} expected {}", probe_x(p, env), probe_y(p, env), demo::format_rgba(got), demo::format_rgba(p.expected)));
             }
 
             // The patch drawn through the highest legal explicit location: u_edge = 0.75 -> (191, 64, 191).
-            const demo::Rgba8 patch = demo::read_pixel(16, 112);
+            const PatchRect pr = patch_rect(env);
+            const int patch_x = pr.x + pr.w / 2, patch_y = pr.y + pr.h / 2;
+            const demo::Rgba8 patch = demo::read_pixel(patch_x, patch_y);
             const demo::Rgba8 want = {to8(0.75f), to8(0.25f), to8(0.75f), 255};
             bool patch_ok = true;
             for (std::size_t c = 0; c < 4; ++c)
                 if (std::abs(int{patch[c]} - int{want[c]}) > 1) patch_ok = false;
             rec.ok(patch_ok, std::format("a uniform at layout(location = MAX_UNIFORM_LOCATIONS - 1 = {}) is set with glUniform1f and seen by the shader", max_locations_ - 1),
-                   std::format("pixel(16,112) = {} expected {}", demo::format_rgba(patch), demo::format_rgba(want)));
+                   std::format("pixel({},{}) = {} expected {}", patch_x, patch_y, demo::format_rgba(patch), demo::format_rgba(want)));
 
             // Negative control: move u_tint, redraw cell 0, and the old expectation must break.
             mgl::glUseProgram(gfx_);
@@ -678,7 +689,7 @@ namespace
             mgl::glBindVertexArray(vao_);
             mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 6);  // cell 0 only
             mgl::glBindVertexArray(mgl::VertexArrayId{0});
-            const demo::Rgba8 changed = demo::read_pixel(probe_x(probes[0]), probe_y(probes[0]));
+            const demo::Rgba8 changed = demo::read_pixel(probe_x(probes[0], env), probe_y(probes[0], env));
             const demo::Rgba8 expect_new = bytes(kVertexColor[0] * 0.25f * f, kVertexColor[1] * 0.25f * f, kVertexColor[2] * 1.0f * f);
             bool new_ok = true, old_ok = true;
             for (std::size_t c = 0; c < 4; ++c)
@@ -692,7 +703,7 @@ namespace
             mgl::glBindVertexArray(vao_);
             mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 6);
             mgl::glBindVertexArray(mgl::VertexArrayId{0});
-            const demo::Rgba8 restored = demo::read_pixel(probe_x(probes[0]), probe_y(probes[0]));
+            const demo::Rgba8 restored = demo::read_pixel(probe_x(probes[0], env), probe_y(probes[0], env));
             bool restored_ok = true;
             for (std::size_t c = 0; c < 4; ++c)
                 if (std::abs(int{restored[c]} - int{probes[0].expected[c]}) > 1) restored_ok = false;
@@ -701,8 +712,17 @@ namespace
             mgl::glViewport(0, 0, env.width, env.height);
         }
 
-        static int probe_x(const Probe& p) { return (p.cell % kGridColumns) * kCellPx + p.x_quarter * (kCellPx / 4); }
-        static int probe_y(const Probe& p) { return 128 + (p.cell / kGridColumns) * kCellPx + kCellPx / 2; }
+        // The grid covers NDC y in [0, 1] (the upper half); cell n is column n % 4, row n / 4. A probe sits at a quarter
+        // (x_quarter 1) or three quarters (3) of the cell width and half its height, i.e. >= 4 pixels from any edge at the
+        // minimum surface size.
+        static int probe_x(const Probe& p, const demo::Env& env)
+        {
+            return (4 * (p.cell % kGridColumns) + p.x_quarter) * env.width / (4 * kGridColumns);
+        }
+        static int probe_y(const Probe& p, const demo::Env& env)
+        {
+            return env.height / 2 + (2 * (p.cell / kGridColumns) + 1) * env.height / (4 * kGridRows);
+        }
 
         // ---------------------------------------------------------------------------------------------
         // Generic: one block entry, compared with its table row.
@@ -1465,7 +1485,7 @@ namespace
         // The check matrix: one cell per recorded check, one band per group, green = passed.
         void paint_matrix(const demo::Env& env, const Recorder& rec)
         {
-            const int region_h = 96;
+            const int region_h = patch_rect(env).y;  // the lower 3/8 of the surface
             int cell = 8;
             auto rows_needed = [&](int px) {
                 const int columns = env.width / px;

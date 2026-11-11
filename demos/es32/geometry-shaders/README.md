@@ -17,6 +17,13 @@ native ES 3.1 driver (softpipe) the executable reports `SKIP_UNSUPPORTED`.
 | bottom left (C) | `triangles_adjacency` -> `triangle_strip, max_vertices = 12` | a torus is first drawn normally (vertex + fragment shader), then again with an index list that carries each triangle's three neighbours. A front-facing triangle emits a thin screen-space quad for every edge whose neighbour faces away: the silhouette. |
 | bottom right (D) | `triangles, invocations = 6` -> `triangle_strip, max_vertices = 3` | ONE triangle list (a cube) is placed six times: invocation `gl_InvocationID` rotates and moves copy k from the uniform arrays `u_place[k]`, `u_spin[k]`. |
 
+**Other window sizes.** The four cells always split the window in half both ways. Each camera's field of view spans the
+*shorter* side of its cell, so an object is framed the same way in a wide and in a tall cell (it is not cropped in a tall
+one). The minimum window is **200 x 200** (a frame, the shorter cell side, of 100 pixels); smaller windows are skipped:
+the band the CPU model must leave uncompared around every edge is a fixed 0.75 px wide, so the comparable share of each
+object shrinks faster than its area: at an 80-pixel frame cells B, C and D fall below the scaled non-vacuity minimums
+below (cell C compares 569 covered pixels where 781 are required).
+
 Every program passes its data between the stages in interface blocks (`VS_OUT`, `GS_OUT`); the block *names* must match
 across a stage boundary, the instance names (`gs_in[]`, `gs_out`, `fs_in`) are local. Animated in windowed mode
 (time = frame / 60, frame 0 is the capture).
@@ -71,6 +78,11 @@ across a stage boundary, the instance names (`gs_in[]`, `gs_out`, `fs_in`) are l
    unbounded slope). The tolerance is 3/255: 8-bit rounding (1) plus slack for the GPU's `normalize`, `sqrt` and `pow`,
    for which the specification gives no precision. Measured on radeonsi: at most 1/255 (cells A to C) and 2/255 (cell D)
    over about 11 600 to 14 500 compared pixels per cell; 11 to 29 percent of the pixels are skipped as ambiguous.
+   Each comparison must be non-vacuous: at least 300 (A), 2000 (B, C) and 1500 (D) *covered* pixels compared at the
+   128-pixel frame of a 256 x 256 window, scaled with the frame area (`(frame / 128)^2`) at other sizes; the counts along
+   the torus outline (more than 150 outline-coloured pixels, more than 100 mismatches in the thick-outline negative
+   control) scale with the frame side. At the 100-pixel minimum frame cell C compares 1228 covered pixels against the
+   1221 required.
 3. **Transform feedback, bit for bit.** The same programs capture their geometry shader output (varyings
    `GS_OUT.eye`, `GS_OUT.world`, `GS_OUT.normal`, `GS_OUT.edge`, `GS_OUT.side`, `GS_OUT.inst`, `GS_OUT.face`, ...).
    The input data is dyadic (positions are multiples of 1/16 or 1/32, sizes and lift are powers of two) and the exact

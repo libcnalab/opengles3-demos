@@ -25,9 +25,11 @@
 //     (SHADER_IMAGE_ACCESS), an image store followed by a texelFetch (TEXTURE_FETCH) and a buffer store followed by a
 //     buffer load (SHADER_STORAGE).
 //
-// Image (256 x 256 window, GL coordinates, cells of 128 x 128):
-//   top left      the compute-generated ring of triangles (5 of 8 sectors survive the compute culling test)
-//   top right     64 x 64 image painted by an indirectly dispatched 8 x 8 group grid (white corner = group origin)
+// Image (any window of at least 128 x 128; four cells, each half the window in both directions, GL coordinates):
+//   top left      the compute-generated ring of triangles (5 of 8 sectors survive the compute culling test), drawn
+//                 into the largest square that fits the cell, centered
+//   top right     64 x 64 image painted by an indirectly dispatched 8 x 8 group grid (white corner = group origin),
+//                 shown at the largest integer number of pixels per texel that fits the cell, from its bottom-left corner
 //   bottom left   the five-pass r32ui image chain, shown as a color ramp with 8-pixel stripes
 //   bottom right  upper strip: image store -> texelFetch ramp; lower strip: buffer store -> buffer load ramp
 //
@@ -58,8 +60,18 @@ using demo::Rgba8;
 
 namespace
 {
-    constexpr int kWin = 256;
-    constexpr int kCell = 128;
+    constexpr int kMinWindow = 128;  // every cell at least 64 x 64: the whole 64 x 64 image fits at 1 pixel per texel
+
+    /// The four cells, derived from the window size. Left / bottom cells are floor(size / 2) wide / high.
+    struct Layout
+    {
+        int w = 0, h = 0;
+        int cw = 0, ch = 0;  // width of the left cells, height of the bottom cells
+        int rw = 0, th = 0;  // width of the right cells, height of the top cells
+        int star_x = 0, star_y = 0, star_side = 0;  // square viewport of the star, centered in the top-left cell
+        int img_scale = 1;                          // pixels per texel of the displayed 64 x 64 image
+        static Layout of(int w, int h);
+    };
 
     std::uint8_t c8(int v) { return static_cast<std::uint8_t>(std::clamp(v, 0, 255)); }
     Rgba8 color8(double r, double g, double b)
@@ -169,6 +181,22 @@ namespace
 
     constexpr auto kColor0 = mgl::to_framebuffer_attachment(mgl::ColorAttachment::Color0);
 
+    Layout Layout::of(int w, int h)
+    {
+        Layout l;
+        l.w = w;
+        l.h = h;
+        l.cw = w / 2;
+        l.ch = h / 2;
+        l.rw = w - l.cw;
+        l.th = h - l.ch;
+        l.star_side = std::min(l.cw, l.th);
+        l.star_x = (l.cw - l.star_side) / 2;
+        l.star_y = l.ch + (l.th - l.star_side) / 2;
+        l.img_scale = std::max(1, std::min(l.rw, l.th) / kImg);
+        return l;
+    }
+
     class ComputeIndirect final : public demo::Demo
     {
     public:
@@ -178,6 +206,10 @@ namespace
             max_frag_ssbo_ = demo::get_integer(mgl::GetParameter::MaxFragmentShaderStorageBlocks);
             have_frag_images_ = max_frag_images_ > 0;
             have_frag_ssbo_ = max_frag_ssbo_ > 0;
+            if (env.width < kMinWindow || env.height < kMinWindow)
+                throw demo::Skip(std::format("needs a window of at least {0} x {0} pixels (each cell must hold the 64 x 64 image)", kMinWindow));
+            if (env.width > demo::get_integer(mgl::GetParameter::MaxTextureSize))
+                throw demo::Skip("the window is wider than MAX_TEXTURE_SIZE: the per-pixel images of the ByRegion pipelines cannot cover it");
 
             prog_gen_ = load_compute(env, "shaders/gen_geometry.comp");
             prog_finalize_ = load_compute(env, "shaders/finalize_command.comp");
@@ -232,11 +264,8 @@ namespace
             buf_cmd_img_ = make_buffer(sizeof(cmd_init), cmd_init.data(), mgl::BufferUsage::DynamicCopy);
             tex_img_ = new_texture(mgl::SizedInternalFormat::Rgba8, kImg, kImg);
 
-            // Fragment pipelines.
-            tex_chain_ = new_texture(mgl::SizedInternalFormat::R32UI, kWin, kWin);
-            tex_tf_ = new_texture(mgl::SizedInternalFormat::R32F, kWin, kWin);
-            const std::vector<std::uint32_t> frag_words(static_cast<std::size_t>(kWin) * kWin, 0u);
-            buf_frag_ssbo_ = make_buffer(frag_words.size() * 4u, frag_words.data(), mgl::BufferUsage::DynamicCopy);
+            // Fragment pipelines: per-pixel images and buffer, sized from the window.
+            allocate_pixel_targets(env.width, env.height);
 
             // ---- vertex array of the star: attribute 0 = vec2 position, attribute 1 = uint sector (integer attribute) ----
             mgl::glGenVertexArrays(1, &vao_star_);
@@ -255,15 +284,17 @@ namespace
             fill_image();
         }
 
-        void render(demo::Env& /*env*/, int /*frame*/) override
+        void render(demo::Env& env, int /*frame*/) override
         {
+            if (env.width != lay_.w || env.height != lay_.h) allocate_pixel_targets(env.width, env.height);  // interactive resize
+            const Layout& l = lay_;
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
-            mgl::glViewport(0, 0, kWin, kWin);
+            mgl::glViewport(0, 0, l.w, l.h);
             mgl::glClearColor(0.10f, 0.10f, 0.14f, 1.0f);
             mgl::glClear(mgl::ClearBufferBit::Color);
 
             // ---- top left: the indirect indexed draw ----------------------------------------------------------------
-            mgl::glViewport(0, kCell, kCell, kCell);
+            mgl::glViewport(l.star_x, l.star_y, l.star_side, l.star_side);
             mgl::glUseProgram(prog_star_);
             mgl::glBindVertexArray(vao_star_);
             mgl::glBindBuffer(mgl::BufferTarget::DrawIndirect, geo_cmd_);
@@ -272,19 +303,19 @@ namespace
 
             // ---- top right: the indirectly filled image --------------------------------------------------------------
             mgl::glBindVertexArray(vao_empty_);
-            mgl::glViewport(kCell, kCell, kCell, kCell);
+            mgl::glViewport(l.cw, l.ch, kImg * l.img_scale, kImg * l.img_scale);  // exactly the displayed image: texelFetch stays in range
             mgl::glUseProgram(prog_show_);
             mgl::glActiveTexture(mgl::TextureUnit::Texture0);
             mgl::glBindTexture(mgl::TextureTarget::Texture2D, tex_img_);
             mgl::glUniform1i(mgl::glGetUniformLocation(prog_show_, "u_tex"), 0);
-            mgl::glUniform2i(mgl::glGetUniformLocation(prog_show_, "u_origin"), kCell, kCell);
-            mgl::glUniform1i(mgl::glGetUniformLocation(prog_show_, "u_scale"), 2);
+            mgl::glUniform2i(mgl::glGetUniformLocation(prog_show_, "u_origin"), l.cw, l.ch);
+            mgl::glUniform1i(mgl::glGetUniformLocation(prog_show_, "u_scale"), l.img_scale);
             mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 3);
 
             // ---- bottom left: five passes over one r32ui image, MemoryBarrierByRegion(SHADER_IMAGE_ACCESS) between them ----
             if (have_frag_images_)
             {
-                mgl::glViewport(0, 0, kCell, kCell);
+                mgl::glViewport(0, 0, l.cw, l.ch);
                 mgl::glUseProgram(prog_chain_);
                 mgl::glBindImageTexture(mgl::ImageUnit{0}, tex_chain_, 0, GL_FALSE, 0, mgl::ImageAccess::ReadWrite, mgl::InternalFormat::R32UI);
                 const mgl::UniformLocation pass = mgl::glGetUniformLocation(prog_chain_, "u_pass");
@@ -298,7 +329,7 @@ namespace
                 }
 
                 // ---- bottom right, upper strip: image store -> texture fetch ------------------------------------------
-                mgl::glViewport(kCell, kCell / 2, kCell, kCell / 2);
+                mgl::glViewport(l.cw, l.ch / 2, l.rw, l.ch - l.ch / 2);
                 mgl::glUseProgram(prog_tex_a_);
                 mgl::glBindImageTexture(mgl::ImageUnit{0}, tex_tf_, 0, GL_FALSE, 0, mgl::ImageAccess::WriteOnly, mgl::InternalFormat::R32F);
                 mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 3);
@@ -314,12 +345,14 @@ namespace
             // ---- bottom right, lower strip: buffer store -> buffer load in fragment shaders ---------------------------
             if (have_frag_ssbo_)
             {
-                mgl::glViewport(kCell, 0, kCell, kCell / 2);
+                mgl::glViewport(l.cw, 0, l.rw, l.ch / 2);
                 mgl::glBindBufferBase(mgl::BufferTarget::ShaderStorage, 0, buf_frag_ssbo_);
                 mgl::glUseProgram(prog_ssbo_a_);
+                mgl::glUniform1ui(mgl::glGetUniformLocation(prog_ssbo_a_, "u_stride"), static_cast<GLuint>(l.w));
                 mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 3);
                 mgl::glMemoryBarrierByRegion(mgl::MemoryBarrierByRegionMask::ShaderStorage);
                 mgl::glUseProgram(prog_ssbo_b_);
+                mgl::glUniform1ui(mgl::glGetUniformLocation(prog_ssbo_b_, "u_stride"), static_cast<GLuint>(l.w));
                 mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 3);
                 mgl::glMemoryBarrierByRegion(mgl::MemoryBarrierByRegionMask::ShaderStorage);
             }
@@ -339,6 +372,7 @@ namespace
             for (mgl::ProgramId p : programs_) mgl::glDeleteProgram(p);
             mgl::glDeleteVertexArrays(1, &vao_star_);
             mgl::glDeleteVertexArrays(1, &vao_empty_);
+            free_pixel_targets();
             textures_.clear();
             buffers_.clear();
             programs_.clear();
@@ -380,7 +414,7 @@ namespace
             return b;
         }
 
-        mgl::TextureId new_texture(mgl::SizedInternalFormat format, int w, int h)
+        mgl::TextureId new_texture(mgl::SizedInternalFormat format, int w, int h, bool track = true)
         {
             mgl::TextureId t{};
             mgl::glGenTextures(1, &t);
@@ -388,7 +422,7 @@ namespace
             mgl::glTexStorage2D(mgl::TextureTarget::Texture2D, 1, format, w, h);  // immutable: required by glBindImageTexture
             mgl::glTexParameter(mgl::TextureTarget::Texture2D, mgl::TextureMinFilter::Nearest);
             mgl::glTexParameter(mgl::TextureTarget::Texture2D, mgl::TextureMagFilter::Nearest);
-            textures_.push_back(t);
+            if (track) textures_.push_back(t);
             return t;
         }
 
@@ -413,6 +447,33 @@ namespace
             mgl::glBindBuffer(mgl::BufferTarget::CopyWrite, buffer);
             mgl::glBufferSubData(mgl::BufferTarget::CopyWrite, 0, std::span<const std::uint32_t>(words));
             mgl::glBindBuffer(mgl::BufferTarget::CopyWrite, mgl::BufferId{0});
+        }
+
+        /// The images and the buffer of the ByRegion pipelines are addressed by window coordinates (gl_FragCoord), so they
+        /// are sized from the window: the r32ui chain covers the bottom-left cell, the r32f image the width of the window
+        /// and the bottom half (only the bottom-right upper strip is used), the buffer one word per pixel of the
+        /// bottom-right lower strip, rows `w` words apart.
+        void allocate_pixel_targets(int w, int h)
+        {
+            free_pixel_targets();
+            lay_ = Layout::of(w, h);
+            tex_chain_ = new_texture(mgl::SizedInternalFormat::R32UI, lay_.cw, lay_.ch, false);
+            tex_tf_ = new_texture(mgl::SizedInternalFormat::R32F, lay_.w, lay_.ch, false);
+            const std::vector<std::uint32_t> frag_words(static_cast<std::size_t>(lay_.w) * static_cast<std::size_t>(lay_.ch / 2), 0u);
+            mgl::glGenBuffers(1, &buf_frag_ssbo_);
+            mgl::glBindBuffer(mgl::BufferTarget::CopyWrite, buf_frag_ssbo_);
+            mgl::glBufferData(mgl::BufferTarget::CopyWrite, static_cast<GLsizeiptr>(frag_words.size() * 4u), frag_words.data(), mgl::BufferUsage::DynamicCopy);
+            mgl::glBindBuffer(mgl::BufferTarget::CopyWrite, mgl::BufferId{0});
+        }
+
+        void free_pixel_targets()
+        {
+            if (tex_chain_.value != 0) mgl::glDeleteTextures(1, &tex_chain_);
+            if (tex_tf_.value != 0) mgl::glDeleteTextures(1, &tex_tf_);
+            if (buf_frag_ssbo_.value != 0) mgl::glDeleteBuffers(1, &buf_frag_ssbo_);
+            tex_chain_ = mgl::TextureId{0};
+            tex_tf_ = mgl::TextureId{0};
+            buf_frag_ssbo_ = mgl::BufferId{0};
         }
 
         std::vector<std::uint8_t> read_texture(mgl::TextureId tex, int w, int h)
@@ -496,6 +557,7 @@ namespace
         mgl::TextureId tex_img_{}, tex_chain_{}, tex_tf_{};
         mgl::VertexArrayId vao_star_{}, vao_empty_{};
         mgl::FramebufferId fbo_{};
+        Layout lay_{};
     };
 
     // ---------------------------------------------------------------------------------------------------------
@@ -583,12 +645,15 @@ namespace
         for (int s = 0; s < kSectors; ++s)
             if (sector_visible(s)) expected_sectors.insert(s);
         check.expect(sectors_ok && seen == expected_sectors, "vertex buffer: every surviving sector appears exactly once with all three vertices carrying its sector number");
-        check.expect(max_err < 1e-3, "vertex buffer: positions match the CPU model within 1e-3 NDC (0.06 px of this viewport; sin/cos accuracy is not specified)", std::format("max error {:.2e}", max_err));
+        check.expect(max_err < 1e-3, std::format("vertex buffer: positions match the CPU model within 1e-3 NDC ({:.2f} px of this viewport; sin/cos accuracy is not specified)", 1e-3 * 0.5 * lay_.star_side),
+                     std::format("max error {:.2e}", max_err));
         check.expect(vtx[0] == std::bit_cast<std::uint32_t>(7.0f) && vtx[4] == std::bit_cast<std::uint32_t>(7.0f), "vertex buffer: the junk vertices before baseVertex are untouched");
 
-        // -- the rendered pixels: top-left cell, origin (0, 128) --
+        // -- the rendered pixels: the square star viewport in the top-left cell --
+        const Layout& l = lay_;
         auto pixel_of = [&](const std::array<double, 2>& ndc) {
-            return std::array<int, 2>{static_cast<int>(std::floor((ndc[0] + 1.0) * 0.5 * kCell)), kCell + static_cast<int>(std::floor((ndc[1] + 1.0) * 0.5 * kCell))};
+            return std::array<int, 2>{l.star_x + static_cast<int>(std::floor((ndc[0] + 1.0) * 0.5 * l.star_side)),
+                                      l.star_y + static_cast<int>(std::floor((ndc[1] + 1.0) * 0.5 * l.star_side))};
         };
         std::vector<Probe> shown, hidden;
         for (int s = 0; s < kSectors; ++s)
@@ -632,10 +697,11 @@ namespace
         std::cout << std::format("note: indirectly filled image: max channel difference {} over {} texels\n", max_diff, kImg * kImg);
         check.expect(bad == 0, "the image painted by glDispatchComputeIndirect(0) equals the CPU model at all 4096 texels (every texel written: the 8 x 8 groups covered it; tolerance 1 = 8-bit quantization)", first);
 
-        // The same image as displayed in the top-right cell (2 pixels per texel).
+        // The same image as displayed in the top-right cell (lay_.img_scale pixels per texel); probe the middle of each texel.
         std::vector<Probe> probes;
+        const int sc = lay_.img_scale;
         for (const std::array<int, 2>& t : std::array<std::array<int, 2>, 6>{{{0, 0}, {5, 3}, {9, 12}, {22, 40}, {63, 63}, {31, 8}}})
-            probes.push_back({kCell + t[0] * 2 + 1, kCell + t[1] * 2 + 1, fill_color(t[0], t[1])});
+            probes.push_back({lay_.cw + t[0] * sc + sc / 2, lay_.ch + t[1] * sc + sc / 2, fill_color(t[0], t[1])});
         probe_set(check, "top-right cell shows that image through a sampler (6 probes: tile corners marked white, orange and blue tiles)", probes, 2);
     }
 
@@ -782,6 +848,7 @@ namespace
     void ComputeIndirect::check_by_region(demo::Check& check)
     {
         mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
+        const Layout& l = lay_;
         if (!have_frag_images_)
             std::cout << "note: MAX_FRAGMENT_IMAGE_UNIFORMS is 0 (allowed by ES 3.1): the image and texture-fetch ByRegion pipelines are skipped\n";
         if (!have_frag_ssbo_)
@@ -789,20 +856,20 @@ namespace
 
         if (have_frag_images_)
         {
-            compare_region(check, "bottom-left: five fragment passes over an r32ui image with glMemoryBarrierByRegion(SHADER_IMAGE_ACCESS) between them", 0, 0, kCell, kCell, 1,
+            compare_region(check, "bottom-left: five fragment passes over an r32ui image with glMemoryBarrierByRegion(SHADER_IMAGE_ACCESS) between them", 0, 0, l.cw, l.ch, 1,
                            [](int x, int y) { return chain_color(chain_value(x, y, true)); });
             // Negative control: without the three read-modify-write passes the picture would be different at (almost) every pixel.
             int differ = 0;
-            for (int y = 0; y < kCell; ++y)
-                for (int x = 0; x < kCell; ++x)
+            for (int y = 0; y < l.ch; ++y)
+                for (int x = 0; x < l.cw; ++x)
                     if (max_channel_diff(chain_color(chain_value(x, y, true)), chain_color(chain_value(x, y, false))) > 1) ++differ;
-            check.expect(differ > kCell * kCell / 2, "negative control: the model of a chain that skipped passes 1..3 differs from the real model at more than half of the pixels",
-                         std::format("{} of {} pixels differ", differ, kCell * kCell));
-            compare_region(check, "bottom-right upper strip: imageStore (r32f) then texelFetch of the same pixel, glMemoryBarrierByRegion(TEXTURE_FETCH) between", kCell, kCell / 2, kCell, kCell / 2, 1,
+            check.expect(differ > l.cw * l.ch / 2, "negative control: the model of a chain that skipped passes 1..3 differs from the real model at more than half of the pixels",
+                         std::format("{} of {} pixels differ", differ, l.cw * l.ch));
+            compare_region(check, "bottom-right upper strip: imageStore (r32f) then texelFetch of the same pixel, glMemoryBarrierByRegion(TEXTURE_FETCH) between", l.cw, l.ch / 2, l.rw, l.ch - l.ch / 2, 1,
                            [](int x, int y) { return tex_color(x, y); });
         }
         if (have_frag_ssbo_)
-            compare_region(check, "bottom-right lower strip: buffer store then buffer load of the same pixel in fragment shaders, glMemoryBarrierByRegion(SHADER_STORAGE) between", kCell, 0, kCell, kCell / 2, 1,
+            compare_region(check, "bottom-right lower strip: buffer store then buffer load of the same pixel in fragment shaders, glMemoryBarrierByRegion(SHADER_STORAGE) between", l.cw, 0, l.rw, l.ch / 2, 1,
                            [](int x, int y) { return ssbo_color(x, y); });
         check.expect_no_gl_error("no error from glMemoryBarrierByRegion with the legal bits ATOMIC_COUNTER, FRAMEBUFFER, SHADER_IMAGE_ACCESS, SHADER_STORAGE, TEXTURE_FETCH, UNIFORM");
         for (const auto bit : {mgl::MemoryBarrierByRegionMask::AtomicCounter, mgl::MemoryBarrierByRegionMask::Framebuffer, mgl::MemoryBarrierByRegionMask::ShaderImageAccess,

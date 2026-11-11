@@ -67,6 +67,13 @@ namespace
     constexpr float kAgreeLevels = static_cast<float>(kPixelTolerance) / 255.0f;
     constexpr float kJitterPx = 1.0f / 16.0f;  // SUBPIXEL_BITS >= 4 (ES 3.2 Table 21.40): positions are only specified to 1/16 pixel
     constexpr float kSensitivityLevels = 2.0f / 255.0f;
+    // Size of the object frame (the shorter side of a cell; the field of view spans it). The coverage minimums below are
+    // written for the 128-pixel frame of a 256 x 256 window and scale with the frame AREA (an object fills the same
+    // fraction of it at every size); counts along the torus outline scale with the frame SIDE. Below 100 pixels the
+    // fixed-size uncertainty band of the CPU model (kMarginPx at every edge, kJitterPx sensitivity) leaves too little of
+    // the objects comparable: the demo needs a window of at least 200 x 200.
+    constexpr int kRefFramePx = 128;
+    constexpr int kMinFramePx = 100;
 
     constexpr std::array<const GLchar*, 0> kNoTf{};
     constexpr std::array<const GLchar*, 3> kTfBillboard = {"GS_OUT.eye", "GS_OUT.uv", "GS_OUT.prim"};
@@ -91,7 +98,11 @@ namespace
         Camera c;
         c.eye = {distance * std::cos(el) * std::cos(azimuth), distance * std::sin(el), distance * std::cos(el) * std::sin(azimuth)};
         c.view = demo::math::look_at(c.eye, {0, 0, 0}, {0, 1, 0});
-        c.proj = demo::math::perspective(demo::math::radians(fov_deg), aspect, 1.0f, 30.0f);
+        // fov_deg is the field of view across the SHORTER side of the cell, so the object is framed the same way in
+        // wide and in tall cells (a vertical field of view alone would crop the object in a tall cell).
+        const float half = demo::math::radians(fov_deg) * 0.5f;
+        const float fovy = aspect >= 1.0f ? 2.0f * half : 2.0f * std::atan(std::tan(half) / aspect);
+        c.proj = demo::math::perspective(fovy, aspect, 1.0f, 30.0f);
         c.viewproj = c.proj * c.view;
         return c;
     }
@@ -206,6 +217,7 @@ namespace
     {
         int compared = 0;    // pixels whose expectation is unambiguous
         int covered = 0;     // ... of which covered by some primitive
+        int footprint = 0;   // pixels the model certainly covers, compared or skipped as ambiguous
         int skipped = 0;     // pixels near a primitive edge or a depth tie (strict and loose model disagree)
         int mismatches = 0;
         int max_diff = 0;
@@ -226,6 +238,7 @@ namespace
                                                        {static_cast<float>(background[0]) / 255.0f, static_cast<float>(background[1]) / 255.0f,
                                                         static_cast<float>(background[2]) / 255.0f},
                                                        shade);
+                if (model.covered) ++st.footprint;
                 if (model.ambiguous)
                 {
                     ++st.skipped;
@@ -335,6 +348,10 @@ namespace
         // =====================================================================================================
         void init(demo::Env& env) override
         {
+            if (std::min(env.width, env.height) / 2 < kMinFramePx)
+                throw demo::Skip(std::format("needs a window of at least {0} x {0} pixels (cells whose shorter side is >= {1} pixels: below that the "
+                                             "pixel comparison is dominated by edge pixels it must skip)",
+                                             2 * kMinFramePx, kMinFramePx));
             // --- programs ----------------------------------------------------------------------------------
             // The geometry-shader programs declare their transform feedback varyings before linking; that state is
             // inert until BeginTransformFeedback, so the same programs render and (in validate()) capture.
@@ -791,14 +808,19 @@ namespace
             const Scene& s = scene_;
             std::vector<std::uint8_t> gpu;
             auto read_cell = [&](int c) { return demo::read_rgba8(cell_x(c), cell_y(c), cw, ch); };
-            auto report = [&](const char* name, const CompareStats& st, int min_covered) {
-                std::printf("   %s: %d pixels compared (%d covered), %d ambiguous pixels skipped, max deviation %d/255, %d mismatches\n", name, st.compared,
-                            st.covered, st.skipped, st.max_diff, st.mismatches);
+            const double frame = static_cast<double>(std::min(cw, ch)) / kRefFramePx;  // 1 at 256 x 256
+            const auto by_area = [&](int n) { return static_cast<int>(std::lround(n * frame * frame)); };
+            const auto by_side = [&](int n) { return static_cast<int>(std::lround(n * frame)); };
+            auto report = [&](const char* name, const CompareStats& st, int min_covered_ref) {
+                const int min_covered = by_area(min_covered_ref);
+                std::printf("   %s: %d pixels compared (%d covered), %d ambiguous pixels skipped, footprint %d, max deviation %d/255, %d mismatches\n", name, st.compared,
+                            st.covered, st.skipped, st.footprint, st.max_diff, st.mismatches);
                 for (const std::string& line : st.samples) std::printf("      mismatch %s\n", line.c_str());
                 check.expect(st.mismatches == 0, std::format("{}: every unambiguous pixel equals the CPU model (+-{}/255)", name, kPixelTolerance),
                              st.mismatches == 0 ? std::string{} : std::format("{} mismatches, first at ({},{})", st.mismatches, st.first_x, st.first_y));
                 check.expect(st.covered >= min_covered && st.compared > cw * ch / 2,
-                             std::format("{}: the comparison is not vacuous ({} covered pixels compared, >= {} needed)", name, st.covered, min_covered));
+                             std::format("{}: the comparison is not vacuous ({} covered pixels compared, >= {} needed = {} x (frame / 128 px)^2)", name,
+                                         st.covered, min_covered, min_covered_ref));
             };
             (void)env;
 
@@ -903,12 +925,13 @@ namespace
                 int outline_pixels = 0;
                 for (std::size_t i = 0; i + 3 < gpu.size(); i += 4)
                     if (std::abs(gpu[i] - 255) <= 2 && std::abs(gpu[i + 1] - 209) <= 2 && std::abs(gpu[i + 2] - 51) <= 2) ++outline_pixels;
-                check.expect(outline_pixels > 150, "cell C: the geometry shader drew a visible outline (outline-coloured pixels)", std::format("{} pixels", outline_pixels));
+                check.expect(outline_pixels > by_side(150), std::format("cell C: the geometry shader drew a visible outline (> {} outline-coloured pixels = 150 x frame / 128 px)", by_side(150)),
+                             std::format("{} pixels", outline_pixels));
                 // Negative control: a CPU model with a 3-pixel line instead of 1.25 must disagree with the GPU image.
                 const auto [wrong_raster, wrong_inside] = build({hw.x * 2.4f, hw.y * 2.4f}, nullptr, nullptr);
                 (void)wrong_inside;
                 const CompareStats wrong = compare_cell(gpu, cw, ch, wrong_raster, kClear8[kCellC], shade);
-                check.expect(wrong.mismatches > 100, "negative control C: a CPU outline 2.4 times thicker breaks the comparison",
+                check.expect(wrong.mismatches > by_side(100), std::format("negative control C: a CPU outline 2.4 times thicker breaks the comparison (> {} mismatches = 100 x frame / 128 px)", by_side(100)),
                              std::format("{} mismatches", wrong.mismatches));
             }
 

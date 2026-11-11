@@ -1,0 +1,71 @@
+{
+  "name": "es20-blending",
+  "title": "Blending",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es20-foundations",
+  "order": 110,
+  "summary": "All 15 blend factors, FUNC_ADD/SUBTRACT/REVERSE_SUBTRACT and MIN/MAX, separate RGB/alpha factors and equations, the constant blend color and painter's-order alpha compositing, checked pixel by pixel against a CPU model of ES 3.0 4.1.7.",
+  "spec": [
+    "ES 3.0 §4.1.7 Blending (§4.1.7.1 Blend Equation + Table 4.1, §4.1.7.2 Blend Functions + Table 4.2, §4.1.7.3 Blend Color, §4.1.7.4 Blending State)",
+    "ES 3.0 §4.1.8 sRGB Conversion (clamping and conversion of the blended result to fixed point)",
+    "ES 3.0 §4.1.9 Dithering",
+    "ES 3.0 §2.1.6 Fixed-Point Data Conversions (equations 2.1 and 2.3)",
+    "ES 3.0 §6.1.1 Simple Queries (state table: blending state)",
+    "GLSL ES 3.00 §4.3.5 Uniform Variables, §4.3.6 Output Variables, §4.3.8 Layout Qualifiers, §4.5.4 Default Precision Qualifiers",
+    "GLSL ES 3.00 §6.4 Jumps (discard), §7.1 Vertex Shader Special Variables (gl_VertexID)"
+  ],
+  "api": {
+    "glEnable": "BLEND (and glIsEnabled TRUE); blended draws match the CPU model only while enabled",
+    "glDisable": "BLEND (control cells and destination pre-draws are exact, glIsEnabled FALSE); DITHER (glIsEnabled FALSE)",
+    "glIsEnabled": "BLEND false initially / true after glEnable / false after glDisable; DITHER true initially, false after glDisable",
+    "glBlendFunc": "30+ cells: every source factor with ZERO and every destination factor with ZERO source; RGB and alpha results match Tables 4.1/4.2 within +-2/255; BLEND_SRC/DST_RGB/ALPHA read back (all four set to the same pair)",
+    "glBlendFuncSeparate": "4 cells with four independent factors match the CPU model; composite scene uses (SRC_ALPHA, ONE_MINUS_SRC_ALPHA, ONE, ONE_MINUS_SRC_ALPHA); four distinct values read back with glGetIntegerv",
+    "glBlendEquation": "FUNC_ADD/FUNC_SUBTRACT/FUNC_REVERSE_SUBTRACT/MIN/MAX cells match the CPU model (MIN/MAX with ZERO and ONE factors prove the factors are ignored); both equation queries read back",
+    "glBlendEquationSeparate": "4 cells with different RGB and alpha equations match the CPU model; BLEND_EQUATION_RGB and _ALPHA read back (REVERSE_SUBTRACT/MAX and MIN/FUNC_ADD)",
+    "glBlendColor": "CONSTANT_COLOR/ALPHA factor cells, a 12-step alpha ramp and an out-of-range color (clamped to [0,1]) match the CPU model; in-range color read back with glGetFloatv",
+    "glGetIntegerv": "BLEND_SRC_RGB, BLEND_DST_RGB, BLEND_SRC_ALPHA, BLEND_DST_ALPHA, BLEND_EQUATION_RGB, BLEND_EQUATION_ALPHA initial and updated values; RED/GREEN/BLUE/ALPHA_BITS",
+    "glGetFloatv": "BLEND_COLOR initial (0,0,0,0) and after glBlendColor(0.25, 0.5, 0.75, 0.125)",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE blocks of every cell and probe pixels of the composite scene compared with the CPU model",
+    "glClearColor": "backdrop color of the surface",
+    "glClear": "COLOR_BUFFER_BIT; pixels outside every drawn rectangle (margins, gutters) keep the clear color",
+    "glViewport": "full-surface viewport maps the NDC rectangles to the probed pixel blocks",
+    "glGetUniformLocation": "u_rect, u_color, u_disc located; rectangles and colors observed in the image",
+    "glUseProgram": "the rect/color program renders every cell",
+    "glUniform4f": "u_rect places each rectangle in NDC, u_color is the source color; both verified by pixel position and value",
+    "glUniform1i": "u_disc selects disc (discard outside) or rectangle; composite probes inside/outside discs",
+    "glDrawArrays": "TRIANGLE_STRIP, 4 vertices from gl_VertexID, no vertex attributes; one draw per cell rectangle, checker square and disc",
+    "glDeleteProgram": "cleanup, final glGetError == NO_ERROR"
+  },
+  "features": [
+    "ES20.BLEND.FUNC",
+    "ES20.BLEND.SEPARATE",
+    "ES20.BLEND.EQUATION",
+    "ES20.BLEND.COLOR",
+    "ES30.BLEND.MINMAX",
+    "ES20.DITHER",
+    "ES20.CLEAR.COLOR",
+    "ES20.DRAW.ARRAYS"
+  ],
+  "glsl_features": [
+    "GLSL300.VERSION",
+    "GLSL300.UNIFORM",
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.FRAG.OUTPUT",
+    "GLSL300.LAYOUT.LOCATION",
+    "GLSL300.PRECISION.DEFAULT",
+    "GLSL300.DISCARD",
+    "GLSL300.BUILTIN_VARS.VS"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet (subagent)",
+    "notes": "256x256 radeonsi es-max capture viewed (the llvmpipe capture differs by at most 1/255 per channel). Top: 16x4 contact sheet of framed cells (blue frame = destination, inner square = blended result) on a dark background; rows 0 and 1 show a varied palette of orange, brown, green and blue tints, row 2 has green-framed equation cells (a pale cream saturated-ADD cell, MIN and MAX pairs identical to each other), row 3 ends in a smooth 12-step blue-to-orange cross-fade ramp. Cell 0 (ZERO, ZERO) looks white because its alpha is 0 and the viewer composites over white. Bottom: grey checkerboard visible through three translucent discs in two Venn clusters; the left cluster (drawn red, green, blue) and the right cluster (drawn blue, green, red) have visibly different overlap colors; disc edges are clean with no stray fragments."
+  }
+}

@@ -468,13 +468,16 @@ namespace
     constexpr double kCameraElevation = 0.14;
     constexpr double kCameraYaw0 = 0.20;
 
-    Camera orbit_camera(double yaw)
+    // The orbit camera's 38 degree field of view spans the SHORTER side of the surface: vertical on a landscape
+    // surface, horizontal on a portrait one, so that the wall, the crate and the sphere (side by side along x) stay
+    // in view at any aspect ratio. Camera::fovy is always the vertical angle that the projection and the CPU rays use.
+    Camera orbit_camera(double yaw, double aspect)
     {
         Camera c;
         c.target = {0.0, -0.15, 0.4};
         c.eye = c.target + D3{std::sin(yaw) * std::cos(kCameraElevation), std::sin(kCameraElevation), std::cos(yaw) * std::cos(kCameraElevation)} *
                                kCameraDistance;
-        c.fovy = 38.0 * std::numbers::pi / 180.0;
+        c.fovy = 2.0 * std::atan(std::tan(0.5 * 38.0 * std::numbers::pi / 180.0) / std::min(aspect, 1.0));
         return c;
     }
 
@@ -786,7 +789,7 @@ namespace
         {
             const int w = env.width, h = env.height;
             const double time = static_cast<double>(ticks_) / 60.0;
-            const Camera cam = orbit_camera(yaw_);
+            const Camera cam = orbit_camera(yaw_, static_cast<double>(w) / static_cast<double>(h));
 
             check_state(check);
             check_tangents(check);
@@ -945,7 +948,7 @@ namespace
         {
             const double time = static_cast<double>(ticks_) / 60.0;
             Pass pass;
-            pass.camera = orbit_camera(yaw_);
+            pass.camera = orbit_camera(yaw_, static_cast<double>(env.width) / static_cast<double>(env.height));
             pass.light.position = light_position(time);
             pass.view = view_;
             pass.normal_map = normal_map_;

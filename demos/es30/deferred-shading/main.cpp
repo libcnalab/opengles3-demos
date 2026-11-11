@@ -1954,9 +1954,13 @@ namespace
         const DiffStats d_full_fwd = compare_images(img_full, img_forward, w, h, budget.full);
         const DiffStats d_vol_fwd = compare_images(img_volumes, img_forward, w, h, budget.volumes);
         const DiffStats d_vol_full = compare_images(img_volumes, img_full, w, h, budget.volumes);
-        auto describe = [](const DiffStats& s) {
-            return std::format("max difference {} steps, worst = {:.2f} of its per-pixel budget at ({},{}), mean {:.3f}, {} of {} pixels beyond budget",
-                               s.max_diff, s.max_ratio, s.at_x, s.at_y, s.mean, s.over, s.total);
+        // Pixels whose view ray hits the scene (CPU model). The negative controls below are judged against these, not the whole
+        // surface: on a wide surface (1000 x 200) the scene fills only the middle third and the empty background, which no
+        // lighting change can alter, would otherwise dilute the share of differing pixels.
+        const std::size_t scene_pixels = static_cast<std::size_t>(std::count_if(model.hits.begin(), model.hits.end(), [](const Hit& hh) { return hh.hit; }));
+        auto describe = [scene_pixels](const DiffStats& s) {
+            return std::format("max difference {} steps, worst = {:.2f} of its per-pixel budget at ({},{}), mean {:.3f}, {} of {} pixels beyond budget ({} scene pixels)",
+                               s.max_diff, s.max_ratio, s.at_x, s.at_y, s.mean, s.over, s.total, scene_pixels);
         };
         check.expect(d_full_fwd.over == 0,
                      std::format("deferred (full-screen lighting pass) matches the forward-rendered reference on all {} pixels", w * h),
@@ -2024,7 +2028,7 @@ namespace
             no_blend.blend = false;
             const Pixels img_no_blend = render_image(env, no_blend);
             const DiffStats d_nb = compare_images(img_no_blend, img_full, w, h, budget.volumes);
-            check.expect(d_nb.over * 20 >= d_nb.total, "control (b): without glEnable(BLEND) + glBlendFunc(ONE, ONE) the volume image differs from the full-screen image on >= 5% of the pixels",
+            check.expect(scene_pixels > 0 && d_nb.over * 20 >= scene_pixels, "control (b): without glEnable(BLEND) + glBlendFunc(ONE, ONE) the volume image differs from the full-screen image on >= 5% of the scene pixels",
                          describe(d_nb));
 
             // (c) Normal plane replaced by "up": the lighting pass visibly depends on the G-buffer contents.
@@ -2033,7 +2037,7 @@ namespace
             flat.overwrite_normals = true;
             const Pixels img_flat = render_image(env, flat);
             const DiffStats d_flat = compare_images(img_flat, img_forward, w, h, budget.volumes);
-            check.expect(d_flat.over * 20 >= d_flat.total, "control (c): with the normal plane overwritten by (0, 1, 0) the image differs from the forward reference on >= 5% of the pixels",
+            check.expect(scene_pixels > 0 && d_flat.over * 20 >= scene_pixels, "control (c): with the normal plane overwritten by (0, 1, 0) the image differs from the forward reference on >= 5% of the scene pixels",
                          describe(d_flat));
             // glClearBufferfv(COLOR, 1, ...) addressed draw buffer 1 only: the normal plane is flat "up", the albedo plane is untouched.
             const Pixels flat_normal = read_plane(mgl::ColorAttachment::Color1);
@@ -2054,7 +2058,7 @@ namespace
             both_faces.cull_volumes = false;
             const Pixels img_both = render_image(env, both_faces);
             const DiffStats d_both = compare_images(img_both, img_full, w, h, budget.volumes);
-            check.expect(d_both.over * 20 >= d_both.total, "control (d): without glCullFace(FRONT) each light is added twice (front and back faces) and the image differs on >= 5% of the pixels",
+            check.expect(scene_pixels > 0 && d_both.over * 20 >= scene_pixels, "control (d): without glCullFace(FRONT) each light is added twice (front and back faces) and the image differs on >= 5% of the scene pixels",
                          describe(d_both));
         }
 
@@ -2075,7 +2079,7 @@ namespace
             check.expect(length(l1.pos - l0.pos) > 0.05, "light 0 moves between t and t + 1 s (CPU model)",
                          std::format("moved {:.3f} world units", length(l1.pos - l0.pos)));
             check.expect(d_later.over == 0, "one second later the deferred image still matches the forward reference", describe(d_later));
-            check.expect(d_moved.over * 10 >= d_moved.total, "the image changes when only the lights move (same camera): >= 10% of the pixels differ by more than 8",
+            check.expect(scene_pixels > 0 && d_moved.over * 10 >= scene_pixels, "the image changes when only the lights move (same camera): >= 10% of the scene pixels differ by more than 8",
                          describe(d_moved));
         }
 

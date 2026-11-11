@@ -144,14 +144,19 @@ The CPU reference is an independent ray caster in double precision. It intersect
    disabled in the trunk VAO. `CURRENT_VERTEX_ATTRIB` 5 and 6 are still (0,0,0,1) and (1,1,1,1) after the instanced
    draws (§2.9.3, §6.1.12). The shadow map is in `COMPARE_REF_TO_TEXTURE` mode, and `SAMPLER_BINDING` of unit 3 is
    the raw-depth sampler.
-2. **Fixed poses, every stable pixel.** About 4500 sample pixels per pose, whatever the window size. A sample becomes
-   a *probe* only when its colour can be predicted:
+2. **Fixed poses, every stable pixel.** About 8000 sample pixels in the central square of the shorter side (every
+   second pixel at most), whatever the window size; the field of view spans the shorter side, so the objects get the
+   same share of the samples in landscape, portrait and square windows, and the extra width or height adds periphery.
+   A sample becomes a *probe* only when its colour can be predicted:
    * the hits at ±2 px see the same object and box face (no silhouette or crease under the pixel), and a box probe
      keeps ≥ 0.12 world units from the face border, because PCF taps near a crease read the neighbouring face, which
      has its own polygon offset;
    * **texture footprint.** ES 3.0 §3.8.10 lets ρ be approximated by any f with max(mu, mv) ≤ f ≤ mu + mv. From the
-     texture coordinates of the neighbouring pixels (forward and backward differences, the larger one) the CPU
-     bounds f ≤ F. λ ≤ log2 F, so a trilinear lookup touches at most levels 0 … ⌊log2 F⌋ + 1, and on each level the
+     texture coordinates of the 3×3 pixel neighbourhood the CPU bounds f ≤ F: an implementation may difference over
+     the 2×2 quad that holds the pixel, forward or backward, and with coarse derivatives on the quad's *other* row or
+     column, so ∂u/∂x is bounded by the horizontal differences of rows y−1, y, y+1 (and likewise ∂/∂y by columns).
+     Only the sphere's u wraps at its seam; ground and box coordinates are unbounded (on far, grazing ground two
+     neighbouring rows differ by several texture repeats, which must not be folded back to a small footprint). λ ≤ log2 F, so a trilinear lookup touches at most levels 0 … ⌊log2 F⌋ + 1, and on each level the
      bilinear 2×2 texels around (u, v). The filtered value is a convex combination of those texels whatever the
      weights, so the per-channel min/max of the 4×4 texels around (u, v) on those levels bounds the albedo. The
      shading is monotonic in the albedo (non-negative coefficients, then a monotonic fog mix and gamma), so the albedo
@@ -181,13 +186,14 @@ The CPU reference is an independent ray caster in double precision. It intersect
    pressed, *all* probes of the pose must match the CPU model with that technique flipped. In addition, every probe
    where the model predicts a change larger than 2·tolerance + 2 must fail the *unflipped* prediction. This is the
    negative control: the comparison can tell the two states apart. Counts between 256×256 and 800×800: shadows
-   70–170, Phong 260–460, normal mapping 220–510, fog 650–1100 changed pixels (minimums 30, 20, 20, 30).
-6. **Wireframe (key 4).** Probe points lie on edges: the centre of a box face (it lies on the face's diagonal) and
-   midpoints of ground-cell edges. Each must be visible to the CPU ray, at least 12 px from every other edge of its
+   about 300–340, Phong 810–900, normal mapping 860–1090, fog 1950–3370 changed pixels (minimums 30, 20, 20, 30).
+6. **Wireframe (key 4).** Seen from a pose high above the scene, looking steeply down, so that the 8-unit ground
+   cells are at least 50 px wide even on a 200-pixel side. Probe points lie on edges: the centre of a box face (it lies
+   on the face's diagonal) and the points at ¼, ½ and ¾ of every ground-cell edge. Each must be visible to the CPU ray, at least 12 px from every other edge of its
    two triangles (all right triangles, so every altitude is ≥ 17 px and `fwidth(b) ≤ 0.083` stays below the 0.12
    where lines start to fade). The pixel containing the projected point is ≤ 0.71 px from the edge, so its wire weight
-   is exactly 1: it must show the wire colour, and must *not* with the overlay off. Pixels ≥ 4 px inside ground
-   triangles must be unchanged by the overlay.
+   is exactly 1: it must show the wire colour, and must *not* with the overlay off. The centroids of both triangles of
+   every ground cell, where they are ≥ 4 px inside the triangle, must be unchanged by the overlay.
 7. **Shadow-map inset (key 5).** For a 12×12 grid of inset pixels the CPU traces the sun's ray through the
    corresponding texel and its 8 neighbours (NEAREST may pick a neighbour at a texel edge). On planar surfaces the
    grey level must lie between the shallowest analytic depth and the deepest plus the polygon offset
@@ -211,8 +217,9 @@ a sanity tolerance of the same size: the spec gives no bound for r in eq. 3.11. 
 is exactly 0 or 1, because all PCF comparisons agree.
 
 The window size does not matter: the probes are a grid scaled to the window, every geometric margin is in world
-units or pixels measured on the actual projection, and the validation passes at 256×256, 800×800, 640×480 and
-333×777. Surfaces smaller than 96×96 are reported as SKIP.
+units or pixels measured on the actual projection, and the validation passes at 256×256, 800×800, 640×480,
+333×777, 1000×200 and 200×1000. **Minimum: a shorter side of 180 pixels**; below it the textured objects of the start
+pose have fewer than 20 pixels whose filtered colour is predictable, and the demo reports SKIP.
 
 ## Pitfalls this demo ran into
 

@@ -256,14 +256,20 @@ What is checked:
    `refract` with the inverse ratio 1.5 (glass, 148 of 148).
 6. **The scene in the face-coded environment** (key `c`): the same five sweeps. Reflected and refracted
    rays now land on faces of very different hue, which makes every formula far more discriminating than
-   the soft sky: the glass without the Fresnel term (refraction only) is rejected at every discriminating
-   pixel (35 at 256 x 256, found by a full-resolution scan of the thin ring where `F > 0.1`), the box
-   sampled along `I` at all 84.
+   the soft sky: the gold box sampled along `I` is rejected at all 84 discriminating pixels. The Fresnel
+   term is judged on a **close-up of the glass sphere** in the same environment (the default camera
+   direction, 3.7 units from the sphere, so its radius is about 60 % of half the shorter side at any aspect
+   ratio): the close-up first matches the right model in its own sweep, then a full-resolution scan of
+   the ring where `F > 0.1` rejects the glass without the Fresnel term (refraction only) at every
+   discriminating pixel (1126 at 256 x 256, 665 at 1000 x 200). In the full scene that ring is only a pixel
+   or two wide, and on a 200-pixel side it holds just two stable pixels.
 7. **The depth trick.** On each object the pixel shows the object, not the sky along that ray, although
    the sky is drawn after it. *Negative control:* with `u_depth_trick = false` (`gl_Position = clip`) the
    sky cube is drawn at its true depth, half a unit from the eye, passes `LEQUAL` against everything and
    covers the whole frame: every stable pixel equals the sky along its ray, and the chrome sphere probe
-   fails the scene model.
+   fails the scene model. The near plane (0.25) must lie inside that cube, or a very wide field of
+   view (1000 x 200) would clip the cube's walls near the frame corners and show the scene there; it is
+   therefore reduced to `0.9 * 0.5 / |(tan_x, tan_y, 1)|` of the frustum corner when that is smaller.
 8. **Fog at a known distance.** For the centre of a ground tile at eye distance `d` (6.56 at 256 x 256) the
    density is set to `sqrt(ln 2) / d`, so `exp(-(density d)^2) = 1/2`: the pixel must be the 50/50 mix of
    the lit ground and the fog colour (measured surface weight 0.50). With the fog off the same pixel is the

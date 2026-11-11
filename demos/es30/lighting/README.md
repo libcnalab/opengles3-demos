@@ -24,7 +24,9 @@ the 8-bit result.
 
 ## The image
 
-Camera and scene (y up, ground at y = 0, the camera looks at the middle from the front and above):
+Camera and scene (y up, ground at y = 0, the camera looks at the middle from the front and above; its 40 degree
+field of view spans the shorter side of the surface, vertical on a landscape surface and horizontal on a portrait one,
+so both columns of objects stay in view at any aspect ratio):
 
 ```
 back row    coarse sphere, lit per VERTEX (Gouraud)     coarse sphere, lit per FRAGMENT

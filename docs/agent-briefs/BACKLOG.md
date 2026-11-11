@@ -4,7 +4,7 @@ The order follows `docs/DEMO_CATALOG.md`. Each line is one delegable task: direc
 followed by feature IDs. Claim an item by moving it to "In progress" with the agent and branch.
 
 ## In progress
-- ES 3.2 items 56, 60 (Claude subagents)
+- ES 3.2 items 56, 59, 60; es31-compute-particles (3D) (Claude subagents)
 
 ## Done
 All Stage 1–4 foundation demos listed as implemented in DEMO_CATALOG.md (merged 2026-11-11).

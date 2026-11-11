@@ -53,17 +53,20 @@ cmake --build --preset debug --target coverage
 4. Phase 6 audit (coverage gaps: run `coverage` and read docs/generated/COVERAGE_SUMMARY.md), then phase 7
    final verification on a clean build.
 
-## In flight (2026-11-11 16:30)
+## In flight (2026-11-11 17:40)
 
-Merged: 58 executables, 350/350 runs PASS, 329/358 entry points with evidence. That includes the 3D demos
-camera, lighting, normal mapping, post-processing, shadow mapping and deferred shading, and the ES 3.2 demos
-debug-output, float-targets-and-indexed-blend, texture-buffer and cube-map-array.
+Merged: 63 executables, 332/358 entry points with evidence. That includes the 3D demos camera, lighting,
+normal mapping, post-processing, shadow mapping and deferred shading, and the ES 3.2 demos debug-output,
+float-targets-and-indexed-blend, texture-buffer, cube-map-array, geometry-shaders, layered-rendering,
+tessellation-domains and tessellation-terrain.
 meta-gl G8 (transpose = GL_TRUE) is fixed on its branch (`3bb7411`).
 Running Claude subagents (worktrees under .claude/worktrees/):
 - es32 multisample-array-and-border-color (56)
 - es32 base-vertex-and-robustness (60)
-Still unassigned: 57 (ASTC + copy image), 59 (advanced blend + sample shading), 62 (glsl320 built-ins),
-35 (glsl310 built-ins), ES 3.0 items 6, 10, 14, 16-20.
+- es32 advanced-blend-and-sample-shading (59)
+- es31 compute-particles (3D showcase)
+Still unassigned: 57 (ASTC + copy image), 62 (glsl320 built-ins), 35 (glsl310 built-ins),
+ES 3.0 items 6, 10, 14, 16-20, 3D fog and skybox.
 
 ## Parallel work / Codex
 

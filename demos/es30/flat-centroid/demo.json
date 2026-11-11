@@ -1,0 +1,79 @@
+{
+  "name": "es30-flat-centroid",
+  "title": "Flat shading, centroid and sample coverage",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es30",
+  "order": 285,
+  "summary": "Provoking-vertex flat shading (int and float, TRIANGLES/STRIP/FAN), centroid vs. default interpolation on a 4x multisample renderbuffer with a texture-atlas bleed example, and glSampleCoverage / SAMPLE_ALPHA_TO_COVERAGE on multisample renderbuffers and a single-sample FBO, checked with bit-exact readback, stencil sample counting and occlusion queries.",
+  "spec": [
+    "ES 3.0 §2.17 Flatshading, Table 2.12 Provoking vertex selection",
+    "ES 3.0 §3.3 Multisampling (SAMPLE_BUFFERS, SAMPLES, multisample rasterization only when SAMPLE_BUFFERS is one)",
+    "ES 3.0 §3.6.1 Basic Polygon Rasterization, §3.6.3 Polygon Multisample Rasterization",
+    "ES 3.0 §3.9.1 Fragment shader variables (centroid in: sampled within the pixel and the primitive)",
+    "ES 3.0 §4.1.3 Multisample Fragment Operations (SampleCoverage, SAMPLE_ALPHA_TO_COVERAGE, clamping, invert)",
+    "ES 3.0 §4.1.4 Stencil Test, §4.1.6 Occlusion Queries, §4.1.10 Additional Multisample Fragment Operations",
+    "ES 3.0 §4.3.2 Reading Pixels (INVALID_OPERATION on a multisample FBO), §4.3.3 Copying Pixels (resolve; INVALID_OPERATION into a multisample draw framebuffer)",
+    "ES 3.0 §4.4.2.1 RenderbufferStorageMultisample (RENDERBUFFER_SAMPLES >= request), §4.4.4.2 SAMPLE_BUFFERS / SAMPLES of an FBO",
+    "ES 3.0 Table 6.7 (multisample state initial values), Table 6.28 (SUBPIXEL_BITS >= 4)",
+    "GLSL ES 3.00 §4.3.6 Output Variables (integer outputs must be flat), §4.3.9 Interpolation (flat, centroid, single-sample rule)",
+    "GLSL ES 3.00 §7.1 gl_VertexID, §8.3 floatBitsToUint"
+  ],
+  "api": {
+    "glSampleCoverage": "value 0 writes no sample and value 1 every sample (occlusion query + stencil count), invert flips both, (v,FALSE)+(v,TRUE) write every sample exactly once for 9 values, value 0.5 gives a partial mask; SAMPLE_COVERAGE_VALUE clamped to [0,1]; no effect with SAMPLE_BUFFERS = 0; endpoint bands of the resolved band image pixel-exact",
+    "glEnable": "SAMPLE_COVERAGE / SAMPLE_ALPHA_TO_COVERAGE / STENCIL_TEST / SCISSOR_TEST; enable state read back",
+    "glDisable": "SAMPLE_COVERAGE / SAMPLE_ALPHA_TO_COVERAGE disable read back; DITHER off for exact pixels",
+    "glIsEnabled": "initial FALSE for both multisample operations; TRUE after glEnable, FALSE after glDisable",
+    "glGetFloatv": "SAMPLE_COVERAGE_VALUE initial 1, clamped 1.75 -> 1 and -0.5 -> 0, 0.375 exact",
+    "glGetBooleanv": "SAMPLE_COVERAGE_INVERT initial FALSE and as set; SAMPLE_COVERAGE / SAMPLE_ALPHA_TO_COVERAGE enable state",
+    "glGetIntegerv": "SAMPLE_BUFFERS / SAMPLES of the multisample FBO (1, = RENDERBUFFER_SAMPLES) and the single-sample FBO (0, 0); MAX_SAMPLES",
+    "glRenderbufferStorageMultisample": "RGBA8 and DEPTH24_STENCIL8 with 4 samples (plus the RGBA8 band target); RENDERBUFFER_SAMPLES >= request and equal for both attachments",
+    "glRenderbufferStorage": "single-sample RGBA8 + DEPTH24_STENCIL8 FBO (SAMPLE_BUFFERS 0) and the RGBA32UI flat-id target",
+    "glGetRenderbufferParameteriv": "RENDERBUFFER_SAMPLES of the multisample attachments",
+    "glBlitFramebuffer": "multisample -> texture resolves shown in the coverage and zoom panels (panel probes match the resolved texels exactly); INVALID_OPERATION into a multisample draw framebuffer",
+    "glReadPixels": "RGBA_INTEGER/UNSIGNED_INT from RGBA32UI (bit-exact flat values), RGBA8 readback of the default framebuffer and of resolved textures; INVALID_OPERATION from a multisample FBO",
+    "glVertexAttribIPointer": "uint palette attribute arrives unconverted in the flat uint varying (checked bit-exact)",
+    "glDrawArrays": "TRIANGLES, TRIANGLE_STRIP and TRIANGLE_FAN with first > 0: gl_VertexID of the provoking vertex checked per triangle",
+    "glClearBufferuiv": "sentinel clear of the RGBA32UI target (unwritten pixels detectable)",
+    "glBeginQuery": "ANY_SAMPLES_PASSED; FALSE and TRUE outcomes both required by different checks",
+    "glEndQuery": "ends the occlusion query around each measured draw",
+    "glGetQueryObjectuiv": "QUERY_RESULT drives the resolve-free coverage and centroid checks",
+    "glGenQueries": "query object used by every occlusion measurement",
+    "glStencilFunc": "EQUAL / NOTEQUAL against the per-sample write count",
+    "glStencilOp": "INCR counts how often each sample was written",
+    "glColorMask": "colour writes off for the stencil-only counting pass (query result depends only on the stencil values)",
+    "glUniform3fv": "8-entry palette indexed by the flat uint (displayed facets probed)"
+  },
+  "features": [
+    "ES30.RASTER.FLAT",
+    "ES30.RASTER.CENTROID",
+    "ES20.SAMPLE_COVERAGE",
+    "ES30.FBO.MSAA_RENDERBUFFER",
+    "ES30.QUERY.OCCLUSION"
+  ],
+  "glsl_features": [
+    "GLSL300.VERSION",
+    "GLSL300.INTERP.SMOOTH_FLAT",
+    "GLSL300.INTERP.CENTROID",
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.LAYOUT.LOCATION",
+    "GLSL300.FRAG.OUTPUT",
+    "GLSL300.BUILTIN_VARS.VS",
+    "GLSL300.DISCARD",
+    "GLSL300.FN.COMMON"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "state-query",
+    "gl-error",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-opus-5.5",
+    "notes": "256x256 radeonsi ctest capture (also viewed 800x800 and 333x777): top-left low-poly dusk scene, strip ridge in slate/violet/teal facets, 10-facet fan sun alternating yellow/orange, cyan/pink and yellow/orange kites, every facet one flat colour; top-right 4 x 9 resolved coverage bands, cyan rising and amber falling in quarter steps, the complementary row fully filled amber->cyan, the pink alpha-to-coverage row with a checker dither; bottom-left red-framed magnified tile with magenta bleed pixels along its rotated edges, bottom-right green-framed identical tile with clean edges."
+  }
+}

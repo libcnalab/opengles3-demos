@@ -1,0 +1,32 @@
+{
+  "name": "test-driver-crash-readpixels-none",
+  "title": "glReadPixels with READ_BUFFER = NONE (crash-isolated)",
+  "min_es": "3.0",
+  "glsl": [],
+  "category": "tests",
+  "order": 2,
+  "summary": "ES 3.0 §4.3.2.1 READ_BUFFER = NONE and missing-image errors; the integer-attachment cases that crash Mesa run in a re-executed child process whose exit status or signal the parent classifies.",
+  "spec": [
+    "ES 3.0 §4.3.1 Selecting Buffers for Reading",
+    "ES 3.0 §4.3.2 Reading Pixels (IMPLEMENTATION_COLOR_READ_FORMAT/TYPE errors)",
+    "ES 3.0 §4.3.2.1 Obtaining Pixels from the Framebuffer",
+    "ES 3.0 §4.4.4.2 Whole Framebuffer Completeness",
+    "ES 3.0 §2.5 GL Errors"
+  ],
+  "api": {
+    "glReadBuffer": "NONE, COLOR_ATTACHMENT0/1/3 and BACK accepted without error; READ_BUFFER read back after each",
+    "glReadPixels": "INVALID_OPERATION with READ_BUFFER = NONE (FBO and default framebuffer) and with a read buffer that has no image, output buffer untouched; legal reads return the cleared RGBA8 / RG32I values; integer-attachment NONE cases run in a child process whose ending is classified",
+    "glGetIntegerv": "READ_BUFFER values; IMPLEMENTATION_COLOR_READ_FORMAT/TYPE raise INVALID_OPERATION with READ_BUFFER = NONE and with a missing read image",
+    "glCheckFramebufferStatus": "FRAMEBUFFER_COMPLETE with a read buffer that has no image",
+    "glClearBufferfv": "RGBA8 attachment cleared; value read back in the parent and in the control child",
+    "glClearBufferiv": "RG32I attachment cleared; (R, G, 0, 1) read back in the control child"
+  },
+  "features": ["ES20.READPIXELS", "ES30.FBO.READ_DRAW", "ES30.FBO.INTEGER_TARGET"],
+  "glsl_features": [],
+  "validation": ["negative", "gl-error", "state-query", "readback"],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-opus-5.5",
+    "notes": "256x256 radeonsi capture (and 333x777): uniform (64,128,191) blue clear color, as expected; the test renders nothing else, all checks are error/readback checks."
+  }
+}

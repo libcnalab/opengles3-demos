@@ -22,12 +22,14 @@ pure signed integer or pure unsigned integer, on the texture or on a sampler obj
 
 ## What the image shows
 
-A 256 × 256 frame:
+The layout follows the surface size (`--width` / `--height`, 256 × 256 by default); both halves fill the window at any size. Surfaces smaller than 128 × 128 report
+`SKIP_UNSUPPORTED`, because below that a tile or a quad cell has too few pixels to show every texel.
 
-- **Top half: the RGBA8 multisample array, unresolved.** One tile per (layer, sample). The columns are samples 0..3 (radeonsi and llvmpipe allocate 4 samples), and the rows are layers 0..3 with layer 0 at the top.
-  Each tile shows the 8 × 8 texels of that sample of that layer, scaled up with `texelFetch`, and a 2-pixel gap on its right and bottom keeps the clear color. Every sample of every layer holds a different
+- **Top half: the RGBA8 multisample array, unresolved.** One tile per (layer, sample), filling the top half. The columns are samples (at most 8 shown; radeonsi and llvmpipe allocate 4), and the rows are layers 0..3 with layer 0 at the top.
+  Each tile shows the 8 × 8 texels of that sample of that layer, scaled up with `texelFetch`. A gap of `max(1, min(tile width, tile height) / 24)` pixels on its right and bottom keeps the clear color. Every sample of every layer holds a different
   colour ramp because the fill shader writes `pattern(x, y, layer, gl_SampleID)`. The sudden colour changes inside a tile are channels wrapping past 255.
-- **Bottom half: four border quads.** Each quad is 60 × 60 pixels and has texture coordinates from −0.5 to 1.5, so the 4 × 4 texture fills the middle quarter and the frame around it is the border:
+- **Bottom half: four square border quads**, in a row of four or a 2 × 2 block (whichever gives the larger squares, so a tall window gets 2 × 2). Each quad is 7/8 of its cell's shorter side,
+  rounded down to a multiple of 8 so that every texel boundary falls on a pixel edge. The quads are drawn with `NEAREST` filtering and texture coordinates from −0.5 to 1.5, so the 4 × 4 texture fills the middle quarter and the frame around it is the border:
   1. RGBA8 with the texture's border `(1.5, −0.25, 0.2, 0.6)`, which clamps to `(1, 0, 0.2, 0.6)`: a **red** frame (255, 0, 51).
   2. The same texture with a sampler object bound whose border is `(0, 1, 0.4, 1)`: a **green** frame. The sampler replaces the texture's border.
   3. RGBA8I with the integer border `(300, 40, −200, 5)`, which clamps to `(127, 40, −128, 5)` and is drawn as `(v + 128) / 255`: an **orange** frame (255, 168, 0) around the bluish-grey integer texture.
@@ -85,10 +87,13 @@ In GLSL: `sampler2DMSArray`, `isampler2DMSArray`, `usampler2DMSArray`, `texelFet
 
 ## Validation (`--validate`)
 
-All references are computed on the CPU. There are 133 checks on radeonsi, llvmpipe and zink. With a 1-sample implementation the three per-sample negative controls are skipped and a note is printed.
+All references are computed on the CPU. There are 135 checks on radeonsi, llvmpipe and zink at every surface size tested (128 × 128 to 2000 × 2000, including 640 × 480 and 333 × 777). With a 1-sample implementation the three per-sample negative controls are skipped and a note is printed.
 
-- **Picture (2).** Every pixel of the top half (32768 values) equals the CPU's integer replica of `show_ms.frag` and `pattern()`, with tolerance 0 (texel `k/255` converts back to `k`).
-  The centres of the 8 × 8 texel- and border-sized cells of the four quads (256 probes, at least 3 pixels from any texel boundary) match the model within ±1, because a border not stored at 8-bit precision may round either way.
+- **Picture (4).** Every pixel of the top half equals the CPU's integer replica of `show_ms.frag` and `pattern()`, with tolerance 0 (texel `k/255` converts back to `k`). The shader works only on integer pixel
+  positions, so this comparison is exact at any size. A second check confirms that every texel of every shown (layer, sample) is actually on screen.
+  Every pixel of the bottom half is either the clear color (outside the quads, exact) or the texel or border cell that its pixel centre selects, within ±1 because a border not stored at 8-bit precision may round either way.
+  The texel coordinate at a pixel centre is `u = −2 + 8 (x + 0.5) / size`. Where it lies within 0.02 texel of a boundary, both neighbouring cells are accepted, because the interpolated coordinate is not exact.
+  Because quad sizes are multiples of 8, this only happens for quads larger than 200 pixels. A fourth check confirms that each quad shows both texels and border.
 - **Sample counts (9).** For RGBA8, RGBA8I and RGBA8UI on `TEXTURE_2D_MULTISAMPLE_ARRAY`: at least one count is reported, the counts are positive and strictly descending, and the largest is at least the §20.3.1 guarantee.
   The demo reads that guarantee as the minimum of all limits that may apply (`MAX_COLOR_TEXTURE_SAMPLES`, `MAX_SAMPLES`, plus `MAX_INTEGER_SAMPLES` for the integer formats).
 - **Allocation and state (43).** For each array: width, height, depth = layers, internal format, `TEXTURE_SAMPLES` in `[request, next supported count]`, `TEXTURE_FIXED_SAMPLE_LOCATIONS` (TRUE, and FALSE for a fourth texture),

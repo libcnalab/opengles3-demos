@@ -14,13 +14,14 @@
 //     (DEPTH_COMPONENT16, with and without depth comparison) textures, including the clamping of the border to the format's range,
 //     the RG -> (R, G, 0, 1) rule, sampler objects overriding the texture's border, and LINEAR filtering across the border.
 //
-// The picture (256 x 256):
+// The picture (laid out from the surface size, see Layout; at least 128 x 128):
 //   top half      the RGBA8 multisample array, unresolved: one tile per (layer, sample), layer 0 at the top, sample 0 at the left;
-//   bottom half   four 60 x 60 quads with texture coordinates -0.5 .. 1.5 (the 4 x 4 texture in the middle, its border all around):
+//   bottom half   four square quads (a row, or 2 x 2 on tall surfaces) with texture coordinates -0.5 .. 1.5 (the 4 x 4 texture in the
+//                 middle, its border all around):
 //                 RGBA8 with the texture's border | the same texture with a sampler object's border | RGBA8I with an integer border |
 //                 DEPTH_COMPONENT16 with depth comparison (white = pass), border depth 0.875 > reference 0.5.
 //
-// Every value is compared with a CPU model; the picture itself is checked pixel by pixel (grid) and at 256 cell centres (quads).
+// Every value is compared with a CPU model; the picture itself is checked pixel by pixel at any surface size.
 
 #include <demo/gl_util.hpp>
 #include <demo/runtime.hpp>
@@ -51,12 +52,9 @@ namespace
     constexpr int kW = 8;          // multisample array textures: kW x kH texels,
     constexpr int kH = 8;
     constexpr int kLayers = 4;     // kLayers layers (shaders/layers.geom emits exactly 4 layers)
-    constexpr int kWindow = 256;
-    constexpr int kGridY = 128;    // the multisample grid occupies rows 128 .. 255
-    constexpr int kTileH = 32;     // kLayers rows of 32 pixels
-    constexpr int kTex = 4;        // border textures are 4 x 4
-    constexpr int kQuad = 60;      // border quads: 60 x 60 pixels at x = 4 + 64 k, y = 34
-    constexpr int kQuadY = 34;
+    constexpr int kMinSurface = 128;  // smallest width / height with every texel of every tile and quad cell visible (see Layout)
+    constexpr int kTex = 4;           // border textures are 4 x 4
+    constexpr int kMaxShownSamples = 8;
     constexpr float kShowRef = 0.5f;  // depth reference of the shadow quad
 
     constexpr demo::Rgba8 kClear = {20, 20, 28, 255};  // exactly representable: k / 255 converts back to k
@@ -143,6 +141,46 @@ namespace
         }
         return {false, std::clamp(i, 0, kTex - 1), std::clamp(j, 0, kTex - 1)};  // CLAMP_TO_EDGE: clamp(coord, 0, size - 1)
     }
+
+    /// The picture's layout, derived from the surface size (shared by draw_picture() and check_picture()).
+    ///   top half    (rows H/2 .. H-1): the multisample grid, `shown` columns (samples) x kLayers rows (layer 0 at the top),
+    ///               tiles of tile_w x tile_h pixels with a `gap` of clear color on the right and at the bottom of each tile;
+    ///   bottom half (rows 0 .. H/2-1): four square border quads, 4 x 1 or 2 x 2 cells (whichever gives larger squares),
+    ///               each quad 7/8 of its cell's shorter side rounded down to a multiple of 8, centred in the cell.
+    struct Layout
+    {
+        int width = 0, height = 0;
+        int grid_y = 0, grid_h = 0;
+        int shown = 1, tile_w = 0, tile_h = 0, gap = 1;
+        struct Quad
+        {
+            int x = 0, y = 0, size = 0;
+        };
+        std::array<Quad, 4> quads{};
+
+        Layout(int w, int h, int samples) : width(w), height(h)
+        {
+            grid_y = h / 2;
+            grid_h = h - grid_y;
+            shown = std::clamp(samples, 1, kMaxShownSamples);
+            tile_w = w / shown;
+            tile_h = grid_h / kLayers;
+            gap = std::max(1, std::min(tile_w, tile_h) / 24);
+            const int bottom = grid_y;
+            const int row_size = std::min(w / 4, bottom);
+            const int square_size = std::min(w / 2, bottom / 2);
+            const int cols = row_size >= square_size ? 4 : 2;
+            const int rows = 4 / cols;
+            const int cell_w = w / cols, cell_h = bottom / rows;
+            // A multiple of 8 puts every texel boundary (8 cells of size / 8 pixels across the quad) on a pixel edge, never on a pixel centre.
+            const int size = std::min(cell_w, cell_h) * 7 / 8 / 8 * 8;
+            for (int q = 0; q < 4; ++q)
+            {
+                const int c = q % cols, r = rows - 1 - q / cols;  // first row at the top
+                quads[static_cast<std::size_t>(q)] = {c * cell_w + (cell_w - size) / 2, r * cell_h + (cell_h - size) / 2, size};
+            }
+        }
+    };
 
     /// The probes: the 16 texel centres and 14 points outside [0, 1] in s, t or both, none of them near a texel boundary.
     std::vector<Probe> border_probes(std::initializer_list<float> refs = {0.0f})
@@ -276,7 +314,7 @@ namespace
 
         // passes
         void fill(const MsArray& m);
-        void draw_picture();
+        void draw_picture(int width, int height);
         struct Fetched
         {
             std::array<int, 3> size{};
@@ -299,7 +337,7 @@ namespace
         void check_sampler_override(demo::Check& check);
         void check_border_linear(demo::Check& check);
         void check_border_errors(demo::Check& check);
-        void check_picture(demo::Check& check);
+        void check_picture(demo::Check& check, int width, int height);
 
         void check_float_lookups(demo::Check& check, mgl::TextureId tex, mgl::SamplerId sampler, bool clamp_to_border, double tolerance,
                                  F4 (*texel)(int, int), F4 border, std::string_view what);
@@ -444,8 +482,9 @@ namespace
 
     void MultisampleArrayAndBorderColor::init(demo::Env& env)
     {
-        if (env.width < kWindow || env.height < kWindow)
-            throw demo::Skip(std::format("this demo draws {0}x{0} pixels and needs a default framebuffer at least that large", kWindow));
+        // Below 128 x 128 a tile of the grid (8 samples) or a quad cell gets too few pixels to show every texel and border cell.
+        if (env.width < kMinSurface || env.height < kMinSurface)
+            throw demo::Skip(std::format("the picture needs a surface of at least {0}x{0} pixels to show every texel (got {1}x{2})", kMinSurface, env.width, env.height));
 
         mgl::glGenVertexArrays(1, &vao_);
         mgl::glBindVertexArray(vao_);
@@ -569,29 +608,30 @@ namespace
         }
     }
 
-    void MultisampleArrayAndBorderColor::draw_picture()
+    void MultisampleArrayAndBorderColor::draw_picture(int width, int height)
     {
+        const Layout lay(width, height, ms_float_.samples);
         mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
-        mgl::glViewport(0, 0, kWindow, kWindow);
+        mgl::glViewport(0, 0, width, height);
         mgl::glClearColor(unorm8f(kClear[0]), unorm8f(kClear[1]), unorm8f(kClear[2]), 1.0f);
         mgl::glClear(mgl::ClearBufferBit::Color);
         mgl::glActiveTexture(mgl::TextureUnit::Texture0);
 
         // Top half: the RGBA8 multisample array, one tile per (layer, sample).
-        const int shown = std::clamp(ms_float_.samples, 1, 8);
-        const int tile_w = kWindow / shown;
-        mgl::glViewport(0, kGridY, kWindow, kWindow - kGridY);
+        mgl::glViewport(0, lay.grid_y, width, lay.grid_h);
         mgl::glUseProgram(show_ms_);
         mgl::glBindTexture(mgl::TextureTarget::Texture2DMultisampleArray, ms_float_.tex);
         mgl::glUniform4f(mgl::glGetUniformLocation(show_ms_, "u_uv"), 0.0f, 0.0f, 1.0f, 1.0f);
-        mgl::glUniform2i(mgl::glGetUniformLocation(show_ms_, "u_origin"), 0, kGridY);
-        mgl::glUniform2i(mgl::glGetUniformLocation(show_ms_, "u_tile"), tile_w, kTileH);
+        mgl::glUniform2i(mgl::glGetUniformLocation(show_ms_, "u_origin"), 0, lay.grid_y);
+        mgl::glUniform2i(mgl::glGetUniformLocation(show_ms_, "u_tile"), lay.tile_w, lay.tile_h);
+        mgl::glUniform1i(mgl::glGetUniformLocation(show_ms_, "u_gap"), lay.gap);
+        mgl::glUniform1i(mgl::glGetUniformLocation(show_ms_, "u_columns"), lay.shown);
         mgl::glUniform2i(mgl::glGetUniformLocation(show_ms_, "u_texels"), kW, kH);
         mgl::glUniform1i(mgl::glGetUniformLocation(show_ms_, "u_layers"), kLayers);
         mgl::glDrawArrays(mgl::PrimitiveType::TriangleStrip, 0, 4);
         mgl::glBindTexture(mgl::TextureTarget::Texture2DMultisampleArray, mgl::TextureId{0});
 
-        // Bottom half: four border quads, texture coordinates -0.5 .. 1.5.
+        // Bottom half: four square border quads, texture coordinates -0.5 .. 1.5.
         struct Quad
         {
             mgl::ProgramId program;
@@ -604,7 +644,8 @@ namespace
                                             {show_border_[3], tex_shadow_, mgl::SamplerId{0}}}};
         for (std::size_t q = 0; q < quads.size(); ++q)
         {
-            mgl::glViewport(4 + 64 * static_cast<int>(q), kQuadY, kQuad, kQuad);
+            const Layout::Quad& r = lay.quads[q];
+            mgl::glViewport(r.x, r.y, r.size, r.size);
             mgl::glUseProgram(quads[q].program);
             mgl::glUniform4f(mgl::glGetUniformLocation(quads[q].program, "u_uv"), -0.5f, -0.5f, 1.5f, 1.5f);
             const mgl::UniformLocation ref = mgl::glGetUniformLocation(quads[q].program, "u_ref");
@@ -615,13 +656,13 @@ namespace
         }
         mgl::glBindSampler(0, mgl::SamplerId{0});
         mgl::glBindTexture(mgl::TextureTarget::Texture2D, mgl::TextureId{0});
-        mgl::glViewport(0, 0, kWindow, kWindow);
+        mgl::glViewport(0, 0, width, height);
     }
 
-    void MultisampleArrayAndBorderColor::render(demo::Env& /*env*/, int /*frame*/)
+    void MultisampleArrayAndBorderColor::render(demo::Env& env, int /*frame*/)
     {
         for (const MsArray* m : {&ms_float_, &ms_int_, &ms_uint_}) fill(*m);
-        draw_picture();
+        draw_picture(env.width, env.height);
     }
 
     // =================================================================================================
@@ -695,7 +736,7 @@ namespace
     // =================================================================================================
     void MultisampleArrayAndBorderColor::validate(demo::Env& env, demo::Check& check)
     {
-        check_picture(check);  // first, while the default framebuffer still holds the rendered frame
+        check_picture(check, env.width, env.height);  // first, while the default framebuffer still holds the rendered frame
         check_ms_counts(check);
         check_ms_queries(check);
         check_ms_contents(check);
@@ -1337,75 +1378,124 @@ namespace
     }
 
     // ---- the picture -------------------------------------------------------------------------------
-    void MultisampleArrayAndBorderColor::check_picture(demo::Check& check)
+    void MultisampleArrayAndBorderColor::check_picture(demo::Check& check, int width, int height)
     {
+        const Layout lay(width, height, ms_float_.samples);
         mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
-        const std::vector<std::uint8_t> px = demo::read_rgba8(0, 0, kWindow, kWindow);
+        const std::vector<std::uint8_t> px = demo::read_rgba8(0, 0, width, height);
         const auto at = [&](int x, int y) {
-            const std::size_t o = static_cast<std::size_t>((y * kWindow + x) * 4);
+            const std::size_t o = (static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(x)) * 4;
             return demo::Rgba8{px[o], px[o + 1], px[o + 2], px[o + 3]};
         };
+        // Which quad (if any) covers a pixel.
+        const auto quad_at = [&](int x, int y) {
+            for (int q = 0; q < 4; ++q)
+            {
+                const Layout::Quad& r = lay.quads[static_cast<std::size_t>(q)];
+                if (x >= r.x && x < r.x + r.size && y >= r.y && y < r.y + r.size) return q;
+            }
+            return -1;
+        };
 
-        // Top half, every pixel: the same integer arithmetic as shaders/show_ms.frag.
-        const int shown = std::clamp(ms_float_.samples, 1, 8);
-        const int tile_w = kWindow / shown;
+        // ---- top half, every pixel: the same integer arithmetic as shaders/show_ms.frag, so the reference is exact ----
         Tally grid;
-        for (int y = kGridY; y < kWindow; ++y)
-            for (int x = 0; x < kWindow; ++x)
+        std::vector<bool> seen(static_cast<std::size_t>(kLayers * lay.shown * kW * kH), false);
+        for (int y = lay.grid_y; y < height; ++y)
+            for (int x = 0; x < width; ++x)
             {
                 demo::Rgba8 want = kClear;
-                const int px_ = x, py = y - kGridY;
-                const int col = px_ / tile_w, row = py / kTileH;
-                const int lx = px_ - col * tile_w, ly = py - row * kTileH;
-                if (col < shown && !(lx >= tile_w - 2 || ly < 2))
+                const int py = y - lay.grid_y;
+                const int col = x / lay.tile_w, row = py / lay.tile_h;
+                const int lx = x - col * lay.tile_w, ly = py - row * lay.tile_h;
+                if (col < lay.shown && row < kLayers && lx < lay.tile_w - lay.gap && ly >= lay.gap)
                 {
                     const int layer = kLayers - 1 - row;
-                    const int tx = lx * kW / (tile_w - 2), ty = (ly - 2) * kH / (kTileH - 2);
+                    const int tx = lx * kW / (lay.tile_w - lay.gap), ty = (ly - lay.gap) * kH / (lay.tile_h - lay.gap);
+                    seen[static_cast<std::size_t>(((layer * lay.shown + col) * kH + ty) * kW + tx)] = true;
                     const U4 p = pattern(static_cast<std::uint32_t>(tx), static_cast<std::uint32_t>(ty), static_cast<std::uint32_t>(layer), static_cast<std::uint32_t>(col));
                     want = {static_cast<std::uint8_t>(p[0]), static_cast<std::uint8_t>(p[1]), static_cast<std::uint8_t>(p[2]), 255};
                 }
-                const demo::Rgba8 got = at(x, y);
-                t_add_rgb(grid, got, want, 0, x, y);
+                t_add_rgb(grid, at(x, y), want, 0, x, y);
             }
-        check.expect(grid.bad == 0, std::format("picture, top half: every pixel shows texelFetch of its (layer, sample, texel) of the RGBA8 array ({} samples shown)", shown),
+        check.expect(grid.bad == 0,
+                     std::format("picture, top half: every pixel shows texelFetch of its (layer, sample, texel) of the RGBA8 array ({} samples shown, tiles {}x{}, gap {})",
+                                 lay.shown, lay.tile_w, lay.tile_h, lay.gap),
                      grid.detail());
+        const auto shown_texels = std::count(seen.begin(), seen.end(), true);
+        check.expect(shown_texels == static_cast<std::ptrdiff_t>(seen.size()), "picture, top half: every texel of every shown (layer, sample) appears on screen",
+                     std::format("{} of {}", shown_texels, seen.size()));
 
-        // Bottom half: the centre of each of the 8 x 8 cells of every quad (a cell is a texel or a border-sized square, 7.5 pixels).
+        // ---- bottom half, every pixel: clear color outside the quads; inside, the texel or border cell the pixel centre selects ----
+        // A pixel centre at (l + 0.5) in a quad of `size` pixels has the texel coordinate u = -2 + 8 (l + 0.5) / size (the texture
+        // spans [0, 4) of it). The interpolated coordinate is not exact, so where u lies within 0.02 texel of an integer both
+        // neighbouring cells (texel / texel or texel / border) are accepted; everywhere else exactly one is.
+        const auto candidates = [](int l, int size) {
+            const double u = -2.0 + 8.0 * (static_cast<double>(l) + 0.5) / static_cast<double>(size);
+            const int i = static_cast<int>(std::floor(u));
+            const double f = u - static_cast<double>(i);
+            std::vector<int> c = {i};
+            if (f < 0.02) c.push_back(i - 1);
+            if (f > 0.98) c.push_back(i + 1);
+            return c;
+        };
+        const auto expected = [&](int q, int i, int j) {
+            const bool border = i < 0 || i >= kTex || j < 0 || j >= kTex;
+            if (q == 0 || q == 1)
+            {
+                if (border) return q == 0 ? demo::Rgba8{255, 0, 51, 255} : demo::Rgba8{0, 255, 102, 255};
+                const auto c = texel_rgba8(i, j);
+                return demo::Rgba8{c[0], c[1], c[2], 255};
+            }
+            if (q == 2)
+            {
+                const I4 c = border ? I4{127, 40, -128, 5} : texel_rgba8i(i, j);
+                return demo::Rgba8{static_cast<std::uint8_t>(c[0] + 128), static_cast<std::uint8_t>(c[1] + 128), static_cast<std::uint8_t>(c[2] + 128), 255};
+            }
+            const double d = border ? static_cast<double>(kBorderDepth) : depth_value(i, j);
+            const std::uint8_t v = static_cast<double>(kShowRef) <= d ? 255 : 0;
+            return demo::Rgba8{v, v, v, 255};
+        };
         Tally quads;
-        for (int q = 0; q < 4; ++q)
-            for (int cy = 0; cy < 8; ++cy)
-                for (int cx = 0; cx < 8; ++cx)
+        int ambiguous = 0;
+        std::array<int, 4> border_px{}, texel_px{};
+        for (int y = 0; y < lay.grid_y; ++y)
+            for (int x = 0; x < width; ++x)
+            {
+                const int q = quad_at(x, y);
+                const demo::Rgba8 got = at(x, y);
+                if (q < 0)
                 {
-                    const int lx = static_cast<int>(std::floor(cx * 7.5 + 3.75)), ly = static_cast<int>(std::floor(cy * 7.5 + 3.75));
-                    const Probe p = {static_cast<float>(-0.5 + 2.0 * (lx + 0.5) / kQuad), static_cast<float>(-0.5 + 2.0 * (ly + 0.5) / kQuad), 0.0f, 0.0f};
-                    const Selected sel = select_nearest(p, true);
-                    demo::Rgba8 want{};
-                    if (q == 0 || q == 1)
-                    {
-                        if (sel.border)
-                            want = q == 0 ? demo::Rgba8{255, 0, 51, 255} : demo::Rgba8{0, 255, 102, 255};
-                        else
-                        {
-                            const auto c = texel_rgba8(sel.i, sel.j);
-                            want = {c[0], c[1], c[2], 255};
-                        }
-                    }
-                    else if (q == 2)
-                    {
-                        const I4 c = sel.border ? I4{127, 40, -128, 5} : texel_rgba8i(sel.i, sel.j);
-                        want = {static_cast<std::uint8_t>(c[0] + 128), static_cast<std::uint8_t>(c[1] + 128), static_cast<std::uint8_t>(c[2] + 128), 255};
-                    }
-                    else
-                    {
-                        const double d = sel.border ? static_cast<double>(kBorderDepth) : depth_value(sel.i, sel.j);
-                        const std::uint8_t v = static_cast<double>(kShowRef) <= d ? 255 : 0;
-                        want = {v, v, v, 255};
-                    }
-                    const int x = 4 + 64 * q + lx, y = kQuadY + ly;
-                    // ±1: a border value that is not stored at 8-bit precision may round either way when written to RGBA8 (section 2.3.5).
-                    t_add_rgb(quads, at(x, y), want, 1, x, y);
+                    t_add_rgb(quads, got, kClear, 0, x, y);
+                    continue;
                 }
-        check.expect(quads.bad == 0, "picture, bottom half: 256 cell centres of the four border quads match the CPU model", quads.detail());
+                const Layout::Quad& r = lay.quads[static_cast<std::size_t>(q)];
+                const std::vector<int> ci = candidates(x - r.x, r.size), cj = candidates(y - r.y, r.size);
+                if (ci.size() > 1 || cj.size() > 1) ++ambiguous;
+                bool ok = false;
+                for (const int i : ci)
+                    for (const int j : cj)
+                    {
+                        const demo::Rgba8 want = expected(q, i, j);
+                        bool match = true;
+                        // ±1: a border value that is not stored at 8-bit precision may round either way when written to RGBA8 (section 2.3.5).
+                        for (std::size_t c = 0; c < 4; ++c) match = match && std::abs(static_cast<int>(got[c]) - static_cast<int>(want[c])) <= 1;
+                        ok = ok || match;
+                    }
+                const int i0 = ci.front(), j0 = cj.front();
+                ((i0 < 0 || i0 >= kTex || j0 < 0 || j0 >= kTex) ? border_px : texel_px)[static_cast<std::size_t>(q)]++;
+                quads.add(ok, std::format("quad {} pixel ({}, {}): got {} expected {}{}", q, x, y, demo::format_rgba(got), demo::format_rgba(expected(q, i0, j0)),
+                                          ci.size() * cj.size() > 1 ? " (or a neighbouring cell)" : ""));
+            }
+        check.expect(quads.bad == 0,
+                     std::format("picture, bottom half: every pixel is the clear color or the texel / border cell of its quad (quads {} px; {} pixels near a "
+                                 "texel boundary accept either neighbour)",
+                                 lay.quads[0].size, ambiguous),
+                     quads.detail());
+        bool both = true;
+        for (std::size_t q = 0; q < 4; ++q) both = both && border_px[q] > 0 && texel_px[q] > 0;
+        check.expect(both, "picture, bottom half: every quad shows both texels and border",
+                     std::format("border/texel pixels: {}/{} {}/{} {}/{} {}/{}", border_px[0], texel_px[0], border_px[1], texel_px[1], border_px[2], texel_px[2],
+                                 border_px[3], texel_px[3]));
     }
 }
 

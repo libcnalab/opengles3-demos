@@ -50,11 +50,12 @@
     "glGetSamplerParameterIuiv": "the Iuiv border unmodified",
     "glBindSampler": "a bound sampler overrides the texture's wrap mode and border; after BindSampler(0, 0) the texture's border is used again",
     "glDispatchCompute": "texelFetch read-back of every sample of every layer and textureSize; 30-90 border probes per texture/sampler combination",
-    "glDrawArrays": "full-viewport triangle into the multisample layers (layered via the geometry shader, or per layer); the picture's grid and quads (all grid pixels and 256 quad cell centres compared with the CPU model)",
-    "glReadPixels": "RGBA8 read-back of the whole default framebuffer for the picture check",
+    "glDrawArrays": "full-viewport triangle into the multisample layers (layered via the geometry shader, or per layer); the picture's grid and quads, laid out from the surface size (every pixel of the frame compared with the CPU model)",
+    "glReadPixels": "RGBA8 read-back of the whole default framebuffer (any surface size) for the picture check",
     "glMapBufferRange": "reads the compute results",
     "glDeleteTextures": "cleanup; final glGetError == NO_ERROR",
-    "glDeleteSamplers": "cleanup"
+    "glDeleteSamplers": "cleanup",
+    "glViewport": "per-layer multisample viewports, the grid half and each border quad, all derived from the surface size; pixel positions verified by the picture check"
   },
   "features": [
     "ES32.TEXTURE.MS_ARRAY",
@@ -80,6 +81,6 @@
   "visual_review": {
     "date": "2026-11-11",
     "by": "claude-opus-5.5 (subagent)",
-    "notes": "radeonsi es-max capture viewed at 3x. Top half: a 4 x 4 grid of tiles (columns = samples 0..3, rows = layers 0..3 from the top), each tile an 8 x 8 block of differently coloured texels with a 2-pixel dark gap on its right and bottom; every tile is a different colour ramp (the pattern depends on layer and sample, with visible wrap-around jumps where a channel passes 255), none is empty or repeated. Bottom half on the dark background: four 60-pixel squares, each with the 4 x 4 texture in the middle (a quarter of the area) and a solid frame: red (255, 0, 51) for RGBA8 with the texture's clamped border, bright green (0, 255, 102) for the same texture with the sampler's border, orange (255, 168, 0) for RGBA8I with the clamped integer border (texture shown bluish-grey), and white for the depth quad, whose inner texture is white in the upper half and black in the lower half (Dref 0.5 against depths increasing upward). The RGBA8 texture is upright (bluish rows at the bottom, greener rows at the top). The llvmpipe capture differs from radeonsi in 174 pixels, all on the two rows and two columns of each quad's texture area where a texel boundary falls exactly on a pixel centre (not probed)."
+    "notes": "Captures viewed at 256x256, 800x800, 640x480 and 333x777 (radeonsi). In every one the top half is filled by a 4 x 4 grid of tiles (columns = samples 0..3, rows = layers 0..3 from the top), each tile an 8 x 8 block of differently coloured texels with a thin dark gap on its right and bottom; every tile is a different colour ramp, none empty or repeated. The bottom half holds four square quads with NEAREST texels: in a row at 800x800 and 640x480 (168 / 136 px), as a 2 x 2 block at 333x777 (144 px). Each quad has the 4 x 4 texture in its middle quarter and a solid frame: red for RGBA8 with the texture's clamped border, bright green for the same texture with the sampler's border, orange for RGBA8I with the clamped integer border (texture bluish-grey), and white for the depth quad, whose texture is white in the upper half and black in the lower half. Texel edges are clean, with no half-texel steps, because the quad sizes are multiples of 8. The texture is upright (bluish rows at the bottom)."
   }
 }

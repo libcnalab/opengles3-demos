@@ -103,8 +103,8 @@
 | ES30.BUFFER.FLUSH_EXPLICIT | 3.0 | buffers | MAP_FLUSH_EXPLICIT_BIT + glFlushMappedBufferRange | ES 3.0 §2.10.3 | NOT_STARTED |  |
 | ES30.BUFFER.COPY | 3.0 | buffers | glCopyBufferSubData via COPY_READ/COPY_WRITE (+ overlap error) | ES 3.0 §2.10.5 | NOT_STARTED |  |
 | ES30.BUFFER.PARAM64 | 3.0 | buffers | glGetBufferParameteri64v (BUFFER_SIZE / MAP_LENGTH / MAP_OFFSET) | ES 3.0 §6.1.9 | NOT_STARTED |  |
-| ES30.BUFFER.PBO_PACK | 3.0 | buffers | PIXEL_PACK_BUFFER: asynchronous glReadPixels into a buffer | ES 3.0 §3.7.1 §4.3.2 | NOT_STARTED |  |
-| ES30.BUFFER.PBO_UNPACK | 3.0 | buffers | PIXEL_UNPACK_BUFFER: texture upload from a buffer | ES 3.0 §3.7.1 | NOT_STARTED |  |
+| ES30.BUFFER.PBO_PACK | 3.0 | buffers | PIXEL_PACK_BUFFER: asynchronous glReadPixels into a buffer | ES 3.0 §3.7.1 §4.3.2 | FULLY_VALIDATED | es30-pixel-buffer-objects |
+| ES30.BUFFER.PBO_UNPACK | 3.0 | buffers | PIXEL_UNPACK_BUFFER: texture upload from a buffer | ES 3.0 §3.7.1 | FULLY_VALIDATED | es30-pixel-buffer-objects |
 | ES30.BUFFER.INVALID_RANGES | 3.0 | buffers | Out-of-range offsets/lengths produce INVALID_VALUE | ES 3.0 §2.10 | NOT_STARTED |  |
 | ES30.UBO.BASIC | 3.0 | uniforms | Uniform blocks + glUniformBlockBinding + glBindBufferBase | ES 3.0 §2.12.6.2 | NOT_STARTED |  |
 | ES30.UBO.RANGE | 3.0 | uniforms | glBindBufferRange with UNIFORM_BUFFER_OFFSET_ALIGNMENT | ES 3.0 §2.12.6.2 | NOT_STARTED |  |
@@ -125,11 +125,11 @@
 | ES30.TEXTURE.SHARED_EXPONENT | 3.0 | textures | RGB9_E5 and R11F_G11F_B10F | ES 3.0 §3.8.17 | NOT_STARTED |  |
 | ES30.TEXTURE.DEPTH | 3.0 | textures | Depth textures + comparison mode/func + sampler2DShadow | ES 3.0 §3.8.8 §3.8.15 | NOT_STARTED |  |
 | ES30.TEXTURE.DEPTH_STENCIL | 3.0 | textures | DEPTH24_STENCIL8 / DEPTH32F_STENCIL8 textures | ES 3.0 §3.8.12 | NOT_STARTED |  |
-| ES30.TEXTURE.SWIZZLE | 3.0 | textures | TEXTURE_SWIZZLE_R/G/B/A | ES 3.0 §3.8.7 | NOT_STARTED |  |
-| ES30.TEXTURE.LOD_PARAMS | 3.0 | textures | TEXTURE_BASE_LEVEL/MAX_LEVEL/MIN_LOD/MAX_LOD | ES 3.0 §3.8.7 §3.8.10 | FULLY_VALIDATED | es20-mipmaps |
+| ES30.TEXTURE.SWIZZLE | 3.0 | textures | TEXTURE_SWIZZLE_R/G/B/A | ES 3.0 §3.8.7 | FULLY_VALIDATED | es30-texture-swizzle-lod |
+| ES30.TEXTURE.LOD_PARAMS | 3.0 | textures | TEXTURE_BASE_LEVEL/MAX_LEVEL/MIN_LOD/MAX_LOD | ES 3.0 §3.8.7 §3.8.10 | FULLY_VALIDATED | es20-mipmaps, es30-texture-swizzle-lod |
 | ES30.TEXTURE.ETC2_EAC | 3.0 | textures | ETC2/EAC compressed textures (required in ES 3.0) | ES 3.0 §3.8.6 Appendix C | NOT_STARTED |  |
 | ES30.TEXTURE.COMPRESSED_QUERY | 3.0 | textures | NUM_COMPRESSED_TEXTURE_FORMATS / COMPRESSED_TEXTURE_FORMATS | ES 3.0 §6.1.3 | FULLY_VALIDATED | diagnostics-capabilities |
-| ES30.TEXTURE.PIXEL_STORE | 3.0 | textures | UNPACK_ROW_LENGTH/SKIP_PIXELS/SKIP_ROWS/IMAGE_HEIGHT/SKIP_IMAGES; PACK_* | ES 3.0 §3.7.1 | NOT_STARTED |  |
+| ES30.TEXTURE.PIXEL_STORE | 3.0 | textures | UNPACK_ROW_LENGTH/SKIP_PIXELS/SKIP_ROWS/IMAGE_HEIGHT/SKIP_IMAGES; PACK_* | ES 3.0 §3.7.1 | FULLY_VALIDATED | es30-pixel-buffer-objects |
 | ES30.TEXTURE.FORMAT_VALIDATION | 3.0 | textures | Invalid format/type/internalformat combinations rejected | ES 3.0 §3.8.3 | NOT_STARTED |  |
 | ES30.TEXTURE.COMPLETENESS_INTEGER | 3.0 | textures | Integer/float texture completeness vs filter rules | ES 3.0 §3.8.13 | NOT_STARTED |  |
 | ES30.SAMPLER.OBJECTS | 3.0 | textures | Sampler objects override texture sampling state | ES 3.0 §3.8.2 | FULLY_VALIDATED | es30-sampler-objects |

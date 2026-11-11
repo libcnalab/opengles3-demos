@@ -89,6 +89,13 @@ meta-gl revision audited: `develop` @ `795bcdc` (v0.4.1). Fixes live on the loca
   requested; meta-gl correctly reports what the driver says. Minimum-version testing uses
   `MESA_GLES_VERSION_OVERRIDE` (driver behavior, not a meta-gl issue).
 
+- **O6b — ergonomics noted by demo authors (not defects):** `glReadPixels(..., void* pixels)` has no
+  buffer-offset overload. With a PIXEL_PACK_BUFFER bound, the pointer is a byte offset, so demos cast
+  an integer to `void*`. There are no typed enums for *returned* values such as
+  `FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE`, `COMPONENT_TYPE` or `COLOR_ENCODING`, or for the queried
+  `IMPLEMENTATION_COLOR_READ_FORMAT/TYPE`, so demos compare them with `GL_*` macros. Candidates for
+  small additive helpers in meta-gl.
+
 ## Open questions
 
 - None yet. New findings are appended here with the same fields:

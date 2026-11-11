@@ -24,5 +24,7 @@
 | es30-instancing | 3.0 | es30 | Instancing, divisors, primitive restart | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-multiple-render-targets | 3.0 | es30 | Multiple render targets: glDrawBuffers, glClearBuffer*, integer targets | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-sampler-objects | 3.0 | es30 | Sampler objects: sampling state separate from textures | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| es30-texture-swizzle-lod | 3.0 | es30 | Texture swizzle and shader-chosen level of detail | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| es30-pixel-buffer-objects | 3.0 | es30 | Pixel buffer objects: texture uploads and read-backs through buffer objects | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | test-metagl-contracts | 3.0 | tests | meta-gl contracts | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | test-glsl300-builtins | 3.0 | tests | GLSL ES 3.00 built-in functions (numeric) | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |

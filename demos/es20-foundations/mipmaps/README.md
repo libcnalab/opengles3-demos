@@ -20,7 +20,14 @@ pattern ("stripes").
 ## The image
 
 The 256×256 framebuffer is a grid of 8 columns by 15 rows of 32×17-pixel cells (a "strip" each). Column `k`
-is drawn at λ = k (or k + ¼, k + ½, k + ¾ as stated):
+is drawn at λ = k (or k + ¼, k + ½, k + ¾ as stated). On any other surface a cell is `width / 8` by
+`height / 15` pixels. Each strip's `s` range is computed from the cell width, so λ stays the same at every size.
+
+**Minimum size: 8×15** (one pixel per cell). On a smaller surface some cells are empty, and their checks
+would compare nothing, so `init()` throws `demo::Skip`. Every check, including the negative controls,
+reads at least one pixel of its cell. With 1-pixel cells each check still compares at least one pixel
+(e.g. "8 px compared" for a row). On llvmpipe every width 8–40 against every odd height 15–75, plus a coarse
+grid up to 400×400 and 2000×2000, passes. 7×15 and 8×14 skip.
 
 | row | texture | filter | λ | what you see |
 |---|---|---|---|---|

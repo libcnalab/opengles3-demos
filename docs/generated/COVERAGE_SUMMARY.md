@@ -14,7 +14,7 @@ Result directories: build/debug/test-results
 
 ## Semantic features (by introducing ES version)
 
-| ES | total | passed | passed % | NOT_STARTED | VISUALLY_VERIFIED | FULLY_VALIDATED |
+| ES | total | passed | passed % | DOCUMENTED_ONLY | VISUALLY_VERIFIED | FULLY_VALIDATED |
 |---|---|---|---|---|---|---|
 | 2.0 | 87 | 86 | 99% | 1 | 0 | 86 |
 | 3.0 | 78 | 78 | 100% | 0 | 1 | 77 |

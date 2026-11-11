@@ -75,6 +75,8 @@ is listed in `docs/KNOWN_LIMITATIONS.md`. Checks are never loosened to make a dr
 - Probes avoid primitive edges and texel boundaries where the spec permits implementation
   variance (e.g. exact rasterization of edge pixels, LOD selection details).
 - Undefined results (feedback loops, out-of-bounds without robustness) are documented, not tested.
+  Inventory rows whose verification method is `doc` get the status DOCUMENTED_ONLY. That status does not
+  count as passed.
 
 ## Suite-wide assumptions beyond the normative text
 - **Multisample resolve is a convex combination of the samples.** ES 3.0 §4.3.3 says only that the samples are

@@ -18,6 +18,7 @@ Outputs (all generated - do not edit by hand)
 
 Status rules (see docs/VALIDATION.md):
   NOT_STARTED            no executable claims it
+  DOCUMENTED_ONLY        inventory method is "doc" (undefined behaviour): documented, never asserted
   IMPLEMENTED_UNVERIFIED claimed by a manifest, no executable built
   BUILD_PASSED           executable built, no result files
   FAILED                 any run FAILED
@@ -39,7 +40,7 @@ import re
 import sys
 from collections import Counter, defaultdict
 
-RANK = ["NOT_STARTED", "IMPLEMENTED_UNVERIFIED", "FAILED", "BLOCKED_BY_PLATFORM", "BLOCKED_BY_META_GL",
+RANK = ["NOT_STARTED", "DOCUMENTED_ONLY", "IMPLEMENTED_UNVERIFIED", "FAILED", "BLOCKED_BY_PLATFORM", "BLOCKED_BY_META_GL",
         "UNSUPPORTED_BY_CONTEXT", "BUILD_PASSED", "RUNTIME_PASSED", "VISUALLY_VERIFIED", "FULLY_VALIDATED"]
 
 
@@ -227,6 +228,8 @@ def main():
     feat_rows, feat_table = [], []
     for ft in features:
         st = best(status_of[d] for d in feat_demos.get(ft["id"], []))
+        if st == "NOT_STARTED" and ft.get("verification") == "doc":
+            st = "DOCUMENTED_ONLY"
         feat_rows.append((ft["introduced"], st))
         feat_table.append([ft["id"], ft["introduced"], ft["category"], ft["title"], ft["spec_ref"], st,
                            ", ".join(feat_demos.get(ft["id"], []))])

@@ -68,13 +68,13 @@ GLSL310.FN.ATOMIC_MEMORY,310,atomics,atomicAdd Min Max And Or Xor Exchange CompS
 GLSL310.LAYOUT.BINDING,310,interface,"layout(binding) for samplers, images, blocks, atomic counters",GLSL ES 3.10 §4.4.4-4.4.6,render
 GLSL310.LAYOUT.UNIFORM_LOCATION,310,interface,layout(location) on default-block uniforms,GLSL ES 3.10 §4.4.3,render
 GLSL310.ARRAYS_OF_ARRAYS,310,types,Arrays of arrays,GLSL ES 3.10 §4.1.9,compute-check
-GLSL310.SEPARABLE_IO,310,interface,Separable-program interface matching by location; gl_PerVertex redeclaration,GLSL ES 3.10 §4.4.1 §7.1,render+negative
+GLSL310.SEPARABLE_IO,310,interface,Separable-program interface matching by location (gl_PerVertex redeclaration is GLSL ES 3.20),GLSL ES 3.10 §4.4.1 §9.2.1,render+negative
 GLSL310.FN.INTEGER,310,builtins,uaddCarry usubBorrow umulExtended imulExtended bitfieldExtract bitfieldInsert bitfieldReverse bitCount findLSB findMSB,GLSL ES 3.10 §8.8,compute-check
 GLSL310.FN.FLOAT_EXT,310,builtins,frexp ldexp,GLSL ES 3.10 §8.3,compute-check
 GLSL310.FN.PACKING_8,310,builtins,packUnorm4x8 packSnorm4x8 unpackUnorm4x8 unpackSnorm4x8,GLSL ES 3.10 §8.4,compute-check
 GLSL310.FN.TEXTURE_GATHER,310,builtins,textureGather textureGatherOffset (+ shadow variants),GLSL ES 3.10 §8.9.3,render
 GLSL310.FN.TEXTURE_MS,310,builtins,sampler2DMS + texelFetch(sample) + textureSize,GLSL ES 3.10 §8.9,render
-GLSL310.EARLY_FRAGMENT_TESTS,310,interface,layout(early_fragment_tests),GLSL ES 3.10 §4.4.1.3,render
+GLSL310.EARLY_FRAGMENT_TESTS,310,interface,layout(early_fragment_tests),GLSL ES 3.10 §4.4.1,render
 GLSL310.HELPER_INVOCATION,310,builtins,gl_HelperInvocation,GLSL ES 3.10 §7.1.2,render
 GLSL310.BUILTIN_CONSTANTS,310,builtins,New gl_Max*Compute*/Image*/AtomicCounter* constants,GLSL ES 3.10 §7.2,compute-check
 GLSL320.VERSION,320,structure,#version 320 es; rejected on ES 3.1 contexts,GLSL ES 3.20 §3.4,compile+negative

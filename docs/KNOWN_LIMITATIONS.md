@@ -48,6 +48,15 @@
 
 | `es31-image-load-store` | ES 3.2 §8.23: `glBindImageTexture` with a format not in Table 8.26 → INVALID_VALUE | RG32F, RG16F, R16F, R8, RG8, R11F_G11F_B10F accepted (desktop ARB_shader_image_load_store list); RGB8 rejected. No exposed extension adds these formats. All Mesa drivers |
 
+| `es31-program-pipelines` | ES 3.2 §7.3/§7.4: `PROGRAM_SEPARABLE` takes effect only after the next successful link; `glUseProgramStages` on a program not linked as separable → INVALID_OPERATION | accepted as soon as the flag is set, without re-link. All Mesa drivers |
+| `es31-program-interface-query` | ES 3.2 §7.3.1: `glGetProgramResourceiv` writes at most `count` values; `length` = values written | for `ACTIVE_VARIABLES` with count 3 of 5 Mesa writes all 5 and returns 5 (buffer-overrun hazard). All Mesa drivers |
+| `es31-program-interface-query` | ES 3.2 §7.3.1 `REFERENCED_BY_*` | radeonsi reports a vertex-only uniform block as referenced by the fragment shader when the FS declares other blocks |
+| `es31-ssbo-std430` | ES 3.2 §6.1.1: negative `glBindBufferRange` offset → INVALID_VALUE | same as the UBO row: no error for alignment-multiple negative offsets. All Mesa drivers |
+| `es31-atomics` | GLSL ES 3.10 §4.4.5: an atomic counter without `binding` is bound to unit zero | Mesa rejects it ("atomic counters require explicit binding point", desktop ARB rule). All Mesa drivers |
+| `es31-framebuffer-no-attachments` | GLSL ES 3.10 §4.4.1: static `gl_FragDepth` write with `early_fragment_tests` is an error | compiles. All Mesa drivers |
+| `es31-framebuffer-no-attachments` | ES 3.2 §9.2.1: an attachment-less FBO has sample buffers iff `FRAMEBUFFER_DEFAULT_SAMPLES` ≠ 0 | `SAMPLE_BUFFERS`/`SAMPLES` read 0 with 4 default samples although rasterization is multisampled. All Mesa drivers |
+| `es31-framebuffer-no-attachments` | ES 3.2 §7.11.1, GLSL ES 3.10 §7.1.2: scissor-failed fragments are not shaded; helper invocations have no side effects | llvmpipe/zink (lavapipe), multisampled: pixels outside the scissor sharing a 2×2 quad run with `gl_HelperInvocation` false and their atomics take effect. radeonsi and single-sample runs exact |
+
 Not deviations (verified during integration): Mesa accepting `glGenerateMipmap` on R32F and unsized
 `RGB + FLOAT` uploads is correct, because the contexts expose `GL_OES_texture_float_linear`,
 `GL_EXT_color_buffer_float` and `GL_OES_texture_float`. The ES 3.0 transform-feedback mode rule failing under

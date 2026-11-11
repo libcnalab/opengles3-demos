@@ -8,8 +8,8 @@ Result directories: build/debug/test-results
 | ES | total | passed | passed % | NOT_STARTED | FULLY_VALIDATED |
 |---|---|---|---|---|---|
 | 2.0 | 142 | 140 | 99% | 2 | 140 |
-| 3.0 | 104 | 99 | 95% | 5 | 99 |
-| 3.1 | 68 | 17 | 25% | 51 | 17 |
+| 3.0 | 104 | 100 | 96% | 4 | 100 |
+| 3.1 | 68 | 68 | 100% | 0 | 68 |
 | 3.2 | 44 | 0 | 0% | 44 | 0 |
 
 ## Semantic features (by introducing ES version)
@@ -17,8 +17,8 @@ Result directories: build/debug/test-results
 | ES | total | passed | passed % | NOT_STARTED | FULLY_VALIDATED |
 |---|---|---|---|---|---|
 | 2.0 | 86 | 79 | 92% | 7 | 79 |
-| 3.0 | 78 | 70 | 90% | 8 | 70 |
-| 3.1 | 30 | 17 | 57% | 13 | 17 |
+| 3.0 | 78 | 71 | 91% | 7 | 71 |
+| 3.1 | 30 | 30 | 100% | 0 | 30 |
 | 3.2 | 31 | 1 | 3% | 30 | 1 |
 
 ## GLSL ES features (by language version)
@@ -27,11 +27,11 @@ Result directories: build/debug/test-results
 |---|---|---|---|---|---|
 | 100 | 4 | 0 | 0% | 4 | 0 |
 | 300 | 51 | 34 | 67% | 17 | 34 |
-| 310 | 23 | 11 | 48% | 12 | 11 |
+| 310 | 23 | 17 | 74% | 6 | 17 |
 | 320 | 16 | 0 | 0% | 16 | 0 |
 
 ## Executables
 
 | status | count |
 |---|---|
-| FULLY_VALIDATED | 43 |
+| FULLY_VALIDATED | 49 |

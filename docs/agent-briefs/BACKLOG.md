@@ -3,13 +3,14 @@
 The order follows `docs/DEMO_CATALOG.md`. Each line is one delegable task: directory → executable,
 followed by feature IDs. Claim an item by moving it to "In progress" with the agent and branch.
 
-## In progress (Claude subagents, batch 4, started 2026-11-11)
-- ES 3.1 items 21+22, 23+24, 25+26, 27+28, 29+30, 31+32, 33+34
+## In progress
+- 3D compositions 40-45 (Claude subagents, batch 5)
 
 ## Done
 All Stage 1–4 foundation demos listed as implemented in DEMO_CATALOG.md (merged 2026-11-11).
 Batch 3 (2026-11-11): items 1, 2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15 merged.
 Remaining ES 3.0 items for Codex: 6, 10, 14, 16, 17, 18, 19, 20.
+Batch 4 (2026-11-11): ES 3.1 items 21-34 merged (14 demos). Item 35 (glsl310 built-ins) open.
 
 ## Next (ES 3.0)
 1. `es30/texture-3d-and-arrays` → ES30.TEXTURE.3D, ES30.TEXTURE.2D_ARRAY, ES30.FBO.LAYER

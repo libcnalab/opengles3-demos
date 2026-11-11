@@ -1,0 +1,76 @@
+{
+  "name": "es20-transformations-camera",
+  "title": "Transformations and camera",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es20-foundations",
+  "order": 160,
+  "summary": "A depth-tested 3D scene (cube, ground, posts, pyramid) drawn through model/view/projection matrices with a perspective and an orthographic pane; the near plane cuts the foreground. Every pixel is checked against a CPU rasterizer of the same coordinate chain.",
+  "spec": [
+    "ES 3.0 §2.13 Coordinate Transformations (clip -> NDC), §2.13.1 Controlling the Viewport (NDC -> window, depth range)",
+    "ES 3.0 §2.18 Primitive Clipping (clip volume -w <= x,y,z <= w, polygon clipping against near and far planes)",
+    "ES 3.0 §2.12.6.1 Loading Uniform Variables In The Default Uniform Block (UniformMatrix*fv, transpose), §6.1.12 (matrices are returned in column-major order)",
+    "ES 3.0 §3.6.1 Basic Polygon Rasterization (point sampling at fragment centers)",
+    "ES 3.0 §4.1.5 Depth Buffer Test, §4.2.3 Clearing the Buffers (ClearDepthf), §2.1.6.2 (float to normalized fixed-point conversion)",
+    "GLSL ES 3.00 §4.1.6 Matrices, §5.10 Vector and Matrix Operations (column-major), §7.1 Vertex Shader Special Variables (gl_Position)"
+  ],
+  "api": {
+    "glUniformMatrix4fv": "model/view/projection uploaded with transpose = GL_FALSE (column-major) and with GL_TRUE (row-major data); both give a picture that agrees with the CPU rasterizer on ~26000 pixels per pane; glGetUniformfv read-back; row-major data declared column-major is a negative control",
+    "glGetUniformfv": "a non-symmetric 4x4 matrix reads back bit-exactly in column-major order after GL_FALSE and GL_TRUE uploads, and transposed after the wrong upload",
+    "glGetUniformLocation": "six active uniforms (u_model, u_view, u_projection, u_light_dir, u_ambient, u_lit) resolved; a wrong location would change the picture",
+    "glUniform3f": "light direction: shaded face colors agree with the CPU shading model within 2/255",
+    "glUniform1f": "ambient term and the per-draw u_lit switch: shaded cube faces and unshaded gizmo/icon colors agree with the CPU",
+    "glUseProgram": "program used for every draw",
+    "glGenBuffers": "one buffer holds all meshes; vertex data observed through the rendered pixels",
+    "glBindBuffer": "ARRAY_BUFFER binding captured by the attribute pointers",
+    "glBufferData": "~1600 interleaved vertices (position, normal, color) observed through the rendered pixels",
+    "glGenVertexArrays": "VAO used for every draw",
+    "glBindVertexArray": "attribute state restored by binding the VAO",
+    "glEnableVertexAttribArray": "three attributes sourced from the buffer",
+    "glVertexAttribPointer": "interleaved stride 36 / offsets 0, 12, 24: positions, normals (through shading) and colors all observed in the image",
+    "glDrawArrays": "each item is one first/count range of the shared buffer; every item is compared with the CPU rasterizer",
+    "glViewport": "two panes with non-zero origins plus two inset viewports; the NDC -> window mapping is verified at ~26000 pixels per pane",
+    "glScissor": "scissored clears stay inside their rectangles: gutter pixels keep the separator color and the second pane does not erase the first",
+    "glEnable": "GL_DEPTH_TEST and GL_SCISSOR_TEST; disabling the depth test changes hidden-surface results exactly as the CPU painter's-order model predicts",
+    "glDisable": "GL_DEPTH_TEST off: the last-drawn face wins (verified against a CPU painter's model); GL_SCISSOR_TEST off before the window clear",
+    "glIsEnabled": "GL_DEPTH_TEST state after the scene, after glDisable and after glEnable",
+    "glDepthFunc": "GL_LESS (nearest wins, hidden faces stay hidden) and GL_GREATER with the depth buffer cleared to 0 (farthest wins, back faces appear), both compared pixel by pixel with the CPU model; the other six functions are covered by es20-depth-test",
+    "glClearDepthf": "0.0 makes GL_GREATER usable: the whole-pane comparison fails if the clear value were ignored",
+    "glClearColor": "pane, separator and inset clear colors observed in the gutter and background pixels",
+    "glClear": "color+depth clears limited by the scissor rectangle"
+  },
+  "features": [
+    "ES20.CAMERA.MVP",
+    "ES20.COORDS.SYSTEMS",
+    "ES20.CLIP.VOLUME",
+    "ES20.DEPTH.TEST",
+    "ES20.UNIFORM.MATRIX",
+    "ES20.VIEWPORT",
+    "ES20.SCISSOR",
+    "ES20.CLEAR.DEPTH",
+    "ES20.DRAW.ARRAYS",
+    "ES20.BUFFER.VBO"
+  ],
+  "glsl_features": [
+    "GLSL300.UNIFORM",
+    "GLSL300.TYPES.MATRIX",
+    "GLSL300.MATRIX_OPS",
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.LAYOUT.LOCATION",
+    "GLSL300.FRAG.OUTPUT",
+    "GLSL300.BUILTIN_VARS.VS"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "state-query",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5",
+    "notes": "radeonsi es-max and zink es-min captures (256x256) plus 960x540, 1024x512 and 640x640 renders and a keyboard-driven xvfb run: two stacked panes (perspective with a wedge icon on top, orthographic with a box icon below); tumbling cube with green top, blue and red sides, small orbiting cube, ground checkerboard with red X-axis row, blue Z-axis column and white origin tile, pyramid, axis gizmo bottom right. Three identical posts shrink with distance in the perspective pane and keep their height in the orthographic one; the nearest post and the ground are cut off by the near plane (hollow, darker inside; ground ends in a straight line above the bottom edge). Orbit, dolly, elevation and P (projection mode) keys change the view; dollying in cuts the cube open at the near plane."
+  }
+}

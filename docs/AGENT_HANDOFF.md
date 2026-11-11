@@ -63,6 +63,8 @@ meta-gl G8 (transpose = GL_TRUE) is fixed on its branch (`3bb7411`).
 Running Claude subagents (worktrees under .claude/worktrees/):
 - es32 astc-and-copy-image (57)
 - es30 skybox-and-fog (3D showcase)
+- es30 program-binary (16)
+- es30 flat-centroid (17)
 Still unassigned: 62 (glsl320 built-ins), 35 (glsl310 built-ins),
 ES 3.0 items 10, 14, 16-20, 3D fog and skybox.
 Entry points still without evidence (2026-11-11 17:00): CopyImageSubData (57),

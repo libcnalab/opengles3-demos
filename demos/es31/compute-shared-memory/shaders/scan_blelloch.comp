@@ -1,0 +1,72 @@
+#version 310 es
+// Exclusive prefix sum of one work group with the work-efficient Blelloch algorithm: an up-sweep builds partial sums in
+// place in a binary tree, the root is replaced by 0, and a down-sweep distributes them. 64 invocations handle 128
+// elements (two each), so only O(n) additions are made instead of Hillis-Steele's O(n log n).
+//
+// Each sweep level reads and writes elements that other invocations wrote in the previous level, so every level starts
+// with a memory barrier + barrier() pair, and so does the single-invocation step between the sweeps.
+layout(local_size_x = 64) in;
+
+layout(std430, binding = 0) readonly buffer Values { int values[]; };
+layout(std430, binding = 1) writeonly buffer Scanned { int scanned[]; };  // exclusive scan within each group of 128
+layout(std430, binding = 2) writeonly buffer Totals { int totals[]; };    // sum of each group of 128
+
+uniform uint u_count;
+
+shared int s[128];
+
+void main()
+{
+    uint lid = gl_LocalInvocationID.x;
+    uint a = gl_WorkGroupID.x * 128u + 2u * lid;
+    uint b = a + 1u;
+    s[2u * lid] = (a < u_count) ? values[a] : 0;
+    s[2u * lid + 1u] = (b < u_count) ? values[b] : 0;
+
+    // Up-sweep (reduce): s[bi] += s[ai] along the tree, d independent additions per level.
+    uint offset = 1u;
+    for (uint d = 64u; d > 0u; d >>= 1u)
+    {
+        memoryBarrierShared();
+        barrier();
+        if (lid < d)
+        {
+            uint ai = offset * (2u * lid + 1u) - 1u;
+            uint bi = offset * (2u * lid + 2u) - 1u;
+            s[bi] += s[ai];
+        }
+        offset <<= 1u;
+    }
+    memoryBarrierShared();
+    barrier();
+
+    // The root holds the group total. Record it and clear the root: that makes the scan exclusive.
+    if (lid == 0u)
+    {
+        totals[gl_WorkGroupID.x] = s[127];
+        s[127] = 0;
+    }
+
+    // Down-sweep: swap-and-add along the tree.
+    for (uint d = 1u; d < 128u; d <<= 1u)
+    {
+        offset >>= 1u;
+        memoryBarrierShared();
+        barrier();
+        if (lid < d)
+        {
+            uint ai = offset * (2u * lid + 1u) - 1u;
+            uint bi = offset * (2u * lid + 2u) - 1u;
+            int t = s[ai];
+            s[ai] = s[bi];
+            s[bi] += t;
+        }
+    }
+    memoryBarrierShared();
+    barrier();
+
+    if (a < u_count)
+        scanned[a] = s[2u * lid];
+    if (b < u_count)
+        scanned[b] = s[2u * lid + 1u];
+}

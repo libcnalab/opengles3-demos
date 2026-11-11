@@ -1,0 +1,17 @@
+#version 310 es
+// Image-free 2-D parallel array transform: out (height x width) = transpose of in (width x height).
+// A 16 x 8 work group tiles the matrix; the dispatch covers more invocations than elements, hence the guard.
+layout(local_size_x = 16, local_size_y = 8) in;
+
+layout(std430, binding = 0) readonly buffer Source { uint src[]; };
+layout(std430, binding = 1) writeonly buffer Result { uint dst[]; };
+
+uniform uvec2 u_size;  // (width, height) of the source
+
+void main()
+{
+    uint x = gl_GlobalInvocationID.x;
+    uint y = gl_GlobalInvocationID.y;
+    if (x < u_size.x && y < u_size.y)
+        dst[x * u_size.y + y] = src[y * u_size.x + x];
+}

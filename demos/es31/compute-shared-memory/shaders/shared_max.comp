@@ -1,0 +1,38 @@
+#version 310 es
+// A shader that uses (almost) all the shared memory an implementation offers.
+//
+// The host inserts the line  #define SHARED_WORDS <MAX_COMPUTE_SHARED_MEMORY_SIZE / 4>  below the #version line, so the
+// shared array is exactly as large as the limit allows (a uint is 4 basic machine units). ES 3.2 section 17.1: "There is
+// a limit to the total size of all variables declared as shared in a single program object", measured in basic machine
+// units, and the total "may not exceed the largest block size that would be obtained if all active variables declared as
+// shared were instead declared as arbitrarily ordered members of a shader storage block qualified with std430".
+//
+// Phase 1: the 128 invocations fill the array, each writing every 128th word.
+// Phase 2: each invocation reads words that a DIFFERENT invocation wrote (the array is read backwards; 127 - lid != lid)
+//          and copies them out. Every work group uses its own pattern, which also proves that the shared storage of
+//          different work groups does not alias.
+layout(local_size_x = 128) in;
+
+layout(std430, binding = 0) writeonly buffer Output { uint o[]; };  // SHARED_WORDS words per work group
+
+shared uint s[SHARED_WORDS];
+
+uint pattern(uint word, uint group)
+{
+    return (word * 2654435761u) ^ (group * 40503u + 17u);
+}
+
+void main()
+{
+    uint lid = gl_LocalInvocationID.x;
+    uint group = gl_WorkGroupID.x;
+
+    for (uint k = lid; k < uint(SHARED_WORDS); k += 128u)
+        s[k] = pattern(k, group);
+
+    memoryBarrierShared();
+    barrier();
+
+    for (uint k = lid; k < uint(SHARED_WORDS); k += 128u)
+        o[group * uint(SHARED_WORDS) + k] = s[uint(SHARED_WORDS) - 1u - k];
+}

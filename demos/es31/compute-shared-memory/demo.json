@@ -1,0 +1,81 @@
+{
+  "name": "es31-compute-shared-memory",
+  "title": "Compute shaders: shared memory and barriers",
+  "min_es": "3.1",
+  "glsl": [
+    "310 es"
+  ],
+  "category": "es31",
+  "order": 110,
+  "summary": "Work group cooperation through shared variables: a sum/min/max reduction of 3000 integers in two passes, Hillis-Steele and Blelloch prefix scans (the first one hierarchical over 24 work groups), memoryBarrierShared()/groupMemoryBarrier()/memoryBarrier() paired with barrier(), a shader whose shared array is exactly MAX_COMPUTE_SHARED_MEMORY_SIZE bytes, and a CPU simulation of the schedules that make an unsynchronized version wrong; every result is compared exactly and the SSBOs are drawn as bars.",
+  "spec": [
+    "ES 3.2 §17 Compute Shaders, §17.1 Compute Shader Variables (MAX_COMPUTE_SHARED_MEMORY_SIZE), Table 21.49",
+    "ES 3.2 §7.11.1 Shader Memory Access Ordering, §7.11.2 Shader Memory Access Synchronization (SHADER_STORAGE, BUFFER_UPDATE and VERTEX_ATTRIB_ARRAY barrier bits)",
+    "ES 3.2 §6.3 Mapping and Unmapping Buffer Data",
+    "GLSL ES 3.10 §4.3.8 Shared Variables, §4.4.1.1 Compute Shader Inputs",
+    "GLSL ES 3.10 §8.14 Shader Invocation Control Functions (barrier), §8.15 Shader Memory Control Functions (memoryBarrierShared, groupMemoryBarrier, memoryBarrier); GLSL ES 3.20 numbers these §8.15 and §8.16"
+  ],
+  "api": {
+    "glCreateShader": "COMPUTE_SHADER objects for the reduction (pass 1 in three fence variants, pass 2), both scans, the offset pass and the shared-memory-limit shader",
+    "glShaderSource": "sources compiled with host-inserted '#define' lines (PASS, SHARED_FENCE, SHARED_WORDS) below #version",
+    "glCompileShader": "a shader declaring `shared uint s[MAX_COMPUTE_SHARED_MEMORY_SIZE / 4]` compiles; all demo shaders compile",
+    "glGetShaderiv": "COMPILE_STATUS of every shader",
+    "glAttachShader": "before linking",
+    "glLinkProgram": "the program with the full-size shared array links and runs; a program one word over the limit is only reported (the specification does not require a link error)",
+    "glGetProgramiv": "LINK_STATUS (demo helper)",
+    "glDetachShader": "after linking (demo helper)",
+    "glDeleteShader": "cleanup",
+    "glUseProgram": "selects the reduction/scan/offset/limit program per dispatch; bars program for drawing",
+    "glDeleteProgram": "cleanup, final glGetError == NO_ERROR",
+    "glGetUniformLocation": "u_count and the bar uniforms are active",
+    "glUniform1ui": "u_count (inputs of each pass, 3000 or 24), observed through exact results and the guard words",
+    "glUniform1i": "bar x0, pitch, width and baseline in pixels, observed through the probed bar positions",
+    "glUniform2i": "framebuffer size of the bar program, observed through the probed bar positions",
+    "glUniform1f": "pixels per unit of the bar heights, observed through the probed tips",
+    "glUniform3f": "bar color, compared exactly in the probes",
+    "glGenBuffers": "SSBOs for input, partials, totals, scans, offsets and the shared-memory-limit output",
+    "glBindBuffer": "SHADER_STORAGE_BUFFER and ARRAY_BUFFER targets used to create, map and use the buffers",
+    "glBufferData": "inputs and the 0xDEADBEEF-filled result buffers; the sentinel is what unwritten words show",
+    "glBindBufferBase": "SHADER_STORAGE_BUFFER binding points 0..2 select the buffers behind each shader's layout(binding) blocks; observed through exact results",
+    "glMapBufferRange": "MAP_READ_BIT readback of every result buffer, compared exactly",
+    "glUnmapBuffer": "after every readback",
+    "glDeleteBuffers": "cleanup",
+    "glDispatchCompute": "24-group reductions and scans, single-group second levels, and four work groups of the shared-memory-limit shader; all results exact",
+    "glMemoryBarrier": "SHADER_STORAGE_BARRIER_BIT between dependent dispatches, BUFFER_UPDATE_BARRIER_BIT before every glMapBufferRange readback, VERTEX_ATTRIB_ARRAY_BARRIER_BIT before the results are drawn as vertex data; results are exact after them (necessity cannot be observed: implementations may synchronize more than required)",
+    "glGetIntegerv": "MAX_COMPUTE_SHARED_MEMORY_SIZE >= 16384 (Table 21.49) and used to size the shared array of the limit shader",
+    "glGenVertexArrays": "one VAO per bar series",
+    "glBindVertexArray": "selects the bar series drawn",
+    "glEnableVertexAttribArray": "integer attribute 0 enabled, observed through the probed bars",
+    "glVertexAttribIPointer": "int attribute read from the compute results with strides 4 and 16 and offsets 0, 4, 8; every bar height probed",
+    "glVertexAttribDivisor": "divisor 1: one value per bar instance",
+    "glDrawArraysInstanced": "one instanced bar per value",
+    "glViewport": "full-surface viewport maps the bar pixel coordinates",
+    "glClearColor": "background, row and baseline colors compared",
+    "glClear": "COLOR_BUFFER_BIT, scissored for rows and baselines",
+    "glScissor": "four row bands and their baselines; the rows' colors are compared beyond the bar tips",
+    "glEnable": "SCISSOR_TEST for the row clears",
+    "glDisable": "SCISSOR_TEST before the bars are drawn: bars of all rows appear",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE readback of the default framebuffer, two probes per bar",
+    "glDeleteVertexArrays": "cleanup"
+  },
+  "features": [
+    "ES31.COMPUTE.SHARED",
+    "ES31.COMPUTE.LIMITS",
+    "ES31.BARRIER.MEMORY"
+  ],
+  "glsl_features": [
+    "GLSL310.SHARED",
+    "GLSL310.BARRIERS"
+  ],
+  "validation": [
+    "readback",
+    "state-query",
+    "pixel-reference",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5",
+    "notes": "Viewed the gpu (radeonsi), llvmpipe (es-min) and zink captures, 256x256, identical; the gpu one also enlarged 3x. Four horizontal bands of 64 px on a dark background, each with a thin gray baseline at mid height. Band 1 (blue): 128 two-pixel-wide bars, the input values, random spikes up and down to near the band edges. Band 2 (green): the inclusive scan of the same 128 values as a filled random-walk silhouette hanging from the baseline: a tiny positive stub at the far left, then below the baseline for the rest, deepening to its lowest point near the right end and recovering slightly at the last bars. Band 3 (orange): the exclusive scan, the same silhouette shifted by one bar (it starts at exactly zero, so no stub). Band 4: 24 clusters of three thin bars each: yellow maxima all pointing up to nearly the band height, purple minima all pointing down to nearly the band height, red sums of both signs and much smaller magnitude. No gaps, stray pixels or bars past the band edges."
+  }
+}

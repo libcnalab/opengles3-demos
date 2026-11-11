@@ -1,0 +1,11 @@
+#version 310 es
+// Negative case: no layout(local_size_*) declaration. The shader compiles, but a program containing it
+// cannot link: "if a program object contains a compute shader, that shader must contain an input layout
+// qualifier specifying a fixed local group size for the program, or a link-time error will occur"
+// (GLSL ES 3.10 section 4.4.1.1).
+layout(std430, binding = 0) buffer Sink { uint sink[]; };
+
+void main()
+{
+    sink[0] = 1u;
+}

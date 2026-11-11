@@ -1050,10 +1050,19 @@ namespace
         // TEXTURE_2D_MULTISAMPLE and TEXTURE_2D_MULTISAMPLE_ARRAY, which do not support mipmaps, the maximum value
         // [of level] is zero"; INVALID_VALUE if level is negative or larger than that maximum.
         // The buffer-specific pnames of Table 21.11 (TEXTURE_BUFFER_DATA_STORE_BINDING, TEXTURE_BUFFER_OFFSET,
-        // TEXTURE_BUFFER_SIZE) cannot be queried: meta-gl's TextureLevelParameter lacks them (see the README).
+        // TEXTURE_BUFFER_SIZE) are glGetTexLevelParameteriv state (added to meta-gl as gap G7 during integration).
         const Format& f = format_named("RG16F");
         attach(sweep_tex_, f, data_buf_, 0, 64);
         const mgl::TextureTarget tb = mgl::TextureTarget::TextureBuffer;
+        {
+            GLint store = -1, offset = -1, size = -1;
+            mgl::glGetTexLevelParameteriv(tb, 0, mgl::TextureLevelParameter::BufferDataStoreBinding, &store);
+            mgl::glGetTexLevelParameteriv(tb, 0, mgl::TextureLevelParameter::BufferOffset, &offset);
+            mgl::glGetTexLevelParameteriv(tb, 0, mgl::TextureLevelParameter::BufferSize, &size);
+            check.expect(store == static_cast<GLint>(data_buf_.value) && offset == 0 && size == 64,
+                         "glGetTexLevelParameteriv: TEXTURE_BUFFER_DATA_STORE_BINDING / OFFSET / SIZE report the attached range (Table 21.11)",
+                         std::format("binding={} (expected {}), offset={}, size={}", store, data_buf_.value, offset, size));
+        }
         demo::drain_gl_errors();
         GLint width = -1, internal_format = -1;
         mgl::glGetTexLevelParameteriv(tb, 0, mgl::TextureLevelParameter::Width, &width);

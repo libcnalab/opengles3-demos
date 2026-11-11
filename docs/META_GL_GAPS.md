@@ -75,6 +75,15 @@ meta-gl revision audited: `develop` @ `795bcdc` (v0.4.1). Fixes live on the loca
   allow them), so the correct query was not expressible. Found by the es31-multisample-textures work.
 - **Fix:** added `TextureLevelParameter::Samples` / `FixedSampleLocations` (additive).
 
+### G7 — buffer-texture level queries missing from `TextureLevelParameter` — FIXED (meta-gl `a451376`)
+- **Expected:** `TEXTURE_BUFFER_DATA_STORE_BINDING`, `TEXTURE_BUFFER_OFFSET`, `TEXTURE_BUFFER_SIZE` are
+  `glGetTexLevelParameteriv` state (ES 3.2 Table 21.11).
+- **Actual:** only in `TextureParameterQuery`/`TextureParameter` (the `glGetTexParameter*` domain, where §8.11.2
+  does not allow them). Found by the es32-texture-buffer work.
+- **Fix:** added to `TextureLevelParameter`; `es32-texture-buffer` now asserts all three.
+- **Follow-up (not changed, would be breaking):** `TextureParameterQuery` still contains these and the
+  multisample pnames, which ES does not accept for `glGetTexParameter*`.
+
 ### Note — arbitrary sample masks
 `SampleMaskValue` (for `glSampleMaski`) has only `None` and `All`. Since it is a registered 32-bit bitfield
 (`all_bits = 0xFFFFFFFF`), a chosen mask is formed with `static_cast<SampleMaskValue>(bits)`. Every value is

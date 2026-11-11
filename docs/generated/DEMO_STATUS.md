@@ -42,6 +42,7 @@
 | es30-normal-mapping | 3.0 | es30 | Normal mapping: tangent space, specular map, mip chains | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-deferred-shading | 3.0 | es30 | Deferred shading: G-buffer (MRT) + 48 moving point lights | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-lighting | 3.0 | es30 | Lighting: directional, point, spot; Phong vs Blinn-Phong | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| es30-skybox-and-fog | 3.0 | es30 | Skybox, environment mapping and fog | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-shadow-mapping | 3.0 | es30 | Shadow Mapping | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-post-processing | 3.0 | es30 | Post-processing: gamma, blur, Sobel, bloom, depth of field | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es31-compute-basics | 3.1 | es31 | Compute shaders: dispatch, built-ins, limits | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |

@@ -1,0 +1,93 @@
+{
+  "name": "es31-framebuffer-no-attachments",
+  "title": "Framebuffer without attachments",
+  "min_es": "3.1",
+  "glsl": [
+    "310 es"
+  ],
+  "category": "es31",
+  "order": 520,
+  "summary": "A framebuffer object with no attachment at all, made complete with glFramebufferParameteri (FRAMEBUFFER_DEFAULT_WIDTH/HEIGHT/SAMPLES/FIXED_SAMPLE_LOCATIONS): rasterization still happens and a fragment shader with no output reports it through shader storage buffer atomics and r32ui image stores. The number and the exact pixel of every fragment are compared with a CPU model under viewport, scissor, the framebuffer rectangle, triangles on the 1/16 pixel grid, odd and MAX_FRAMEBUFFER_WIDTH x HEIGHT sizes, a multisample default and an attachment that overrides the defaults; the parameter initial values, completeness rules and every INVALID_VALUE / INVALID_OPERATION case are checked. layout(early_fragment_tests) is shown in a depth-tested framebuffer (invocations = exactly the visible fragments; without it the visible ones are among them; the depth buffer is the same), and gl_HelperInvocation by counters that are exact only if helper invocations (the uncovered pixels of partly covered 2 x 2 quads) have no side effects.",
+  "spec": [
+    "ES 3.2 §9.2.1 Framebuffer Object Parameters (FRAMEBUFFER_DEFAULT_WIDTH/HEIGHT/SAMPLES/FIXED_SAMPLE_LOCATIONS, INVALID_ENUM / INVALID_VALUE / INVALID_OPERATION), §9.2.3 Framebuffer Object Queries (glGetFramebufferParameteriv), §9.2.3.1 Multisample Queries",
+    "ES 3.2 §9.2 Binding and Managing Framebuffer Objects (no attachments: rendering is limited to (0,0)-(width,height)), §9.4.2 Whole Framebuffer Completeness (FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT unless an image is attached or the default size is non-zero), §9.4.4 Effects of Framebuffer Completeness on Framebuffer Operations (INVALID_FRAMEBUFFER_OPERATION)",
+    "ES 3.2 Table 21.15 (framebuffer state, initial values), Table 21.40 (MAX_FRAMEBUFFER_WIDTH/HEIGHT >= 2048, MAX_FRAMEBUFFER_SAMPLES >= 4), §13.8.2 Scissor Test, §12.6.1 Controlling the Viewport, §13.7 Polygons (rasterization of triangles), §13.4 Multisampling",
+    "ES 3.2 §13.8 Early Per-Fragment Tests, §13.8.4 The Early Fragment Test Qualifier, §14.2.4 Early Fragment Tests, §15.1.3 Depth Buffer Test",
+    "ES 3.2 §7.11.1 Shader Memory Access Ordering (one invocation per fragment without a multisample buffer; fragments that fail the scissor test or the early tests are not shaded; helper invocations: stores have no effect), §7.11.2 Shader Memory Access Synchronization (BUFFER_UPDATE_BARRIER_BIT, FRAMEBUFFER_BARRIER_BIT)",
+    "GLSL ES 3.10 §4.4.1 Input Layout Qualifiers (early_fragment_tests; an error to statically write gl_FragDepth), §7.1.2 Fragment Shader Special Variables (gl_HelperInvocation: no side effects), §8.11 Atomic Memory Functions, §8.12 Image Functions (imageStore), §8.13 Fragment Processing Functions (dFdx, dFdy)"
+  ],
+  "api": {
+    "glFramebufferParameteri": "FRAMEBUFFER_DEFAULT_WIDTH / HEIGHT / SAMPLES / FIXED_SAMPLE_LOCATIONS: a framebuffer with no attachment becomes complete only when both sizes are non-zero, and the rasterized area is exactly that size (64 x 32, 33 x 17, 40 x 8 after resizing the same object, MAX_FRAMEBUFFER_WIDTH x HEIGHT, 16384 x 16384 here: a 3 x 2 scissor box at its far corner yields exactly 6 fragments there); 4 default samples are accepted and rasterized; values above the MAX_* limits (+1), negative values and INT_MAX raise INVALID_VALUE and change nothing; the default framebuffer bound raises INVALID_OPERATION; READ_FRAMEBUFFER / FRAMEBUFFER / DRAW_FRAMEBUFFER targets address the right object",
+    "glGetFramebufferParameteriv": "initial 0 / 0 / 0 / FALSE in a new framebuffer object, the values that were set read back (width, height, samples, fixed sample locations), unchanged after rejected values; INVALID_OPERATION for the default framebuffer and for DRAW_FRAMEBUFFER when the draw binding is the default one; READ_FRAMEBUFFER, DRAW_FRAMEBUFFER and FRAMEBUFFER give one object's value",
+    "glCheckFramebufferStatus": "INCOMPLETE_MISSING_ATTACHMENT for size 0 x 0, 16 x 0 and 0 x 16 without attachments; COMPLETE for 24 x 12, 4 default samples + fixed locations, MAX x MAX x MAX_FRAMEBUFFER_SAMPLES, a 16 x 8 color renderbuffer, a depth-only renderbuffer, a multisample renderbuffer",
+    "glGenFramebuffers": "attachment-less, attachment-override, depth-only, resize, multisample, renderbuffer-multisample and read framebuffers",
+    "glBindFramebuffer": "FRAMEBUFFER, READ_FRAMEBUFFER and DRAW_FRAMEBUFFER bindings as the targets of the parameter commands and of the draws",
+    "glDeleteFramebuffers": "cleanup, final glGetError == NO_ERROR",
+    "glFramebufferRenderbuffer": "a 16 x 8 RGBA8 renderbuffer attached to the 64 x 32 framebuffer: only 16 x 8 = 128 fragments arrive; detached again: 2048 fragments (the default size is back); DEPTH_ATTACHMENT renderbuffer for the early-test framebuffer; a multisample renderbuffer for the control",
+    "glGenRenderbuffers": "color, depth and multisample renderbuffers",
+    "glBindRenderbuffer": "storage definition",
+    "glRenderbufferStorage": "RGBA8 16 x 8 (overrides the default size), DEPTH_COMPONENT24 64 x 32 (depth test)",
+    "glRenderbufferStorageMultisample": "RGBA8 64 x 32 with 4 samples: the control for the multisample scissor behaviour",
+    "glDeleteRenderbuffers": "cleanup",
+    "glDrawArrays": "TRIANGLE_STRIP rectangles and TRIANGLES (two triangles, a covering triangle plus a degenerate one): fragment count and positions against the CPU model; INVALID_FRAMEBUFFER_OPERATION into the incomplete framebuffer with no fragment shaded",
+    "glViewport": "(0,0,64,32), (8,4,32,16), (0,0,128,64) larger than the framebuffer, (-32,-16,64,32) half outside, (0,0,33,17), (0,0,40,8) and (0,0,MAX,MAX): the covered pixels equal viewport intersected with the framebuffer rectangle",
+    "glScissor": "boxes (10,4,20,12), (20,6,24,18), (5,3,36,16) and a 3 x 2 box at the far corner of a 16384 x 16384 framebuffer: the fragments are exactly the intersection with the geometry",
+    "glEnable": "SCISSOR_TEST and DEPTH_TEST",
+    "glDisable": "the tests restored",
+    "glDepthFunc": "LESS: the depth test of the early-test scene (A in front of B) and of the probe draws",
+    "glDepthMask": "FALSE during the probe draws (the probes read the depth buffer without changing it)",
+    "glClearDepthf": "1.0 before the early-test scene",
+    "glClear": "DEPTH buffer of the depth-only framebuffer",
+    "glUseProgram": "counting, early-test, helper-invocation and image programs",
+    "glGetUniformLocation": "u_rect, u_pos, u_depth, u_stride located; effects visible in the hit maps",
+    "glUniform1f": "u_depth: the depth of the rectangles of the early-test scene (0.25, 0.75, 0.5, 0.9)",
+    "glUniform1i": "u_stride: the row length of the hit map (each fragment lands in its own cell)",
+    "glUniform4f": "u_rect: rectangle placement verified pixel by pixel",
+    "glUniform2fv": "u_pos[6]: triangle corners; coverage matches the exact-arithmetic model pixel by pixel",
+    "glBindBuffer": "SHADER_STORAGE_BUFFER",
+    "glBindBufferBase": "binding 0 of the hit/counter buffer read by the fragment shaders",
+    "glBufferData": "hit buffer initialised (zeros; minima 0xFFFFFFFF) before every draw",
+    "glMapBufferRange": "READ mapping of the hit buffer: every count, minimum, maximum and per-pixel cell compared",
+    "glUnmapBuffer": "mapping released",
+    "glGenBuffers": "the hit buffer",
+    "glDeleteBuffers": "cleanup",
+    "glMemoryBarrier": "BUFFER_UPDATE_BARRIER_BIT before mapping the buffer; TEXTURE_UPDATE_BARRIER_BIT before clearing the images; FRAMEBUFFER_BARRIER_BIT | SHADER_IMAGE_ACCESS_BARRIER_BIT before reading the images with glReadPixels",
+    "glBindImageTexture": "two r32ui images (WRITE_ONLY, units 0 and 1) written by imageStore from a framebuffer with no attachment: the covered pixels and the position codes read back exactly",
+    "glTexStorage2D": "two R32UI 64 x 32 image textures",
+    "glTexSubImage2D": "zeroed images before the draw",
+    "glReadPixels": "RGBA_INTEGER / UNSIGNED_INT readback of the two images through a framebuffer",
+    "glReadBuffer": "COLOR_ATTACHMENT0 of the read framebuffer for the image readback",
+    "glGenTextures": "image textures",
+    "glDeleteTextures": "cleanup",
+    "glGetIntegerv": "MAX_FRAMEBUFFER_WIDTH / HEIGHT / SAMPLES (>= 2048 / 2048 / 4), MAX_VIEWPORT_DIMS, SAMPLES and SAMPLE_BUFFERS (XFAIL on Mesa: 0 / 0 for a framebuffer with default samples and no attachment)",
+    "glDeleteProgram": "cleanup"
+  },
+  "features": [
+    "ES31.FBO.NO_ATTACHMENTS",
+    "ES31.SHADER.HELPER_INVOCATION",
+    "ES20.FBO.COMPLETENESS",
+    "ES20.ERRORS.INVALID_VALUE",
+    "ES20.ERRORS.INVALID_OPERATION",
+    "ES20.ERRORS.INVALID_FB_OP",
+    "ES20.SCISSOR",
+    "ES20.VIEWPORT",
+    "ES20.DEPTH.TEST"
+  ],
+  "glsl_features": [
+    "GLSL310.EARLY_FRAGMENT_TESTS",
+    "GLSL310.HELPER_INVOCATION"
+  ],
+  "validation": [
+    "readback",
+    "pixel-reference",
+    "state-query",
+    "gl-error",
+    "negative",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5",
+    "notes": "256x256 radeonsi capture: 2 x 4 tiles of 64 x 32 hit maps scaled 2x (dark = no fragment, white = one, yellow = two, cyan = occluded fragment that ran, red would be a mismatch: none). Bottom row: the scissored rectangle (a 20 x 12 box) and the (8,4) 32 x 16 viewport box; next row: the half-outside viewport (a 32 x 16 box in the lower-left corner) and the two triangles (a large one and a thin sliver crossing it, yellow where they overlap); next: the 16 x 8 attachment corner of a 64 x 32 default size and the early-test visible part of B (an L shape right of and above the hidden A); top row: the late-test run of B (white visible L plus a cyan block for the occluded fragments that ran) and the helper-invocation triangles identical to the plain triangle tile. No red pixel."
+  }
+}

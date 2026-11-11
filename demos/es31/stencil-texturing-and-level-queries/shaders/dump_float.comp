@@ -1,0 +1,31 @@
+#version 310 es
+// Reads every texel of a floating-point-sampled texture twice, with texelFetch and with textureLod at the
+// texel centre (NEAREST), and stores the four components of each result as raw float bits in an SSBO:
+//   data[4 * (y * w + x) + c]              texelFetch(u_tex, (x, y), 0)[c]
+//   data[4 * w * h + 4 * (y * w + x) + c]  textureLod(u_tex, (x + 0.5, y + 0.5) / size, 0.0)[c]
+// Used for the depth component of depth/stencil textures and for ordinary color / depth textures.
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(binding = 0) uniform highp sampler2D u_tex;
+
+layout(std430, binding = 0) buffer Dump
+{
+    uint data[];
+};
+
+void main()
+{
+    ivec2 size = textureSize(u_tex, 0);
+    ivec2 xy = ivec2(gl_GlobalInvocationID.xy);
+    if (xy.x >= size.x || xy.y >= size.y) return;
+    uint texel = uint(xy.y * size.x + xy.x);
+    uint count = uint(size.x * size.y);
+
+    vec4 fetched = texelFetch(u_tex, xy, 0);
+    vec4 sampled = textureLod(u_tex, (vec2(xy) + 0.5) / vec2(size), 0.0);
+    for (int c = 0; c < 4; ++c)
+    {
+        data[4u * texel + uint(c)] = floatBitsToUint(fetched[c]);
+        data[4u * count + 4u * texel + uint(c)] = floatBitsToUint(sampled[c]);
+    }
+}

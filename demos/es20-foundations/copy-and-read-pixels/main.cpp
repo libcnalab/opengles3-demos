@@ -537,17 +537,19 @@ namespace
         // undefined (section 4.3.2.1): only the pixels inside the framebuffer are compared.
         void check_out_of_window(demo::Check& check, demo::Env& env)
         {
-            struct Case { const char* name; mgl::FramebufferId fbo; int size; int x, y, w, h; };
+            // The framebuffer is width x height: the default framebuffer need not be square.
+            struct Case { const char* name; mgl::FramebufferId fbo; int width, height; int x, y, w, h; };
             const Case cases[] = {
-                {"chart framebuffer, region over the lower left corner", chart_fbo_, kChart, -8, -8, 24, 24},
-                {"chart framebuffer, region over the upper right corner", chart_fbo_, kChart, 56, 56, 24, 24},
-                {"default framebuffer, region over its upper right corner", mgl::FramebufferId{0}, env.width, env.width - 16, env.height - 16, 32, 32},
+                {"chart framebuffer, region over the lower left corner", chart_fbo_, kChart, kChart, -8, -8, 24, 24},
+                {"chart framebuffer, region over the upper right corner", chart_fbo_, kChart, kChart, 56, 56, 24, 24},
+                {"default framebuffer, region over its upper right corner", mgl::FramebufferId{0}, env.width, env.height,
+                 env.width - 16, env.height - 16, 32, 32},
             };
             for (const Case& c : cases)
             {
                 bind_read(c.fbo);
                 const int ix0 = std::max(c.x, 0), iy0 = std::max(c.y, 0);
-                const int ix1 = std::min(c.x + c.w, c.size), iy1 = std::min(c.y + c.h, c.size);
+                const int ix1 = std::min(c.x + c.w, c.width), iy1 = std::min(c.y + c.h, c.height);
                 const std::vector<Rgba8> inside = read_texels(ix0, iy0, ix1 - ix0, iy1 - iy0);  // reference: the part inside, read separately
                 std::vector<std::uint8_t> buf(static_cast<std::size_t>(c.w) * static_cast<std::size_t>(c.h) * 4, 0xA5);
                 (void)demo::drain_gl_errors();
@@ -560,7 +562,7 @@ namespace
                     {
                         const int fx = c.x + i, fy = c.y + j;
                         const std::uint8_t* px = &buf[(static_cast<std::size_t>(j) * static_cast<std::size_t>(c.w) + static_cast<std::size_t>(i)) * 4];
-                        if (fx >= 0 && fy >= 0 && fx < c.size && fy < c.size)
+                        if (fx >= 0 && fy >= 0 && fx < c.width && fy < c.height)
                         {
                             const Rgba8 want = inside[static_cast<std::size_t>(fy - iy0) * static_cast<std::size_t>(ix1 - ix0) + static_cast<std::size_t>(fx - ix0)];
                             if (std::memcmp(px, want.data(), 4) != 0) ++bad;

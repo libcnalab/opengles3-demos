@@ -285,6 +285,9 @@ namespace
     };
 
     constexpr float kDiscRadius = 36.0f;
+    // One Venn cluster at scale 1 spans 112 x 106 px (centers +-20 / +12 / -22 around the cluster center, radius 36).
+    // Two clusters are kept at least this far apart (center to center) and from the composite's edges.
+    constexpr float kClusterPitch = 116.0f;
 
     class Blending final : public demo::Demo
     {
@@ -535,19 +538,30 @@ namespace
         void build_composite()
         {
             const Rect r = layout_.composite;
-            const float cy = static_cast<float>(r.y) + static_cast<float>(r.h) / 2.0f;
-            const float left_x = static_cast<float>(r.x) + static_cast<float>(r.w) / 4.0f;
-            const float right_x = static_cast<float>(r.x) + 3.0f * static_cast<float>(r.w) / 4.0f;
+            const float w = static_cast<float>(r.w), h = static_cast<float>(r.h);
+            // The two clusters sit side by side in a wide composite area and on top of each other in a tall one
+            // (first = left / top), each in the middle of its half. They must not overlap: if a half is smaller
+            // than kClusterPitch in either direction, the cluster geometry shrinks with it.
+            const bool side_by_side = w >= h;
+            const float along = (side_by_side ? w : h) / 2.0f, across = side_by_side ? h : w;
+            const float scale = std::min({1.0f, along / kClusterPitch, across / kClusterPitch});
+            auto center = [&](int half) -> std::pair<float, float> {
+                const float t = 0.25f + 0.5f * static_cast<float>(half);  // 1/4 and 3/4 of the long axis
+                if (side_by_side) return {static_cast<float>(r.x) + t * w, static_cast<float>(r.y) + h / 2.0f};
+                return {static_cast<float>(r.x) + w / 2.0f, static_cast<float>(r.y) + (1.0f - t) * h};
+            };
             // Venn arrangement: red and green on top, blue below; every pair and the triple overlap.
-            auto cluster = [&](float cx, std::array<int, 3> order, const char* side) {
-                std::array<Disc, 3> discs = {{{cx - 20.0f, cy + 12.0f, kDiscRadius, kDiscRed},
-                                              {cx + 20.0f, cy + 12.0f, kDiscRadius, kDiscGreen},
-                                              {cx, cy - 22.0f, kDiscRadius, kDiscBlue}}};
+            auto cluster = [&](int half, std::array<int, 3> order, const char* side) {
+                const auto [cx, cy] = center(half);
+                const float rad = kDiscRadius * scale;
+                std::array<Disc, 3> discs = {{{cx - 20.0f * scale, cy + 12.0f * scale, rad, kDiscRed},
+                                              {cx + 20.0f * scale, cy + 12.0f * scale, rad, kDiscGreen},
+                                              {cx, cy - 22.0f * scale, rad, kDiscBlue}}};
                 clusters_.push_back({discs, order});
                 probe_cluster(clusters_.back(), side);
             };
-            cluster(left_x, {0, 1, 2}, "left cluster, drawn red-green-blue");
-            cluster(right_x, {2, 1, 0}, "right cluster, drawn blue-green-red");
+            cluster(0, {0, 1, 2}, side_by_side ? "left cluster, drawn red-green-blue" : "top cluster, drawn red-green-blue");
+            cluster(1, {2, 1, 0}, side_by_side ? "right cluster, drawn blue-green-red" : "bottom cluster, drawn blue-green-red");
         }
 
         struct Cluster
@@ -570,8 +584,10 @@ namespace
                 int x = 0, y = 0;
             };
             std::array<Best, 8> best{};
-            for (int y = static_cast<int>(cy - 1.6f * kDiscRadius); y < static_cast<int>(cy + 1.6f * kDiscRadius); ++y)
-                for (int x = static_cast<int>(cx - 1.6f * kDiscRadius); x < static_cast<int>(cx + 1.6f * kDiscRadius); ++x)
+            // Search box: 1.6 radii around the cluster - it never reaches the other cluster's discs.
+            const float reach = 1.6f * cl.discs[0].r;
+            for (int y = static_cast<int>(cy - reach); y < static_cast<int>(cy + reach); ++y)
+                for (int x = static_cast<int>(cx - reach); x < static_cast<int>(cx + reach); ++x)
                 {
                     if (x < r.x || y < r.y || x >= r.x + r.w || y >= r.y + r.h) continue;
                     const float px = static_cast<float>(x) + 0.5f, py = static_cast<float>(y) + 0.5f;

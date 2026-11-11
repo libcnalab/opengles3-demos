@@ -162,7 +162,7 @@ namespace
     // ---------------------------------------------------------------------------------------------
     struct Layout
     {
-        int width = 0, height = 0, tile = 0, sky_h = 0;
+        int width = 0, height = 0, tile_w = 0, tile_h = 0, sky_h = 0;
     };
 
     /// Top-down view of an RGBA8 read-back (glReadPixels returns the bottom row first).
@@ -241,7 +241,7 @@ namespace
             const Vec3 right = normalize(cross(forward_, {0, 1, 0}));
             const Vec3 up = cross(right, forward_);
             tan_half_fov_ = std::tan(fov / 2.0);
-            right_ = right * tan_half_fov_;  // multiplied by the aspect ratio in render()
+            right_ = right * tan_half_fov_;  // scaled for the aspect ratio by sky_scale()
             up_ = up * tan_half_fov_;
         }
 
@@ -255,11 +255,11 @@ namespace
             mgl::glActiveTexture(mgl::TextureUnit::Texture0);
 
             draw_sky(lay, tex_[kMainCube]);
-            for (int f = 0; f < kFaces; ++f) draw_face_tile(tex_[kMainCube], f, lay.tile * f, lay.tile, lay.tile);
+            for (int f = 0; f < kFaces; ++f) draw_face_tile(tex_[kMainCube], f, lay.tile_w * f, lay.tile_h, lay.tile_w, lay.tile_h);
             for (int s = 0; s < kScenarioCount; ++s)
             {
-                draw_face_tile(broken(s), 0, lay.tile * 2 * s, 0, lay.tile);
-                draw_face_tile(twin(s), 0, lay.tile * (2 * s + 1), 0, lay.tile);
+                draw_face_tile(broken(s), 0, lay.tile_w * 2 * s, 0, lay.tile_w, lay.tile_h);
+                draw_face_tile(twin(s), 0, lay.tile_w * (2 * s + 1), 0, lay.tile_w, lay.tile_h);
             }
         }
 
@@ -301,8 +301,11 @@ namespace
 
         static Layout layout_of(const demo::Env& env)
         {
-            const int tile = env.width / 8;
-            return {env.width, env.height, tile, env.height - 2 * tile};
+            // Eight tile columns span the width. Tiles are square while two tile rows fit into half the height;
+            // on a wide surface they become flatter, so the skybox keeps at least half of the height.
+            const int tile_w = env.width / 8;
+            const int tile_h = std::min(tile_w, env.height / 4);
+            return {env.width, env.height, tile_w, tile_h, env.height - 2 * tile_h};
         }
 
         // ------------------------------------------------------------------------------------------
@@ -385,19 +388,48 @@ namespace
         {
             mgl::glViewport(0, lay.height - lay.sky_h, lay.width, lay.sky_h);
             mgl::glBindTexture(mgl::TextureTarget::TextureCubeMap, cube);
-            const double aspect = static_cast<double>(lay.width) / lay.sky_h;
+            const SkyScale k = sky_scale(lay);
             mgl::glUniform1i(loc_mode_, 1);
             mgl::glUniform3f(loc_forward_, static_cast<float>(forward_.x), static_cast<float>(forward_.y), static_cast<float>(forward_.z));
-            mgl::glUniform3f(loc_right_, static_cast<float>(right_.x * aspect), static_cast<float>(right_.y * aspect),
-                             static_cast<float>(right_.z * aspect));
-            mgl::glUniform3f(loc_up_, static_cast<float>(up_.x), static_cast<float>(up_.y), static_cast<float>(up_.z));
+            mgl::glUniform3f(loc_right_, static_cast<float>(right_.x * k.right), static_cast<float>(right_.y * k.right),
+                             static_cast<float>(right_.z * k.right));
+            mgl::glUniform3f(loc_up_, static_cast<float>(up_.x * k.up), static_cast<float>(up_.y * k.up), static_cast<float>(up_.z * k.up));
             mgl::glDrawArrays(mgl::PrimitiveType::TriangleStrip, 0, 4);
         }
 
-        /// A square tile at framebuffer position (x, y) (y from the bottom) that samples directions on the plane of `face`.
-        void draw_face_tile(mgl::TextureId cube, int face, int x, int y, int size) const
+        /// Factors for right_ and up_ (both pre-scaled by tan(vfov / 2)). Normally the vertical field of view is
+        /// 70 degrees and the horizontal one follows the aspect ratio. On an extreme sky rectangle each half-angle
+        /// is kept within [14, 60] degrees (tan 0.25 .. sqrt 3), and pixels stop being square:
+        ///  - above 60 degrees the view would become a fisheye strip whose pixels are mostly near face edges,
+        ///    where probes must be skipped;
+        ///  - below 14 degrees a thin strip around the forward direction would show only one or two faces.
+        struct SkyScale
         {
-            mgl::glViewport(x, y, size, size);
+            double right, up;
+        };
+        [[nodiscard]] SkyScale sky_scale(const Layout& lay) const
+        {
+            const double aspect = static_cast<double>(lay.width) / lay.sky_h;
+            constexpr double kMinTan = 0.25;
+            const double max_tan = std::sqrt(3.0);  // tan(60 degrees)
+            double tan_h = tan_half_fov_ * aspect, tan_v = tan_half_fov_;
+            if (tan_h > max_tan)
+            {
+                tan_h = max_tan;
+                tan_v = std::max(max_tan / aspect, kMinTan);
+            }
+            else if (tan_h < kMinTan)
+            {
+                tan_h = kMinTan;
+                tan_v = std::min(kMinTan / aspect, max_tan);
+            }
+            return {tan_h / tan_half_fov_, tan_v / tan_half_fov_};
+        }
+
+        /// A w x h tile at framebuffer position (x, y) (y from the bottom) that samples directions on the plane of `face`.
+        void draw_face_tile(mgl::TextureId cube, int face, int x, int y, int w, int h) const
+        {
+            mgl::glViewport(x, y, w, h);
             mgl::glBindTexture(mgl::TextureTarget::TextureCubeMap, cube);
             mgl::glUniform1i(loc_mode_, 0);
             mgl::glUniform1i(loc_face_, face);
@@ -410,19 +442,26 @@ namespace
             mgl::glUseProgram(program_);
             mgl::glBindTexture(mgl::TextureTarget::TextureCubeMap, cube);
             mgl::glUniform1i(loc_mode_, 2);
-            for (std::size_t n = 0; n < dirs.size(); ++n)
-            {
-                const int x = static_cast<int>(n % static_cast<std::size_t>(lay.width));
-                const int y_top = static_cast<int>(n / static_cast<std::size_t>(lay.width));
-                mgl::glViewport(x, lay.height - 1 - y_top, 1, 1);
-                mgl::glUniform3f(loc_dir_, static_cast<float>(dirs[n].x), static_cast<float>(dirs[n].y), static_cast<float>(dirs[n].z));
-                mgl::glDrawArrays(mgl::PrimitiveType::TriangleStrip, 0, 4);
-            }
-            const Image img = read_fb(lay);
+            // A small surface has fewer pixels than directions: render and read back in batches of one surface each.
+            const std::size_t w = static_cast<std::size_t>(lay.width);
+            const std::size_t batch = w * static_cast<std::size_t>(lay.height);
             std::vector<Rgba8> out;
             out.reserve(dirs.size());
-            for (std::size_t n = 0; n < dirs.size(); ++n)
-                out.push_back(img.at(static_cast<int>(n % static_cast<std::size_t>(lay.width)), static_cast<int>(n / static_cast<std::size_t>(lay.width))));
+            for (std::size_t begin = 0; begin < dirs.size(); begin += batch)
+            {
+                const std::size_t end = std::min(dirs.size(), begin + batch);
+                for (std::size_t n = begin; n < end; ++n)
+                {
+                    const int x = static_cast<int>((n - begin) % w);
+                    const int y_top = static_cast<int>((n - begin) / w);
+                    mgl::glViewport(x, lay.height - 1 - y_top, 1, 1);
+                    mgl::glUniform3f(loc_dir_, static_cast<float>(dirs[n].x), static_cast<float>(dirs[n].y), static_cast<float>(dirs[n].z));
+                    mgl::glDrawArrays(mgl::PrimitiveType::TriangleStrip, 0, 4);
+                }
+                const Image img = read_fb(lay);
+                for (std::size_t n = begin; n < end; ++n)
+                    out.push_back(img.at(static_cast<int>((n - begin) % w), static_cast<int>((n - begin) / w)));
+            }
             return out;
         }
 
@@ -440,7 +479,7 @@ namespace
         // ------------------------------------------------------------------------------------------
         void check_skybox(demo::Check& check, const Layout& lay, const Image& fb)
         {
-            const double aspect = static_cast<double>(lay.width) / lay.sky_h;
+            const SkyScale k = sky_scale(lay);
             std::array<long, kFaces> seen{};
             long probes = 0, skipped = 0, bad = 0;
             std::string first_bad;
@@ -450,7 +489,7 @@ namespace
                     // Window pixel centre -> NDC (the viewport is the sky rectangle) -> the same linear function the vertex shader evaluates.
                     const double ndc_x = 2.0 * (x + 0.5) / lay.width - 1.0;
                     const double ndc_y = 2.0 * ((lay.sky_h - 1 - y) + 0.5) / lay.sky_h - 1.0;
-                    const Vec3 r = as_float(forward_ + right_ * (ndc_x * aspect) + up_ * ndc_y);
+                    const Vec3 r = as_float(forward_ + right_ * (ndc_x * k.right) + up_ * (ndc_y * k.up));
                     const Lookup L = select_face(r);
                     if (L.ambiguous)
                     {
@@ -485,14 +524,14 @@ namespace
             {
                 long probes = 0, bad = 0;
                 std::string first_bad;
-                for (int y = 0; y < lay.tile; ++y)
-                    for (int x = 0; x < lay.tile; ++x)
+                for (int y = 0; y < lay.tile_h; ++y)
+                    for (int x = 0; x < lay.tile_w; ++x)
                     {
-                        const double s = (x + 0.5) / lay.tile, t = (y + 0.5) / lay.tile;  // t grows downwards, like the rows of the upload
+                        const double s = (x + 0.5) / lay.tile_w, t = (y + 0.5) / lay.tile_h;  // t grows downwards, like the rows of the upload
                         if (std::abs(s * kSize - 1.0) < kTexelMargin || std::abs(t * kSize - 1.0) < kTexelMargin) continue;
                         ++probes;
                         const int i = static_cast<int>(std::floor(s * kSize)), j = static_cast<int>(std::floor(t * kSize));
-                        const Rgba8 want = texel_color(f, i, j), got = fb.at(lay.tile * f + x, lay.sky_h + y);
+                        const Rgba8 want = texel_color(f, i, j), got = fb.at(lay.tile_w * f + x, lay.sky_h + y);
                         if (got != want && bad++ == 0)
                             first_bad = std::format("tile pixel ({},{}): got {} expected texel ({},{}) = {}", x, y, demo::format_rgba(got), i, j,
                                                     demo::format_rgba(want));
@@ -647,13 +686,13 @@ namespace
         // Completeness (bottom tiles)
         // ------------------------------------------------------------------------------------------
         /// True when every pixel of the tile at x (framebuffer, bottom tile row when `bottom`) equals `want`.
-        long mismatches(const Image& img, int x0, int y_top0, int tile, int face, bool expect_black) const
+        long mismatches(const Image& img, int x0, int y_top0, int w, int h, int face, bool expect_black) const
         {
             long bad = 0;
-            for (int y = 0; y < tile; ++y)
-                for (int x = 0; x < tile; ++x)
+            for (int y = 0; y < h; ++y)
+                for (int x = 0; x < w; ++x)
                 {
-                    const double s = (x + 0.5) / tile, t = (y + 0.5) / tile;
+                    const double s = (x + 0.5) / w, t = (y + 0.5) / h;
                     if (std::abs(s * kSize - 1.0) < kTexelMargin || std::abs(t * kSize - 1.0) < kTexelMargin) continue;
                     const Rgba8 want = expect_black ? kBlack : texel_color(face, static_cast<int>(std::floor(s * kSize)), static_cast<int>(std::floor(t * kSize)));
                     if (img.at(x0 + x, y_top0 + y) != want) ++bad;
@@ -666,9 +705,9 @@ namespace
             for (int s = 0; s < kScenarioCount; ++s)
             {
                 const ScenarioInfo& info = kScenarioInfo[static_cast<std::size_t>(s)];
-                const int y_top = lay.sky_h + lay.tile;
-                const long bad_broken = mismatches(fb, lay.tile * 2 * s, y_top, lay.tile, 0, true);
-                const long bad_twin = mismatches(fb, lay.tile * (2 * s + 1), y_top, lay.tile, 0, false);
+                const int y_top = lay.sky_h + lay.tile_h;
+                const long bad_broken = mismatches(fb, lay.tile_w * 2 * s, y_top, lay.tile_w, lay.tile_h, 0, true);
+                const long bad_twin = mismatches(fb, lay.tile_w * (2 * s + 1), y_top, lay.tile_w, lay.tile_h, 0, false);
                 check.expect(bad_broken == 0 && bad_twin == 0,
                              std::format("completeness {}: '{}' samples (0,0,0,1); the complete twin shows the +X face", s, info.what),
                              std::format("{} wrong pixels in the broken tile, {} in the twin", bad_broken, bad_twin));
@@ -684,9 +723,9 @@ namespace
 
                 repair_scenario(static_cast<Scenario>(s), broken(s));
                 mgl::glUseProgram(program_);
-                draw_face_tile(broken(s), 0, 0, lay.height - lay.tile, lay.tile);
+                draw_face_tile(broken(s), 0, 0, lay.height - lay.tile_h, lay.tile_w, lay.tile_h);
                 const Image after = read_fb(lay);
-                const long bad_after = mismatches(after, 0, 0, lay.tile, 0, false);
+                const long bad_after = mismatches(after, 0, 0, lay.tile_w, lay.tile_h, 0, false);
                 check.expect(bad_after == 0, std::format("completeness {}: {} makes the same cube map complete: the +X face appears", s, info.fix),
                              std::format("{} wrong pixels", bad_after));
             }
@@ -742,13 +781,13 @@ namespace
             const Rgba8 wrong = {1, 2, 3, 255};
             mgl::glTexSubImage2D(mgl::TextureTarget::TextureCubeMapNegativeY, 0, 1, 0, 1, 1, mgl::PixelFormat::Rgba, mgl::PixelType::UnsignedByte,
                                  wrong.data());  // texel (1, 0) of the -Y face
-            draw_face_tile(tex_[kMainCube], 3, 0, lay.height - lay.tile, lay.tile);
+            draw_face_tile(tex_[kMainCube], 3, 0, lay.height - lay.tile_h, lay.tile_w, lay.tile_h);
             const Image img = read_fb(lay);
             long changed = 0, unchanged_ok = 0, unchanged = 0;
-            for (int y = 0; y < lay.tile; ++y)
-                for (int x = 0; x < lay.tile; ++x)
+            for (int y = 0; y < lay.tile_h; ++y)
+                for (int x = 0; x < lay.tile_w; ++x)
                 {
-                    const double s = (x + 0.5) / lay.tile, t = (y + 0.5) / lay.tile;
+                    const double s = (x + 0.5) / lay.tile_w, t = (y + 0.5) / lay.tile_h;
                     if (std::abs(s * kSize - 1.0) < kTexelMargin || std::abs(t * kSize - 1.0) < kTexelMargin) continue;
                     const int i = static_cast<int>(std::floor(s * kSize)), j = static_cast<int>(std::floor(t * kSize));
                     const Rgba8 got = img.at(x, y);

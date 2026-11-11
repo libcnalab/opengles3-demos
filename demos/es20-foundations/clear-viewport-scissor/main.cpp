@@ -41,8 +41,11 @@ namespace
     // Gallery layout and palette
     // ---------------------------------------------------------------------------------------------
     constexpr int kPanel = 64;  // panel edge in pixels
-    constexpr int kColumns = 4;
-    constexpr int kRows = 4;
+    constexpr int kPanels = 16;
+    // The 16 panels are arranged as 4x4, 8x2 or 2x8, whichever fits the surface (chosen in init()).
+    // Every experiment works in exact panel-local pixels, so the panel itself is never scaled.
+    int g_columns = 4;
+    int g_rows = 4;
 
     struct Rect
     {
@@ -65,11 +68,12 @@ namespace
         ViewportMapping, FourViewports, NegativeViewport, ClippedTriangle,
     };
 
-    // Row-major from the top: panel 0 is the top-left cell, window y grows upwards.
-    constexpr Rect panel_rect(Panel p)
+    // Row-major from the top: panel 0 is the top-left cell, window y grows upwards. The bottom row
+    // always starts at y = 0, so panel N's negative viewport origin lies below the window in every arrangement.
+    Rect panel_rect(Panel p)
     {
         const int i = static_cast<int>(p);
-        return {(i % kColumns) * kPanel, (kRows - 1 - i / kColumns) * kPanel, kPanel, kPanel};
+        return {(i % g_columns) * kPanel, (g_rows - 1 - i / g_columns) * kPanel, kPanel, kPanel};
     }
 
     constexpr Rect shifted(Rect local, Rect origin)
@@ -257,9 +261,28 @@ namespace
             u_color_ = mgl::glGetUniformLocation(program_, "u_color");
             if (u_vertex_.value < 0 || u_z_.value < 0 || u_color_.value < 0)
                 throw demo::Failure("rect.vert / solid.frag: an expected uniform is not active");
-            if (env.width < kPanel * kColumns || env.height < kPanel * kRows)
-                throw demo::Failure(std::format("the gallery needs at least a {}x{} surface (got {}x{})",
-                                                kPanel * kColumns, kPanel * kRows, env.width, env.height));
+            // Pick the arrangement that fits the surface and whose aspect ratio is closest to it.
+            // The panels hold exact pixel experiments (scissor edges, 4-px depth columns), so a surface
+            // that fits none of 256x256, 512x128 and 128x512 cannot show them: skip instead of shrinking.
+            bool fits = false;
+            double best = 0.0;
+            for (const int columns : {4, 8, 2})
+            {
+                const int rows = kPanels / columns;
+                if (env.width < kPanel * columns || env.height < kPanel * rows) continue;
+                const double mismatch = std::abs(std::log(static_cast<double>(env.width) / env.height *
+                                                          static_cast<double>(rows) / columns));
+                if (!fits || mismatch < best)
+                {
+                    fits = true;
+                    best = mismatch;
+                    g_columns = columns;
+                    g_rows = rows;
+                }
+            }
+            if (!fits)
+                throw demo::Skip(std::format("the 16 panels of 64x64 px need a 256x256, 512x128 or 128x512 surface (got {}x{})",
+                                             env.width, env.height));
 
             // The very first GL state of the context: nothing has been set yet, so these are the
             // *initial* values the specification lists (checked in validate()).

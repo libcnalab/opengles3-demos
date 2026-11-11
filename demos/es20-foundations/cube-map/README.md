@@ -27,6 +27,16 @@ tile must show that face's 2×2 image upright and unmirrored: the first uploaded
 the row at the left. The bottom pairs show the +X face of a cube map that is missing a face, has a face of the wrong
 size, has a face of the wrong format, or needs mipmaps it does not have — black — next to a complete twin.
 
+The rows above are for the default 256×256 surface; the layout scales with any surface. Eight tile columns
+span the width (`width / 8`). Tiles are square as long as their two rows take at most half of the height;
+on a wider surface they get flatter (`height / 4`), so the skybox always keeps at least half the height. The
+skybox camera has a 70° vertical field of view, and the horizontal one follows the aspect ratio. On a
+very wide or very tall sky rectangle each half-angle is kept between 14° and 60°, so pixels are no longer
+square: the view never turns into a fisheye strip (mostly near face edges, where probes must be skipped)
+or into a sliver that shows only one or two faces. The checks use the same scale factors, so every size
+passes. There is no minimum size: even 32×32 and 16×400 pass, because the single-direction probes are
+drawn and read back in batches of one surface.
+
 ## Key ideas
 
 - **One object, six images.** `glBindTexture(GL_TEXTURE_CUBE_MAP, id)` binds the whole cube map;

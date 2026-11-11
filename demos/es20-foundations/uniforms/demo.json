@@ -79,6 +79,6 @@
   "visual_review": {
     "date": "2026-11-11",
     "by": "claude-opus-5.5",
-    "notes": "radeonsi: 38 green cells (rows of 8 from the bottom), remaining area dark gray; softpipe capture showed cells >=3 red (driver bug, documented)."
+    "notes": "radeonsi 256x256 es-max capture after the 8x5 grid change: 38 green cells of 32x51 px (rows of 8 from the bottom) fill the surface; the two unused cells at the top right and the 1-px remainder row at the top are dark gray. Also viewed 1001x200 on llvmpipe: all five rows visible, 1-px remainder column dark. Earlier softpipe capture showed cells >=3 red (driver bug, documented)."
   }
 }

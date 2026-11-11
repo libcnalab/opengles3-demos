@@ -24,12 +24,16 @@ namespace
 {
     constexpr int kTests = 38;
     constexpr int kColumns = 8;
+    constexpr int kRows = (kTests + kColumns - 1) / kColumns;  // 5: the grid partitions the whole surface
 
     class Uniforms final : public demo::Demo
     {
     public:
         void init(demo::Env& env) override
         {
+            if (env.width < kColumns || env.height < kRows)
+                throw demo::Skip(std::format("the {}x{} grid of uniform cells needs at least a {}x{} surface (got {}x{})",
+                                             kColumns, kRows, kColumns, kRows, env.width, env.height));
             program_ = demo::build_program(env, "shaders/fullscreen.vert", "shaders/uniforms.frag");
             mgl::glUseProgram(program_);  // glUniform* always writes to the *current* program
             upload();
@@ -39,19 +43,20 @@ namespace
         {
             mgl::glViewport(0, 0, env.width, env.height);
             mgl::glUseProgram(program_);
-            mgl::glUniform1i(loc("u_cell_px"), cell_px(env));
+            const Cell c = cell_size(env);
+            mgl::glUniform2i(loc("u_cell_size"), c.w, c.h);
             mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 3);
         }
 
         void validate(demo::Env& env, demo::Check& check) override
         {
             // 1. What the shader sees: one cell per uniform.
-            const int px = cell_px(env);
+            const Cell c = cell_size(env);
             int green = 0;
             std::string red;
             for (int i = 0; i < kTests; ++i)
             {
-                const demo::Rgba8 p = demo::read_pixel((i % kColumns) * px + px / 2, (i / kColumns) * px + px / 2);
+                const demo::Rgba8 p = demo::read_pixel(c.center_x(i), c.center_y(i));
                 if (p == demo::Rgba8{0, 255, 0, 255}) ++green;
                 else red += std::format("{} ", i);
             }
@@ -63,9 +68,9 @@ namespace
             mgl::glUseProgram(program_);
             mgl::glUniform3i(loc("u_iv3"), 3, -4, 6);  // cell 10 expects (3, -4, 5)
             render(env, 0);
-            check.expect_pixel((10 % kColumns) * px + px / 2, (10 / kColumns) * px + px / 2, {255, 0, 0, 255}, 0,
+            check.expect_pixel(c.center_x(10), c.center_y(10), {255, 0, 0, 255}, 0,
                                "negative control: a wrong ivec3 component turns its cell red");
-            check.expect_pixel((11 % kColumns) * px + px / 2, (11 / kColumns) * px + px / 2, {0, 255, 0, 255}, 0,
+            check.expect_pixel(c.center_x(11), c.center_y(11), {0, 255, 0, 255}, 0,
                                "negative control: the neighbouring cell stays green");
             mgl::glUniform3i(loc("u_iv3"), 3, -4, 5);
             render(env, 0);
@@ -82,7 +87,15 @@ namespace
         }
 
     private:
-        static int cell_px(const demo::Env& env) { return env.width / kColumns; }
+        // Cell i covers [x*w, (x+1)*w) x [y*h, (y+1)*h) with x = i % 8, y = i / 8 (the shader's integer division
+        // of gl_FragCoord). The size follows each axis of the surface, so all five rows are always visible.
+        struct Cell
+        {
+            int w, h;
+            [[nodiscard]] int center_x(int i) const { return (i % kColumns) * w + w / 2; }
+            [[nodiscard]] int center_y(int i) const { return (i / kColumns) * h + h / 2; }
+        };
+        static Cell cell_size(const demo::Env& env) { return {env.width / kColumns, env.height / kRows}; }
 
         mgl::UniformLocation loc(const char* name) const
         {

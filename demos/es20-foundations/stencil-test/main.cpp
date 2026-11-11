@@ -280,6 +280,7 @@ namespace
     };
 
     constexpr int kSegments = 48;  // keep in sync with circle.vert
+    constexpr int kDesign = 256;   // the layout is designed on a 256x256 grid and stretched to the surface
     constexpr double kWindowRadius = 0.55, kOutlineRadius = 0.67;
     constexpr double kStarRadius = 0.8;
 
@@ -288,6 +289,13 @@ namespace
     public:
         void init(demo::Env& env) override
         {
+            // The 256x256 design is stretched to the surface. Below a quarter of it in either direction an
+            // experiment cell (16x14 design px) is under 4x3.5 px - one border pixel on each side leaves almost
+            // nothing to probe - and the visual panels (120 design px) are too coarse for the probes' margins
+            // around the circle and star edges (0.06 and 0.044 NDC).
+            if (env.width < kDesign / 4 || env.height < kDesign / 4)
+                throw demo::Skip(std::format("the stretched 256x256 layout needs at least a {0}x{0} surface (got {1}x{2})",
+                                             kDesign / 4, env.width, env.height));
             fill_ = make_program(env, "shaders/fullscreen.vert", "shaders/solid.frag");
             stripes_ = make_program(env, "shaders/fullscreen.vert", "shaders/stripes.frag");
             point_ = make_program(env, "shaders/point.vert", "shaders/solid.frag");
@@ -310,9 +318,8 @@ namespace
         {
             cell_probes_.clear();
             pixel_probes_.clear();
-            const int k = std::max(1, std::min(env.width, env.height) / 256);  // design size is 256x256
+            width_ = env.width;
             height_ = env.height;
-            scale_ = k;
 
             reset_state();
             mgl::glViewport(0, 0, env.width, env.height);
@@ -424,10 +431,15 @@ namespace
             mgl::glClearDepthf(1.0f);
         }
 
-        /// A rect given in "design pixels" from the top-left corner of the window.
+        /// A rect given in "design pixels" of a 256x256 design, measured from the top-left corner of the
+        /// window. The design is stretched to the surface, independently in x and y: every design edge maps
+        /// to round(edge * size / 256), so neighbouring rects share their edges and the layout partitions
+        /// the surface exactly at any size and aspect ratio.
         Rect top_rect(int x, int y_top, int w, int h) const
         {
-            return {x * scale_, height_ - (y_top + h) * scale_, w * scale_, h * scale_};
+            auto sx = [this](int v) { return static_cast<int>(std::lround(static_cast<double>(v) * width_ / kDesign)); };
+            auto sy = [this](int v) { return static_cast<int>(std::lround(static_cast<double>(v) * height_ / kDesign)); };
+            return {sx(x), height_ - sy(y_top + h), sx(x + w) - sx(x), sy(y_top + h) - sy(y_top)};
         }
 
         /// Pixel of window position (nx, ny) in the NDC of `r`.
@@ -1124,7 +1136,7 @@ namespace
         Program fill_, stripes_, point_, circle_, star_;
         const Program* current_ = nullptr;
         float point_size_ = 1.0f;
-        int scale_ = 1, height_ = 256;
+        int width_ = kDesign, height_ = kDesign;
         Rect view_{0, 0, 1, 1};
         int probe_x_ = 0, probe_y_ = 0;
     };

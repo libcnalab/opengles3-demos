@@ -12,7 +12,9 @@ proves three ways that the values arrived intact.
 ## How it works
 
 The fragment shader (`shaders/uniforms.frag`) declares one uniform per test and divides the screen
-into an 8-column grid. Cell *i* compares uniform *i* with the **exact** value the C++ code
+into an 8x5 grid that partitions the whole surface: a cell is `width / 8` by `height / 5` pixels
+(the size reaches the shader as `uniform ivec2 u_cell_size`), so all five rows are visible at any
+aspect ratio; the minimum surface is 8x5. Cell *i* compares uniform *i* with the **exact** value the C++ code
 uploaded (all values are exactly representable in binary floating point). It paints green on a
 match and red otherwise. Both float and int use `highp`: a fragment shader's int precision is not
 fixed, and `mediump` ints may be only 16 bits, too few for `0x80000001u`.
@@ -43,7 +45,8 @@ fixed, and `mediump` ints may be only 16 bits, too few for `0x80000001u`.
 
 ## Expected image
 
-38 green cells (5 rows; rows start at the bottom of the window), with the unused area dark gray.
+38 green cells (8 columns x 5 rows filling the surface; rows start at the bottom of the window), with
+the two unused cells of the top row dark gray.
 
 ## Driver note
 

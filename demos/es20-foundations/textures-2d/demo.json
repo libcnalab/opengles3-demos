@@ -7,7 +7,7 @@
   ],
   "category": "es20-foundations",
   "order": 130,
-  "summary": "Texture objects/units, NEAREST/LINEAR, three wrap modes, sub-image, unpack alignment, legacy unsized + packed formats, incomplete textures; all checked against a CPU sampler.",
+  "summary": "Texture objects/units, NEAREST/LINEAR, three wrap modes, sub-image, unpack alignment, legacy unsized + packed formats, incomplete textures; checked against a CPU sampler (NEAREST exactly, LINEAR within the min/max of its texels).",
   "spec": [
     "ES 3.0 §3.7.1 Pixel Storage Modes",
     "ES 3.0 §3.8.1 Texture Objects, §3.8.3 Texture Image Specification (Table 3.3 unsized formats)",

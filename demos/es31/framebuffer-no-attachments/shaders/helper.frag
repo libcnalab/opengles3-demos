@@ -6,7 +6,8 @@
 //   guarded     counts the invocations that run the atomic behind if (!gl_HelperInvocation)
 //   unguarded   counts every invocation that executes the shader, with no guard at all
 //   helper_seen is incremented only when gl_HelperInvocation is true (a helper's atomic would show here)
-//   deriv_bad   counts real invocations whose derivative of gl_FragCoord is not (1, 1)
+//   deriv_bad   counts real invocations whose derivative of gl_FragCoord is not (1, 1) within 0.01 (printed only:
+//               section 8.13 leaves derivative accuracy open)
 //   cells[]     per-pixel count of the unguarded atomic
 precision highp float;
 precision highp int;

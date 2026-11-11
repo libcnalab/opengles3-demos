@@ -1285,9 +1285,12 @@ namespace
                              std::format("helper_seen = {}", o.helper_seen));
                 check.expect(m.mismatches == 0 && m.guard_hits == 0, std::format("{}: the per-pixel map of the unguarded atomic equals the coverage model (no hit on an uncovered pixel)", c->name),
                              std::format("{} pixels differ {}, {} outside", m.mismatches, m.first, m.guard_hits));
-                // dFdx(gl_FragCoord.x) is 1 and dFdy(gl_FragCoord.y) is 1 for any approximation of a derivative of a linear function.
-                check.expect(o.deriv_bad == 0, std::format("{}: dFdx(gl_FragCoord.x) and dFdy(gl_FragCoord.y) are 1 (within 0.01) in every real invocation, also next to uncovered pixels (sanity tolerance: the spec leaves derivative precision open)", c->name),
-                             std::format("{} invocations outside", o.deriv_bad));
+                // Observation, not a check: GLSL ES 3.10 section 8.13 lets an implementation "approximate the true derivatives by
+                // using a fast but not entirely accurate derivative computation" and gives no precision, so a derivative of
+                // gl_FragCoord that is not exactly 1 is conformant. (The derivatives are what makes the helper invocations exist.)
+                std::cout << std::format("   note: {}: {} of {} real invocations have dFdx(gl_FragCoord.x) or dFdy(gl_FragCoord.y) more than 0.01 "
+                                         "from 1 (GLSL ES 3.10 section 8.13 leaves derivative accuracy open)\n",
+                                         c->name, o.deriv_bad, o.guarded);
             }
             // Negative control: if the helpers had stored, the unguarded count would have exceeded the coverage by up to `candidates`.
             check.expect(helper_triangles_.observed.unguarded + static_cast<std::uint32_t>(candidates) > sum(helper_triangles_.expected),

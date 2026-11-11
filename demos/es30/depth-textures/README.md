@@ -202,8 +202,12 @@ Verified at 128x128, 256x256, 640x480, 800x800, 333x777, 1280x400 and 150x600 on
   `LINEAR` (or `NEAREST_MIPMAP_LINEAR`, `LINEAR_MIPMAP_NEAREST`) filter is sampled (filtered) instead of returning
   `(0, 0, 0, 1)`. No exposed extension amends the rule: `OES_depth_texture` covers only the unsized `DEPTH_COMPONENT`
   format and says nothing about filters. The checks stay strict and are reported as XFAIL on "Mesa".
-- **zink** returns 1.0 (the `ALWAYS` result) for a shadow lookup on a mipmap-incomplete depth texture instead of the
-  0 required by §3.9.2.1. radeonsi and llvmpipe return 0. Reported as XFAIL on "zink".
+- **lavapipe** (the Vulkan driver under zink and under ANGLE in this matrix) returns 1.0 (the `ALWAYS` result) for a
+  shadow lookup on a mipmap-incomplete depth texture instead of the 0 required by §3.9.2.1. radeonsi and llvmpipe
+  return 0. The demo accepts the deviation only when `GL_RENDERER` is lavapipe-backed, that is when it contains both
+  "Vulkan" and "llvmpipe" (`zink Vulkan ... (llvmpipe ...)`, `ANGLE (Mesa, Vulkan ... (llvmpipe ...)`), and then
+  reports it as XFAIL on "zink" or "ANGLE". On every other renderer, including zink or ANGLE on a GPU Vulkan driver
+  such as RADV, the check stays strict.
 - **ANGLE** (Vulkan backend) does not clamp `Dref` to [0, 1] for `DEPTH_COMPONENT24` and `DEPTH24_STENCIL8`
   (`DEPTH_COMPONENT16` is clamped): `LESS` with `Dref = -0.5` against `Dt = 0` returns 1. §3.8.15.1 (ES 3.2 §8.20.1):
   *"If the texture's internal format indicates a fixed-point depth texture, then Dt and Dref are clamped to the range

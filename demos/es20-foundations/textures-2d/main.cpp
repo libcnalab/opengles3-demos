@@ -3,7 +3,8 @@
 // 2D texture objects, units, filtering, wrapping, sub-image updates, unpack alignment, the
 // unsized ES 2.0 formats (LUMINANCE, LUMINANCE_ALPHA, ALPHA) with packed 16-bit types, and the
 // result of sampling an incomplete texture. Sixteen cells, each sampling one configuration;
-// every probe is compared with a CPU evaluation of the ES 3.0 §3.8.10 sampling equations.
+// every probe is compared with a CPU evaluation of the ES 3.0 §3.8.10 sampling equations (LINEAR only
+// against the bound those equations guarantee: the min/max of the contributing texels).
 //
 //   row 3: RGBA4444 | RGBA5551 | two units  | incomplete
 //   row 2: LUMIN.   | LUM.ALPHA| ALPHA      | RGB565
@@ -15,9 +16,11 @@
 
 #include <metagl/metagl.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <format>
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -34,7 +37,7 @@ namespace
                 static_cast<std::uint8_t>((i + j) % 2 ? 220 : 30), 255};
     }
 
-    // --- CPU reference of ES 3.0 §3.8.10 (Table 3.22 wrap, eq. 3.23 bilinear) -------------------
+    // --- CPU reference of ES 3.0 §3.8.10.2 (Table 3.22 wrap, eq. 3.22 in its 2D form) ----------
     int wrap(int coord, int size, mgl::TextureWrapMode mode)
     {
         auto fmod_i = [](int a, int b) { return ((a % b) + b) % b; };
@@ -212,32 +215,94 @@ namespace
             const int cw = env.width / 4, ch = env.height / 4;
             auto origin = [&](int c) { return std::array<int, 2>{(c % 4) * cw, (c / 4) * ch}; };
 
-            // Cells 0-4: compare a grid of probes with the CPU sampler.
+            // Cells 0-3 (NEAREST, REPEAT, MIRRORED_REPEAT, CLAMP_TO_EDGE): every probe away from a texel boundary must be
+            // exactly the texel that the CPU sampler selects.
+            static const char* names[] = {"NEAREST", "LINEAR", "REPEAT", "MIRRORED_REPEAT", "CLAMP_TO_EDGE"};
             for (int c = 0; c <= 4; ++c)
             {
+                if (c == 1) continue;  // LINEAR: see below
                 const Cell& cell = cells_[static_cast<std::size_t>(c)];
-                const int tol = cell.linear ? 3 : 0;  // filter-weight precision is implementation-defined
                 int probes = 0, bad = 0;
                 std::string first_bad;
-                for (int ly = 2; ly < ch; ly += cell.linear ? 8 : 4)
-                    for (int lx = 2; lx < cw; lx += cell.linear ? 8 : 4)
+                for (int ly = 2; ly < ch; ly += 4)
+                    for (int lx = 2; lx < cw; lx += 4)
                     {
-                        const double scale = cell.uv_scale, offset = cell.uv_offset;
-                        const double u = offset + scale * (lx + 0.5) / cw;
-                        const double v = offset + scale * (ly + 0.5) / ch;
-                        if (!cell.linear && (near_edge(u * kBase) || near_edge(v * kBase))) continue;  // texel boundary
-                        const auto ref = sample_ref(base_, kBase, kBase, cell.linear, cell.wrap, u, v);
+                        const double u = double(cell.uv_offset) + double(cell.uv_scale) * (lx + 0.5) / cw;
+                        const double v = double(cell.uv_offset) + double(cell.uv_scale) * (ly + 0.5) / ch;
+                        if (near_edge(u * kBase) || near_edge(v * kBase)) continue;  // texel boundary
+                        const auto ref = sample_ref(base_, kBase, kBase, false, cell.wrap, u, v);
                         const Rgba8 got = demo::read_pixel(origin(c)[0] + lx, origin(c)[1] + ly);
                         ++probes;
                         bool ok = true;
-                        for (int k = 0; k < 4; ++k) ok = ok && std::abs(got[k] - ref[k]) <= tol + 0.5;
+                        for (int k = 0; k < 4; ++k) ok = ok && std::abs(got[k] - ref[k]) <= 0.5;
                         if (!ok && bad++ == 0)
                             first_bad = std::format("at uv=({:.3f},{:.3f}) got {} ref ({:.1f},{:.1f},{:.1f},{:.1f})", u, v,
                                                     demo::format_rgba(got), ref[0], ref[1], ref[2], ref[3]);
                     }
-                static const char* names[] = {"NEAREST", "LINEAR (bilinear weights)", "REPEAT", "MIRRORED_REPEAT", "CLAMP_TO_EDGE"};
-                check.expect(probes > 10 && bad == 0, std::format("cell {}: {} matches the CPU sampler at {} probes", c, names[c], probes),
+                check.expect(probes > 10 && bad == 0, std::format("cell {}: {} matches the CPU sampler exactly at {} probes", c, names[c], probes),
                              first_bad);
+            }
+
+            // Cell 1 (LINEAR). ES 3.0 section 3.8.10.2 defines the result as the bilinear sum of the 2x2 texels
+            // around (u - 0.5, v - 0.5) with weights built from alpha = frac(u - 0.5), beta = frac(v - 0.5), but gives no
+            // precision for the weights. What the equation does guarantee for any alpha, beta in [0, 1): the weights
+            // (1-a)(1-b), a(1-b), (1-a)b, ab are non-negative and sum to one, so every channel lies between the minimum
+            // and maximum of the contributing texels. That bound is the check. The texel set is taken over
+            // u, v +- 0.1 texel (the same coordinate margin that the NEAREST probes keep from texel boundaries), and
+            // +-1 is allowed for the conversion to 8 bits, which may return either of the two closest integers
+            // (section 2.1.6.2). The deviation from the ideal equation is printed, not checked.
+            {
+                const Cell& cell = cells_[1];
+                constexpr double kMargin = 0.1;
+                int probes = 0, bad = 0, rejected_shifted = 0;
+                double max_err = 0.0;
+                std::string first_bad;
+                auto hull = [&](double u, double v) {
+                    std::array<double, 4> lo{255, 255, 255, 255}, hi{0, 0, 0, 0};
+                    const double us = u * kBase - 0.5, vs = v * kBase - 0.5;
+                    for (int j = static_cast<int>(std::floor(vs - kMargin)); j <= static_cast<int>(std::floor(vs + kMargin)) + 1; ++j)
+                        for (int i = static_cast<int>(std::floor(us - kMargin)); i <= static_cast<int>(std::floor(us + kMargin)) + 1; ++i)
+                        {
+                            const Rgba8 t = base_[static_cast<std::size_t>(wrap(j, kBase, cell.wrap) * kBase + wrap(i, kBase, cell.wrap))];
+                            for (std::size_t k = 0; k < 4; ++k)
+                            {
+                                lo[k] = std::min(lo[k], double(t[k]) - 1.0);
+                                hi[k] = std::max(hi[k], double(t[k]) + 1.0);
+                            }
+                        }
+                    return std::array<std::array<double, 4>, 2>{lo, hi};
+                };
+                auto inside = [](const auto& h, const auto& val) {
+                    for (std::size_t k = 0; k < 4; ++k)
+                        if (val[k] < h[0][k] || val[k] > h[1][k]) return false;
+                    return true;
+                };
+                for (int ly = 2; ly < ch; ly += 8)
+                    for (int lx = 2; lx < cw; lx += 8)
+                    {
+                        const double u = (lx + 0.5) / cw, v = (ly + 0.5) / ch;
+                        const auto h = hull(u, v);
+                        const auto ref = sample_ref(base_, kBase, kBase, true, cell.wrap, u, v);
+                        const Rgba8 got = demo::read_pixel(origin(1)[0] + lx, origin(1)[1] + ly);
+                        ++probes;
+                        const std::array<double, 4> g{double(got[0]), double(got[1]), double(got[2]), double(got[3])};
+                        for (std::size_t k = 0; k < 4; ++k) max_err = std::max(max_err, std::abs(g[k] - ref[k]));
+                        if (!inside(h, g) && bad++ == 0)
+                            first_bad = std::format("at uv=({:.3f},{:.3f}) got {} outside [{:.0f}..{:.0f}, {:.0f}..{:.0f}, {:.0f}..{:.0f}, {:.0f}..{:.0f}]", u, v,
+                                                    demo::format_rgba(got), h[0][0], h[1][0], h[0][1], h[1][1], h[0][2], h[1][2], h[0][3], h[1][3]);
+                        // Mutation: the value a sampler two texels off would return must fall outside the bound often.
+                        if (!inside(h, sample_ref(base_, kBase, kBase, true, cell.wrap, u + 0.5, v + 0.5))) ++rejected_shifted;
+                    }
+                check.expect(probes > 10 && bad == 0,
+                             std::format("cell 1: LINEAR stays within the min/max of the contributing 2x2 texels (+-1) at {} probes "
+                                         "(eq. 3.22 weights are convex)", probes),
+                             first_bad);
+                check.expect(rejected_shifted * 4 > probes,
+                             "negative control: the LINEAR bound rejects the value sampled two texels off at more than a quarter of the probes",
+                             std::format("{} of {} rejected", rejected_shifted, probes));
+                std::cout << std::format("   note: LINEAR cell: largest deviation from the ideal bilinear equation {:.1f}/255 over {} probes "
+                                         "(observation; section 3.8.10.2 gives no weight precision)\n",
+                                         max_err, probes);
             }
 
             // Cell 5: the sub-image patch replaced exactly texels (1..2, 1..2).

@@ -81,15 +81,16 @@ is drawn at λ = k (or k + ¼, k + ½, k + ¾ as stated):
   *No particular filter algorithm is required, though a box filter is recommended.* So the spec does **not**
   say that the 1×1 level of a 2×2 checker is the mean of its two colours. All three Mesa drivers do produce
   the mean (`note:` lines in the log), but the demo does not assert it. What it asserts is what the spec
-  guarantees: derived level sizes (`textureSize`), unchanged base level, replaced stale content, untouched
-  levels beyond `MAX_LEVEL`, the texture being complete afterwards, and the error conditions. The one assumption
-  that goes slightly beyond the literal text is that a "filtered reduction" of a *uniform* image is that same
-  uniform image (any filter with weights that sum to one), which is how stale content and the generated levels
-  are observed through rendering.
+  guarantees: derived level sizes (`textureSize`), unchanged base level, untouched levels beyond `MAX_LEVEL`, the
+  texture being complete afterwards, and the error conditions. "Regardless of their previous contents" is tested
+  directly: the same base is generated over two different sets of stale levels (red and green, or the ladder
+  colours and red), and the derived levels must come out identical. Whether a uniform base gives uniform levels
+  depends on the filter, so the largest deviation from the base colour is only printed (0/255 on all drivers here).
+  Completeness after the call is proven through the base level: before the call the texture is incomplete and
+  samples (0, 0, 0, 1) at every λ, level 0 included, so level 0 showing its texels means the chain is complete.
 - **`glHint(GENERATE_MIPMAP_HINT, …)`** is a hint ("An implementation may ignore them entirely", §5.3); what the
   spec fixes is its state: initial value `DONT_CARE`, and it is a `glGetIntegerv` state (Table 6.27). Since the
-  hint may change the filter quality, the uniform-image test is repeated under all three hint values, and each
-  still produces correct levels. (Reading the hint back needed `GetParameter::GenerateMipmapHint`, meta-gl gap G2.)
+  hint may change the filter quality, the independence test above is repeated under all three hint values. (Reading the hint back needed `GetParameter::GenerateMipmapHint`, meta-gl gap G2.)
 - **Shader side.** `texture(sampler2D, vec2)` computes λ from the screen-space derivatives of its coordinate,
   and `textureSize(sampler, lod)` returns the size of level `BASE_LEVEL + lod`. The demo uses `textureSize`
   as an independent probe of the level sizes `glGenerateMipmap` produced (the size is encoded in the red and
@@ -100,32 +101,48 @@ is drawn at λ = k (or k + ¼, k + ½, k + ¾ as stated):
 64 checks per run. Every cell is compared pixel by pixel (all 32×17 pixels of a cell) with either hard-coded level
 colours or a CPU model that implements equations 3.16–3.25 and Table 3.22 for the very strips the shader draws.
 
-- Rows 0, 1, 4, 5: exact level colours (tolerance 0 for NEAREST inside the level; 1 for LINEAR, whose weights
-  sum to one up to fixed-point rounding). Rows 2, 3: the 50/50 blend with `1 + |τ₂ − τ₁|/16` per channel.
-- Rows 6–9: the full CPU sampler. Pixels within 0.1 texel of a texel boundary between different texels are skipped for
-  NEAREST (a texel boundary is not robust); LINEAR pixels are compared everywhere.
+- Rows 0, 1, 4, 5: exact level colours (tolerance 0 for NEAREST inside the level; ±1 for LINEAR, whose weights are
+  convex, so only the 8-bit conversion can move the result). Rows 2, 3: a blend of levels k and k + 1 whose weight
+  lies within ¼ of ½ (sanity bound, see below), ±1.
+- Rows 6–9: the CPU sampler's range. Pixels within 0.1 texel of a texel boundary between different texels are skipped for
+  NEAREST (a texel boundary is not robust); LINEAR pixels are checked everywhere against the min/max of the texels that
+  can contribute.
 - Rows 13, 14: `BASE_LEVEL`, `MAX_LEVEL`, `MIN_LOD`, `MAX_LOD`, with exact colours or blends and with the model.
-- `glGenerateMipmap`: see above. A before/after pair shows that a base level plus stale levels 1–2 is incomplete
-  (black) and complete after the call; a 37×21 base gives 18×10, 9×5, 4×2, 2×1, 1×1; `MAX_LEVEL = 2` makes the call
-  replace levels 1 and 2 only; `RGBA8UI` and `DEPTH_COMPONENT24` bases → `INVALID_OPERATION`.
+- `glGenerateMipmap`: see above. A base level plus stale levels 1–2 is incomplete (black) before the call; the derived
+  levels do not depend on the stale content (under each hint); a 37×21 base gives 18×10, 9×5, 4×2, 2×1, 1×1;
+  `MAX_LEVEL = 2` makes the call replace levels 1 and 2 (identical over two different stale contents) and keeps
+  levels 3–6 exactly; `RGBA8UI` and `DEPTH_COMPONENT24` bases → `INVALID_OPERATION`.
 - Completeness: for each scenario the broken tile must be exactly (0, 0, 0, 1) and the twin exactly the colour of
   the intended level, then the *same* texture object is repaired in place with one call and re-drawn.
 - State: the four mipmap filters read back; initial `BASE_LEVEL` 0, `MAX_LEVEL` 1000, `MIN_LOD` −1000, `MAX_LOD` 1000,
   `MIN_FILTER` `NEAREST_MIPMAP_LINEAR`; negative `BASE_LEVEL`/`MAX_LEVEL` → `INVALID_VALUE`; hint initial value and
   read-back after each of FASTEST, NICEST, DONT_CARE.
 
-**Tolerances.** ES 3.0 puts no bound on the accuracy of λ or of the filter weights, so the comparisons scale with the
-quantity a weight multiplies: 1/64 of the texel difference for one bilinear weight (hardware has ≥ 6–8 fractional
-bits), 1/16 of the level difference for the blend weight `frac λ` (4 fractional bits; no implementation is coarser),
-plus one 8-bit step whenever a result is a weighted sum. The largest deviations measured are 1.0–1.3 steps on
-the blend rows (radeonsi, llvmpipe, zink; es-min and es-max alike) against tolerances of 8–12, and
-captures from the three drivers differ by at most 1/255. A wrong filter or level moves a result by 25 % to 100 % of
-the same quantity, far outside the tolerance.
+**What is a hard check and what is measured.** ES 3.0 bounds neither the precision of λ nor that of the filter
+weights. The checks are therefore limited to what the equations guarantee:
 
-**Negative controls.** (1) The LINEAR_MIPMAP_NEAREST row is compared with the model of NEAREST_MIPMAP_NEAREST and
-must be rejected at more than a quarter of the pixels. (2) The blend cell at λ = 2.5 is redrawn with
+- *Level choice.* For a strip, condition 2 of §3.8.10.1 pins the approximated ρ to `|∂u/∂x|`, so λ is fixed by the
+  test. Every strip keeps λ at least ¼ from the boundaries where the chosen level(s) change, and the level choice is
+  checked exactly.
+- *NEAREST inside a level* returns one texel and is exact.
+- *LINEAR inside a level* (§3.8.10.2): the bilinear weights are non-negative and sum to one for any α in [0, 1), so
+  the result lies between the minimum and maximum of the contributing texels (taken over u ± 0.1 texel, the margin
+  the NEAREST probes use). That range is checked.
+- *Blending two levels.* The blend weight `frac λ` has no specified precision. The check is a sanity bound with the
+  same margin as the level choice: the weight lies within ¼ of its ideal ½. A λ error that large would already
+  break the k + ¼ / k + ¾ rows. Without this bound a filter that never blends would pass.
+- ±1 whenever a result is a weighted sum: the conversion to 8 bits returns either of the two closest integers
+  (§2.1.6.2).
+
+The deviation from the ideal equations is printed in each check's detail. The measured blend weight is printed per
+row (0.493–0.500 on radeonsi, llvmpipe, zink and ANGLE on lavapipe), and so is how many pixels of rows 6 and 7 differ
+visibly (all of them here). None of these values is checked.
+
+**Negative controls.** (1) The LINEAR_MIPMAP_NEAREST stripe cells (row 7, k = 1–3) are redrawn with the solid ladder
+texture, whose level colour is exact on any implementation. The stripes range must reject it at more than a quarter
+of the pixels (1530 of 1632 at 256×256). (2) The blend cell at λ = 2.5 is redrawn with
 `MIN_FILTER` = NEAREST (a non-mipmapped filter always uses level 0): the colour becomes level 0's, and the
-blend expectation must reject all pixels. (3) Changing the filter of row 3 to LINEAR_MIPMAP_NEAREST in the source makes
+blend range must reject all pixels. (3) Changing the filter of row 3 to LINEAR_MIPMAP_NEAREST in the source makes
 the two row-3 checks fail (done once during development). (4) Every incomplete texture is compared to
 black and to its twin; a texture that was accidentally complete would fail the first, one that stayed incomplete
 after the repair would fail the second.

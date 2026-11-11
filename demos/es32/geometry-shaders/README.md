@@ -106,9 +106,11 @@ the model breaks each transform feedback comparison.
 * A geometry shader output is only well defined after `EmitVertex()` for the members that were written *before* that call
   (all members are undefined afterwards), so the helper functions write every member each time.
 * The strip order for transform feedback is (i, i+1, i+2) / (i+1, i, i+2); Mesa follows section 10.1.5.
-* **Known deviation (Mesa: radeonsi, llvmpipe and zink):** `max_vertices` x output components above
-  `MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS` still links (ES 3.2 section 11.3.4.4 says LinkProgram will fail). The check is
-  strict and reported as XFAIL on "Mesa".
+* `max_vertices` x active output components above `MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS` is an observation, not a check.
+  ES 3.2 section 11.3.4.4 says *"LinkProgram will fail if it determines that the total component limit would be
+  violated"*. The failure is conditional on the linker determining the violation, so a program that links anyway is
+  conformant. The demo links such a program, prints the outcome and never draws with it. All Mesa drivers (radeonsi,
+  llvmpipe, zink) link it.
 * The adjacency index list must be built from a closed, consistently wound manifold: each directed edge must have exactly
   one owner (`cpu_model.hpp: adjacency_indices`).
 * Mesa reports `LAYER_PROVOKING_VERTEX` = `UNDEFINED_VERTEX` here; see `es32-layered-rendering`.

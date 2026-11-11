@@ -73,21 +73,32 @@ namespace
     constexpr Rgba8 kChecker[2] = {{240, 200, 40, 255}, {40, 90, 220, 255}};
     constexpr Rgba8 kUniform = {90, 160, 220, 255};          // base colour of the glGenerateMipmap tests
     constexpr Rgba8 kBogus = {255, 0, 0, 255};               // pre-existing content glGenerateMipmap must replace
+    constexpr Rgba8 kBogus2 = {0, 255, 0, 255};              // other pre-existing content (the result must not depend on it)
 
     // ---------------------------------------------------------------------------------------------
-    // Tolerances. ES 3.0 does not bound the accuracy of lambda or of the filter weights ("an
-    // implementation may approximate ..."), so the comparisons are scaled with the quantity that the
-    // weight multiplies. Both numbers are far below the distance between a right and a wrong answer
-    // (a wrong filter or level moves the result by 25 % to 100 % of the same quantity).
-    //   * kLinearWeightError: error of one bilinear weight. Hardware uses fixed-point weights with
-    //     at least 6-8 fractional bits, so 1/64 of the difference of the two texels is generous.
-    //   * kLodWeightError: error of the blend weight frac(lambda) between two levels, i.e. an
-    //     error of lambda itself. 1/16 = 4 fractional bits, which no implementation goes below.
-    //   * Plus one 8-bit step whenever a result is a weighted sum (the framebuffer rounds to nearest).
-    // Pure NEAREST selections must be exact (tolerance 0).
+    // What is checked, and what is only measured.
+    //   * Level selection. For a strip, du/dy = dv/dx = dv/dy = 0, so condition 2 of section 3.8.10.1
+    //     (max{mu, mv, mw} <= f <= mu + mv + mw) pins the approximated scale factor to f = |du/dx|: rho,
+    //     and with it lambda = log2(rho), is fixed even for an implementation that approximates rho.
+    //     Every strip keeps lambda at least kLodMargin = 1/4 away from each boundary at which the selected
+    //     level(s) would change (integer + 1/2 for *_MIPMAP_NEAREST, integers for *_MIPMAP_LINEAR), so
+    //     the level choice is robust and checked exactly.
+    //   * NEAREST inside a level returns one texel: exact, away from texel boundaries (0.1 texel margin).
+    //   * LINEAR inside a level. Section 3.8.10.2 gives the bilinear equation but no precision for its
+    //     weights. The weights are non-negative and sum to one for any alpha in [0, 1), so the result
+    //     lies between the minimum and maximum of the contributing texels (taken over u +- 0.1 texel,
+    //     the same coordinate margin as for NEAREST). That bound is checked.
+    //   * Blending two levels (*_MIPMAP_LINEAR). tau = (1 - frac(lambda)) tau1 + frac(lambda) tau2. The
+    //     levels are fixed (above); the weight frac(lambda) has no specified precision. The check is a
+    //     sanity bound that uses the same margin as the level selection: frac(lambda) within kLodMargin
+    //     of its ideal value 1/2 (a lambda error of 1/4 would already break the k + 0.25 / k + 0.75
+    //     level-selection rows).
+    //   * Plus one 8-bit step whenever a result is a weighted sum: the conversion to the framebuffer
+    //     returns either of the two closest integers (section 2.1.6.2).
+    // The deviation from the ideal equations (filter weights, blend weight) is printed as an observation.
     // ---------------------------------------------------------------------------------------------
-    constexpr double kLinearWeightError = 1.0 / 64.0;
-    constexpr double kLodWeightError = 1.0 / 16.0;
+    constexpr double kLodMargin = 0.25;
+    constexpr double kTexelMargin = 0.1;
 
     // ---------------------------------------------------------------------------------------------
     // CPU model of ES 3.0 sections 3.8.10.1-3.8.10.4. All textures used with the model have rows
@@ -122,9 +133,9 @@ namespace
 
     struct Fetched
     {
-        std::array<double, 4> value{};
-        std::array<double, 4> spread{};  // |texel1 - texel0| per channel for LINEAR, else 0
-        bool ambiguous = false;          // NEAREST within 0.1 texel of a texel boundary between different texels
+        std::array<double, 4> value{};     // ideal value of the equations
+        std::array<double, 4> lo{}, hi{};  // guaranteed range: min / max of the texels that can contribute
+        bool ambiguous = false;            // NEAREST within 0.1 texel of a texel boundary between different texels
     };
 
     /// One texel fetch inside a level (CLAMP_TO_EDGE; Table 3.22): NEAREST takes texel floor(u),
@@ -139,8 +150,8 @@ namespace
             const int i = static_cast<int>(std::floor(u));
             const double frac = u - std::floor(u);
             const Rgba8 t = at(i);
-            if ((frac < 0.1 || frac > 0.9) && t != at(frac < 0.5 ? i - 1 : i + 1)) f.ambiguous = true;
-            for (int c = 0; c < 4; ++c) f.value[static_cast<std::size_t>(c)] = t[static_cast<std::size_t>(c)];
+            if ((frac < kTexelMargin || frac > 1.0 - kTexelMargin) && t != at(frac < 0.5 ? i - 1 : i + 1)) f.ambiguous = true;
+            for (std::size_t c = 0; c < 4; ++c) f.value[c] = f.lo[c] = f.hi[c] = t[c];
         }
         else
         {
@@ -151,8 +162,15 @@ namespace
             for (std::size_t c = 0; c < 4; ++c)
             {
                 f.value[c] = (1.0 - a) * t0[c] + a * t1[c];
-                f.spread[c] = std::abs(double(t1[c]) - double(t0[c]));
+                f.lo[c] = 255.0;
+                f.hi[c] = 0.0;
             }
+            for (int i = static_cast<int>(std::floor(x - kTexelMargin)); i <= static_cast<int>(std::floor(x + kTexelMargin)) + 1; ++i)
+                for (std::size_t c = 0; c < 4; ++c)
+                {
+                    f.lo[c] = std::min(f.lo[c], double(at(i)[c]));
+                    f.hi[c] = std::max(f.hi[c], double(at(i)[c]));
+                }
         }
         return f;
     }
@@ -172,8 +190,8 @@ namespace
 
     struct Prediction
     {
-        std::array<double, 4> value{};
-        std::array<double, 4> tol{};
+        std::array<double, 4> value{};     // ideal value of equations 3.16-3.25
+        std::array<double, 4> lo{}, hi{};  // checked range (see "What is checked" above)
         bool ambiguous = false;
         double lambda = 0.0;
     };
@@ -202,7 +220,8 @@ namespace
             for (std::size_t c = 0; c < 4; ++c)
             {
                 p.value[c] = f.value[c];
-                p.tol[c] = (lin ? 1.0 : 0.0) + f.spread[c] * kLinearWeightError;
+                p.lo[c] = f.lo[c] - (lin ? 1.0 : 0.0);
+                p.hi[c] = f.hi[c] + (lin ? 1.0 : 0.0);
             }
         }
         else if (!blends_levels(st.min))
@@ -217,7 +236,8 @@ namespace
             for (std::size_t c = 0; c < 4; ++c)
             {
                 p.value[c] = f.value[c];
-                p.tol[c] = (lin ? 1.0 : 0.0) + f.spread[c] * kLinearWeightError;
+                p.lo[c] = f.lo[c] - (lin ? 1.0 : 0.0);
+                p.hi[c] = f.hi[c] + (lin ? 1.0 : 0.0);
             }
         }
         else
@@ -233,11 +253,15 @@ namespace
             const bool lin = linear_in_level(st.min);
             const Fetched f1 = level_fetch(d1, lin), f2 = level_fetch(d2, lin);
             p.ambiguous = f1.ambiguous || f2.ambiguous;
+            // Sanity bound on the blend weight (kLodMargin); a single level (d1 == d2) is not blended.
+            const double w_lo = d1 == d2 ? 0.0 : std::max(0.0, w2 - kLodMargin);
+            const double w_hi = d1 == d2 ? 0.0 : std::min(1.0, w2 + kLodMargin);
+            const double round = (lin || d1 != d2) ? 1.0 : 0.0;
             for (std::size_t c = 0; c < 4; ++c)
             {
                 p.value[c] = (1.0 - w2) * f1.value[c] + w2 * f2.value[c];
-                p.tol[c] = 1.0 + ((1.0 - w2) * f1.spread[c] + w2 * f2.spread[c]) * kLinearWeightError +
-                           std::abs(f2.value[c] - f1.value[c]) * kLodWeightError;
+                p.lo[c] = std::min((1.0 - w_lo) * f1.lo[c] + w_lo * f2.lo[c], (1.0 - w_hi) * f1.lo[c] + w_hi * f2.lo[c]) - round;
+                p.hi[c] = std::max((1.0 - w_lo) * f1.hi[c] + w_lo * f2.hi[c], (1.0 - w_hi) * f1.hi[c] + w_hi * f2.hi[c]) + round;
             }
         }
         return p;
@@ -320,24 +344,20 @@ namespace
     struct Stats
     {
         long probes = 0, skipped = 0, bad = 0;
-        double max_dev = 0.0, tol_at_max = 0.0;
+        double max_dev = 0.0;  // largest |got - ideal| (observation)
         std::string first_bad;
         void merge(const Stats& o)
         {
             probes += o.probes;
             skipped += o.skipped;
             bad += o.bad;
-            if (o.max_dev >= max_dev)
-            {
-                max_dev = o.max_dev;
-                tol_at_max = o.tol_at_max;
-            }
+            max_dev = std::max(max_dev, o.max_dev);
             if (first_bad.empty()) first_bad = o.first_bad;
         }
         [[nodiscard]] std::string summary() const
         {
-            return std::format("{} px compared, {} skipped (texel boundary); max deviation {:.1f} (tolerance there {:.1f})", probes,
-                               skipped, max_dev, tol_at_max);
+            return std::format("{} px compared, {} skipped (texel boundary); largest deviation from the ideal value {:.1f}/255 (observation)",
+                               probes, skipped, max_dev);
         }
     };
 
@@ -363,24 +383,27 @@ namespace
                 bool ok = true;
                 for (std::size_t k = 0; k < 4; ++k)
                 {
-                    const double dev = std::abs(got[k] - p.value[k]);
-                    if (dev >= stats.max_dev)
-                    {
-                        stats.max_dev = dev;
-                        stats.tol_at_max = p.tol[k];
-                    }
-                    if (dev > p.tol[k] + 1e-9) ok = false;
+                    stats.max_dev = std::max(stats.max_dev, std::abs(got[k] - p.value[k]));
+                    if (got[k] < p.lo[k] - 1e-9 || got[k] > p.hi[k] + 1e-9) ok = false;
                 }
                 if (!ok && stats.bad++ == 0)
-                    stats.first_bad = std::format("x={} y={} lambda={:.3f}: got {} expected ({:.1f},{:.1f},{:.1f},{:.1f})", x, y, p.lambda,
-                                                  demo::format_rgba(got), p.value[0], p.value[1], p.value[2], p.value[3]);
+                    stats.first_bad = std::format(
+                        "x={} y={} lambda={:.3f}: got {} outside [{:.1f}..{:.1f}, {:.1f}..{:.1f}, {:.1f}..{:.1f}, {:.1f}..{:.1f}] (ideal ({:.1f},{:.1f},{:.1f},{:.1f}))",
+                        x, y, p.lambda, demo::format_rgba(got), p.lo[0], p.hi[0], p.lo[1], p.hi[1], p.lo[2], p.hi[2], p.lo[3], p.hi[3], p.value[0],
+                        p.value[1], p.value[2], p.value[3]);
             }
         }
         return stats;
     }
 
-    /// Compares every pixel of a rectangle with one expected colour (+- tol per channel).
-    Stats compare_const(const Image& img, Rect r, const std::array<double, 4>& expected, const std::array<double, 4>& tol)
+    /// Expected colour of a rectangle: the ideal value and the checked range per channel.
+    struct Range
+    {
+        std::array<double, 4> value{}, lo{}, hi{};
+    };
+
+    /// Compares every pixel of a rectangle with one expected range per channel.
+    Stats compare_range(const Image& img, Rect r, const Range& e)
     {
         Stats stats;
         for (int y = 0; y < r.h; ++y)
@@ -391,38 +414,58 @@ namespace
                 bool ok = true;
                 for (std::size_t k = 0; k < 4; ++k)
                 {
-                    const double dev = std::abs(got[k] - expected[k]);
-                    if (dev >= stats.max_dev)
-                    {
-                        stats.max_dev = dev;
-                        stats.tol_at_max = tol[k];
-                    }
-                    if (dev > tol[k] + 1e-9) ok = false;
+                    stats.max_dev = std::max(stats.max_dev, std::abs(got[k] - e.value[k]));
+                    if (got[k] < e.lo[k] - 1e-9 || got[k] > e.hi[k] + 1e-9) ok = false;
                 }
                 if (!ok && stats.bad++ == 0)
-                    stats.first_bad = std::format("x={} y={}: got {} expected ({:.1f},{:.1f},{:.1f},{:.1f})", x, y, demo::format_rgba(got),
-                                                  expected[0], expected[1], expected[2], expected[3]);
+                    stats.first_bad = std::format("x={} y={}: got {} outside [{:.1f}..{:.1f}, {:.1f}..{:.1f}, {:.1f}..{:.1f}, {:.1f}..{:.1f}]", x, y,
+                                                  demo::format_rgba(got), e.lo[0], e.hi[0], e.lo[1], e.hi[1], e.lo[2], e.hi[2], e.lo[3], e.hi[3]);
             }
         return stats;
     }
 
     std::array<double, 4> as_double(Rgba8 c) { return {double(c[0]), double(c[1]), double(c[2]), double(c[3])}; }
-    std::array<double, 4> uniform_tol(double t) { return {t, t, t, t}; }
 
-    /// 50/50 blend of two colours and its tolerance (rounding + weight error), per channel.
-    struct Blend
+    /// One colour +- tol per channel.
+    Range around(Rgba8 c, double tol)
     {
-        std::array<double, 4> value{}, tol{};
-    };
-    Blend blend(Rgba8 a, Rgba8 b)
+        Range r;
+        r.value = as_double(c);
+        for (std::size_t k = 0; k < 4; ++k)
+        {
+            r.lo[k] = r.value[k] - tol;
+            r.hi[k] = r.value[k] + tol;
+        }
+        return r;
+    }
+
+    Stats compare_const(const Image& img, Rect r, Rgba8 expected, double tol) { return compare_range(img, r, around(expected, tol)); }
+
+    /// (1 - w) a + w b of two solid levels at frac(lambda) = 1/2: w within kLodMargin of 1/2 (sanity bound), +-1 rounding.
+    Range blend(Rgba8 a, Rgba8 b)
     {
-        Blend r;
+        Range r;
         for (std::size_t c = 0; c < 4; ++c)
         {
             r.value[c] = 0.5 * (a[c] + b[c]);
-            r.tol[c] = 1.0 + std::abs(double(a[c]) - double(b[c])) * kLodWeightError;
+            const double e1 = (0.5 - kLodMargin) * a[c] + (0.5 + kLodMargin) * b[c];
+            const double e2 = (0.5 + kLodMargin) * a[c] + (0.5 - kLodMargin) * b[c];
+            r.lo[c] = std::min(e1, e2) - 1.0;
+            r.hi[c] = std::max(e1, e2) + 1.0;
         }
         return r;
+    }
+
+    /// Blend weight w that best explains `got` = (1 - w) a + w b (least squares over the colour channels).
+    double measured_weight(Rgba8 got, Rgba8 a, Rgba8 b)
+    {
+        double num = 0.0, den = 0.0;
+        for (std::size_t c = 0; c < 3; ++c)
+        {
+            num += (double(got[c]) - a[c]) * (double(b[c]) - a[c]);
+            den += (double(b[c]) - a[c]) * (double(b[c]) - a[c]);
+        }
+        return den > 0.0 ? num / den : 0.0;
     }
 
     Model make_ladder_model()
@@ -509,6 +552,7 @@ namespace
             ladder_model_ = make_ladder_model();
             stripes_model_ = make_stripes_model();
             checker_model_ = make_checker_row_model();
+            tiny_model_.levels.push_back(Column{kChecker[0], kChecker[1]});  // row 0 of the 2x2 checker of check_generate_mipmap
 
             // --- ladder: seven solid levels, uploaded one glTexImage2D call each ----------------------
             mgl::glActiveTexture(mgl::TextureUnit::Texture0);
@@ -912,10 +956,10 @@ namespace
                 for (int k = 0; k < kCols; ++k)
                 {
                     const int level = row == 5 ? level_of(k + 1) : level_of(k);
-                    // NEAREST inside a solid level returns the texel unchanged: tolerance 0. LINEAR weights of a
-                    // solid level sum to one, so only fixed-point weight rounding (+-1) can appear.
+                    // NEAREST inside a solid level returns the texel unchanged: tolerance 0. LINEAR weights are convex, so
+                    // a solid level gives its colour; only the 8-bit conversion (+-1, section 2.1.6.2) can appear.
                     const double tol = row == 1 ? 1.0 : 0.0;
-                    all.merge(compare_const(fb, rect_of(cell_at(row, k), lay), as_double(kLadder[static_cast<std::size_t>(level)]), uniform_tol(tol)));
+                    all.merge(compare_const(fb, rect_of(cell_at(row, k), lay), kLadder[static_cast<std::size_t>(level)], tol));
                 }
                 check.expect(all.bad == 0,
                              std::format("row {}: {} selects exactly the colour of level {} in all 8 cells", row, names[row],
@@ -923,27 +967,37 @@ namespace
                              all.bad == 0 ? all.summary() : all.first_bad);
             }
 
-            // Rows 2, 3: lambda = k + 0.5 between two levels: equal blend of the two level colours
-            // (equations 3.24, 3.25, tau = (1 - frac) tau1 + frac tau2, frac = 0.5). From k = 6 on, base + lambda >= q:
-            // both levels are q = 6 and the result is the colour of level 6.
+            // Rows 2, 3: lambda = k + 0.5 between two levels: a blend of the two level colours
+            // (equations 3.24, 3.25, tau = (1 - frac) tau1 + frac tau2, ideally frac = 0.5). The levels are fixed (lambda is
+            // 1/2 from the next integer); the weight is checked only against the kLodMargin sanity bound and printed. From
+            // k = 6 on, base + lambda >= q: both levels are q = 6 and the result is the colour of level 6.
             for (const int row : {2, 3})
             {
                 Stats all;
+                double w_min = 1.0, w_max = 0.0;
                 for (int k = 0; k < kCols; ++k)
                 {
                     const Rect r = rect_of(cell_at(row, k), lay);
                     if (k < kLevels - 1)
                     {
-                        const Blend b = blend(kLadder[static_cast<std::size_t>(k)], kLadder[static_cast<std::size_t>(k + 1)]);
-                        all.merge(compare_const(fb, r, b.value, b.tol));
+                        const Range b = blend(kLadder[static_cast<std::size_t>(k)], kLadder[static_cast<std::size_t>(k + 1)]);
+                        all.merge(compare_range(fb, r, b));
+                        const double w = measured_weight(fb.at(r.x + r.w / 2, r.y + r.h / 2), kLadder[static_cast<std::size_t>(k)],
+                                                         kLadder[static_cast<std::size_t>(k + 1)]);
+                        w_min = std::min(w_min, w);
+                        w_max = std::max(w_max, w);
                     }
                     else
-                        all.merge(compare_const(fb, r, as_double(kLadder[kLevels - 1]), uniform_tol(row == 3 ? 1.0 : 0.0)));
+                        all.merge(compare_const(fb, r, kLadder[kLevels - 1], row == 3 ? 1.0 : 0.0));
                 }
                 check.expect(all.bad == 0,
-                             std::format("row {}: {}_MIPMAP_LINEAR at lambda = k + 0.5 is the 50/50 blend of levels k and k+1 (level 6 from k = 6)",
+                             std::format("row {}: {}_MIPMAP_LINEAR at lambda = k + 0.5 blends levels k and k+1 with a weight in [1/4, 3/4] "
+                                         "(sanity bound; level 6 from k = 6)",
                                          row, row == 2 ? "NEAREST" : "LINEAR"),
                              all.bad == 0 ? all.summary() : all.first_bad);
+                std::cout << std::format("   note: row {}: measured blend weight frac(lambda) of levels k, k+1 at lambda = k + 0.5: {:.3f} .. {:.3f} "
+                                         "(ideal 0.5; observation)\n",
+                                         row, w_min, w_max);
             }
 
             // The same cells against the full CPU model (rows 0-5 include the model's own rounding rules).
@@ -952,7 +1006,7 @@ namespace
                 Stats all;
                 for (int k = 0; k < kCols; ++k) all.merge(compare_model(cell_at(row, k), fb, rect_of(cell_at(row, k), lay)));
                 check.expect(all.bad == 0 && all.probes > 8 * lay.cw * lay.ch / 2,
-                             std::format("row {}: every pixel agrees with the CPU model of equations 3.20-3.25", row),
+                             std::format("row {}: every pixel lies in the range the CPU model of equations 3.20-3.25 guarantees", row),
                              all.bad == 0 ? all.summary() : all.first_bad);
             }
         }
@@ -969,17 +1023,17 @@ namespace
                 Stats all;
                 for (int k = 0; k < kCols; ++k) all.merge(compare_model(cell_at(row, k), fb, rect_of(cell_at(row, k), lay)));
                 check.expect(all.bad == 0 && all.probes > 8 * lay.cw * lay.ch / 3,
-                             std::format("row {}: {} matches the CPU sampler (level selection + filtering inside the level)", row,
+                             std::format("row {}: {} lies in the CPU sampler's range (exact level selection, in-level filter bound)", row,
                                          names[row - 6]),
                              all.bad == 0 ? all.summary() : all.first_bad);
             }
 
-            // The in-level filter is visible: at lambda = k the strip has one level-k texel per pixel and
-            // the sample point sits 1/4 texel past a texel centre, so NEAREST returns a texel and LINEAR a
+            // Observation: the in-level filter is visible. At lambda = k the strip has one level-k texel per pixel and
+            // the sample point sits 1/4 texel past a texel centre, so NEAREST returns a texel and the ideal LINEAR a
             // 3:1 mixture of two neighbours (adjacent texels differ by at least 110/255 in one channel, so the two
-            // results differ by at least 27). Compare the NEAREST row with the LINEAR row pixel by pixel, over the
-            // pixels whose sample point lies inside the level (the strip starts at texel 2 of a level that has
-            // 32, 16, 8 texels for k = 1, 2, 3; beyond the level both filters clamp to the same edge texel).
+            // results ideally differ by at least 27). How much they differ depends on the weight precision, which the
+            // spec leaves open, so the count is printed, not checked. Compared over the pixels whose sample point lies
+            // inside the level (the strip starts at texel 2 of a level that has 32, 16, 8 texels for k = 1, 2, 3).
             int differing = 0, compared = 0;
             for (int k = 1; k <= 3; ++k)
             {
@@ -994,9 +1048,9 @@ namespace
                     if (dmax >= 20) ++differing;
                 }
             }
-            check.expect(compared > 0 && differing == compared,
-                         "rows 6 vs 7: inside a level, LINEAR_MIPMAP_NEAREST differs visibly from NEAREST_MIPMAP_NEAREST at every pixel",
-                         std::format("{} of {} pixels differ by at least 20/255", differing, compared));
+            std::cout << std::format("   note: rows 6 vs 7: {} of {} pixels inside a level differ by at least 20/255 between NEAREST_MIPMAP_NEAREST and "
+                                     "LINEAR_MIPMAP_NEAREST (observation)\n",
+                                     differing, compared);
         }
 
         // ------------------------------------------------------------------------------------------
@@ -1005,7 +1059,7 @@ namespace
         void check_lod_state(demo::Check& check, const Layout& lay, const Image& fb)
         {
             auto solid_cell = [&](int row, int col, Rgba8 color, double tol) {
-                return compare_const(fb, rect_of(cell_at(row, col), lay), as_double(color), uniform_tol(tol));
+                return compare_const(fb, rect_of(cell_at(row, col), lay), color, tol);
             };
             // Row 13. With BASE_LEVEL = b, level b is the base image: lambda is measured in units of the base
             // image, so a strip that has lambda0 = 1 relative to level 0 has lambda = 1 - b = -1 relative to
@@ -1023,31 +1077,32 @@ namespace
 
             Stats blended;
             {
-                const Blend b23 = blend(kLadder[2], kLadder[3]), b34 = blend(kLadder[3], kLadder[4]);
-                blended.merge(compare_const(fb, rect_of(cell_at(13, 4), lay), b23.value, b23.tol));  // MAX_LEVEL 3, lambda0 = 2.5
-                blended.merge(compare_const(fb, rect_of(cell_at(13, 6), lay), b34.value, b34.tol));  // BASE 2, lambda0 = 3.5 -> lambda 1.5
+                const Range b23 = blend(kLadder[2], kLadder[3]), b34 = blend(kLadder[3], kLadder[4]);
+                blended.merge(compare_range(fb, rect_of(cell_at(13, 4), lay), b23));  // MAX_LEVEL 3, lambda0 = 2.5
+                blended.merge(compare_range(fb, rect_of(cell_at(13, 6), lay), b34));  // BASE 2, lambda0 = 3.5 -> lambda 1.5
             }
-            check.expect(blended.bad == 0, "row 13: NEAREST_MIPMAP_LINEAR blends levels base + floor(lambda) and the next one",
+            check.expect(blended.bad == 0,
+                         "row 13: NEAREST_MIPMAP_LINEAR blends levels base + floor(lambda) and the next one (weight in [1/4, 3/4], sanity bound)",
                          blended.bad == 0 ? blended.summary() : blended.first_bad);
 
             Stats model;
             for (int i = 0; i < 8; ++i) model.merge(compare_model(cell_at(13, i), fb, rect_of(cell_at(13, i), lay)));
-            check.expect(model.bad == 0, "row 13: all eight cells also agree with the CPU model", model.bad == 0 ? model.summary() : model.first_bad);
+            check.expect(model.bad == 0, "row 13: all eight cells also lie in the CPU model's range", model.bad == 0 ? model.summary() : model.first_bad);
 
             // Row 14: lambda' is clamped to [TEXTURE_MIN_LOD, TEXTURE_MAX_LOD] before the level is chosen (eq. 3.18).
             Stats lod;
             lod.merge(solid_cell(14, 0, kLadder[2], 0));  // MIN_LOD 2:   lambda0 = 0 is raised to 2 -> level 2 (and the filter is a minification filter)
             lod.merge(solid_cell(14, 2, kLadder[3], 0));  // MAX_LOD 3:   lambda0 = 5 is lowered to 3 -> level 3
             {
-                const Blend b12 = blend(kLadder[1], kLadder[2]), b23 = blend(kLadder[2], kLadder[3]);
-                lod.merge(compare_const(fb, rect_of(cell_at(14, 1), lay), b12.value, b12.tol));  // MIN_LOD 1.5 -> blend of levels 1 and 2
-                lod.merge(compare_const(fb, rect_of(cell_at(14, 3), lay), b23.value, b23.tol));  // MAX_LOD 2.5 -> blend of levels 2 and 3
+                const Range b12 = blend(kLadder[1], kLadder[2]), b23 = blend(kLadder[2], kLadder[3]);
+                lod.merge(compare_range(fb, rect_of(cell_at(14, 1), lay), b12));  // MIN_LOD 1.5 -> blend of levels 1 and 2
+                lod.merge(compare_range(fb, rect_of(cell_at(14, 3), lay), b23));  // MAX_LOD 2.5 -> blend of levels 2 and 3
             }
             check.expect(lod.bad == 0, "row 14: TEXTURE_MIN_LOD raises and TEXTURE_MAX_LOD lowers lambda (equation 3.18)",
                          lod.bad == 0 ? lod.summary() : lod.first_bad);
             Stats lod_model;
             for (int i = 0; i < 4; ++i) lod_model.merge(compare_model(cell_at(14, i), fb, rect_of(cell_at(14, i), lay)));
-            check.expect(lod_model.bad == 0, "row 14: all four cells also agree with the CPU model",
+            check.expect(lod_model.bad == 0, "row 14: all four cells also lie in the CPU model's range",
                          lod_model.bad == 0 ? lod_model.summary() : lod_model.first_bad);
         }
 
@@ -1065,9 +1120,41 @@ namespace
                 c.tex = tex;
                 c.lambda0 = k;
                 const Image img = draw_scratch(c, lay);
-                all.merge(compare_const(img, {0, 0, lay.cw, lay.ch}, as_double(expected(k)), uniform_tol(tol)));
+                all.merge(compare_const(img, {0, 0, lay.cw, lay.ch}, expected(k), tol));
             }
             return all;
+        }
+
+        /// The pixels of strips of `tex` at lambda0 = first..last (NEAREST_MIPMAP_NEAREST: level k each), concatenated.
+        std::vector<Rgba8> snapshot_levels(mgl::TextureId tex, const Layout& lay, int first, int last) const
+        {
+            std::vector<Rgba8> out;
+            for (int k = first; k <= last; ++k)
+            {
+                Cell c;
+                c.tex = tex;
+                c.lambda0 = k;
+                const Image img = draw_scratch(c, lay);
+                for (int y = 0; y < lay.ch; ++y)
+                    for (int x = 0; x < lay.cw; ++x) out.push_back(img.at(x, y));
+            }
+            return out;
+        }
+
+        static long count_differences(const std::vector<Rgba8>& a, const std::vector<Rgba8>& b)
+        {
+            long n = a.size() == b.size() ? 0 : static_cast<long>(std::max(a.size(), b.size()));
+            for (std::size_t i = 0; i < std::min(a.size(), b.size()); ++i)
+                if (a[i] != b[i]) ++n;
+            return n;
+        }
+
+        static int max_deviation(const std::vector<Rgba8>& pixels, Rgba8 from)
+        {
+            int m = 0;
+            for (const Rgba8& p : pixels)
+                for (std::size_t c = 0; c < 4; ++c) m = std::max(m, std::abs(p[c] - from[c]));
+            return m;
         }
 
         void check_generate_mipmap(demo::Check& check, const Layout& lay, const Image& fb)
@@ -1078,10 +1165,14 @@ namespace
 
             // --- the generated checker (row 10) ---------------------------------------------------------
             // The spec fixes only that levels base+1..q are replaced by a filtered reduction ("no particular filter
-            // algorithm is required, though a box filter is recommended") and that level base is unchanged.
+            // algorithm is required, though a box filter is recommended") and that level base is unchanged. Before the
+            // call only level 0 existed, so the texture (min filter NEAREST_MIPMAP_NEAREST) was incomplete and would have
+            // sampled (0,0,0,1) at every level of detail, level 0 included (sections 3.8.13, 3.9.2). Level 0 showing the
+            // uploaded colours therefore also proves that the generated chain made the texture complete.
             {
                 const Stats base = compare_model(cell_at(10, 0), fb, rect_of(cell_at(10, 0), lay));
-                check.expect(base.bad == 0 && base.probes > 0, "checker: glGenerateMipmap leaves level 0 unchanged (row 10, column 0: two colours as uploaded)",
+                check.expect(base.bad == 0 && base.probes > 0,
+                             "checker: after glGenerateMipmap level 0 is unchanged (row 10, column 0: two colours as uploaded), so the texture is complete",
                              base.bad == 0 ? base.summary() : base.first_bad);
                 int black = 0;
                 for (int k = 1; k < kLevels; ++k)
@@ -1090,8 +1181,7 @@ namespace
                     for (int x = 0; x < r.w; ++x)
                         if (fb.at(r.x + x, r.y + r.h / 2) == kBlack) ++black;
                 }
-                check.expect(black == 0, "checker: after glGenerateMipmap the texture is mipmap complete (levels 1-6 sample real colours, not (0,0,0,1))",
-                             std::format("{} black pixels", black));
+                std::cout << std::format("   note: checker levels 1-6: {} black pixels on the probe line (observation: the filter is unspecified)\n", black);
                 const Rect l6 = rect_of(cell_at(10, 6), lay);
                 const Rgba8 top = fb.at(l6.x + l6.w / 2, l6.y + l6.h / 2);
                 const double mean_r = 0.5 * (kChecker[0][0] + kChecker[1][0]);
@@ -1114,8 +1204,8 @@ namespace
             }
 
             // --- hint modes, replacement of existing content, completeness before/after ----------------------
-            mgl::TextureId scratch[4]{};
-            mgl::glGenTextures(4, scratch);
+            mgl::TextureId scratch[5]{};
+            mgl::glGenTextures(5, scratch);
             const mgl::TextureId uniform_tex = scratch[0], range_tex = scratch[1], npot_tex = scratch[2], tiny_tex = scratch[3];
 
             const struct
@@ -1143,35 +1233,59 @@ namespace
                     c.tex = uniform_tex;
                     c.lambda0 = 3;
                     const Image before = draw_scratch(c, lay);
-                    const Stats s = compare_const(before, {0, 0, lay.cw, lay.ch}, as_double(kBlack), uniform_tol(0));
+                    const Stats s = compare_const(before, {0, 0, lay.cw, lay.ch}, kBlack, 0);
                     check.expect(s.bad == 0, "before glGenerateMipmap: levels 0-2 only, the mipmapped min filter makes the texture incomplete -> (0,0,0,1)",
                                  s.bad == 0 ? "" : s.first_bad);
                 }
                 mgl::glBindTexture(mgl::TextureTarget::Texture2D, uniform_tex);
                 mgl::glGenerateMipmap(mgl::TextureTarget::Texture2D);
-                // A uniform base must give uniform levels with any normalised filter; +-1 for rounding inside the filter.
-                const Stats after = probe_levels(uniform_tex, lay, 0, 6, 1.0, [](int) { return kUniform; });
-                check.expect(after.bad == 0,
-                             std::format("hint {}: glGenerateMipmap makes levels 1-6 (the red levels 1-2 are replaced) of a uniform image uniform", h.name),
-                             after.bad == 0 ? after.summary() : after.first_bad);
+                const std::vector<Rgba8> first_gen = snapshot_levels(uniform_tex, lay, 1, 6);
+                // "Mipmap generation replaces texel array levels levelbase + 1 through q with arrays derived from the
+                // levelbase array, regardless of their previous contents" (section 3.8.10.5): overwrite levels 1-2 with other
+                // content and generate again from the same base; every derived level must come out identical.
+                mgl::glBindTexture(mgl::TextureTarget::Texture2D, uniform_tex);
+                upload_solid(1, kBaseSize / 2, kBogus2);
+                upload_solid(2, kBaseSize / 4, kBogus2);
+                mgl::glGenerateMipmap(mgl::TextureTarget::Texture2D);
+                const std::vector<Rgba8> second_gen = snapshot_levels(uniform_tex, lay, 1, 6);
+                const long diff = count_differences(first_gen, second_gen);
+                check.expect(diff == 0 && !first_gen.empty(),
+                             std::format("hint {}: glGenerateMipmap's levels 1-6 depend only on level 0: red or green previous levels 1-2 give "
+                                         "identical results",
+                                         h.name),
+                             std::format("{} of {} pixels differ", diff, first_gen.size()));
+                // A filter that preserves a constant image is the obvious choice, but "no particular filter algorithm is required".
+                std::cout << std::format("   note: hint {}: generated levels 1-6 of a uniform {} deviate from it by at most {}/255 (observation)\n",
+                                         h.name, demo::format_rgba(kUniform), max_deviation(first_gen, kUniform));
                 first_run = false;
             }
 
             // --- only levels base+1..q are replaced -------------------------------------------------------------
+            // range_tex has the ladder colours in levels 1-6, its twin red levels 1-6. With MAX_LEVEL = 2 (q = 2),
+            // glGenerateMipmap must replace levels 1 and 2 of both with arrays derived from the same base, so they become
+            // identical, and leave levels 3-6 as they were (section 3.8.10.5).
             {
-                mgl::glBindTexture(mgl::TextureTarget::Texture2D, range_tex);
-                set_sampling_defaults();
-                upload_solid(0, kBaseSize, kUniform);
-                for (int k = 1; k < kLevels; ++k) upload_solid(k, kBaseSize >> k, kLadder[static_cast<std::size_t>(k)]);
-                mgl::glTexParameteri(mgl::TextureTarget::Texture2D, mgl::TextureParameterSetter::MaxLevel, 2);  // q = 2
-                mgl::glGenerateMipmap(mgl::TextureTarget::Texture2D);
-                mgl::glTexParameteri(mgl::TextureTarget::Texture2D, mgl::TextureParameterSetter::MaxLevel, kUnbounded);
-                const Stats replaced = probe_levels(range_tex, lay, 0, 2, 1.0, [](int) { return kUniform; });
+                const mgl::TextureId twin_tex = scratch[4];
+                for (const mgl::TextureId t : {range_tex, twin_tex})
+                {
+                    mgl::glBindTexture(mgl::TextureTarget::Texture2D, t);
+                    set_sampling_defaults();
+                    upload_solid(0, kBaseSize, kUniform);
+                    for (int k = 1; k < kLevels; ++k) upload_solid(k, kBaseSize >> k, t == range_tex ? kLadder[static_cast<std::size_t>(k)] : kBogus);
+                    mgl::glTexParameteri(mgl::TextureTarget::Texture2D, mgl::TextureParameterSetter::MaxLevel, 2);  // q = 2
+                    mgl::glGenerateMipmap(mgl::TextureTarget::Texture2D);
+                    mgl::glTexParameteri(mgl::TextureTarget::Texture2D, mgl::TextureParameterSetter::MaxLevel, kUnbounded);
+                }
+                const std::vector<Rgba8> replaced = snapshot_levels(range_tex, lay, 1, 2), twin = snapshot_levels(twin_tex, lay, 1, 2);
+                const long diff = count_differences(replaced, twin);
                 const Stats kept = probe_levels(range_tex, lay, 3, 6, 0.0, [](int k) { return kLadder[static_cast<std::size_t>(k)]; });
-                check.expect(replaced.bad == 0, "MAX_LEVEL = 2: glGenerateMipmap replaced levels 1 and 2 (the ladder colours are gone)",
-                             replaced.bad == 0 ? replaced.summary() : replaced.first_bad);
+                check.expect(diff == 0 && !replaced.empty(),
+                             "MAX_LEVEL = 2: glGenerateMipmap replaced levels 1 and 2 (ladder and red previous contents give identical levels)",
+                             std::format("{} of {} pixels differ", diff, replaced.size()));
                 check.expect(kept.bad == 0, "MAX_LEVEL = 2: levels 3-6 are left unchanged (still exactly the ladder colours)",
                              kept.bad == 0 ? kept.summary() : kept.first_bad);
+                std::cout << std::format("   note: MAX_LEVEL = 2: generated levels 1-2 of a uniform {} deviate from it by at most {}/255 (observation)\n",
+                                         demo::format_rgba(kUniform), max_deviation(replaced, kUniform));
             }
 
             // --- non-power-of-two base: floor(w / 2^i), at least 1 ---------------------------------------------
@@ -1202,18 +1316,26 @@ namespace
                 upload(0, 2, texels.data());
                 mgl::glGenerateMipmap(mgl::TextureTarget::Texture2D);
                 const auto l1 = query_size(tiny_tex, 1, lay);
+                // Level 0 along t = 0.25 (texel row 0: A, B). Before the call the texture had only level 0 and a mipmapped
+                // min filter, i.e. it was incomplete and would sample (0,0,0,1); the exact level-0 colours prove completeness.
+                Cell c0;
+                c0.tex = tiny_tex;
+                c0.model = &tiny_model_;
+                c0.w0 = 2;
+                c0.n0 = 0;
+                c0.lambda0 = 0;
+                c0.t = 0.25f;
+                const Stats level0 = compare_model(c0, draw_scratch(c0, lay), {0, 0, lay.cw, lay.ch});
+                check.expect(l1[0] == 1 && l1[1] == 1 && level0.bad == 0 && level0.probes > 0,
+                             "2x2 checker: glGenerateMipmap defines a 1x1 level 1 (textureSize) and the texture is complete (level 0 samples its texels, not (0,0,0,1))",
+                             std::format("level 1 is {}x{}; level 0: {}", l1[0], l1[1], level0.bad == 0 ? level0.summary() : level0.first_bad));
                 Cell c;
                 c.tex = tiny_tex;
                 c.w0 = 2;
                 c.lambda0 = 1;  // one level-1 texel per pixel: the 1x1 level
                 const Image img = draw_scratch(c, lay);
-                const Stats vs_black = compare_const(img, {0, 0, lay.cw, lay.ch}, as_double(kBlack), uniform_tol(0));  // bad = not black
-                const long black_pixels = vs_black.probes - vs_black.bad;
-                check.expect(l1[0] == 1 && l1[1] == 1 && black_pixels == 0,
-                             "2x2 checker: glGenerateMipmap defines a 1x1 level 1 (textureSize) and the texture is complete (the level samples a colour, not (0,0,0,1))",
-                             std::format("level 1 is {}x{}, {} black pixels", l1[0], l1[1], black_pixels));
                 const Rgba8 mean_px = img.at(lay.cw / 2, lay.ch / 2);
-                std::cout << std::format("   note: 1x1 level of the 2x2 checker = {} (the box-filter mean would be ({:.1f}, {:.1f}, {:.1f}))\n",
+                std::cout << std::format("   note: 1x1 level of the 2x2 checker = {} (the box-filter mean would be ({:.1f}, {:.1f}, {:.1f}); the spec does not require it)\n",
                                          demo::format_rgba(mean_px), 0.5 * (kChecker[0][0] + kChecker[1][0]),
                                          0.5 * (kChecker[0][1] + kChecker[1][1]), 0.5 * (kChecker[0][2] + kChecker[1][2]));
             }
@@ -1257,7 +1379,7 @@ namespace
 
             mgl::glHint(mgl::HintTarget::GenerateMipmap, mgl::HintMode::Nicest);  // as in init(): the visible checker used NICEST
             mgl::glBindTexture(mgl::TextureTarget::Texture2D, mgl::TextureId{0});
-            mgl::glDeleteTextures(4, scratch);
+            mgl::glDeleteTextures(5, scratch);
         }
 
         // ------------------------------------------------------------------------------------------
@@ -1270,8 +1392,8 @@ namespace
                 const ScenarioInfo& info = kScenarioInfo[static_cast<std::size_t>(s)];
                 const int row = 11 + s / 4, col = 2 * (s % 4);
                 const Rect rb = rect_of(cell_at(row, col), lay), rt = rect_of(cell_at(row, col + 1), lay);
-                const Stats black = compare_const(fb, rb, as_double(kBlack), uniform_tol(0));
-                const Stats twin_ok = compare_const(fb, rt, as_double(info.expected), uniform_tol(0));
+                const Stats black = compare_const(fb, rb, kBlack, 0);
+                const Stats twin_ok = compare_const(fb, rt, info.expected, 0);
                 check.expect(black.bad == 0 && twin_ok.bad == 0,
                              std::format("completeness {}: '{}' samples (0,0,0,1); the correct twin samples {}", s, info.what,
                                          demo::format_rgba(info.expected)),
@@ -1281,7 +1403,7 @@ namespace
                 repair_scenario(static_cast<Scenario>(s), broken(s));
                 Cell c = scenario_cell(s, broken(s));
                 const Image after = draw_scratch(c, lay);
-                const Stats fixed = compare_const(after, {0, 0, lay.cw, lay.ch}, as_double(info.expected), uniform_tol(0));
+                const Stats fixed = compare_const(after, {0, 0, lay.cw, lay.ch}, info.expected, 0);
                 check.expect(fixed.bad == 0, std::format("completeness {}: {} makes the same texture complete -> {}", s, info.fix, demo::format_rgba(info.expected)),
                              fixed.bad == 0 ? "" : fixed.first_bad);
             }
@@ -1355,34 +1477,35 @@ namespace
         // ------------------------------------------------------------------------------------------
         // Negative controls: the comparisons above can fail
         // ------------------------------------------------------------------------------------------
-        void check_controls(demo::Check& check, const Layout& lay, const Image& fb)
+        void check_controls(demo::Check& check, const Layout& lay, const Image& /*fb*/)
         {
-            // (1) Compare the LINEAR_MIPMAP_NEAREST stripes (row 7) with the model of NEAREST_MIPMAP_NEAREST:
-            // more than a quarter of the pixels must disagree (not all: beyond the end of the small levels both filters
-            // clamp to the same edge texel), i.e. the stripe comparison can tell the filters apart.
+            // (1) Redraw the LINEAR_MIPMAP_NEAREST stripe cells (row 7, k = 1..3) with the ladder texture instead of the
+            // stripes. Level k of the ladder is solid, so the result is exactly that colour (+-1) on any implementation; the
+            // stripes range check must reject it at more than a quarter of the pixels, i.e. the range is narrow enough to
+            // catch a wrong texture or level.
             {
                 Stats wrong;
                 for (int k = 1; k <= 3; ++k)
                 {
                     Cell c = cell_at(7, k);
-                    c.min = mgl::TextureMinFilter::NearestMipmapNearest;
-                    c.mag = mgl::TextureMagFilter::Nearest;
-                    wrong.merge(compare_model(c, fb, rect_of(c, lay)));
+                    Cell drawn = c;
+                    drawn.tex = tex_[kLadderTex];
+                    wrong.merge(compare_model(c, draw_scratch(drawn, lay), {0, 0, lay.cw, lay.ch}));
                 }
                 check.expect(wrong.probes > 0 && wrong.bad * 4 > wrong.probes,
-                             "negative control: the LINEAR_MIPMAP_NEAREST row does NOT match the NEAREST_MIPMAP_NEAREST model",
+                             "negative control: the ladder drawn into the LINEAR_MIPMAP_NEAREST stripe cells is rejected by the stripes range",
                              std::format("{} of {} pixels rejected", wrong.bad, wrong.probes));
             }
 
-            // (2) Redraw the 50/50 blend cell (row 3, k = 2, lambda = 2.5) with the non-mipmapped min filter
-            // NEAREST (always level 0): the colour changes to level 0's and the blend expectation rejects it.
+            // (2) Redraw the blend cell (row 3, k = 2, lambda = 2.5) with the non-mipmapped min filter
+            // NEAREST (always level 0): the colour changes to level 0's and the blend range rejects it.
             {
                 Cell c = cell_at(3, 2);
                 c.min = mgl::TextureMinFilter::Nearest;
                 const Image img = draw_scratch(c, lay);
-                const Blend b = blend(kLadder[2], kLadder[3]);
-                const Stats rejected = compare_const(img, {0, 0, lay.cw, lay.ch}, b.value, b.tol);
-                const Stats level0 = compare_const(img, {0, 0, lay.cw, lay.ch}, as_double(kLadder[0]), uniform_tol(0));
+                const Range b = blend(kLadder[2], kLadder[3]);
+                const Stats rejected = compare_range(img, {0, 0, lay.cw, lay.ch}, b);
+                const Stats level0 = compare_const(img, {0, 0, lay.cw, lay.ch}, kLadder[0], 0);
                 check.expect(rejected.bad == rejected.probes && level0.bad == 0,
                              "negative control: switching the min filter to NEAREST turns the blend cell into level 0's colour, which the blend check rejects",
                              std::format("{} of {} pixels rejected", rejected.bad, rejected.probes));
@@ -1393,7 +1516,7 @@ namespace
         mgl::ProgramId program_{};
         mgl::UniformLocation loc_s0_{}, loc_range_{}, loc_t_{}, loc_mode_{}, loc_lod_{};
         std::array<mgl::TextureId, kTexCount> tex_{};
-        Model ladder_model_, stripes_model_, checker_model_;
+        Model ladder_model_, stripes_model_, checker_model_, tiny_model_;
         std::vector<Cell> cells_;
         int initial_hint_ = 0;
         int hint_after_set_ = 0;

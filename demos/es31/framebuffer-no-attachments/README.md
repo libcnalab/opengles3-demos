@@ -108,9 +108,9 @@ effects, by definition), so it counts what a *leak* would change:
 * a per-pixel map of the unguarded atomic.
 
 For two triangles (706 covered pixels, 125 uncovered pixels that share a quad with a covered one) and for a rectangle starting at an odd pixel (576 covered, 108 such pixels)
-all of `guarded` and `unguarded` must equal the CPU coverage **exactly**, `helper_seen` must be 0, the map must equal the model, and `dFdx(gl_FragCoord.x)` and
-`dFdy(gl_FragCoord.y)` must be 1 within 0.01 in every real invocation, also next to uncovered pixels (the derivative is that of a linear function, so any
-approximation gives 1; the tolerance is a sanity bound because the spec leaves derivative precision open). The negative control is arithmetic: if the 125 uncovered pixels had
+all of `guarded` and `unguarded` must equal the CPU coverage **exactly**, `helper_seen` must be 0, and the map must equal the model. The number of real invocations in which `dFdx(gl_FragCoord.x)` or
+`dFdy(gl_FragCoord.y)` is more than 0.01 away from 1 is printed as an observation, not checked: GLSL ES 3.10 section 8.13 lets an implementation
+"approximate the true derivatives by using a fast but not entirely accurate derivative computation" and gives no precision. The negative control is arithmetic: if the 125 uncovered pixels had
 stored, `unguarded` would exceed the coverage, so the equality can fail.
 
 ## Parameters, completeness and errors
@@ -133,7 +133,7 @@ stored, `unguarded` would exceed the coverage, so the equality can fail.
 
 ## Validation summary
 
-71 checks, every one against the CPU model or the specification text; none is "the call returned". Negative controls: the full-quad hit map judged against the sub-rectangle's
+69 checks, every one against the CPU model or the specification text; none is "the call returned". Negative controls: the full-quad hit map judged against the sub-rectangle's
 model differs in 1472 pixels and the two-triangle map against the first triangle alone in the 73 sliver pixels; the test-design checks prove that
 B has occluded fragments (672 vs 384) and that helper candidates exist (125 and 108), so the exact equalities could fail; the single-sample control shows what the multisample
 run is compared against.

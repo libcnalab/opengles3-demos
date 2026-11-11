@@ -24,7 +24,7 @@ row 0:       NEAREST    | LINEAR     | REPEAT [-1,2]   | MIRRORED [-1,2]
   variants (`glTexParameteri/f/iv/fv`) and reads them back. ES 3.0 sampler objects
   (`es30-sampler-objects`) separate this state from the texture.
 - **NEAREST vs LINEAR.** NEAREST takes texel `wrap(⌊u·w⌋)`. LINEAR blends the four texels around
-  `u·w − 0.5` with weights `α = frac(u·w − 0.5)` (ES 3.0 eq. 3.23). A 4×4 texture stretched over 64
+  `u·w − 0.5` with weights `α = frac(u·w − 0.5)` (ES 3.0 §3.8.10.2, the 2D form of eq. 3.22). A 4×4 texture stretched over 64
   pixels shows the difference clearly.
 - **Wrap modes** (Table 3.22) only matter outside [0,1]: REPEAT tiles, MIRRORED_REPEAT reflects
   every other tile, CLAMP_TO_EDGE repeats the edge texels.
@@ -42,9 +42,17 @@ row 0:       NEAREST    | LINEAR     | REPEAT [-1,2]   | MIRRORED [-1,2]
 
 ## Validation
 
-33 checks:
-- Grids of probes in the filter and wrap cells. NEAREST probes skip texel boundaries and must match
-  exactly. LINEAR is allowed ±3/255, because filter-weight precision is implementation-defined.
+34 checks:
+- Grids of probes in the NEAREST and wrap cells. They skip texel boundaries and must match the CPU
+  sampler exactly.
+- LINEAR: §3.8.10.2 gives the bilinear equation but no precision for its weights, so the demo does
+  not compare with the ideal value. It checks what the equation guarantees for any α, β in [0, 1):
+  the four weights are non-negative and sum to one, so each channel lies between the minimum and
+  maximum of the contributing 2×2 texels. The texel set is taken over u, v ± 0.1 texel (the margin
+  the NEAREST probes keep from texel boundaries), plus ±1 for the 8-bit conversion, which may return
+  either of the two closest integers (§2.1.6.2). The largest deviation from the ideal equation is
+  printed as an observation (0.4/255 on radeonsi). A mutation shows that the bound can fail: the
+  value a sampler two texels off would return lies outside it at most probes.
 - Exact texels for the sub-image and alignment cells.
 - Format conversions (±1 for the packed types).
 - Per-unit bindings, parameter queries, `glIsTexture` life cycle, and `glGetIntegerv(GL_UNPACK_ALIGNMENT)`.

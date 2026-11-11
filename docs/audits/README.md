@@ -26,3 +26,18 @@ Most demos were rated "good". Actionable items:
 
 Reports: [es20](2026-11-11-codex-review-es20.md), [es30a](2026-11-11-codex-review-es30a.md),
 [es30b](2026-11-11-codex-review-es30b.md), [es31/es32](2026-11-11-codex-review-es31-32.md).
+
+## 2026-11-11 (late): Codex independent review of the post-audit changes (DIFF_REVIEW_BRIEF.md)
+
+Scope: `git diff 5bd59a6..HEAD` for the 41 demo/test directories changed by the fixing agents after the audit. Most
+changes were confirmed: no unjustified loosening; thresholds are derived from the geometry; negative controls still
+bite. Findings, all accepted:
+- **BUG, minimum sizes:**
+  - es20-cube-map and es20-mipmaps have no Skip guard, and tiny surfaces FAIL;
+  - es30-instancing fails at its documented 240x240 minimum;
+  - es32-cube-map-array fails at its admitted 80x89.
+- **WEAK:** es30-post-processing's dark-channel floor was lowered from w*h/4 to w*h/8 on an observation, not a
+  derivation.
+
+Reports: [es20+tests](2026-11-11-codex-diffreview-es20-tests.md), [es30](2026-11-11-codex-diffreview-es30.md),
+[es31/es32](2026-11-11-codex-diffreview-es31-32.md).

@@ -1,0 +1,49 @@
+#version 310 es
+// Compute-generated geometry: a ring of triangles, one candidate per sector. A sector is kept when
+// (sector * 7 + u_seed) % 5 < 3. Kept sectors append their three vertices and three indices at a slot obtained
+// with atomicAdd (so the ORDER of the triangles is not deterministic, their number and content are).
+//
+// Layout the draw will rely on (a DrawElementsIndirectCommand with firstIndex = 2 and baseVertex = 3 is written
+// by finalize_command.comp; junk entries before those offsets must never be drawn):
+//   vertices: [3 junk vertices][slot 0: 3 vertices][slot 1: ...]
+//   indices : [2 junk indices ][slot 0: 3 indices ][slot 1: ...]   (index values are relative to baseVertex)
+layout(local_size_x = 8) in;
+
+struct Vertex
+{
+    vec2 pos;
+    uint sector;
+    uint pad;
+};
+
+uniform uint u_seed;
+
+layout(std430, binding = 0) buffer Vertices { Vertex v[]; } u_vtx;
+layout(std430, binding = 1) buffer Indices { uint i[]; } u_idx;
+layout(std430, binding = 2) buffer Command { uint cmd[8]; } u_cmd;  // cmd[5] counts the triangles
+
+const uint kBaseVertex = 3u;
+const uint kFirstIndex = 2u;
+const float kTwoPi = 6.28318530718;
+
+void main()
+{
+    uint s = gl_GlobalInvocationID.x;
+    if (((s * 7u + u_seed) % 5u) >= 3u)
+        return;  // this sector is culled
+    uint slot = atomicAdd(u_cmd.cmd[5], 1u);
+
+    float a = kTwoPi * float(s) / 8.0;
+    float half_width = 0.4 * kTwoPi / 8.0;
+    vec2 base0 = 0.40 * vec2(cos(a - half_width), sin(a - half_width));
+    vec2 base1 = 0.40 * vec2(cos(a + half_width), sin(a + half_width));
+    vec2 tip = 0.90 * vec2(cos(a), sin(a));
+
+    uint first = kBaseVertex + 3u * slot;
+    u_vtx.v[first + 0u] = Vertex(base0, s, 0u);
+    u_vtx.v[first + 1u] = Vertex(tip, s, 0u);
+    u_vtx.v[first + 2u] = Vertex(base1, s, 0u);
+    u_idx.i[kFirstIndex + 3u * slot + 0u] = 3u * slot + 0u;
+    u_idx.i[kFirstIndex + 3u * slot + 1u] = 3u * slot + 1u;
+    u_idx.i[kFirstIndex + 3u * slot + 2u] = 3u * slot + 2u;
+}

@@ -1,0 +1,15 @@
+#version 310 es
+// Pass 1: derives the group counts of the image fill from the size of the image itself (imageSize on a readonly
+// writeonly image: allowed, the image is neither read nor written) and writes them as a DispatchIndirectCommand.
+layout(local_size_x = 1) in;
+
+layout(rgba8, binding = 0) uniform readonly writeonly highp image2D u_img;
+layout(std430, binding = 0) buffer Command { uint groups[3]; } u_cmd;
+
+void main()
+{
+    uvec2 size = uvec2(imageSize(u_img));
+    u_cmd.groups[0] = (size.x + 7u) / 8u;
+    u_cmd.groups[1] = (size.y + 7u) / 8u;
+    u_cmd.groups[2] = 1u;
+}

@@ -1,0 +1,28 @@
+#version 310 es
+// Format round trip: imageLoad from a readonly image, imageStore to a writeonly image.
+// main.cpp injects the macros below right after this line, one set per image format of
+// ES 3.2 Table 8.26. The defaults make the file compile on its own.
+#ifndef FORMAT
+#define FORMAT rgba8
+#define IMAGE image2D
+#define VEC vec4
+#define COMPONENTS 4
+#endif
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+// GLSL ES 3.10 4.4.7: every image variable names a format. 4.9: only r32f/r32i/r32ui may omit
+// readonly/writeonly, all other formats need exactly one of them.
+layout(FORMAT, binding = 0) uniform readonly highp IMAGE u_src;
+layout(FORMAT, binding = 1) uniform writeonly highp IMAGE u_dst;
+
+void main()
+{
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    VEC v = imageLoad(u_src, p);
+#if COMPONENTS == 4
+    imageStore(u_dst, p, v.abgr);               // a pure permutation: exact for every format
+#else
+    imageStore(u_dst, p, v * VEC(2) + VEC(1));  // single-channel formats keep only .x
+#endif
+}

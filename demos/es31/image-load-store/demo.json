@@ -1,0 +1,87 @@
+{
+  "name": "es31-image-load-store",
+  "title": "Image load/store",
+  "min_es": "3.1",
+  "glsl": [
+    "310 es"
+  ],
+  "category": "es31",
+  "order": 350,
+  "summary": "Shader image load/store: glBindImageTexture of immutable textures (all 13 image formats of Table 8.26, layered and non-layered bindings, cube face mapping, level selection, format reinterpretation by size) read and written by imageLoad/imageStore/imageSize in compute and fragment shaders; a 3x3 blur and a Sobel filter against CPU references; readonly/writeonly/coherent/volatile/restrict and their compile-time rules; IMAGE_BINDING_* state through glGetIntegeri_v/glGetBooleani_v, IMAGE_FORMAT_COMPATIBILITY_TYPE, the errors of glBindImageTexture; memory barriers between image writes and sampler/framebuffer/buffer reads.",
+  "spec": [
+    "ES 3.2 §8.23 Texture Image Loads and Stores: BindImageTexture and its errors, Table 8.24 (layer number -> cube map face), Table 8.25 (image coordinates), Table 8.26 (supported image unit formats), Table 8.27 (texel sizes, compatibility by size, format reinterpretation), invalid-access and format-mismatch rules; §8.23.1 Image Unit Queries, Table 21.33 Image State (initial values)",
+    "ES 3.2 §8.11.2 Texture Parameter Queries (IMAGE_FORMAT_COMPATIBILITY_TYPE); §20.1 Simple Queries (GetIntegeri_v / GetBooleani_v, INVALID_VALUE for an index out of range)",
+    "ES 3.2 §7.11 Shader Memory Access: §7.11.1 ordering, §7.11.2 MemoryBarrier (SHADER_IMAGE_ACCESS, TEXTURE_FETCH, FRAMEBUFFER and BUFFER_UPDATE bits; coherent variables)",
+    "ES 3.2 §2.3.5.2 Conversion from Floating-Point to Normalized Fixed-Point (imageStore into rgba8 / rgba8_snorm: one of the two closest integers), §2.3.5.1 (texel fetch of normalized formats), §2.3.1 Errors (an erroring command has no effect), §17 Compute Shaders (DispatchCompute)",
+    "ES 3.2 §8.5 / Table 8.3 (upload format/type pairs), §9.2 (framebuffer objects used for glReadPixels of image-written textures), §6 (MapBufferRange of a buffer written by shaders)",
+    "GLSL ES 3.10 §4.1.7.2 Images, §4.4.7 Format Layout Qualifiers (every image needs a format, float/int/uint families), §4.9 Memory Access Qualifiers (coherent, volatile, restrict, readonly, writeonly; only r32f/r32i/r32ui may be read-write), §8.12 Image Functions (imageSize, imageLoad, imageStore), §8.14/§8.15 barrier() and memoryBarrierImage(), §7.1.3 Compute Shader Special Variables"
+  ],
+  "api": {
+    "glBindImageTexture": "binds a level / layer / cube face of immutable textures to image units for 13 formats, layered and non-layered; every texel read or written by the shaders is compared with CPU models; IMAGE_BINDING_* of 4 bindings read back; unbind with texture 0; detach on glDeleteTextures; INVALID_OPERATION (mutable texture), INVALID_VALUE (unit, level, layer, texture name, 7 formats outside Table 8.26)",
+    "glGetIntegeri_v": "IMAGE_BINDING_NAME / LEVEL / LAYER / ACCESS / FORMAT: initial values on every unit (Table 21.33) and the values after four different bindings; INVALID_VALUE for index == MAX_IMAGE_UNITS",
+    "glGetBooleani_v": "IMAGE_BINDING_LAYERED: FALSE initially on every unit, TRUE after a layered array binding, FALSE after non-layered ones; INVALID_VALUE for index == MAX_IMAGE_UNITS",
+    "glGetTexParameteriv": "IMAGE_FORMAT_COMPATIBILITY_TYPE == IMAGE_FORMAT_COMPATIBILITY_BY_SIZE for immutable 2D, 2D array and mutable textures allocated by the GL",
+    "glGetIntegerv": "MAX_IMAGE_UNITS, MAX_COMPUTE_/MAX_COMBINED_/MAX_FRAGMENT_/MAX_VERTEX_IMAGE_UNIFORMS checked against the minimum values / used to gate the fragment-shader checks",
+    "glTexStorage2D": "immutable 2D, cube and multi-level textures that image units require (13 formats, 5-level mip chains, 16x16 / 8x8 / 64x64)",
+    "glTexStorage3D": "immutable 2D array and 3D textures bound layered and per layer",
+    "glTexImage2D": "creates the mutable textures whose BindImageTexture raises INVALID_OPERATION and whose compatibility type is queried",
+    "glTexSubImage2D": "uploads the source data of every format (Table 8.3 pairs), the source image, the level data and the cube faces; read back unchanged through samplers after the readonly image passes",
+    "glTexParameteri": "NEAREST / NEAREST_MIPMAP_NEAREST filters (typed glTexParameter overloads) that make the integer, 32-bit float and mipmapped textures complete for the sampler read-backs",
+    "glDispatchCompute": "format round trips, filters, layered and single-layer stores, imageSize, coherent/volatile reversal, reinterpretation copies: results compared with CPU models",
+    "glMemoryBarrier": "SHADER_IMAGE_ACCESS between dependent image writes, TEXTURE_FETCH before sampler reads, FRAMEBUFFER before glReadPixels of image-written textures, BUFFER_UPDATE before MapBufferRange: the data of the next stage matches the CPU model",
+    "glCompileShader": "five GLSL ES 3.10 image declaration errors (store to readonly, load from writeonly, rgba8 without readonly/writeonly, missing format qualifier, float format on uimage2D) fail to compile; the control shader compiles",
+    "glGenTextures": "all textures of the passes; glDeleteTextures detaches a bound texture",
+    "glBindTexture": "samplers on units 0..3 for the sampler read-backs and display, creation of textures, glTexParameteri targets",
+    "glDeleteTextures": "a bound texture is detached from its image unit (IMAGE_BINDING_NAME 0); cleanup",
+    "glActiveTexture": "units 0..3 for the four samplers of the display program",
+    "glGenBuffers": "shader storage buffer that receives the texelFetch read-backs and the imageSize results",
+    "glBindBuffer": "SHADER_STORAGE target for BufferSubData / MapBufferRange",
+    "glBufferData": "allocates the 128 KiB shader storage buffer",
+    "glBufferSubData": "fills the storage buffer with a sentinel before every read-back; an unwritten word cannot match the model",
+    "glBindBufferBase": "binds the storage buffer to binding point 0 of the read-back and imageSize shaders",
+    "glMapBufferRange": "reads the words written by the compute shaders after BUFFER_UPDATE_BARRIER_BIT",
+    "glGenFramebuffers": "framebuffer object for glReadPixels of image-written RGBA8 textures",
+    "glBindFramebuffer": "FRAMEBUFFER target for the read-back and the default framebuffer for the display",
+    "glFramebufferTexture2D": "attaches the blur / Sobel textures and the six cube faces to COLOR_ATTACHMENT0",
+    "glCheckFramebufferStatus": "FRAMEBUFFER_COMPLETE for the RGBA8 attachments (otherwise the read-back is empty and the check fails)",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE: every texel of the blur and Sobel outputs against CPU references, the six cube faces, 8 probes per display cell of the capture",
+    "glUseProgram": "compute, display and fragment image programs",
+    "glGetUniformLocation": "display, dump and fragment program uniforms",
+    "glUniform1i": "sampler units, level, layer, scale, mode of the dump and display programs",
+    "glUniform2i": "texture size of the dump program, cell origin of the display programs",
+    "glUniform2f": "gray ramp scale of the display program",
+    "glDrawArrays": "fragment-shader imageStore pass (64x64 pixels) and the display cells (a triangle from gl_VertexID, empty VAO); the written texels and the capture pixels are compared with the model",
+    "glViewport": "cell and image-store viewports",
+    "glDeleteBuffers": "cleanup",
+    "glDeleteFramebuffers": "cleanup",
+    "glDeleteProgram": "cleanup"
+  },
+  "features": [
+    "ES31.IMAGE.LOAD_STORE",
+    "ES31.IMAGE.ACCESS",
+    "ES31.IMAGE.QUERY",
+    "ES31.STATE.BOOLEANI"
+  ],
+  "glsl_features": [
+    "GLSL310.IMAGES",
+    "GLSL310.FN.IMAGE",
+    "GLSL310.MEMORY_QUALIFIERS",
+    "GLSL310.COMPUTE.LAYOUT",
+    "GLSL310.COMPUTE.BUILTINS",
+    "GLSL310.BARRIERS",
+    "GLSL310.LAYOUT.BINDING"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "state-query",
+    "gl-error",
+    "negative",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet (subagent)",
+    "notes": "256x256 radeonsi es-max capture viewed at 1x and 3x (llvmpipe and zink differ by at most 1/255 per channel). 4x4 sheet of 64x64 cells. Row 0: the gradient source with yellow disc, blue square and a pink/white checker patch; the same image blurred (soft disc edge, blurred square); the Sobel result (white outlines of disc, square and checker on black); the source color-inverted by the fragment shader (blue disc, yellow square). Row 1: four 8x8 ramps of the 2D array, gray / red / BLUE / yellow tints (layer 2 blue = the non-layered overwrite). Row 2: four 3D slices green / BLUE / blue / magenta (slice 1 = the single-slice overwrite). Row 3: flat orange level 0, a yellow-green inverted gradient for level 1, flat orange level 2, and a gray ramp black at the bottom left to white at the top right written by the fragment imageStore."
+  }
+}

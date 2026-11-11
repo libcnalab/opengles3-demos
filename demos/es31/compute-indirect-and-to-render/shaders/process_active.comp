@@ -1,0 +1,28 @@
+#version 310 es
+// Pass 2: launched with glDispatchComputeIndirect, with the group count that pass 1 wrote. Every invocation of
+// every launched group is counted; the active elements are squared (plus one).
+layout(local_size_x = 64) in;
+
+layout(std430, binding = 0) readonly buffer Input { uint values[]; } u_in;
+layout(std430, binding = 1) buffer Work
+{
+    uint cmd[3];
+    uint active_count;
+    uint groups_seen;
+    uint invocations_seen;
+    uint list[];
+} u_work;
+layout(std430, binding = 3) buffer Output { uint values[]; } u_out;
+
+void main()
+{
+    atomicAdd(u_work.invocations_seen, 1u);
+    if (gl_LocalInvocationIndex == 0u)
+        atomicAdd(u_work.groups_seen, 1u);
+    uint g = gl_GlobalInvocationID.x;
+    if (g < u_work.active_count)
+    {
+        uint v = u_in.values[u_work.list[g]];
+        u_out.values[g] = v * v + 1u;
+    }
+}

@@ -1,0 +1,11 @@
+#version 310 es
+// Non-layered binding (layered = FALSE): the image is a plain image2D that addresses exactly one
+// layer / slice / cube face of the bound texture, chosen by the layer argument of BindImageTexture.
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(r32ui, binding = 0) uniform writeonly highp uimage2D u_img;
+
+void main()
+{
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    imageStore(u_img, p, uvec4(900000u + uint(p.y * 8 + p.x)));
+}

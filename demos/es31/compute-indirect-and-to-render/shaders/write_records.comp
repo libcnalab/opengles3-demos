@@ -1,0 +1,14 @@
+#version 310 es
+// Writes a table of work group counts into a buffer that is later used as DISPATCH_INDIRECT_BUFFER. Any three
+// consecutive words, starting at any word (byte offset = 4 * word), form a valid DispatchIndirectCommand, so the
+// table is read at overlapping offsets.
+layout(local_size_x = 12) in;
+
+layout(std430, binding = 0) buffer Records { uint words[]; } u_rec;
+
+const uint kTable[12] = uint[12](3u, 2u, 2u,   4u, 1u, 0u,   1u, 5u, 1u,   2u, 1u, 3u);
+
+void main()
+{
+    u_rec.words[gl_LocalInvocationID.x] = kTable[gl_LocalInvocationID.x];
+}

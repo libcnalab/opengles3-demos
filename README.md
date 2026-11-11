@@ -12,9 +12,21 @@ An educational and validation suite for the **OpenGL ES 3.0, 3.1 and 3.2** core 
 - **Specification-derived coverage.** The 358 core entry points come from the Khronos registry;
   features and GLSL language items are tracked separately (`docs/`).
 
-> Status: early (Phase 1 complete — infrastructure + first demo). See
-> [docs/generated/COVERAGE_SUMMARY.md](docs/generated/COVERAGE_SUMMARY.md) for real numbers.
+> **Status (2026-11-11):** 82 executables (77 demos, 5 test programs).
+> - **API:** all 358 core entry points of ES 2.0/3.0/3.1/3.2 have passing, validated evidence.
+> - **Semantic features:** every ES 3.0-3.2 row is validated; one ES 2.0 row (feedback loops) has undefined
+>   results and is documented only.
+> - **GLSL ES:** every 1.00/3.00/3.10/3.20 inventory row is validated.
+>
+> The suite runs on radeonsi, llvmpipe and zink, each at the maximum and the minimum ES version; ES 3.2
+> executables also run on softpipe. Driver deviations from the spec are recorded as XFAIL with spec quotes
+> ([docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md)). Live numbers:
+> [docs/generated/COVERAGE_SUMMARY.md](docs/generated/COVERAGE_SUMMARY.md).
 > This is not a Khronos conformance suite.
+
+Where to start: [docs/DEMO_CATALOG.md](docs/DEMO_CATALOG.md) lists every executable in learning order. The ★
+entries are 3D scenes: camera, lighting, normal and shadow mapping, deferred shading, post-processing, skybox
+and fog, compute particles, tessellated terrain, and geometry shaders.
 
 ## Requirements
 
@@ -28,8 +40,8 @@ An educational and validation suite for the **OpenGL ES 3.0, 3.1 and 3.2** core 
 
 ```sh
 cmake --preset debug
-cmake --build --preset debug
-ctest --preset debug                       # every demo × {gpu, llvmpipe} × {es-max, es-min}
+cmake --build --preset debug              # jobs: 8 (owner's CPU limit)
+ctest --preset debug                       # every demo × {gpu, llvmpipe, zink} × {es-max, es-min}
 
 ./build/debug/bin/es30-hello-triangle                 # window (SDL3)
 ./build/debug/bin/es30-hello-triangle --headless --validate --capture tri.png
@@ -49,7 +61,7 @@ Exit status: 0 PASS, 1 FAIL, 77 SKIP_UNSUPPORTED / BLOCKED_*, 2 usage error.
 
 | Document | Content |
 |---|---|
-| [docs/DEMO_CATALOG.md](docs/DEMO_CATALOG.md) | learning path, implemented and planned demos |
+| [docs/DEMO_CATALOG.md](docs/DEMO_CATALOG.md) | every executable in learning order |
 | [docs/API_COVERAGE.csv](docs/API_COVERAGE.csv) | all 358 core entry points with evidence (generated) |
 | [docs/FEATURE_COVERAGE.md](docs/FEATURE_COVERAGE.md) | semantic feature inventory and method |
 | [docs/GLSL_COVERAGE.md](docs/GLSL_COVERAGE.md) | GLSL ES coverage strategy |

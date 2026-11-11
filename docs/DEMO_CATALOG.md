@@ -1,97 +1,117 @@
 # Demo catalog and learning path
 
-Status of every executable: **[generated/DEMO_STATUS.md](generated/DEMO_STATUS.md)**.
-Entries marked **planned** do not exist yet; they form the implementation backlog in the order a
-reader should study them. Feature IDs refer to `inventory/features.csv`.
+Every executable in the suite, in the order a reader should study them (the `order` field of each
+`demo.json`). Live status per driver and ES version: **[generated/DEMO_STATUS.md](generated/DEMO_STATUS.md)**.
+Executables marked ★ are 3D scenes, good starting points to see what the API pieces add up to.
 
-## Stage 1 — first pixels (ES 3.0 context, GLSL ES 3.00)
+## Stage 1–3: ES 2.0 foundations on an ES 3.x context
 
-| # | executable | teaches | status |
-|---|---|---|---|
-| 1 | `es30-hello-triangle` | VBO, VAO, shader program, `glDrawArrays`, interpolation | implemented |
-| 2 | `es20-clear-viewport-scissor` | clear values, viewport mapping, scissor, color mask | implemented |
-| 3 | `es20-shader-compilation` | compile/link status, info logs, deferred deletion, source/precision queries | implemented |
-| 4 | `es20-vertex-attributes` | attribute formats, normalization, stride/offset, constant attributes, bind/get location | implemented |
-| 5 | `es20-indexed-drawing` | index buffers, index types, `glBufferSubData` | implemented |
-| 6 | `es20-primitive-topology` | points/lines/strips/fans, `gl_PointSize`, line width range | implemented |
-| 7 | `es20-uniforms` | scalar/vector/matrix/array/struct uniforms, active-uniform enumeration | implemented |
+| executable | min ES | what it teaches |
+|---|---|---|
+| [`es20-clear-viewport-scissor`](../demos/es20-foundations/clear-viewport-scissor/README.md) | 3.0 | Clear, viewport and scissor |
+| [`es20-shader-compilation`](../demos/es20-foundations/shader-compilation/README.md) | 3.0 | Shader and program objects |
+| [`es20-vertex-attributes`](../demos/es20-foundations/vertex-attributes/README.md) | 3.0 | Vertex attributes |
+| [`es20-indexed-drawing`](../demos/es20-foundations/indexed-drawing/README.md) | 3.0 | Indexed drawing |
+| [`es20-primitive-topology`](../demos/es20-foundations/primitive-topology/README.md) | 3.0 | Primitive topology |
+| [`es20-uniforms`](../demos/es20-foundations/uniforms/README.md) | 3.0 | Uniform variables |
+| [`es20-culling-front-face`](../demos/es20-foundations/culling-front-face/README.md) | 3.0 | Face culling and front-face winding |
+| [`es20-depth-test`](../demos/es20-foundations/depth-test/README.md) | 3.0 | Depth buffer test |
+| [`es20-stencil-test`](../demos/es20-foundations/stencil-test/README.md) | 3.0 | Stencil buffer test |
+| [`es20-blending`](../demos/es20-foundations/blending/README.md) | 3.0 | Blending |
+| [`es20-textures-2d`](../demos/es20-foundations/textures-2d/README.md) | 3.0 | 2D textures: filtering, wrapping, formats, units |
+| [`es20-framebuffer-objects`](../demos/es20-foundations/framebuffer-objects/README.md) | 3.0 | Framebuffer objects: render to texture, renderbuffers, completeness |
+| [`es20-mipmaps`](../demos/es20-foundations/mipmaps/README.md) | 3.0 | Mipmaps: level of detail, the four mipmap filters, glGenerateMipmap, completeness |
+| [`es20-copy-and-read-pixels`](../demos/es20-foundations/copy-and-read-pixels/README.md) | 3.0 | Copy and read pixels: glReadPixels, glCopyTexImage2D, glCopyTexSubImage2D |
+| [`es20-cube-map`](../demos/es20-foundations/cube-map/README.md) | 3.0 | Cube map textures: face selection (Table 3.21) and completeness |
+| [`es20-transformations-camera`](../demos/es20-foundations/transformations-camera/README.md) ★ | 3.0 | Transformations and camera |
+| [`es20-state-queries-errors`](../demos/es20-foundations/state-queries-errors/README.md) | 3.0 | State queries, conversions and GL errors |
 
-## Stage 2 — the fixed pipeline stages that remain (per-fragment operations)
+## Stage 4: OpenGL ES 3.0
 
-| # | executable | teaches | status |
-|---|---|---|---|
-| 8 | `es20-culling-front-face` | winding, culling, `gl_FrontFacing` | implemented |
-| 9 | `es20-depth-test` | depth functions, depth mask, depth range, polygon offset | implemented |
-| 10 | `es20-stencil-test` | all stencil ops/functions, separate front/back state, masks | implemented |
-| 11 | `es20-blending` | blend factors, equations, constant color, separate RGB/alpha | implemented |
-| 12 | `es30-blend-min-max` | MIN/MAX equations | implemented inside `es20-blending` |
+| executable | min ES | what it teaches |
+|---|---|---|
+| [`es30-hello-triangle`](../demos/es30/hello-triangle/README.md) | 3.0 | Hello Triangle |
+| [`es30-vertex-array-objects`](../demos/es30/vertex-array-objects/README.md) | 3.0 | Vertex array objects, integer and packed attributes |
+| [`es30-instancing`](../demos/es30/instancing/README.md) | 3.0 | Instancing, divisors, primitive restart |
+| [`es30-multiple-render-targets`](../demos/es30/multiple-render-targets/README.md) | 3.0 | Multiple render targets: glDrawBuffers, glClearBuffer*, integer targets |
+| [`es30-sampler-objects`](../demos/es30/sampler-objects/README.md) | 3.0 | Sampler objects: sampling state separate from textures |
+| [`es30-integer-float-textures`](../demos/es30/integer-float-textures/README.md) | 3.0 | Integer, float and packed-float textures |
+| [`es30-texture-3d-and-arrays`](../demos/es30/texture-3d-and-arrays/README.md) | 3.0 | 3D textures and 2D array textures |
+| [`es30-texture-swizzle-lod`](../demos/es30/texture-swizzle-lod/README.md) | 3.0 | Texture swizzle and shader-chosen level of detail |
+| [`es30-immutable-storage`](../demos/es30/immutable-storage/README.md) | 3.0 | Immutable texture storage and sized formats |
+| [`es30-pixel-buffer-objects`](../demos/es30/pixel-buffer-objects/README.md) | 3.0 | Pixel buffer objects: texture uploads and read-backs through buffer objects |
+| [`es30-srgb`](../demos/es30/srgb/README.md) | 3.0 | sRGB textures and sRGB render targets |
+| [`es30-etc2-eac`](../demos/es30/etc2-eac/README.md) | 3.0 | ETC2 / EAC compressed textures |
+| [`es30-glsl-texture-functions`](../demos/es30/glsl-texture-functions/README.md) | 3.0 | GLSL ES 3.00 texture lookup and derivative functions |
+| [`es30-framebuffer-blit-msaa`](../demos/es30/framebuffer-blit-msaa/README.md) | 3.0 | Framebuffer blits and multisample resolve |
+| [`es30-flat-centroid`](../demos/es30/flat-centroid/README.md) | 3.0 | Flat shading, centroid and sample coverage |
+| [`es30-multisample-default-framebuffer`](../demos/es30/multisample-default-framebuffer/README.md) | 3.0 | Multisampled default framebuffer |
+| [`es30-framebuffer-invalidate`](../demos/es30/framebuffer-invalidate/README.md) | 3.0 | Framebuffer invalidation and attachment queries |
+| [`es30-buffer-mapping`](../demos/es30/buffer-mapping/README.md) | 3.0 | Buffer mapping and copying |
+| [`es30-uniform-buffer-objects`](../demos/es30/uniform-buffer-objects/README.md) | 3.0 | Uniform buffer objects |
+| [`es30-transform-feedback`](../demos/es30/transform-feedback/README.md) | 3.0 | Transform feedback: capture, objects, pause/resume, queries |
+| [`es30-program-binary`](../demos/es30/program-binary/README.md) | 3.0 | Program binaries |
+| [`es30-sync-objects`](../demos/es30/sync-objects/README.md) | 3.0 | Sync objects: fences, client and server waits, flush and finish |
+| [`es30-normal-mapping`](../demos/es30/normal-mapping/README.md) ★ | 3.0 | Normal mapping: tangent space, specular map, mip chains |
+| [`es30-deferred-shading`](../demos/es30/deferred-shading/README.md) ★ | 3.0 | Deferred shading: G-buffer (MRT) + 48 moving point lights |
+| [`es30-lighting`](../demos/es30/lighting/README.md) ★ | 3.0 | Lighting: directional, point, spot; Phong vs Blinn-Phong |
+| [`es30-skybox-and-fog`](../demos/es30/skybox-and-fog/README.md) ★ | 3.0 | Skybox, environment mapping and fog |
+| [`es30-occlusion-queries`](../demos/es30/occlusion-queries/README.md) ★ | 3.0 | Occlusion queries: culling hidden towers behind a city block |
+| [`es30-shadow-mapping`](../demos/es30/shadow-mapping/README.md) ★ | 3.0 | Shadow Mapping |
+| [`es30-depth-textures`](../demos/es30/depth-textures/README.md) | 3.0 | Depth Textures |
+| [`es30-post-processing`](../demos/es30/post-processing/README.md) ★ | 3.0 | Post-processing: gamma, blur, Sobel, bloom, depth of field |
 
-## Stage 3 — textures and framebuffers
+## Stage 5: OpenGL ES 3.1
 
-| # | executable | teaches | status |
-|---|---|---|---|
-| 13 | `es20-textures-2d` | texture objects/units, filtering, wrapping, unpack alignment | implemented |
-| 14 | `es20-mipmaps` | mip chains, `glGenerateMipmap`, completeness | implemented |
-| 15 | `es20-cube-map` | cube faces and direction lookup | implemented |
-| 16 | `es20-framebuffer-objects` | render to texture, renderbuffers, completeness (incl. failures) | implemented |
-| 17 | `es20-copy-tex-image` | `glCopyTexImage2D/SubImage2D` | implemented as `es20-copy-and-read-pixels` |
-| 18 | `es20-read-pixels` | readback formats, pack alignment, implementation read format | implemented as `es20-copy-and-read-pixels` |
-| 19 | `es30-sampler-objects` | sampler vs texture state, two samplers on one texture | implemented |
-| 20 | `es30-texture-3d-and-arrays` | 3D and 2D-array textures, layer addressing | implemented |
-| 21 | `es30-immutable-storage` | `glTexStorage*`, immutability errors, sized formats | implemented |
-| 22 | `es30-integer-float-textures` | isampler/usampler, float/half textures, filterability rules | implemented |
-| 23 | `es30-srgb` | sRGB textures and render targets | implemented |
-| 24 | `es30-texture-swizzle-lod` | swizzles, base/max level, min/max LOD | implemented |
-| 25 | `es30-etc2-eac` | required compressed formats | planned |
-| 26 | `es30-pixel-buffer-objects` | PBO pack/unpack | implemented |
-| 27 | `es30-multiple-render-targets` | `glDrawBuffers`, fragment output locations | implemented |
-| 28 | `es30-framebuffer-blit-msaa` | read/draw FBOs, blits, multisample resolve | implemented |
-| 29 | `es30-clear-buffer` | `glClearBuffer*` per attachment and type | implemented inside `es30-multiple-render-targets` |
-| 30 | `es30-framebuffer-invalidate` | invalidation, attachment queries (layers: `es30-texture-3d-and-arrays`) | implemented |
-| 31 | `es30-depth-textures-shadow` | depth textures, comparison sampling, shadow-map basics | planned |
+| executable | min ES | what it teaches |
+|---|---|---|
+| [`es31-compute-basics`](../demos/es31/compute-basics/README.md) | 3.1 | Compute shaders: dispatch, built-ins, limits |
+| [`es31-compute-shared-memory`](../demos/es31/compute-shared-memory/README.md) | 3.1 | Compute shaders: shared memory and barriers |
+| [`es31-ssbo-std430`](../demos/es31/ssbo-std430/README.md) | 3.1 | Shader storage buffers and std430 |
+| [`es31-atomics`](../demos/es31/atomics/README.md) | 3.1 | Atomic counters and atomic memory functions |
+| [`es31-image-load-store`](../demos/es31/image-load-store/README.md) | 3.1 | Image load/store |
+| [`es31-compute-indirect-and-to-render`](../demos/es31/compute-indirect-and-to-render/README.md) | 3.1 | Indirect dispatch and compute to render |
+| [`es31-compute-particles`](../demos/es31/compute-particles/README.md) ★ | 3.1 | Compute particles: an SSBO fountain simulated on the GPU |
+| [`es31-stencil-texturing-and-level-queries`](../demos/es31/stencil-texturing-and-level-queries/README.md) | 3.1 | Stencil texturing and texture level queries |
+| [`es31-texture-gather`](../demos/es31/texture-gather/README.md) | 3.1 | textureGather and textureGatherOffset |
+| [`es31-framebuffer-no-attachments`](../demos/es31/framebuffer-no-attachments/README.md) | 3.1 | Framebuffer without attachments |
+| [`es31-multisample-textures`](../demos/es31/multisample-textures/README.md) | 3.1 | Multisample textures and the sample mask |
+| [`es31-indirect-draw`](../demos/es31/indirect-draw/README.md) | 3.1 | Indirect drawing |
+| [`es31-separate-vertex-format`](../demos/es31/separate-vertex-format/README.md) | 3.1 | Separate vertex format and vertex buffer bindings |
+| [`es31-program-pipelines`](../demos/es31/program-pipelines/README.md) | 3.1 | Separable programs and program pipelines |
+| [`es31-program-interface-query`](../demos/es31/program-interface-query/README.md) | 3.1 | Program interface queries |
 
-## Stage 4 — ES 3.0 data paths
+## Stage 6: OpenGL ES 3.2
 
-| # | executable | teaches | status |
-|---|---|---|---|
-| 32 | `es30-vertex-array-objects` | VAO switching, element buffer as VAO state | implemented |
-| 33 | `es30-integer-and-packed-attributes` | `glVertexAttribIPointer`, 2_10_10_10, half float | implemented inside `es30-vertex-array-objects` |
-| 34 | `es30-instancing` | divisors, instanced draws, `gl_InstanceID` | implemented |
-| 35 | `es30-draw-range-primitive-restart` | `glDrawRangeElements`, primitive restart | implemented inside `es30-instancing` |
-| 36 | `es30-buffer-mapping` | map flags, explicit flush, copy, 64-bit queries | implemented |
-| 37 | `es30-uniform-buffer-objects` | std140, ranges, introspection, sharing | implemented |
-| 38 | `es30-transform-feedback` | capture, modes, objects, pause/resume, render from capture | implemented |
-| 39 | `es30-occlusion-queries` | query objects, availability | planned |
-| 40 | `es30-sync-objects` | fences, client/server waits | implemented |
-| 41 | `es30-program-binary` | binary retrieval/reload + recompile fallback | planned |
-| 42 | `es30-flat-centroid` | flat/centroid interpolation, provoking vertex | planned |
-| 43 | `diagnostics-capabilities` | version, limits, extension report | implemented |
+| executable | min ES | what it teaches |
+|---|---|---|
+| [`es32-float-targets-and-indexed-blend`](../demos/es32/float-targets-and-indexed-blend/README.md) | 3.2 | Float render targets and indexed blending |
+| [`es32-geometry-shaders`](../demos/es32/geometry-shaders/README.md) ★ | 3.2 | Geometry shaders: amplification, adjacency, invocations |
+| [`es32-layered-rendering`](../demos/es32/layered-rendering/README.md) ★ | 3.2 | Layered rendering: gl_Layer, cube map in one pass |
+| [`es32-debug-output`](../demos/es32/debug-output/README.md) | 3.2 | Debug output: messages, groups and labels |
+| [`es32-tessellation-domains`](../demos/es32/tessellation-domains/README.md) | 3.2 | Tessellation domains, spacings and winding |
+| [`es32-tessellation-terrain`](../demos/es32/tessellation-terrain/README.md) ★ | 3.2 | Tessellated terrain with dynamic LOD |
+| [`es32-base-vertex-and-robustness`](../demos/es32/base-vertex-and-robustness/README.md) | 3.2 | Base vertex drawing and robustness |
+| [`es32-texture-buffer`](../demos/es32/texture-buffer/README.md) | 3.2 | Buffer textures |
+| [`es32-cube-map-array`](../demos/es32/cube-map-array/README.md) | 3.2 | Cube map array textures |
+| [`es32-multisample-array-and-border-color`](../demos/es32/multisample-array-and-border-color/README.md) | 3.2 | Multisample array textures and the border color |
+| [`es32-astc-and-copy-image`](../demos/es32/astc-and-copy-image/README.md) | 3.2 | ASTC textures and glCopyImageSubData |
+| [`es32-advanced-blend-and-sample-shading`](../demos/es32/advanced-blend-and-sample-shading/README.md) | 3.2 | Advanced blend equations and sample shading |
 
-## Stage 5 — shading compositions (ES 3.0)
+## Diagnostics
 
-`es30-lighting` (directional/point/spot, Phong/Blinn-Phong), `es30-normal-mapping`,
-`es30-post-processing` (blur, Sobel, gamma), `es30-fog`, `es30-deferred-shading`,
-`es30-shadow-mapping`, `es30-particles-transform-feedback` — all **planned**.
-
-## Stage 6 — ES 3.1
-
-`es31-compute-basics`, `es31-compute-shared-memory`, `es31-compute-indirect-dispatch`,
-`es31-ssbo-std430`, `es31-image-load-store`, `es31-atomic-counters`, `es31-atomic-memory`,
-`es31-indirect-draw`, `es31-separate-vertex-format`, `es31-program-pipelines`,
-`es31-program-interface-query`, `es31-texture-gather`, `es31-multisample-textures`,
-`es31-stencil-texturing`, `es31-sample-mask`, `es31-framebuffer-no-attachments`,
-`es31-compute-particles`, `es31-compute-image-filter` — all **planned**.
-
-## Stage 7 — ES 3.2
-
-`es32-geometry-basics`, `es32-geometry-layered`, `es32-tessellation-triangles`,
-`es32-tessellation-quads-isolines`, `es32-tessellation-lod`, `es32-texture-buffer`,
-`es32-cube-map-array`, `es32-multisample-array`, `es32-border-color`, `es32-astc`,
-`es32-copy-image`, `es32-float-render-targets`, `es32-indexed-blend`, `es32-advanced-blend`,
-`es32-sample-shading`, `es32-interpolate-at`, `es32-base-vertex`, `es32-debug-output`,
-`es32-debug-groups-labels`, `es32-robustness` — all **planned**.
+| executable | min ES | what it teaches |
+|---|---|---|
+| [`diagnostics-capabilities`](../demos/diagnostics/capabilities/README.md) | 3.0 | Capabilities, limits and extensions |
 
 ## Test executables (not demos)
 
-`glsl-compile-tests` (implemented: GLSL ES positive/negative compile and link), `test-glsl300-builtins` (implemented), `glsl310-builtins` (planned), `tests/negative/*`
-(`test-metagl-contracts` implemented; more planned).
+| executable | min ES | what it checks |
+|---|---|---|
+| [`test-glsl-language`](../tests/glsl/glsl-language/README.md) | 3.0 | GLSL ES language rules at run time |
+| [`test-glsl300-builtins`](../tests/glsl/glsl300-builtins/README.md) | 3.0 | GLSL ES 3.00 built-in functions (numeric) |
+| [`test-glsl310-builtins`](../tests/glsl/glsl310-builtins/README.md) | 3.1 | GLSL ES 3.10 built-in functions and arrays of arrays |
+| [`test-glsl320-builtins`](../tests/glsl/glsl320-builtins/README.md) | 3.2 | GLSL ES 3.20 image atomics, fma and precise |
+| [`test-driver-crash-readpixels-none`](../tests/negative/driver-crash-readpixels-none/README.md) | 3.0 | glReadPixels with READ_BUFFER = NONE (crash-isolated) |
+| [`test-metagl-contracts`](../tests/negative/metagl-contracts/README.md) | 3.0 | meta-gl contracts |
+| [`glsl-compile-tests`](../shader-tests/README.md) | 3.0 | GLSL ES compile and link tests |

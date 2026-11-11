@@ -283,12 +283,15 @@ namespace demo
         req.title = std::format("{} - {}", info.name, info.title);
 
         std::string error;
+        std::string probe_error;  // non-empty: the current context is only a version probe
         if (!platform->create(req, error))
         {
             // A driver may refuse to create a context of a version it does not support (e.g. softpipe,
             // a native ES 3.1 driver, answers EGL_BAD_MATCH for ES 3.2). Retry with ES 3.0 to learn what
             // the driver offers: the version check below then reports SKIP_UNSUPPORTED with the real
-            // version instead of a misleading BLOCKED_ENVIRONMENT.
+            // version instead of a misleading BLOCKED_ENVIRONMENT. The probe drops the debug/robust
+            // attributes (softpipe refuses robust contexts of every version); it only learns the version,
+            // and a probe context that turns out to be new enough is reported BLOCKED with the original error.
             bool recovered = false;
             if (Version{3, 0} < req.version)
             {
@@ -299,11 +302,16 @@ namespace demo
                 if (!platform) platform = detail::make_egl_headless_platform();
                 detail::ContextRequest fallback = req;
                 fallback.version = {3, 0};
+                fallback.debug = false;
+                fallback.robust = false;
                 std::string fallback_error;
                 recovered = platform->create(fallback, fallback_error);
                 if (recovered)
+                {
+                    probe_error = error;
                     std::cout << std::format("note: ES {} context refused ({}); probing with an ES 3.0 request\n",
                                              to_string(req.version), error);
+                }
             }
             if (!recovered)
             {
@@ -357,6 +365,13 @@ namespace demo
             rep.outcome = Outcome::SkipUnsupported;
             rep.reason = std::format("requires OpenGL ES {}, context is {}", to_string(info.min_es),
                                      to_string(rep.context_version));
+            return finish(options, info, rep, runtime_checks, demo_checks);
+        }
+        if (!probe_error.empty())
+        {
+            // The driver supports the version but refused the requested context attributes.
+            rep.outcome = Outcome::BlockedEnvironment;
+            rep.reason = probe_error;
             return finish(options, info, rep, runtime_checks, demo_checks);
         }
 

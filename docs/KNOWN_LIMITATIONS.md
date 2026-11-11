@@ -65,6 +65,7 @@
 
 | `es32-geometry-shaders` | ES 3.2 §11.3.4.4: `GEOMETRY_VERTICES_OUT` × active output components may not exceed `MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS`; "LinkProgram will fail if it determines that the total component limit would be violated" | `max_vertices = 256` with 128 active output components per vertex (31 vec4 read by the FS + `gl_Position`): 256 × 128 = 32 768 > 4095 (radeonsi) / 1024 (llvmpipe, zink) links. The product is known at link time, so we read "if it determines" as satisfied. All Mesa drivers |
 | `es32-layered-rendering` | ES 3.2 §9.2.8: `FramebufferTextureLayer` accepts cube map textures; layer selects the face (Table 8.24) | no error, but the previous attachment stays in place (the cube map is not attached). Layered `glFramebufferTexture` on a cube map works. All Mesa drivers |
+| `es32-base-vertex-and-robustness` | ES 3.2 §16.1.2: `ReadnPixels` raises INVALID_VALUE if `bufSize` is negative (INVALID_OPERATION, the too-small-buffer rule, would also be acceptable) | `bufSize = -1` raises no error and writes the pixels. `glGetnUniform*v` rejects a negative `bufSize` correctly. All Mesa drivers |
 
 Not deviations (verified during integration): Mesa accepting `glGenerateMipmap` on R32F and unsized
 `RGB + FLOAT` uploads is correct, because the contexts expose `GL_OES_texture_float_linear`,

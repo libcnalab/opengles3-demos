@@ -4,7 +4,7 @@ _Keep this file current. It is the first thing any agent reads._
 
 ## Current phase
 
-**Phases 2-5 (demos) in progress; ES 2.0/3.0/3.1 largely done, ES 3.2 and 3D underway.** Last update: 2026-11-11 16:30.
+**All backlog demos merged; phase 6 (independent audit) next, phase 7 verification green.** Last update: 2026-11-11 20:30.
 
 ## Done
 
@@ -53,19 +53,17 @@ cmake --build --preset debug --target coverage
 4. Phase 6 audit (coverage gaps: run `coverage` and read docs/generated/COVERAGE_SUMMARY.md), then phase 7
    final verification on a clean build.
 
-## In flight (2026-11-11 17:40)
+## In flight (2026-11-11 20:30)
 
-Merged: 63 executables, 332/358 entry points with evidence. That includes the 3D demos camera, lighting,
-normal mapping, post-processing, shadow mapping and deferred shading, and the ES 3.2 demos debug-output,
-float-targets-and-indexed-blend, texture-buffer, cube-map-array, geometry-shaders, layered-rendering,
-tessellation-domains and tessellation-terrain.
-meta-gl G8 (transpose = GL_TRUE) is fixed on its branch (`3bb7411`).
-Running Claude subagents (worktrees under .claude/worktrees/):
-Coverage (2026-11-11 19:00): API 358/358, ES features 99% (FBO feedback loop is documentation-only; MSAA
-default framebuffer is in progress), GLSL 100% at all four language versions.
-Codex from 22:05 (background job): phase 6 audits per docs/agent-briefs/AUDIT_BRIEF.md via
-tools/agents/codex_audit.sh, groups es20, es30a, es30b and es31, then es32 and tests. Reports go to
-../opengles3-demos-worktrees/audit-*.report.md; the integrator triages and fixes.
+The suite has 82 executables. Coverage: API 358/358; ES features 100% for 3.0-3.2 (the ES 2.0 feedback-loop row is
+DOCUMENTED_ONLY); GLSL 100% at all four language versions.
+Phase 7 verification:
+- debug preset (gpu, llvmpipe, zink × es-max/es-min, plus softpipe for 3.2): 474/474;
+- headless-ci (-Werror, llvmpipe and softpipe): clean build, 172/172;
+- sanitize (ASan/UBSan): 474/474.
+Next: Codex phase 6 audits start at 22:05 (background job; tools/agents/codex_audit.sh, brief
+docs/agent-briefs/AUDIT_BRIEF.md). Reports go to ../opengles3-demos-worktrees/audit-*.report.md. Triage each
+finding against the spec, fix the real ones in the demos, and record any changed deviations.
 
 ## Parallel work / Codex
 

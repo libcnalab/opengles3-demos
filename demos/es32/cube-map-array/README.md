@@ -28,7 +28,19 @@ A 256 × 256 frame (frame 19 of the animation, time = frame/60 s, camera orbitin
 
 On other surfaces the layout scales: the tile rows are `min(w/10, 3h/10/3)` pixels high, the ten tile columns partition the whole width (`[c·w/10, (c+1)·w/10)`,
 so the tiles may be wider than high), and the spheres take the rest. A portrait scene viewport keeps the 45° *horizontal* field of view (the vertical one widens), so all
-five spheres stay in view. Surfaces whose tile rows would be under 8 pixels or whose scene would be under 64 rows report SKIP.
+five spheres stay in view.
+
+**Minimum size.** `init()` reports SKIP in two cases. The first is a tile row under 8 pixels or a scene under 64 rows.
+The second is a surface too small for the sphere check. The sphere check probes every second pixel in x and y, so
+it gets about one ray per 4 pixels of a sphere's projected area. It needs at least 40 hits on every sphere, at least
+a quarter of them comparable, and more than 20 compared probes on each of at least four faces. Whether a surface
+meets that depends on the projected sphere sizes at the frame `validate()` shows (frame 19 by default, since the
+camera orbits) and on the aspect ratio. So `init()` runs the same CPU ray model (`sphere_model()`) for that frame
+and skips when the model cannot meet these counts. The check itself can then fail only when the picture
+disagrees with the model. Because the minimum is computed, it is not one rectangle and not monotonic in every
+direction. On llvmpipe: 102 × 102 passes and 101 × 101 skips; 100 × 200 passes and 95 × 200 skips; 1000 × 104 passes,
+and 1000 × 102 and 1000 × 103 skip (1000 × 101 passes). A sweep of every width 80–140 against every height 89–140
+gives only PASS or SKIP. The old guard alone admitted 80 × 89, where the spheres got only 32–39 hits each.
 
 ## Central calls
 

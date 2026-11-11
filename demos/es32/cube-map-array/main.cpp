@@ -275,6 +275,40 @@ namespace
     };
     constexpr int kMinTile = 8;     // smallest tile row height (pixels)
     constexpr int kMinScene = 64;   // smallest scene viewport height (pixels)
+    // The sphere check (check_picture) probes every second pixel in x and y (one probe per 2 x 2 pixels) and needs, from
+    // the CPU ray model alone: at least kMinSphereHits probes on every sphere, at least a quarter of them stable enough to
+    // compare, and more than kMinFaceProbes compared probes on each of at least kMinSphereFaces faces.
+    constexpr int kMinSphereHits = 40;
+    constexpr int kMinFaceProbes = 20;
+    constexpr int kMinSphereFaces = 4;
+
+    /// One sphere probe of the CPU ray model: a scene pixel (y from the top of the scene viewport) and the texel it must show.
+    struct SphereProbe
+    {
+        int x = 0, y = 0, sphere = 0;
+        Sample S;
+    };
+    /// The probe set of the sphere check, computed from the camera and the sphere positions only (no read-back).
+    struct SphereModel
+    {
+        std::vector<SphereProbe> probes;  // the compared probes
+        int skipped = 0;                  // grazing hits or hits whose texel is not stable under small normal perturbations
+        std::array<int, 5> per_sphere{}, hits{};
+        std::array<int, kFaces> per_face{};
+        [[nodiscard]] bool every_sphere() const
+        {
+            for (std::size_t k = 0; k < 5; ++k)
+                if (hits[k] < kMinSphereHits || per_sphere[k] < hits[k] / 4) return false;
+            return true;
+        }
+        [[nodiscard]] int faces_seen() const
+        {
+            int n = 0;
+            for (const int c : per_face) n += c > kMinFaceProbes ? 1 : 0;
+            return n;
+        }
+        [[nodiscard]] bool usable() const { return every_sphere() && faces_seen() >= kMinSphereFaces; }
+    };
 
     class CubeMapArray final : public demo::Demo
     {
@@ -330,8 +364,10 @@ namespace
         void check_picture(demo::Env& env, demo::Check& check);
 
         // ---- rendering -------------------------------------------------------------------------------------
-        [[nodiscard]] dm::Vec3 eye_position() const;
+        [[nodiscard]] dm::Vec3 eye_position() const { return eye_position(shown_frame_); }
+        [[nodiscard]] dm::Vec3 eye_position(int frame) const;
         [[nodiscard]] std::array<V3, 5> sphere_centres(double t) const;
+        [[nodiscard]] SphereModel sphere_model(const Layout& lay, int frame) const;
 
         std::array<LookupProgram, 4> kinds_{};
         mgl::ProgramId env_program_{}, tile_program_{}, image_layered_{}, image_single_{};
@@ -478,6 +514,14 @@ namespace
             const Layout lay = layout_of(env);
             if (lay.tile < kMinTile || lay.scene_h < kMinScene)
                 throw demo::Skip(std::format("{}x{} is too small: the tile strip needs rows of at least {} pixels and the scene at least {} rows", env.width, env.height, kMinTile, kMinScene));
+            // The sphere check needs enough probes on every sphere; whether it gets them depends on the projected size
+            // of the spheres at the frame that validate() shows (the camera orbits), so ask the same ray model.
+            const int frames = env.options.frames > 0 ? env.options.frames : env.info.default_frames;
+            const SphereModel m = sphere_model(lay, std::max(frames, 1) - 1);
+            if (!m.usable())
+                throw demo::Skip(std::format("{}x{} is too small for the sphere check: probes per sphere {} {} {} {} {} (needs >= {}), {} faces with more than {} compared probes (needs {})",
+                                             env.width, env.height, m.hits[0], m.hits[1], m.hits[2], m.hits[3], m.hits[4], kMinSphereHits, m.faces_seen(), kMinFaceProbes,
+                                             kMinSphereFaces));
         }
         struct Variant
         {
@@ -575,9 +619,9 @@ namespace
         return l;
     }
 
-    dm::Vec3 CubeMapArray::eye_position() const
+    dm::Vec3 CubeMapArray::eye_position(int frame) const
     {
-        const float yaw = dm::radians(static_cast<float>(yaw_deg_ + 0.7 * shown_frame_)), pitch = dm::radians(static_cast<float>(pitch_deg_));
+        const float yaw = dm::radians(static_cast<float>(yaw_deg_ + 0.7 * frame)), pitch = dm::radians(static_cast<float>(pitch_deg_));
         const float d = static_cast<float>(distance_);
         return {d * std::cos(pitch) * std::sin(yaw), d * std::sin(pitch), d * std::cos(pitch) * std::cos(yaw)};
     }
@@ -1519,6 +1563,63 @@ namespace
 
     V3 reflect(V3 incident, V3 n) { return incident - n * (2.0 * dot(incident, n)); }
 
+    SphereModel CubeMapArray::sphere_model(const Layout& lay, int frame) const
+    {
+        SphereModel m;
+        const double t = static_cast<double>(frame) / 60.0;
+        const auto centres = sphere_centres(t);
+        constexpr double kRadius = 0.8;
+        const dm::Vec3 eye_f = eye_position(frame);
+        const V3 eye{eye_f.x, eye_f.y, eye_f.z};
+        const V3 forward = normalize(V3{0, 0, 0} - eye);
+        const V3 right = normalize(cross(forward, V3{0, 1, 0}));
+        const V3 up = cross(right, forward);
+        const double aspect = static_cast<double>(lay.width) / lay.scene_h;
+        const double tan_half = std::tan(lay.fovy * 0.5);
+        constexpr double kPerturb = 0.012;  // radians; the tessellated sphere's interpolated normals deviate from the analytic ones by far less
+        for (int y = 1; y < lay.scene_h; y += 2)  // y counted from the top of the scene viewport
+            for (int x = 1; x < lay.width; x += 2)
+            {
+                const double nx = (x + 0.5) / lay.width * 2.0 - 1.0, ny = 1.0 - (y + 0.5) / lay.scene_h * 2.0;
+                const V3 dir = normalize(forward + right * (nx * tan_half * aspect) + up * (ny * tan_half));
+                const SphereHit h = hit_spheres(centres, kRadius, eye, dir);
+                if (h.id < 0) continue;
+                ++m.hits[static_cast<std::size_t>(h.id)];
+                const V3 incident = normalize(h.point - eye);
+                if (-dot(incident, h.normal) < 0.25)
+                {
+                    ++m.skipped;  // grazing: the reflection direction changes too fast
+                    continue;
+                }
+                // The expected texel must be the same for the analytic normal and for normals tilted by +-kPerturb about two axes.
+                const V3 t1 = normalize(cross(h.normal, std::abs(h.normal.y) < 0.9 ? V3{0, 1, 0} : V3{1, 0, 0}));
+                const V3 t2 = cross(h.normal, t1);
+                bool stable = true;
+                Sample S{};
+                for (int variant = 0; variant < 5 && stable; ++variant)
+                {
+                    V3 n = h.normal;
+                    if (variant == 1) n = normalize(h.normal + t1 * kPerturb);
+                    if (variant == 2) n = normalize(h.normal - t1 * kPerturb);
+                    if (variant == 3) n = normalize(h.normal + t2 * kPerturb);
+                    if (variant == 4) n = normalize(h.normal - t2 * kPerturb);
+                    const Sample v = model_lookup(as_float(reflect(incident, n)), static_cast<double>(h.id), 0.0, kSize, kLevels, kLayers);
+                    if (v.ambiguous) stable = false;
+                    if (variant == 0) S = v;
+                    else if (!(v == S)) stable = false;
+                }
+                if (!stable)
+                {
+                    ++m.skipped;
+                    continue;
+                }
+                ++m.per_sphere[static_cast<std::size_t>(h.id)];
+                ++m.per_face[static_cast<std::size_t>(S.face)];
+                m.probes.push_back({x, y, h.id, S});
+            }
+        return m;
+    }
+
     void CubeMapArray::check_picture(demo::Env& env, demo::Check& check)
     {
         render(env, shown_frame_);
@@ -1581,78 +1682,29 @@ namespace
                      std::format("equal pixels per wrong model: {} of {}", control_detail, tile_probes));
 
         // ---- the five spheres -----------------------------------------------------------------------------
-        const double t = static_cast<double>(shown_frame_) / 60.0;
-        const auto centres = sphere_centres(t);
-        constexpr double kRadius = 0.8;
-        const dm::Vec3 eye_f = eye_position();
-        const V3 eye{eye_f.x, eye_f.y, eye_f.z};
-        const V3 forward = normalize(V3{0, 0, 0} - eye);
-        const V3 right = normalize(cross(forward, V3{0, 1, 0}));
-        const V3 up = cross(right, forward);
-        const double aspect = static_cast<double>(lay.width) / lay.scene_h;
-        const double tan_half = std::tan(lay.fovy * 0.5);
-        int compared = 0, skipped = 0, bad = 0, layer_plus_one_equal = 0;
-        std::array<int, 5> per_sphere{}, hits{};
-        std::array<int, kFaces> per_face{};
+        const SphereModel m = sphere_model(lay, shown_frame_);
+        const int compared = static_cast<int>(m.probes.size());
+        int bad = 0, layer_plus_one_equal = 0;
         std::string sfirst;
-        constexpr double kPerturb = 0.012;  // radians; the tessellated sphere's interpolated normals deviate from the analytic ones by far less
-        for (int y = 1; y < lay.scene_h; y += 2)  // y counted from the top of the scene viewport
-            for (int x = 1; x < lay.width; x += 2)
+        for (const SphereProbe& pr : m.probes)
+        {
+            const Rgba8 got = at(pr.x, pr.y);
+            if (got != sample_color(pr.S))
             {
-                const double nx = (x + 0.5) / lay.width * 2.0 - 1.0, ny = 1.0 - (y + 0.5) / lay.scene_h * 2.0;
-                const V3 dir = normalize(forward + right * (nx * tan_half * aspect) + up * (ny * tan_half));
-                const SphereHit h = hit_spheres(centres, kRadius, eye, dir);
-                if (h.id < 0) continue;
-                ++hits[static_cast<std::size_t>(h.id)];
-                const V3 incident = normalize(h.point - eye);
-                if (-dot(incident, h.normal) < 0.25)
-                {
-                    ++skipped;  // grazing: the reflection direction changes too fast
-                    continue;
-                }
-                // The expected texel must be the same for the analytic normal and for normals tilted by +-kPerturb about two axes.
-                const V3 t1 = normalize(cross(h.normal, std::abs(h.normal.y) < 0.9 ? V3{0, 1, 0} : V3{1, 0, 0}));
-                const V3 t2 = cross(h.normal, t1);
-                bool stable = true;
-                Sample S{};
-                for (int variant = 0; variant < 5 && stable; ++variant)
-                {
-                    V3 n = h.normal;
-                    if (variant == 1) n = normalize(h.normal + t1 * kPerturb);
-                    if (variant == 2) n = normalize(h.normal - t1 * kPerturb);
-                    if (variant == 3) n = normalize(h.normal + t2 * kPerturb);
-                    if (variant == 4) n = normalize(h.normal - t2 * kPerturb);
-                    const Sample v = model_lookup(as_float(reflect(incident, n)), static_cast<double>(h.id), 0.0, kSize, kLevels, kLayers);
-                    if (v.ambiguous) stable = false;
-                    if (variant == 0) S = v;
-                    else if (!(v == S)) stable = false;
-                }
-                if (!stable)
-                {
-                    ++skipped;
-                    continue;
-                }
-                ++compared;
-                ++per_sphere[static_cast<std::size_t>(h.id)];
-                ++per_face[static_cast<std::size_t>(S.face)];
-                const Rgba8 got = at(x, y);
-                if (got != sample_color(S))
-                {
-                    if (bad == 0) sfirst = std::format("pixel ({}, {}) on sphere {}: got {} expected layer {} face {} texel ({},{}) = {}", x, y, h.id, demo::format_rgba(got), S.layer, kFaceName[static_cast<std::size_t>(S.face)], S.i, S.j, demo::format_rgba(sample_color(S)));
-                    ++bad;
-                }
-                if (got == sample_color(wrong_layer_plus_one(S))) ++layer_plus_one_equal;
+                if (bad == 0) sfirst = std::format("pixel ({}, {}) on sphere {}: got {} expected layer {} face {} texel ({},{}) = {}", pr.x, pr.y, pr.sphere, demo::format_rgba(got), pr.S.layer, kFaceName[static_cast<std::size_t>(pr.S.face)], pr.S.i, pr.S.j, demo::format_rgba(sample_color(pr.S)));
+                ++bad;
             }
-        // Every sphere must be in the picture (the ray model hits it at >= 40 probe positions) and at least a quarter of its
-        // probes must survive the grazing / texel-boundary filter: a bound that scales with the sphere's size on screen.
-        bool every_sphere = true;
-        for (std::size_t k = 0; k < 5; ++k) every_sphere = every_sphere && hits[k] >= 40 && per_sphere[k] >= hits[k] / 4;
-        int faces_seen = 0;
-        for (int c : per_face) faces_seen += c > 20 ? 1 : 0;
-        std::cout << std::format("   [note] spheres: {} probes compared, {} skipped (grazing / near texel boundaries); per sphere {}/{} {}/{} {}/{} {}/{} {}/{} (compared/hit); per face {} {} {} {} {} {}\n", compared, skipped,
-                                 per_sphere[0], hits[0], per_sphere[1], hits[1], per_sphere[2], hits[2], per_sphere[3], hits[3], per_sphere[4], hits[4],
-                                 per_face[0], per_face[1], per_face[2], per_face[3], per_face[4], per_face[5]);
-        check.expect(bad == 0 && every_sphere && faces_seen >= 4,
+            if (got == sample_color(wrong_layer_plus_one(pr.S))) ++layer_plus_one_equal;
+        }
+        // Every sphere must be in the picture (the ray model hits it at >= kMinSphereHits probe positions) and at least a quarter of its
+        // probes must survive the grazing / texel-boundary filter: a bound that scales with the sphere's size on screen. init() skips
+        // surfaces on which the model cannot meet this, so here it only fails if the model and the picture disagree.
+        const bool every_sphere = m.every_sphere();
+        const int faces_seen = m.faces_seen();
+        std::cout << std::format("   [note] spheres: {} probes compared, {} skipped (grazing / near texel boundaries); per sphere {}/{} {}/{} {}/{} {}/{} {}/{} (compared/hit); per face {} {} {} {} {} {}\n", compared, m.skipped,
+                                 m.per_sphere[0], m.hits[0], m.per_sphere[1], m.hits[1], m.per_sphere[2], m.hits[2], m.per_sphere[3], m.hits[3], m.per_sphere[4], m.hits[4],
+                                 m.per_face[0], m.per_face[1], m.per_face[2], m.per_face[3], m.per_face[4], m.per_face[5]);
+        check.expect(bad == 0 && every_sphere && faces_seen >= kMinSphereFaces,
                      std::format("environment-mapped spheres: {} pixel probes equal texture(reflect(view, normal), k) of the model, sphere k showing layer k (all five spheres, {} different faces)", compared, faces_seen),
                      std::format("{} wrong of {}; first: {}", bad, compared, sfirst));
         check.expect(layer_plus_one_equal < compared / 4, "negative control: a model that lets sphere k reflect layer k + 1 reproduces fewer than a quarter of the sphere pixels",

@@ -7,8 +7,8 @@ Result directories: build/debug/test-results
 
 | ES | total | passed | passed % | NOT_STARTED | FULLY_VALIDATED |
 |---|---|---|---|---|---|
-| 2.0 | 142 | 42 | 30% | 100 | 42 |
-| 3.0 | 104 | 3 | 3% | 101 | 3 |
+| 2.0 | 142 | 45 | 32% | 97 | 45 |
+| 3.0 | 104 | 6 | 6% | 98 | 6 |
 | 3.1 | 68 | 0 | 0% | 68 | 0 |
 | 3.2 | 44 | 0 | 0% | 44 | 0 |
 
@@ -16,10 +16,10 @@ Result directories: build/debug/test-results
 
 | ES | total | passed | passed % | NOT_STARTED | FULLY_VALIDATED |
 |---|---|---|---|---|---|
-| 2.0 | 86 | 14 | 16% | 72 | 14 |
-| 3.0 | 78 | 1 | 1% | 77 | 1 |
-| 3.1 | 30 | 0 | 0% | 30 | 0 |
-| 3.2 | 31 | 0 | 0% | 31 | 0 |
+| 2.0 | 86 | 16 | 19% | 70 | 16 |
+| 3.0 | 78 | 5 | 6% | 73 | 5 |
+| 3.1 | 30 | 2 | 7% | 28 | 2 |
+| 3.2 | 31 | 1 | 3% | 30 | 1 |
 
 ## GLSL ES features (by language version)
 
@@ -34,4 +34,4 @@ Result directories: build/debug/test-results
 
 | status | count |
 |---|---|
-| FULLY_VALIDATED | 2 |
+| FULLY_VALIDATED | 3 |

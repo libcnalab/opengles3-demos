@@ -1,0 +1,48 @@
+{
+  "name": "diagnostics-capabilities",
+  "title": "Capabilities, limits and extensions",
+  "min_es": "3.0",
+  "glsl": [],
+  "category": "diagnostics",
+  "order": 1,
+  "summary": "Version/limit/extension report; every limit checked against the spec minimum for the context version; meta-gl availability of every core entry point.",
+  "spec": [
+    "ES 3.0 §6.1.6 String Queries, Tables 6.28-6.34",
+    "ES 3.1 §20.x and ES 3.2 §21 Implementation Dependent tables",
+    "ES 3.0 §3.8.6 / ES 3.2 §8.7 required compressed formats"
+  ],
+  "api": {
+    "glGetString": "VERSION/VENDOR/RENDERER/SHADING_LANGUAGE_VERSION equal meta-gl Capabilities; EXTENSIONS set equals glGetStringi set",
+    "glGetStringi": "every index equals Capabilities::extensions[i]; NUM_EXTENSIONS index -> NULL + INVALID_VALUE",
+    "glGetIntegerv": "~100 implementation limits checked against per-version minimums",
+    "glGetInteger64v": "MAX_ELEMENT_INDEX, MAX_UNIFORM_BLOCK_SIZE, MAX_SERVER_WAIT_TIMEOUT, MAX_SHADER_STORAGE_BLOCK_SIZE, combined uniform components",
+    "glGetFloatv": "point/line width ranges contain 1.0, LOD bias, interpolation offsets",
+    "glGetIntegeri_v": "MAX_COMPUTE_WORK_GROUP_COUNT/SIZE per dimension (ES 3.1+)",
+    "glClear": "scissored clears draw the version strip (pixel-checked)",
+    "glClearColor": "version strip colors",
+    "glScissor": "bar placement",
+    "glGetError": "INVALID_VALUE for out-of-range glGetStringi"
+  },
+  "features": [
+    "ES20.CONTEXT.INIT",
+    "ES20.CONTEXT.STRINGS",
+    "ES30.STATE.INDEXED",
+    "ES30.EXTENSIONS.REPORT",
+    "ES30.TEXTURE.COMPRESSED_QUERY",
+    "ES31.COMPUTE.LIMITS",
+    "ES30.UBO.LIMITS",
+    "ES31.SSBO.LIMITS",
+    "ES32.TESS.LIMITS"
+  ],
+  "glsl_features": [],
+  "validation": [
+    "state-query",
+    "pixel-reference",
+    "negative"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-opus-5.5",
+    "notes": "softpipe capture: bars ES2.0/3.0/3.1 green, ES3.2 gray, matching its native ES 3.1."
+  }
+}

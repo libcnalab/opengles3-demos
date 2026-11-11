@@ -14,8 +14,8 @@ glBlendFuncSeparate,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glBufferData,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,vertex data observed through rendered colors,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
 glBufferSubData,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glCheckFramebufferStatus,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glClear,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,COLOR_BUFFER_BIT,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
-glClearColor,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,corner pixels equal the clear color,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
+glClear,2.0,GL_ES_VERSION_2_0,yes,diagnostics-capabilities es30-hello-triangle,scissored clears draw the version strip (pixel-checked) / COLOR_BUFFER_BIT,FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
+glClearColor,2.0,GL_ES_VERSION_2_0,yes,diagnostics-capabilities es30-hello-triangle,version strip colors / corner pixels equal the clear color,FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glClearDepthf,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glClearStencil,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glColorMask,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
@@ -59,10 +59,10 @@ glGetAttachedShaders,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,returns e
 glGetAttribLocation,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetBooleanv,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,SHADER_COMPILER = TRUE,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glGetBufferParameteriv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glGetError,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glGetFloatv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glGetError,2.0,GL_ES_VERSION_2_0,yes,diagnostics-capabilities,INVALID_VALUE for out-of-range glGetStringi,FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED
+glGetFloatv,2.0,GL_ES_VERSION_2_0,yes,diagnostics-capabilities,"point/line width ranges contain 1.0, LOD bias, interpolation offsets",FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED
 glGetFramebufferAttachmentParameteriv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glGetIntegerv,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,"CURRENT_PROGRAM, VERTEX_ARRAY_BINDING",FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
+glGetIntegerv,2.0,GL_ES_VERSION_2_0,yes,diagnostics-capabilities es30-hello-triangle,"~100 implementation limits checked against per-version minimums / CURRENT_PROGRAM, VERTEX_ARRAY_BINDING",FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glGetProgramInfoLog,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,printed for link failure,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glGetProgramiv,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,"LINK_STATUS, ATTACHED_SHADERS, DELETE_STATUS, VALIDATE_STATUS / LINK_STATUS queried",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glGetRenderbufferParameteriv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
@@ -70,7 +70,7 @@ glGetShaderInfoLog,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,INFO_LOG_LE
 glGetShaderPrecisionFormat,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,all 6 precision types x 2 stages meet GLSL ES 3.00 minimums,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glGetShaderSource,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,returned source equals the concatenated strings,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glGetShaderiv,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,"COMPILE_STATUS, SHADER_TYPE, SOURCE_LENGTH (=len+1), INFO_LOG_LENGTH, DELETE_STATUS / COMPILE_STATUS queried",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
-glGetString,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glGetString,2.0,GL_ES_VERSION_2_0,yes,diagnostics-capabilities,VERSION/VENDOR/RENDERER/SHADING_LANGUAGE_VERSION equal meta-gl Capabilities; EXTENSIONS set equals glGetStringi set,FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED
 glGetTexParameterfv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetTexParameteriv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetUniformLocation,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,u_color located in each program,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
@@ -95,7 +95,7 @@ glReadPixels,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,RGBA/UNSIGNED_BYTE re
 glReleaseShaderCompiler,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,compilation still succeeds afterwards,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glRenderbufferStorage,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glSampleCoverage,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glScissor,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,two halves drawn by different programs,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
+glScissor,2.0,GL_ES_VERSION_2_0,yes,diagnostics-capabilities es20-shader-compilation,bar placement / two halves drawn by different programs,FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED es20-shader-compilation:FULLY_VALIDATED
 glShaderBinary,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,unsupported format -> INVALID_ENUM,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glShaderSource,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,"3 strings with lengths {-1,-1,N}: concatenation verified via glGetShaderSource / source uploaded (string_view overload, explicit length)",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glStencilFunc,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
@@ -183,15 +183,15 @@ glGetBufferParameteri64v,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glGetBufferPointerv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glGetFragDataLocation,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glGetInteger64i_v,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glGetInteger64v,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glGetIntegeri_v,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
+glGetInteger64v,3.0,GL_ES_VERSION_3_0,yes,diagnostics-capabilities,"MAX_ELEMENT_INDEX, MAX_UNIFORM_BLOCK_SIZE, MAX_SERVER_WAIT_TIMEOUT, MAX_SHADER_STORAGE_BLOCK_SIZE, combined uniform components",FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED
+glGetIntegeri_v,3.0,GL_ES_VERSION_3_0,yes,diagnostics-capabilities,MAX_COMPUTE_WORK_GROUP_COUNT/SIZE per dimension (ES 3.1+),FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED
 glGetInternalformativ,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glGetProgramBinary,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glGetQueryObjectuiv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glGetQueryiv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glGetSamplerParameterfv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glGetSamplerParameteriv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glGetStringi,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
+glGetStringi,3.0,GL_ES_VERSION_3_0,yes,diagnostics-capabilities,every index equals Capabilities::extensions[i]; NUM_EXTENSIONS index -> NULL + INVALID_VALUE,FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED
 glGetSynciv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glGetTransformFeedbackVarying,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glGetUniformBlockIndex,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,

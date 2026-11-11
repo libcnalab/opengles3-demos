@@ -3,8 +3,8 @@
 
 | id | ES | category | title | spec | status | demos |
 |---|---|---|---|---|---|---|
-| ES20.CONTEXT.INIT | 2.0 | context | Context creation + meta-gl initialization + version/API verification | ES 3.0 §2.1-2.2; meta-gl Loader.hpp | NOT_STARTED |  |
-| ES20.CONTEXT.STRINGS | 2.0 | context | GL_VENDOR/RENDERER/VERSION/SHADING_LANGUAGE_VERSION strings and version parsing | ES 3.0 §6.1.6 | NOT_STARTED |  |
+| ES20.CONTEXT.INIT | 2.0 | context | Context creation + meta-gl initialization + version/API verification | ES 3.0 §2.1-2.2; meta-gl Loader.hpp | FULLY_VALIDATED | diagnostics-capabilities |
+| ES20.CONTEXT.STRINGS | 2.0 | context | GL_VENDOR/RENDERER/VERSION/SHADING_LANGUAGE_VERSION strings and version parsing | ES 3.0 §6.1.6 | FULLY_VALIDATED | diagnostics-capabilities |
 | ES20.ERRORS.GETERROR | 2.0 | errors | glGetError semantics: sticky flags; command ignored on error | ES 3.0 §2.5 | NOT_STARTED |  |
 | ES20.ERRORS.INVALID_ENUM | 2.0 | errors | GL_INVALID_ENUM generation (only reachable via raw casts through typed wrappers) | ES 3.0 §2.5 Table 2.3 | NOT_STARTED |  |
 | ES20.ERRORS.INVALID_VALUE | 2.0 | errors | GL_INVALID_VALUE generation (negative sizes/out-of-range indices) | ES 3.0 §2.5 | NOT_STARTED |  |
@@ -112,7 +112,7 @@
 | ES30.UBO.ROW_MAJOR | 3.0 | uniforms | row_major vs column_major in blocks (IS_ROW_MAJOR / MATRIX_STRIDE) | GLSL 3.00 §4.3.8.3 | NOT_STARTED |  |
 | ES30.UBO.INTROSPECTION | 3.0 | uniforms | glGetUniformBlockIndex/glGetActiveUniformBlockiv/Name/glGetUniformIndices/glGetActiveUniformsiv | ES 3.0 §2.12.6 | NOT_STARTED |  |
 | ES30.UBO.SHARED | 3.0 | uniforms | One UBO shared by several programs; update between draws | ES 3.0 §2.12.6.2 | NOT_STARTED |  |
-| ES30.UBO.LIMITS | 3.0 | uniforms | MAX_UNIFORM_BLOCK_SIZE / MAX_*_UNIFORM_BLOCKS / MAX_UNIFORM_BUFFER_BINDINGS | ES 3.0 §6.2 | NOT_STARTED |  |
+| ES30.UBO.LIMITS | 3.0 | uniforms | MAX_UNIFORM_BLOCK_SIZE / MAX_*_UNIFORM_BLOCKS / MAX_UNIFORM_BUFFER_BINDINGS | ES 3.0 §6.2 | FULLY_VALIDATED | diagnostics-capabilities |
 | ES30.UNIFORM.UINT | 3.0 | uniforms | glUniform{1234}ui[v] / glGetUniformuiv | ES 3.0 §2.12.6 | NOT_STARTED |  |
 | ES30.UNIFORM.NONSQUARE | 3.0 | uniforms | glUniformMatrix{2x3 3x2 2x4 4x2 3x4 4x3}fv | ES 3.0 §2.12.6 | NOT_STARTED |  |
 | ES30.TEXTURE.3D | 3.0 | textures | 3D textures glTexImage3D/glTexSubImage3D/glCopyTexSubImage3D | ES 3.0 §3.8.3 | NOT_STARTED |  |
@@ -128,7 +128,7 @@
 | ES30.TEXTURE.SWIZZLE | 3.0 | textures | TEXTURE_SWIZZLE_R/G/B/A | ES 3.0 §3.8.7 | NOT_STARTED |  |
 | ES30.TEXTURE.LOD_PARAMS | 3.0 | textures | TEXTURE_BASE_LEVEL/MAX_LEVEL/MIN_LOD/MAX_LOD | ES 3.0 §3.8.7 §3.8.10 | NOT_STARTED |  |
 | ES30.TEXTURE.ETC2_EAC | 3.0 | textures | ETC2/EAC compressed textures (required in ES 3.0) | ES 3.0 §3.8.6 Appendix C | NOT_STARTED |  |
-| ES30.TEXTURE.COMPRESSED_QUERY | 3.0 | textures | NUM_COMPRESSED_TEXTURE_FORMATS / COMPRESSED_TEXTURE_FORMATS | ES 3.0 §6.1.3 | NOT_STARTED |  |
+| ES30.TEXTURE.COMPRESSED_QUERY | 3.0 | textures | NUM_COMPRESSED_TEXTURE_FORMATS / COMPRESSED_TEXTURE_FORMATS | ES 3.0 §6.1.3 | FULLY_VALIDATED | diagnostics-capabilities |
 | ES30.TEXTURE.PIXEL_STORE | 3.0 | textures | UNPACK_ROW_LENGTH/SKIP_PIXELS/SKIP_ROWS/IMAGE_HEIGHT/SKIP_IMAGES; PACK_* | ES 3.0 §3.7.1 | NOT_STARTED |  |
 | ES30.TEXTURE.FORMAT_VALIDATION | 3.0 | textures | Invalid format/type/internalformat combinations rejected | ES 3.0 §3.8.3 | NOT_STARTED |  |
 | ES30.TEXTURE.COMPLETENESS_INTEGER | 3.0 | textures | Integer/float texture completeness vs filter rules | ES 3.0 §3.8.13 | NOT_STARTED |  |
@@ -164,17 +164,17 @@
 | ES30.RASTER.FLAT | 3.0 | rasterization | flat qualifier + provoking vertex (last vertex in ES 3.0) | ES 3.0 §2.17 | NOT_STARTED |  |
 | ES30.RASTER.CENTROID | 3.0 | rasterization | centroid interpolation with multisampling | ES 3.0 §3.6.3 | NOT_STARTED |  |
 | ES30.BLEND.MINMAX | 3.0 | fragment-ops | MIN/MAX blend equations | ES 3.0 §4.1.7 | NOT_STARTED |  |
-| ES30.STATE.INDEXED | 3.0 | state | glGetIntegeri_v / glGetInteger64i_v / glGetInteger64v / glGetStringi(EXTENSIONS) | ES 3.0 §6.1.1 | NOT_STARTED |  |
+| ES30.STATE.INDEXED | 3.0 | state | glGetIntegeri_v / glGetInteger64i_v / glGetInteger64v / glGetStringi(EXTENSIONS) | ES 3.0 §6.1.1 | FULLY_VALIDATED | diagnostics-capabilities |
 | ES30.MULTISAMPLE.DEFAULT | 3.0 | multisample | Multisampled default framebuffer; SAMPLES / SAMPLE_BUFFERS | ES 3.0 §3.3 | NOT_STARTED |  |
-| ES30.EXTENSIONS.REPORT | 3.0 | diagnostics | Extension enumeration via glGetStringi + capability/limit report | ES 3.0 §6.1.6 | NOT_STARTED |  |
+| ES30.EXTENSIONS.REPORT | 3.0 | diagnostics | Extension enumeration via glGetStringi + capability/limit report | ES 3.0 §6.1.6 | FULLY_VALIDATED | diagnostics-capabilities |
 | ES31.COMPUTE.DISPATCH | 3.1 | compute | Compute shaders + glDispatchCompute + work group built-ins | ES 3.2 §17; GLSL 3.10 §7.1 | NOT_STARTED |  |
 | ES31.COMPUTE.INDIRECT | 3.1 | compute | glDispatchComputeIndirect from DISPATCH_INDIRECT_BUFFER | ES 3.2 §17 | NOT_STARTED |  |
 | ES31.COMPUTE.SHARED | 3.1 | compute | shared variables + barrier() within a work group | GLSL 3.10 §4.3.8 | NOT_STARTED |  |
-| ES31.COMPUTE.LIMITS | 3.1 | compute | MAX_COMPUTE_WORK_GROUP_COUNT/SIZE/INVOCATIONS / SHARED_MEMORY_SIZE | ES 3.2 §20 | NOT_STARTED |  |
+| ES31.COMPUTE.LIMITS | 3.1 | compute | MAX_COMPUTE_WORK_GROUP_COUNT/SIZE/INVOCATIONS / SHARED_MEMORY_SIZE | ES 3.2 §20 | FULLY_VALIDATED | diagnostics-capabilities |
 | ES31.COMPUTE.TO_RENDER | 3.1 | compute | Compute-generated vertex/indirect data consumed by rendering | ES 3.2 §17 §7.11 | NOT_STARTED |  |
 | ES31.SSBO.BASIC | 3.1 | storage | Shader storage blocks + SHADER_STORAGE_BUFFER bindings | ES 3.2 §7.8 | NOT_STARTED |  |
 | ES31.SSBO.STD430 | 3.1 | storage | std430 layout + runtime-sized arrays (.length()) | GLSL 3.10 §4.4.4 | NOT_STARTED |  |
-| ES31.SSBO.LIMITS | 3.1 | storage | MAX_SHADER_STORAGE_BLOCK_SIZE / SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT / per-stage block limits | ES 3.2 §20 | NOT_STARTED |  |
+| ES31.SSBO.LIMITS | 3.1 | storage | MAX_SHADER_STORAGE_BLOCK_SIZE / SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT / per-stage block limits | ES 3.2 §20 | FULLY_VALIDATED | diagnostics-capabilities |
 | ES31.IMAGE.LOAD_STORE | 3.1 | images | glBindImageTexture + imageLoad/imageStore + format qualifiers | ES 3.2 §8.23 | NOT_STARTED |  |
 | ES31.IMAGE.ACCESS | 3.1 | images | readonly/writeonly/coherent/volatile/restrict qualifiers | GLSL 3.10 §4.10 | NOT_STARTED |  |
 | ES31.IMAGE.QUERY | 3.1 | images | IMAGE_BINDING_* indexed queries + IMAGE_FORMAT_COMPATIBILITY_TYPE | ES 3.2 §8.23.1 | NOT_STARTED |  |
@@ -206,7 +206,7 @@
 | ES32.TESS.ISOLINES | 3.2 | tessellation | Isoline domain | ES 3.2 §11.2.2 | NOT_STARTED |  |
 | ES32.TESS.SPACING_WINDING | 3.2 | tessellation | equal/fractional spacing + cw/ccw + point_mode | ES 3.2 §11.2.2 | NOT_STARTED |  |
 | ES32.TESS.PATCH_PARAM | 3.2 | tessellation | glPatchParameteri PATCH_VERTICES + PATCHES primitive | ES 3.2 §10.1.12 | NOT_STARTED |  |
-| ES32.TESS.LIMITS | 3.2 | tessellation | MAX_TESS_GEN_LEVEL / MAX_PATCH_VERTICES etc. | ES 3.2 §20 | NOT_STARTED |  |
+| ES32.TESS.LIMITS | 3.2 | tessellation | MAX_TESS_GEN_LEVEL / MAX_PATCH_VERTICES etc. | ES 3.2 §20 | FULLY_VALIDATED | diagnostics-capabilities |
 | ES32.PRIMITIVE_BOUNDING_BOX | 3.2 | tessellation | glPrimitiveBoundingBox + gl_BoundingBox | ES 3.2 §13.2 | NOT_STARTED |  |
 | ES32.TEXTURE.BUFFER | 3.2 | textures | Buffer textures glTexBuffer/glTexBufferRange + samplerBuffer | ES 3.2 §8.9 | NOT_STARTED |  |
 | ES32.TEXTURE.CUBE_ARRAY | 3.2 | textures | Cube map array textures | ES 3.2 §8.5 | NOT_STARTED |  |

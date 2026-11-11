@@ -34,8 +34,7 @@
     "glReadPixels": "RGBA_INTEGER / UNSIGNED_INT readback of the fragment results; RGBA / UNSIGNED_BYTE probes of the GLSL ES 1.00 picture",
     "glDepthRangef": "values clamped to [0, 1] seen as gl_DepthRange.near/far/diff in both languages",
     "glGetFloatv": "DEPTH_RANGE equals the clamped glDepthRangef arguments",
-    "glGetIntegerv": "MAX_VERTEX_UNIFORM_VECTORS asserted equal to gl_MaxVertexUniformVectors (GLSL ES 3.00 §1.5, in 1.00 and 3.00 shaders); the other limits are only printed next to their gl_Max* constants",
-    "glGetIntegeri_v": "MAX_COMPUTE_WORK_GROUP_COUNT/SIZE (indices 0..2) printed next to gl_MaxComputeWorkGroupCount/Size (ES >= 3.1); not asserted"
+    "glGetIntegerv": "MAX_VERTEX_UNIFORM_VECTORS asserted equal to gl_MaxVertexUniformVectors (GLSL ES 3.00 §1.5, in 1.00 and 3.00 shaders); the other limits are only printed next to their gl_Max* constants"
   },
   "features": [
     "ES30.TF.BASIC",
@@ -59,7 +58,6 @@
     "GLSL300.PARAM_QUALIFIERS",
     "GLSL300.BUILTIN_CONSTANTS",
     "GLSL300.BUILTIN_UNIFORMS",
-    "GLSL300.UNDEFINED_BEHAVIOR",
     "GLSL310.VERSION",
     "GLSL310.BUILTIN_CONSTANTS"
   ],

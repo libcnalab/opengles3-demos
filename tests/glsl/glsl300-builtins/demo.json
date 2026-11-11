@@ -21,13 +21,10 @@
     "glBindBufferBase": "TRANSFORM_FEEDBACK_BUFFER binding 0",
     "glMapBufferRange": "MAP_READ_BIT readback of captured values",
     "glUnmapBuffer": "after each readback",
-    "glVertexAttribIPointer": "ivec4/uvec4 inputs reach the shader exactly (bit-cast and integer cases)",
-    "glEnable": "RASTERIZER_DISCARD",
-    "glDisable": "RASTERIZER_DISCARD"
+    "glVertexAttribIPointer": "ivec4/uvec4 inputs reach the shader exactly (bit-cast and integer cases)"
   },
   "features": [
     "ES30.TF.BASIC",
-    "ES30.TF.RASTERIZER_DISCARD",
     "ES30.ATTRIB.INTEGER",
     "ES30.BUFFER.MAP_RANGE"
   ],

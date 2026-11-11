@@ -350,6 +350,8 @@ def main():
     glsl_rows, glsl_table = [], []
     for g in glsl:
         st = best(status_of[d] for d in glsl_demos.get(g["id"], []))
+        if st == "NOT_STARTED" and g.get("strategy") == "doc":
+            st = "DOCUMENTED_ONLY"
         glsl_rows.append((g["glsl"], st))
         glsl_table.append([g["id"], g["glsl"], g["category"], g["title"], g["spec_ref"], g["strategy"], st,
                            ", ".join(glsl_demos.get(g["id"], []))])

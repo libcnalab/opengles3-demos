@@ -23,9 +23,7 @@
   ],
   "api": {
     "glCompileShader": "COMPILE_STATUS asserted TRUE/FALSE per case expectation",
-    "glLinkProgram": "LINK_STATUS asserted per case expectation (incl. ES 3.2 stage combinations)",
-    "glGetShaderInfoLog": "logs captured into check details",
-    "glGetProgramInfoLog": "logs captured into check details"
+    "glLinkProgram": "LINK_STATUS asserted per case expectation (incl. ES 3.2 stage combinations)"
   },
   "features": [],
   "glsl_features": [],

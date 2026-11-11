@@ -311,13 +311,14 @@ namespace
                      [](const Row& r) { Out o{}; for (int i = 0; i < 4; ++i) { const auto k = static_cast<std::size_t>(i);
                                             o[i] = std::min(r.ua[k], r.ub[k]); o[4 + i] = std::max(r.ua[k], r.ub[k]); o[8 + i] = std::clamp(r.ua[k], 2u, 100u); } return o; },
                      {TolKind::Exact, 0}, {UA({1, 0xFFFFFFFFu, 50, 0}, {3, 7, 50, 1})}});
+        // ia.x / ib.x = -15 / 5 is exact: GLSL ES 3.00 §12.33 leaves the rounding of an inexact signed division undefined.
         c.push_back({"integer / % & | ^ ~ << >> (defined operand ranges)", "GLSL300.OPERATORS.BITWISE", OutType::Uint, 16,
                      "r0 = uvec4(ua / ub); r1 = ua % ub; r2 = uvec4((ua & ub).x, ua.y | ub.y, ua.z ^ ub.z, ~ua.w);"
                      " r3 = uvec4(ua.x << 4u, ua.y >> 3u, uint(ia.x / ib.x), uint(ia.y << 2));",
                      [](const Row& r) { Out o{}; for (int i = 0; i < 4; ++i) { const auto k = static_cast<std::size_t>(i); o[i] = r.ua[k] / r.ub[k]; o[4 + i] = r.ua[k] % r.ub[k]; }
                                         o[8] = r.ua[0] & r.ub[0]; o[9] = r.ua[1] | r.ub[1]; o[10] = r.ua[2] ^ r.ub[2]; o[11] = ~r.ua[3];
                                         o[12] = static_cast<GLuint>(r.ua[0] << 4u); o[13] = r.ua[1] >> 3u; o[14] = static_cast<GLuint>(r.ia[0] / r.ib[0]); o[15] = static_cast<GLuint>(r.ia[1] << 2); return o; },
-                     {TolKind::Exact, 0}, {[] { Row r = UA({100, 0xF0F0F0F0u, 0x0000FFFFu, 0x12345678u}, {7, 0x0F0F0000u, 0x00FF00FFu, 13}); r.ia = {-17, 5, 0, 0}; r.ib = {5, 1, 1, 1}; return r; }()}});
+                     {TolKind::Exact, 0}, {[] { Row r = UA({100, 0xF0F0F0F0u, 0x0000FFFFu, 0x12345678u}, {7, 0x0F0F0000u, 0x00FF00FFu, 13}); r.ia = {-15, 5, 0, 0}; r.ib = {5, 1, 1, 1}; return r; }()}});
         return c;
     }
 

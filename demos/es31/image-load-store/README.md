@@ -67,7 +67,7 @@ restrict`). `layered_store.comp` / `single_store.comp` / `face_color.comp` show 
 
 ## Validation (`--validate`)
 
-143 checks (the same at es-max and es-min, on radeonsi, llvmpipe and zink), grouped:
+144 checks (the same at es-max and es-min, on radeonsi, llvmpipe and zink), grouped:
 
 - **Limits and initial state (9).** `MAX_IMAGE_UNITS`, `MAX_COMPUTE_IMAGE_UNIFORMS`, `MAX_COMBINED_IMAGE_UNIFORMS` are at least the specified minimum 4; read before anything is bound, every unit has
   name 0, level 0, layered FALSE, layer 0, access `READ_ONLY`, format `R32UI` (Table 21.33).
@@ -76,8 +76,14 @@ restrict`). `layered_store.comp` / `single_store.comp` / `face_color.comp` show 
   only uploaded is compared within 0.01 level (equation 2.1/2.2 evaluated in float). Two negative controls feed the same comparison a model with one perturbed word and require it to fail.
 - **Filters (3).** All 4096 texels of the blur and of the Sobel output (read with `glReadPixels` through a framebuffer object, a path independent of the shaders) equal the CPU filters
   within 1 level (the measured maximum is 1 for the blur, 0 for Sobel); a control requires the blurred image to differ from the source by up to 97 levels, so the comparison can fail.
-- **Layered and non-layered bindings (14).** The four layers of the array and the four slices of the 3D texture hold exactly the values of the layered store, except layer 2 / slice 1 which hold those of the
+- **Layered and non-layered bindings (15).** The four layers of the array and the four slices of the 3D texture hold exactly the values of the layered store, except layer 2 / slice 1 which hold those of the
   single-layer store (and nothing else changed); the cube map faces `NEGATIVE_Y` (layer 3) and `NEGATIVE_Z` (layer 5) hold the gradient, the other four faces stay black (Table 8.24).
+  The store through a non-layered binding of a **3D-texture slice** crashes one driver, so it is made first in a **child process** on every driver (in `init()`, before anything
+  else touches the GPU). The executable re-executes itself through `/proc/self/exe` with a hidden first argument (the pattern of `tests/negative/driver-crash-readpixels-none`).
+  The child fills an 8 x 8 x 4 `R32UI` 3D texture with a sentinel, binds slice 1 with `layered = FALSE`, runs `single_store.comp` between two printed markers and reads the four
+  slices back with `glFramebufferTextureLayer` + `glReadPixels(RGBA_INTEGER)`. Slice 1 must hold the stored values and the other slices the sentinel. The parent echoes the child's
+  output and classifies its end (exit status, signal, 30 s timeout). Only a death between the markers is the documented deviation; any other failure is a plain FAIL. The parent
+  repeats the store for the displayed image only when the child survived it. Otherwise slice 1 is expected to keep the layered values (also in the display probes).
 - **Levels and `imageSize` (10).** Level 1 of texture B is the inverted level 1 of A, levels 0, 2, 3, 4 are untouched; `imageSize` is (8, 8) for level 1 of a 16 x 16 texture, (4, 4) for level 2, (8, 8, 4) for the layered
   3D texture and 2D array, (8, 8) for one layer of that array.
 - **Reinterpretation (3).** `R32F` as `r32ui` returns the float bit patterns, `RGBA8` as `r32ui` the packed bytes, `r32ui` stores appear as bytes in an `RGBA8` texture; all 64 texels each.
@@ -101,6 +107,17 @@ restrict`). `layered_store.comp` / `single_store.comp` / `face_color.comp` show 
 - **`glBindImageTexture` format errors (Mesa deviation).** Section 8.23: "An INVALID_VALUE error is generated if format is not one of the formats listed in table 8.26." Mesa (radeonsi, llvmpipe, zink,
   25.0.7) accepts `RG32F`, `RG16F`, `R16F`, `R8`, `RG8` and `R11F_G11F_B10F` without error (it validates against the desktop `ARB_shader_image_load_store` list) but rejects `RGB8` correctly. Recorded as XFAIL on
   "Mesa". No exposed extension changes Table 8.26: the only matching extension is `GL_OES_shader_image_atomic`, which adds atomic image functions and no image unit formats.
+
+## Known driver deviation: ANGLE
+
+- **`imageStore` through a non-layered binding of a 3D-texture slice faults the GPU.** On ANGLE 2.1.17841 (Vulkan backend, RADV on a Radeon 780M)
+  the dispatch raises a GPU page fault (`GCVM_L2_PROTECTION_FAULT`, a write from the texture cache client). The context is lost and the next
+  synchronizing call never returns. Found by bisection: the layered stores, the array-layer store and every other pass run cleanly, and the
+  minimal child reproduces the fault alone. ES 3.2 §8.23: *"If layered is FALSE, only the single layer identified by layer will be bound, and
+  the layer is treated as a different texture target for image accesses; two-dimensional array, three-dimensional, cube map, and cube map
+  array texture layers are treated as two-dimensional textures."* The store is inside the 8 x 8 slice. The isolated check is reported as XFAIL
+  on "ANGLE". On ANGLE the capture shows slice 1 (row 2, second cell) with the layered values. Every other check passes on ANGLE. Each ANGLE
+  run triggers one amdgpu soft recovery of the child's context (logged by the kernel); other contexts are not affected.
 
 ## Pitfalls
 

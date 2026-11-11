@@ -40,17 +40,31 @@
 
 #include <metagl/metagl.hpp>
 
+#include <fcntl.h>
+#include <poll.h>
+#include <signal.h>
+#include <spawn.h>
+#include <sys/resource.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <cerrno>
+#include <chrono>
 #include <cmath>
+#include <csignal>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <format>
 #include <iostream>
 #include <string>
 #include <string_view>
 #include <vector>
+
+extern char** environ;
 
 namespace mgl = metagl;
 using demo::Rgba8;
@@ -372,6 +386,237 @@ namespace
     constexpr auto kColor0 = mgl::to_framebuffer_attachment(mgl::ColorAttachment::Color0);
     constexpr std::size_t kSsboBytes = 128 * 1024;
 
+    // ---------------------------------------------------------------------------------------------
+    // Crash isolation (the pattern of tests/negative/driver-crash-readpixels-none). A call that is valid, or
+    // that the specification says must fail cleanly, but that crashes or hangs a driver cannot be observed
+    // in-process. It runs in a fresh child process instead: this executable re-executed through
+    // /proc/self/exe with a hidden first argument. The child creates its own EGL display and context
+    // through demo::run (a fork()ed copy of the parent's context is not usable), inherits the environment
+    // (driver selection, MESA_GLES_VERSION_OVERRIDE), and prints a marker immediately before and after the
+    // isolated call. The parent classifies how the child ended: exit status, signal or timeout, and whether
+    // it died between the two markers.
+    // ---------------------------------------------------------------------------------------------
+    constexpr std::string_view kChildFlag = "--crash-isolated-child";
+    constexpr std::string_view kBeforeMarker = "@@ before the isolated call";
+    constexpr std::string_view kAfterMarker = "@@ after the isolated call";
+
+    struct ChildResult
+    {
+        bool spawned = false;
+        bool timed_out = false;
+        bool exited = false;
+        int exit_code = -1;
+        bool signaled = false;
+        int signal = 0;
+        std::string output;
+
+        [[nodiscard]] bool reached_call() const { return output.find(kBeforeMarker) != std::string::npos; }
+        [[nodiscard]] bool returned_from_call() const { return output.find(kAfterMarker) != std::string::npos; }
+        /// The child passed its own checks.
+        [[nodiscard]] bool passed() const { return exited && exit_code == 0 && returned_from_call(); }
+        /// The child died (signal or timeout) between the two markers, i.e. inside the isolated call.
+        [[nodiscard]] bool died_in_call() const { return (signaled || timed_out) && reached_call() && !returned_from_call(); }
+        [[nodiscard]] std::string describe() const
+        {
+            if (!spawned) return "child could not be spawned";
+            const char* where = reached_call() && !returned_from_call() ? " inside the isolated call" : "";
+            if (timed_out) return std::format("child timed out{} and was killed", where);
+            if (signaled) return std::format("child killed by signal {} ({}){}", signal, sigabbrev_np(signal) ? sigabbrev_np(signal) : "?", where);
+            return std::format("child exited with status {}", exit_code);
+        }
+    };
+
+    /// Environment of the child: ours, plus ASan options that leave SIGSEGV/SIGBUS/SIGABRT to the default action, so that a
+    /// crash is reported as a signal also in OGLES3_SANITIZE builds. Harmless without ASan.
+    std::vector<std::string> child_environment()
+    {
+        std::vector<std::string> env;
+        std::string asan = "ASAN_OPTIONS=";
+        for (char** e = environ; *e != nullptr; ++e)
+        {
+            const std::string_view kv = *e;
+            if (kv.starts_with("ASAN_OPTIONS=")) asan = std::string(kv) + ":";
+            else env.emplace_back(kv);
+        }
+        env.push_back(asan + "handle_segv=0:handle_sigbus=0:handle_abort=0:handle_sigill=0:handle_sigfpe=0");
+        return env;
+    }
+
+    ChildResult run_child(std::string_view case_name, std::chrono::seconds timeout)
+    {
+        ChildResult r;
+        const std::string name(case_name);
+        std::vector<std::string> args = {"/proc/self/exe", std::string(kChildFlag), name};
+        std::vector<char*> argv;
+        for (auto& a : args) argv.push_back(a.data());
+        argv.push_back(nullptr);
+        std::vector<std::string> env_strings = child_environment();
+        std::vector<char*> envp;
+        for (auto& e : env_strings) envp.push_back(e.data());
+        envp.push_back(nullptr);
+
+        int fds[2] = {-1, -1};
+        if (pipe2(fds, O_CLOEXEC) != 0) return r;
+        posix_spawn_file_actions_t actions;
+        posix_spawn_file_actions_init(&actions);
+        posix_spawn_file_actions_adddup2(&actions, fds[1], STDOUT_FILENO);
+        posix_spawn_file_actions_adddup2(&actions, fds[1], STDERR_FILENO);
+
+        // No core dump for the expected crash (inherited soft limit; restored right after the spawn).
+        rlimit core{};
+        const bool have_core = getrlimit(RLIMIT_CORE, &core) == 0;
+        if (have_core)
+        {
+            rlimit none = core;
+            none.rlim_cur = 0;
+            setrlimit(RLIMIT_CORE, &none);
+        }
+        std::cout << std::flush;
+        std::fflush(nullptr);
+        pid_t pid = -1;
+        const int rc = posix_spawn(&pid, "/proc/self/exe", &actions, nullptr, argv.data(), envp.data());
+        if (have_core) setrlimit(RLIMIT_CORE, &core);
+        posix_spawn_file_actions_destroy(&actions);
+        close(fds[1]);
+        if (rc != 0)
+        {
+            close(fds[0]);
+            return r;
+        }
+        r.spawned = true;
+
+        const auto deadline = std::chrono::steady_clock::now() + timeout;
+        std::array<char, 4096> buf{};
+        for (;;)
+        {
+            const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now());
+            if (left.count() <= 0)
+            {
+                r.timed_out = true;
+                kill(pid, SIGKILL);
+                break;
+            }
+            pollfd p{fds[0], POLLIN, 0};
+            const int n = poll(&p, 1, static_cast<int>(left.count()));
+            if (n < 0 && errno == EINTR) continue;
+            if (n <= 0) continue;
+            const ssize_t got = read(fds[0], buf.data(), buf.size());
+            if (got < 0 && errno == EINTR) continue;
+            if (got <= 0) break;  // EOF: the child (and everything that inherited the pipe) is gone
+            r.output.append(buf.data(), static_cast<std::size_t>(got));
+        }
+        close(fds[0]);
+        int status = 0;
+        while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
+        if (!r.timed_out)
+        {
+            r.exited = WIFEXITED(status);
+            r.exit_code = r.exited ? WEXITSTATUS(status) : -1;
+            r.signaled = WIFSIGNALED(status);
+            r.signal = r.signaled ? WTERMSIG(status) : 0;
+        }
+
+        std::cout << std::format("   --- child '{}' output ---\n", name);
+        std::size_t start = 0;
+        while (start < r.output.size())
+        {
+            const std::size_t end = r.output.find('\n', start);
+            const std::size_t stop = end == std::string::npos ? r.output.size() : end;
+            const std::string_view line = std::string_view(r.output).substr(start, stop - start);
+            // "child RESULT:" so that a log scan for the parent's own "RESULT:" line never matches a child.
+            std::cout << "   | " << (line.starts_with("RESULT:") ? "child " : "") << line << "\n";
+            start = stop + 1;
+        }
+        std::cout << std::format("   --- child '{}': {} ---\n", name, r.describe());
+        return r;
+    }
+
+    /// Prints a marker and flushes it to the pipe before the isolated call can crash.
+    void marker(std::string_view m) { std::cout << m << std::endl; }
+
+
+    // Child process: the store through a non-layered binding of one slice of a 3D texture (ES 3.2 8.23: "If layered is
+    // FALSE, only the single layer identified by layer will be bound, and the layer is treated as a different texture
+    // target for image accesses; [...] three-dimensional [...] texture layers are treated as two-dimensional textures").
+    // On ANGLE (Vulkan backend, RADV) this valid store raises a GPU page fault, the context is lost and the next
+    // synchronizing call never returns; in-process it would take the whole validation run down.
+    constexpr std::string_view kSliceChild = "slice3d-store";
+    constexpr std::uint32_t kChildSentinel = 0x5EEDu;
+
+    class SliceStoreChild final : public demo::Demo
+    {
+    public:
+        void init(demo::Env& env) override
+        {
+            std::string log;
+            const mgl::ShaderId cs = demo::compile_shader(mgl::ShaderType::Compute, env.load_text("shaders/single_store.comp"), log);
+            if (cs.value == 0) throw demo::Failure("single_store.comp failed to compile:\n" + log);
+            const std::array<mgl::ShaderId, 1> shaders = {cs};
+            prog_ = demo::link_program(shaders, log);
+            mgl::glDeleteShader(cs);
+            if (prog_.value == 0) throw demo::Failure("single_store.comp failed to link:\n" + log);
+
+            mgl::glGenTextures(1, &tex_);
+            mgl::glBindTexture(mgl::TextureTarget::Texture3D, tex_);
+            mgl::glTexStorage3D(mgl::TextureTarget::Texture3D, 1, mgl::SizedInternalFormat::R32UI, 8, 8, 4);
+            const std::vector<std::uint32_t> fill(8 * 8 * 4, kChildSentinel);
+            mgl::glTexSubImage3D(mgl::TextureTarget::Texture3D, 0, 0, 0, 0, 8, 8, 4, mgl::PixelFormat::RedInteger, mgl::PixelType::UnsignedInt, fill.data());
+            mgl::glBindTexture(mgl::TextureTarget::Texture3D, mgl::TextureId{0});
+            mgl::glGenFramebuffers(1, &fbo_);
+        }
+
+        void render(demo::Env& /*env*/, int /*frame*/) override {}
+
+        void validate(demo::Env& /*env*/, demo::Check& check) override
+        {
+            mgl::glUseProgram(prog_);
+            mgl::glBindImageTexture(mgl::ImageUnit{0}, tex_, 0, GL_FALSE, k3dSingleSlice, mgl::ImageAccess::WriteOnly, mgl::InternalFormat::R32UI);
+            check.expect_no_gl_error("glBindImageTexture(8x8x4 3D texture, level 0, layered = FALSE, layer = 1, WRITE_ONLY, R32UI)");
+            std::array<std::vector<std::uint32_t>, 4> slices;
+            marker(kBeforeMarker);
+            mgl::glDispatchCompute(1, 1, 1);
+            mgl::glMemoryBarrier(mgl::MemoryBarrierMask::Framebuffer);  // the slices are read with glReadPixels next
+            mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, fbo_);
+            for (std::size_t z = 0; z < slices.size(); ++z)
+            {
+                mgl::glFramebufferTextureLayer(mgl::FramebufferTarget::Framebuffer, kColor0, tex_, 0, static_cast<GLint>(z));
+                slices[z].assign(8 * 8 * 4, 0xDEADBEEFu);
+                mgl::glReadPixels(0, 0, 8, 8, mgl::PixelFormat::RgbaInteger, mgl::PixelType::UnsignedInt, slices[z].data());
+            }
+            marker(kAfterMarker);
+            check.expect_no_gl_error("glDispatchCompute and the RGBA_INTEGER read-back of the four slices raise no error");
+            for (std::size_t z = 0; z < slices.size(); ++z)
+            {
+                const bool stored = static_cast<int>(z) == k3dSingleSlice;
+                int bad = 0;
+                std::string first;
+                for (int y = 0; y < 8; ++y)
+                    for (int x = 0; x < 8; ++x)
+                    {
+                        const std::uint32_t g = slices[z][static_cast<std::size_t>((y * 8 + x) * 4)], e = stored ? single_value(x, y) : kChildSentinel;
+                        if (g != e && bad++ == 0) first = std::format("texel ({},{}) got {} expected {}", x, y, g, e);
+                    }
+                check.expect(bad == 0, std::format("slice {}: {}", z, stored ? "holds the values stored through the non-layered binding" : "keeps the uploaded sentinel (not bound)"), first);
+            }
+            mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
+        }
+
+        void shutdown(demo::Env& /*env*/) override
+        {
+            mgl::glUseProgram(mgl::ProgramId{0});
+            mgl::glBindImageTexture(mgl::ImageUnit{0}, mgl::TextureId{0}, 0, GL_FALSE, 0, mgl::ImageAccess::ReadOnly, mgl::InternalFormat::R32UI);
+            mgl::glDeleteFramebuffers(1, &fbo_);
+            mgl::glDeleteTextures(1, &tex_);
+            mgl::glDeleteProgram(prog_);
+        }
+
+    private:
+        mgl::ProgramId prog_{};
+        mgl::TextureId tex_{};
+        mgl::FramebufferId fbo_{};
+    };
+
+
     class ImageLoadStore final : public demo::Demo
     {
     public:
@@ -449,6 +694,14 @@ namespace
             mgl::glUniform1i(mgl::glGetUniformLocation(prog_display_, "u_uarr"), 1);
             mgl::glUniform1i(mgl::glGetUniformLocation(prog_display_, "u_u3d"), 2);
             mgl::glUniform1i(mgl::glGetUniformLocation(prog_display_, "u_utex"), 3);
+
+            // The non-layered store into a 3D-texture slice crashes one driver (see SliceStoreChild). It is made first in a
+            // child process, on every driver; the parent repeats it for the displayed image only when the child survived it.
+            slice3d_child_ = run_child(kSliceChild, std::chrono::seconds{30});
+            slice3d_in_process_ = slice3d_child_.exited;
+            if (!slice3d_in_process_)
+                std::cout << "note: the non-layered 3D-slice store is not repeated in-process (the child did not survive it); slice "
+                          << k3dSingleSlice << " keeps the layered values\n";
 
             create_textures();
             run_passes();
@@ -749,8 +1002,11 @@ namespace
             mgl::glUseProgram(prog_single_);
             bind_image(0, tex_arr_, 0, false, kArrSingleLayer, mgl::ImageAccess::WriteOnly, mgl::InternalFormat::R32UI);
             mgl::glDispatchCompute(1, 1, 1);
-            bind_image(0, tex_3d_, 0, false, k3dSingleSlice, mgl::ImageAccess::WriteOnly, mgl::InternalFormat::R32UI);
-            mgl::glDispatchCompute(1, 1, 1);
+            if (slice3d_in_process_)
+            {
+                bind_image(0, tex_3d_, 0, false, k3dSingleSlice, mgl::ImageAccess::WriteOnly, mgl::InternalFormat::R32UI);
+                mgl::glDispatchCompute(1, 1, 1);
+            }
 
             // 3. Level selection: level 1 of A (8 x 8) inverted into level 1 of B; the other levels of B stay untouched.
             mgl::glUseProgram(prog_invert_);
@@ -804,6 +1060,11 @@ namespace
         mgl::VertexArrayId vao_{};
         mgl::FramebufferId fbo_{};
         mgl::TextureId tex_src_{}, tex_blur_{}, tex_sobel_{}, tex_arr_{}, tex_3d_{}, tex_lvl_a_{}, tex_lvl_b_{}, tex_frag_{};
+        ChildResult slice3d_child_;
+        bool slice3d_in_process_ = true;  // the 3D slice was overwritten through the non-layered binding in this process
+
+        /// Is layer `l` of the array (row 1) or slice `l` of the 3D texture (row 2) overwritten by the non-layered binding?
+        [[nodiscard]] bool overwritten(bool is_3d, int l) const { return is_3d ? slice3d_in_process_ && l == k3dSingleSlice : l == kArrSingleLayer; }
     };
 
     // ---------------------------------------------------------------------------------------------------------
@@ -906,13 +1167,13 @@ namespace
                 std::vector<Probe> probes;
                 for (const auto& t : tex_pts)
                 {
-                    const bool single = row == 1 ? l == kArrSingleLayer : l == k3dSingleSlice;
+                    const bool single = overwritten(row == 2, l);
                     const std::uint32_t v = single ? single_value(t[0], t[1]) : layered_value(row == 1 ? kArrBase : k3dBase, t[0], t[1], l);
                     probes.push_back({o[0] + t[0] * 8 + 4, o[1] + t[1] * 8 + 4, tagged_color(v)});
                 }
                 probe_cell(check,
                            std::format("cell ({},{}): {} {} shows the values of {}", row, l, row == 1 ? "array layer" : "3D slice", l,
-                                       (row == 1 ? l == kArrSingleLayer : l == k3dSingleSlice) ? "the non-layered binding (layered = FALSE)" : "the layered binding (layered = TRUE)"),
+                                       overwritten(row == 2, l) ? "the non-layered binding (layered = FALSE)" : "the layered binding (layered = TRUE)"),
                            probes, 1);
             }
         }
@@ -1038,7 +1299,7 @@ namespace
         }
         for (int l = 0; l < 4; ++l)
         {
-            const bool single = l == k3dSingleSlice;
+            const bool single = overwritten(true, l);
             compare_layer(std::format("3D texture slice {}: {}", l, single ? "overwritten by the non-layered binding (layered = FALSE, layer = 1)" : "written by the layered binding (layered = TRUE, z = slice)"),
                           DumpU3, tex_3d_, l, [&](int x, int y) { return single ? single_value(x, y) : layered_value(k3dBase, x, y, l); });
         }
@@ -1448,6 +1709,19 @@ namespace
         check_filters(check);
         check_formats(check);
         check_layers(check);
+        {
+            // The isolated child (see SliceStoreChild): only a death inside the store/read-back is the documented deviation;
+            // any other outcome (wrong values, a crash during setup) is a plain failure on every driver.
+            const ChildResult& r = slice3d_child_;
+            const std::string what = "isolated child: imageStore through a non-layered binding of 3D-texture slice 1 writes exactly that slice "
+                                     "(the other slices keep their contents) and the process survives";
+            if (r.passed() || r.died_in_call())
+                check.expect_or_known_deviation(r.passed(), what, r.describe(), "ANGLE",
+                                                "ANGLE (Vulkan, RADV) raises a GPU page fault on imageStore through a non-layered binding of a 3D-texture "
+                                                "slice; the context is lost and the next synchronizing call hangs (ES 3.2 8.23: the slice is treated as a 2D texture)");
+            else
+                check.expect(false, what, r.describe());
+        }
         check_levels_and_sizes(check);
         check_reinterpretation(check);
         check_coherent(check);
@@ -1460,6 +1734,24 @@ namespace
 
 int main(int argc, char** argv)
 {
+    if (argc >= 3 && std::string_view(argv[1]) == kChildFlag)
+    {
+        if (std::string_view(argv[2]) != kSliceChild)
+        {
+            std::cerr << "unknown child case '" << argv[2] << "'\n";
+            return 2;
+        }
+        std::array<char*, 3> child_argv = {argv[0], const_cast<char*>("--headless"), const_cast<char*>("--validate")};
+        const demo::Info child_info{
+            .name = "es31-image-load-store(child)",
+            .title = "Image store into a 3D-texture slice: isolated child process",
+            .min_es = {3, 1},
+            .summary = "Internal child process of es31-image-load-store.",
+            .source_dir = DEMO_SOURCE_DIR,
+        };
+        return demo::run<SliceStoreChild>(static_cast<int>(child_argv.size()), child_argv.data(), child_info);
+    }
+
     const demo::Info info{
         .name = "es31-image-load-store",
         .title = "Image load/store",

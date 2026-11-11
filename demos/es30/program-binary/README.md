@@ -67,11 +67,10 @@ With **at least one binary format** (all Mesa drivers in the matrix report one f
 | Active uniforms and attributes (name, size, type) and the `o_color` output location match the original | §2.12.4 |
 | Both halves match the CPU reference (±1), and the right half is **bit-identical** to the left half | §2.1.6.2, §2.12.4 |
 | Negative control: a different `u_seed` on the reloaded program is caught by both comparisons | — |
-| Six bad binaries (byte inverted at the start, middle or end; truncated by 1 byte or to half; a single flipped bit), each loaded over a successfully loaded program: no error, `LINK_STATUS = FALSE`, `PROGRAM_BINARY_LENGTH = 0` | §2.12.4 "will fail", "no error is generated", "information about a previous link ... is lost" |
-| Length + 16 with trailing bytes must also fail | §2.12.4 (known Mesa deviation, see below) |
-| After a failed load, `glUseProgram` and `glGetProgramBinary` → `INVALID_OPERATION` | §2.12.3, §2.12.4 |
+| Seven bad binaries (byte inverted at the start, middle or end; truncated by 1 byte or to half; 16 trailing bytes with length + 16; a single flipped bit), each loaded over a successfully loaded program **in a child process** (see below): no error, `LINK_STATUS = FALSE`, `PROGRAM_BINARY_LENGTH = 0`, and the process survives | §2.12.4 "will fail", "no error is generated", "information about a previous link ... is lost" (known Mesa and ANGLE deviations, see below) |
+| In-process, a binary with an inverted first byte (a header mutation, rejected cleanly by every tested driver) fails to load; afterwards `glUseProgram` and `glGetProgramBinary` → `INVALID_OPERATION` | §2.12.3, §2.12.4 |
 | A `binaryFormat` that is not listed → `INVALID_ENUM`; `length = -1` → `INVALID_VALUE`. Both calls must leave the program linked. | ES 3.2 §7.5, ES 3.0 §2.5 |
-| Fallback: after a failed load the program still has its two shaders attached and its attribute binding, relinks from source with `glLinkProgram`, and renders the reference image | §2.12.4 |
+| Fallback: after a failed load of a stale binary (its header altered, as after a driver update) the program still has its two shaders attached and its attribute binding, relinks from source with `glLinkProgram`, and renders the reference image | §2.12.4 |
 | `glGetProgramBinary` with `bufSize = length − 1` and with `bufSize = 0` → `INVALID_OPERATION`, and `binaryFormat` / `length` are not written | §2.12.4, §2.5 |
 
 With **zero formats**, every `binaryFormat` value passed to `glProgramBinary` must give
@@ -84,6 +83,17 @@ gallium screen has a disk-cache object, and it keeps that object even with
 **In both cases:** a never-linked program has `PROGRAM_BINARY_LENGTH = 0`, and `glGetProgramBinary`
 on it gives `INVALID_OPERATION`. The same call on a program whose link failed (vertex shader only)
 also gives `INVALID_OPERATION`.
+
+### Bad binaries in child processes
+
+A load that must fail cleanly crashes one driver (SIGILL inside `glProgramBinary` on ANGLE), so each of the seven
+mutations runs in a fresh child process on every driver. The executable re-executes itself through `/proc/self/exe` with
+a hidden first argument (the pattern of `tests/negative/driver-crash-readpixels-none`). The child creates its own
+context, links the pattern program from source, retrieves its binary, loads the valid binary and then the mutated one
+between two printed markers, prints the error, `LINK_STATUS` and `PROGRAM_BINARY_LENGTH`, and exits with PASS or FAIL. The
+parent echoes the child's output and classifies its end (exit status, signal, 30 s timeout). The documented deviations are
+a death between the markers and a mutated binary that loads with `LINK_STATUS = TRUE`. Anything else, such as a wrong error,
+a failing valid load or a crash during setup, is a plain FAIL on every driver.
 
 ## Known Mesa deviations (kept strict, reported as XFAIL)
 
@@ -98,6 +108,25 @@ show up on radeonsi, llvmpipe and zink alike:
    the error "is ignored so that it has no effect on GL state".
 3. **A `glGetProgramBinary` call that raises an error writes `*length = 0`.** §2.5 says "no change is
    made to these values". `binaryFormat` is left alone, as required.
+
+## Known ANGLE deviations (kept strict, reported as XFAIL)
+
+ANGLE 2.1.17841 (Vulkan backend, one format `0x93A6`):
+
+1. **Bad binaries load.** A byte inverted in the middle or at the end, a single flipped bit, a length one byte short and a
+   length 16 bytes too long all load with `LINK_STATUS = TRUE` (`PROGRAM_BINARY_LENGTH` 13395 instead of the 13195 bytes
+   retrieved). Only the inverted first byte (the header) is rejected. §2.12.4: *"binaryFormat and binary must be those
+   returned by a previous call to GetProgramBinary, and length must be the length of the program binary as returned by
+   GetProgramBinary or GetProgramiv with pname PROGRAM_BINARY_LENGTH. Loading the program binary will fail, setting the
+   LINK_STATUS of program to FALSE, if these conditions are not met."*
+2. **A binary truncated to half its length crashes the process** (SIGILL inside `glProgramBinary`) instead of failing the
+   load. Same rule; also *"If ProgramBinary fails to load a binary, no error is generated"*.
+3. **`length = -1` raises no error.** ES 3.0 §2.5: *"If a negative number is provided where an argument of type sizei or
+   sizeiptr is specified, the error INVALID_VALUE is generated."* (ES 3.2 §7.5 states it for `ProgramBinary` explicitly.)
+   The program stays linked, as required.
+4. **`glGetProgramBinary` with a too-small `bufSize` writes `*binaryFormat` and `*length = 0`** while it raises
+   `INVALID_OPERATION` (§2.5: "no change is made to these values"). On the other `INVALID_OPERATION` paths (never-linked
+   program, failed load) ANGLE leaves both untouched.
 
 ## Pitfalls
 

@@ -109,7 +109,7 @@ versions of the language" (GLSL ES 3.10 §1.1).
 
 ## Validation (`--validate`)
 
-215 checks in an ES 3.1+ context, 209 in an ES 3.0 context (the integer resolve needs ES 3.1), all against CPU models,
+218 checks in an ES 3.1+ context, 209 in an ES 3.0 context (the integer resolve needs ES 3.1), all against CPU models,
 per-sample readback or defined errors; each blit check compares the *whole* destination, so pixels
 that must not change are checked as well. All images read back with `glReadPixels` as `RGBA/UNSIGNED_BYTE`.
 
@@ -142,9 +142,12 @@ that must not change are checked as well. All images read back with `glReadPixel
   Rules that hold for *any* resolve:
   - `LINEAR` resolves identically to `NEAREST` ("The filter parameter is ignored"; Appendix A.1 repeatability makes the
     same command on the same samples give the same result);
-  - a sub-rectangle with identical bounds writes exactly that rectangle, with the same values as the whole-image resolve
-    ("the samples corresponding to each pixel location in the source are converted to a single sample": a resolved pixel is
-    a function of that pixel's samples), and leaves every other pixel untouched;
+  - a sub-rectangle with identical bounds leaves every pixel outside the rectangle untouched ("Only pixels whose centers lie
+    within the destination rectangle are written by BlitFramebuffer"), checked exactly on the whole RGBA8 target. Inside the
+    rectangle the RGBA8 values are implementation-dependent like every RGBA8 resolve, and nothing requires a sub-rectangle
+    resolve to reproduce the whole-image resolve bit for bit (it is a different command, and an implementation may take
+    another resolve path for it), so how many inside pixels equal the whole-image resolve is printed, not asserted. The
+    inside is asserted with integer samples instead (next item but one);
   - **depth and stencil**: the four-region scene is written into the multisample depth/stencil buffer by *scissored clears*.
     The scissor test selects whole pixels and "masking and scissoring affect clearing the multisample buffer in the same way
     as they affect clearing the corresponding color, depth, and stencil buffers" (§4.2.3.1), so all samples of a pixel hold
@@ -156,7 +159,8 @@ that must not change are checked as well. All images read back with `glReadPixel
     back, one pass per sample index, with `texelFetch(usampler2DMS, ...)`; no resolve is involved. Every sample must be exactly
     the cleared background or the triangle value, and both must occur. The blit resolve into an RGBA8UI texture must give,
     in **every pixel, the value of one of that pixel's own samples**. Negative control: the resolved values shifted by one are
-    rejected in every pixel. (A per-channel average would also be rejected in each pixel whose samples differ: 301 of 301 on
+    rejected in every pixel. The same is repeated for a sub-rectangle resolve (20,30)-(100,90) into a target cleared to a
+    sentinel: every pixel inside is one of its own samples and every pixel outside keeps the sentinel. (A per-channel average would also be rejected in each pixel whose samples differ: 301 of 301 on
     radeonsi with 8 samples, 244 of 244 on llvmpipe and zink with 4; printed, since how many such pixels exist depends on
     the sample locations.) In an ES 3.0 context this part is skipped with a note: ES 3.0 has no multisample integer images
     (`RenderbufferStorageMultisample` with an integer format is `INVALID_OPERATION`, §4.4.2.1).
@@ -189,8 +193,18 @@ that must not change are checked as well. All images read back with `glReadPixel
   bits and `INVALID_ENUM` for a filter other than `LINEAR` / `NEAREST` (a raw cast would be needed).
 - The RGBA8 resolve is implementation-dependent (§4.3.3), so no RGBA8 resolved value is asserted, not even for pixels whose samples
   all hold one color. A conformant driver that resolves normalized colors by some other rule passes. What the demo does assert
-  about resolves (filter ignored, identical-bounds sub-rectangle, uniform depth/stencil, integer resolve = one of the samples)
-  follows from the quoted text alone, with one reading made explicit: a resolved pixel depends only on that pixel's samples.
+  about resolves (filter ignored, nothing written outside an identical-bounds sub-rectangle, uniform depth/stencil, integer
+  resolve = one of the samples, also for a sub-rectangle) follows from the quoted text alone.
+
+## Known driver deviation: ANGLE
+
+- **A multisample resolve of a sub-rectangle writes outside the destination rectangle.** ANGLE 2.1.17841 (Vulkan backend,
+  RADV) resolves (20,30)-(100,90) as if the rectangle reached the far edges of the 128 x 128 framebuffer: all 5784 pixels of
+  (20,30)-(128,128) outside the rectangle are written, with resolved values (RGBA8 and RGBA8UI alike). ES 3.0 §4.3.3: *"Only
+  pixels whose centers lie within the destination rectangle are written by BlitFramebuffer."* Both "outside" checks are
+  reported as XFAIL on "ANGLE"; the inside of the integer sub-rectangle resolve conforms. The original check also required the
+  RGBA8 inside to equal the whole-image resolve; that asserted more than §4.3.3 guarantees and is now an observation (on ANGLE
+  4758 of 4800 inside pixels are equal, on the Mesa drivers all of them).
 
 ## Pitfalls
 

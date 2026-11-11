@@ -1646,7 +1646,38 @@ namespace
             Image want(kDst, kDst, {0, 0, 0, 255});
             for (int y = part.y0; y < part.y1; ++y)
                 for (int x = part.x0; x < part.x1; ++x) want.at(x, y) = res_img_.at(x, y);
-            expect_image(check, "...and resolves exactly that rectangle", read_attachment(res_, mgl::ColorAttachment::Color0, kDst, kDst), want, 0);
+            // ES 3.0 4.3.3: "Only pixels whose centers lie within the destination rectangle are written by BlitFramebuffer." That
+            // part is normative and asserted exactly. The values inside the rectangle are an RGBA8 resolve, which is
+            // implementation-dependent - nothing requires a sub-rectangle resolve to reproduce the full resolve bit for bit - so
+            // the inside is only compared as an observation. The integer resolve check (ES 3.1) asserts the inside normatively.
+            {
+                const Image got = read_attachment(res_, mgl::ColorAttachment::Color0, kDst, kDst);
+                const demo::Rgba8 cleared = {0, 0, 0, 255};
+                int inside = 0, inside_same = 0, outside = 0, outside_written = 0, outside_as_resolved = 0;
+                std::string first_written;
+                for (int y = 0; y < kDst; ++y)
+                    for (int x = 0; x < kDst; ++x)
+                    {
+                        if (x >= part.x0 && x < part.x1 && y >= part.y0 && y < part.y1)
+                        {
+                            ++inside;
+                            inside_same += got.at(x, y) == res_img_.at(x, y) ? 1 : 0;
+                            continue;
+                        }
+                        ++outside;
+                        if (got.at(x, y) == cleared) continue;
+                        outside_as_resolved += got.at(x, y) == res_img_.at(x, y) ? 1 : 0;
+                        if (outside_written++ == 0) first_written = std::format("first at ({},{}): {}", x, y, demo::format_rgba(got.at(x, y)));
+                    }
+                check.expect_or_known_deviation(
+                    outside_written == 0, "...and writes no pixel outside that rectangle (every other pixel keeps the clear color)",
+                    outside_written == 0 ? std::format("{} pixels outside", outside)
+                                         : std::format("{} of {} pixels outside were written ({} of them equal the full resolve), {}", outside_written, outside,
+                                                       outside_as_resolved, first_written),
+                    "ANGLE", "ANGLE writes resolved pixels outside the destination rectangle of a multisample resolve blit (ES 3.0 4.3.3: only pixels whose centers lie within the destination rectangle are written)");
+                std::cout << std::format("   note: observed sub-rectangle RGBA8 resolve (implementation-dependent, not asserted): {} of {} pixels inside the "
+                                         "rectangle equal the full resolve\n", inside_same, inside);
+            }
 
             // Reading the samples of a multisample framebuffer directly is an error; a resolve is the only way (4.3.2).
             bind_read(ms_);
@@ -1846,6 +1877,43 @@ namespace
                 }
                 mean_rejected += is_a_sample(p, mean) ? 0 : 1;
             }
+            // A resolve of a sub-rectangle (identical source and destination bounds). Integer samples make the inside normative too:
+            // every pixel whose centre lies within the rectangle is one of its own samples, every other pixel keeps the sentinel.
+            {
+                const Rect part = {20, 30, 100, 90};
+                const std::array<GLuint, 4> sentinel = {1, 2, 3, 4};
+                const U4 sentinel32 = {sentinel[0], sentinel[1], sentinel[2], sentinel[3]};
+                bind_both(resolved);
+                reset_fragment_state();
+                mgl::glClearBufferuiv(mgl::UnsignedIntegerClearBuffer::Color, 0, sentinel.data());
+                bind_pair(ms, resolved);
+                (void)demo::drain_gl_errors();
+                blit(part, part, kColorBit, kNearest);
+                check.expect_no_gl_error("integer resolve of the sub-rectangle (20,30)-(100,90) with identical bounds raises no error");
+                const std::vector<std::uint32_t> sub = read_uint_image(resolved, kDst);
+                int in_bad = 0, out_written = 0, in_count = 0;
+                std::string first_in, first_out;
+                for (std::size_t p = 0; p < pixels; ++p)
+                {
+                    const int x = static_cast<int>(p % kDst), y = static_cast<int>(p / kDst);
+                    const U4 v = value_at(sub, p);
+                    if (x >= part.x0 && x < part.x1 && y >= part.y0 && y < part.y1)
+                    {
+                        ++in_count;
+                        if (!is_a_sample(p, v) && in_bad++ == 0) first_in = std::format("({},{}) = ({},{},{},{})", x, y, v[0], v[1], v[2], v[3]);
+                    }
+                    else if (v != sentinel32 && out_written++ == 0)
+                        first_out = std::format("({},{}) = ({},{},{},{})", x, y, v[0], v[1], v[2], v[3]);
+                }
+                check.expect(in_bad == 0, "integer sub-rectangle resolve: every pixel inside the rectangle equals one of its own samples",
+                             in_bad == 0 ? std::format("{} pixels", in_count) : std::format("{} of {} violate it, first {}", in_bad, in_count, first_in));
+                check.expect_or_known_deviation(
+                    out_written == 0, "integer sub-rectangle resolve: no pixel outside the rectangle is written (all keep the sentinel)",
+                    out_written == 0 ? std::format("{} pixels outside", pixels - static_cast<std::size_t>(in_count))
+                                     : std::format("{} pixels written, first {}", out_written, first_out),
+                    "ANGLE", "ANGLE writes resolved pixels outside the destination rectangle of a multisample resolve blit (ES 3.0 4.3.3: only pixels whose centers lie within the destination rectangle are written)");
+            }
+
             std::string picks;
             for (const int k : picked) picks += std::format(" {}", k);
             std::cout << std::format("   note: observed integer resolve ({} samples): {} pixels with mixed samples; a per-channel mean would be rejected in {} "

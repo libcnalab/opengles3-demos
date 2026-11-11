@@ -31,7 +31,7 @@
     "glGetIntegerv": "SAMPLE_BUFFERS / SAMPLES of the multisample FBO (1, = RENDERBUFFER_SAMPLES) and the single-sample FBO (0, 0); MAX_SAMPLES",
     "glRenderbufferStorageMultisample": "RGBA8 and DEPTH24_STENCIL8 with 4 samples (plus the RGBA8 band target); RENDERBUFFER_SAMPLES >= request and equal for both attachments",
     "glRenderbufferStorage": "single-sample RGBA8 + DEPTH24_STENCIL8 FBO (SAMPLE_BUFFERS 0) and the RGBA32UI flat-id target",
-    "glGetRenderbufferParameteriv": "RENDERBUFFER_SAMPLES of the multisample attachments",
+    "glGetRenderbufferParameteriv": "RENDERBUFFER_SAMPLES of the multisample attachments (>= request) and of the single-sample FBO's attachments (0)",
     "glBlitFramebuffer": "multisample -> texture resolves shown in the coverage and zoom panels (panel probes match the read-back resolved texels exactly; the resolved values themselves are only observed, ES 3.0 4.3.3 makes them implementation-dependent); INVALID_OPERATION into a multisample draw framebuffer",
     "glReadPixels": "RGBA_INTEGER/UNSIGNED_INT from RGBA32UI (bit-exact flat values), RGBA8 readback of the default framebuffer and of resolved textures; INVALID_OPERATION from a multisample FBO",
     "glVertexAttribIPointer": "uint palette attribute arrives unconverted in the flat uint varying (checked bit-exact)",

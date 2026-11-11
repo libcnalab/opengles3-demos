@@ -122,9 +122,9 @@ stencil test `NOTEQUAL 1`, which must be FALSE. The checks:
   back 1 and TRUE; `(-0.5, FALSE)` reads back 0; `(0.375, TRUE)` reads back exactly 0.375; the
   enable state through `glIsEnabled` and `glGetBooleanv`;
 * the multisample FBO reports `SAMPLE_BUFFERS` 1 and `SAMPLES` = `RENDERBUFFER_SAMPLES` ≥ 4.
-  The single-sample FBO reports 0 and 0, and there coverage value 0, value 1 inverted,
-  alpha-to-coverage with alpha 0 and value 0.5 all change nothing. Every pixel is written,
-  checked by exact readback and stencil count;
+  The single-sample FBO reports 0 and 0, both of its attachments report `RENDERBUFFER_SAMPLES` 0,
+  and there coverage value 0, value 1 inverted, alpha-to-coverage with alpha 0 and value 0.5 all
+  change nothing. Every pixel is written, checked by exact readback and stencil count;
 * the coverage panel and both zoom panels must show the resolved texels they magnify. They are
   compared with the resolved images read back from their textures, so the check holds whatever
   the resolve produced: on the single-sample default framebuffer the pixel centre selects exactly
@@ -146,6 +146,17 @@ steps (dithered) for alpha-to-coverage. What the endpoint bands show is asserted
 no resolve involved, by the occlusion-query and stencil checks above. (Earlier versions of this
 demo asserted the endpoint bands as exact. That relied on an assumption the specification does
 not make.)
+
+## Known driver deviation
+
+* **ANGLE** (Vulkan backend) applies `SAMPLE_COVERAGE` and `SAMPLE_ALPHA_TO_COVERAGE` on the
+  single-sample FBO. The FBO is really single-sampled: `SAMPLE_BUFFERS` and `SAMPLES` read 0 and
+  both renderbuffers report `RENDERBUFFER_SAMPLES` 0. Even so, coverage value 0, value 1
+  inverted and alpha 0 discard every pixel (the clear colour stays), and value 0.5 leaves pixels
+  unwritten. ES 3.0 §4.1.3: *"No changes to the fragment alpha or coverage values are made at this
+  step if the value of SAMPLE_BUFFERS is not one."* (ES 3.2 §13.8.3: *"If the value of
+  SAMPLE_BUFFERS is not one, this step is skipped."*) No extension that ANGLE exposes changes
+  this rule. The four checks are reported as XFAIL on "ANGLE".
 
 ## Pitfalls
 

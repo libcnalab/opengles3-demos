@@ -12,7 +12,7 @@
 | GLSL300.COMMENTS_TOKENS | 300 | structure | Comments; identifiers; reserved words (__ prefix / gl_ prefix errors) | GLSL ES 3.00 §3.5-3.8 | negative | NOT_STARTED |  |
 | GLSL300.TYPES.SCALAR_VECTOR | 300 | types | bool/int/uint/float, vec/ivec/uvec/bvec 2-4 | GLSL ES 3.00 §4.1 | compute-check | FULLY_VALIDATED | es30-uniform-buffer-objects |
 | GLSL300.TYPES.MATRIX | 300 | types | mat2..mat4 and non-square matCxR; column-major indexing | GLSL ES 3.00 §4.1.6 | compute-check | FULLY_VALIDATED | es20-transformations-camera, es20-uniforms, es30-lighting, es30-uniform-buffer-objects |
-| GLSL300.TYPES.SAMPLERS | 300 | types | sampler2D/3D/Cube/2DArray, *Shadow, isampler*/usampler*; opaque rules | GLSL ES 3.00 §4.1.7 | render+negative | FULLY_VALIDATED | es20-copy-and-read-pixels, es20-cube-map, es20-framebuffer-objects, es20-mipmaps, es20-textures-2d, es30-immutable-storage, es30-integer-float-textures, es30-normal-mapping, es30-pixel-buffer-objects, es30-sampler-objects, es30-texture-3d-and-arrays, es30-texture-swizzle-lod, es32-layered-rendering |
+| GLSL300.TYPES.SAMPLERS | 300 | types | sampler2D/3D/Cube/2DArray, *Shadow, isampler*/usampler*; opaque rules | GLSL ES 3.00 §4.1.7 | render+negative | FULLY_VALIDATED | es20-copy-and-read-pixels, es20-cube-map, es20-framebuffer-objects, es20-mipmaps, es20-textures-2d, es30-immutable-storage, es30-integer-float-textures, es30-normal-mapping, es30-pixel-buffer-objects, es30-sampler-objects, es30-texture-3d-and-arrays, es30-texture-swizzle-lod, es32-layered-rendering, es32-multisample-array-and-border-color |
 | GLSL300.TYPES.STRUCT | 300 | types | Structures; nested; constructors; equality | GLSL ES 3.00 §4.1.8 | compute-check | FULLY_VALIDATED | es20-uniforms, es30-lighting, es30-uniform-buffer-objects |
 | GLSL300.TYPES.ARRAY | 300 | types | Arrays; array constructors; .length(); assignment/comparison of arrays | GLSL ES 3.00 §4.1.9 | compute-check | FULLY_VALIDATED | es20-uniforms, es30-uniform-buffer-objects |
 | GLSL300.TYPES.IMPLICIT_CONVERSION | 300 | types | No implicit conversions in ES (int->float is an error) | GLSL ES 3.00 §4.1.10 | negative | NOT_STARTED |  |
@@ -55,7 +55,7 @@
 | GLSL300.FN.TEXTURE.LOD | 300 | builtins | textureLod textureProjLod textureGrad textureProjGrad | GLSL ES 3.00 §8.8 | render | FULLY_VALIDATED | es30-immutable-storage, es30-integer-float-textures, es30-texture-swizzle-lod |
 | GLSL300.FN.TEXTURE.OFFSET | 300 | builtins | textureOffset texelFetchOffset textureLodOffset textureGradOffset etc. + offset limits | GLSL ES 3.00 §8.8 | render | FULLY_VALIDATED | es30-texture-swizzle-lod |
 | GLSL300.FN.TEXTURE.FETCH | 300 | builtins | texelFetch on 2D/3D/2DArray (+ integer samplers) | GLSL ES 3.00 §8.8 | render | FULLY_VALIDATED | es20-framebuffer-objects, es30-deferred-shading, es30-integer-float-textures, es30-multiple-render-targets, es30-post-processing, es30-shadow-mapping, es30-srgb, es30-texture-3d-and-arrays, es30-texture-swizzle-lod, es32-float-targets-and-indexed-blend |
-| GLSL300.FN.TEXTURE.SHADOW | 300 | builtins | Shadow sampler lookups (comparison) | GLSL ES 3.00 §8.8 | render | FULLY_VALIDATED | es30-shadow-mapping |
+| GLSL300.FN.TEXTURE.SHADOW | 300 | builtins | Shadow sampler lookups (comparison) | GLSL ES 3.00 §8.8 | render | FULLY_VALIDATED | es30-shadow-mapping, es32-multisample-array-and-border-color |
 | GLSL300.FN.DERIVATIVES | 300 | builtins | dFdx dFdy fwidth | GLSL ES 3.00 §8.9 | render | NOT_STARTED |  |
 | GLSL300.UNDEFINED_BEHAVIOR | 300 | semantics | Documented undefined / implementation-dependent results (division by zero, out-of-range shifts, NaN propagation) | GLSL ES 3.00 §4.5 §5.9 | doc | NOT_STARTED |  |
 | GLSL310.VERSION | 310 | structure | #version 310 es; rejected on ES 3.0 contexts | GLSL ES 3.10 §3.3 | compile+negative | NOT_STARTED |  |
@@ -90,7 +90,7 @@
 | GLSL320.SAMPLE_VARS | 320 | multisample | gl_SampleID gl_SamplePosition gl_SampleMaskIn gl_SampleMask + sample qualifier | GLSL ES 3.20 §7.1.5 §4.5 | render | NOT_STARTED |  |
 | GLSL320.FN.INTERPOLATE_AT | 320 | builtins | interpolateAtCentroid interpolateAtSample interpolateAtOffset | GLSL ES 3.20 §8.14.2 | render | NOT_STARTED |  |
 | GLSL320.FN.IMAGE_ATOMIC | 320 | builtins | imageAtomicAdd/Min/Max/And/Or/Xor/Exchange/CompSwap (r32i/r32ui; Exchange r32f) | GLSL ES 3.20 §8.12 | compute-check | NOT_STARTED |  |
-| GLSL320.TYPES.NEW_SAMPLERS | 320 | types | samplerBuffer imageBuffer samplerCubeArray(Shadow) imageCubeArray sampler2DMSArray | GLSL ES 3.20 §4.1.7 | render | FULLY_VALIDATED | es32-cube-map-array, es32-texture-buffer |
+| GLSL320.TYPES.NEW_SAMPLERS | 320 | types | samplerBuffer imageBuffer samplerCubeArray(Shadow) imageCubeArray sampler2DMSArray | GLSL ES 3.20 §4.1.7 | render | FULLY_VALIDATED | es32-cube-map-array, es32-multisample-array-and-border-color, es32-texture-buffer |
 | GLSL320.PRIMITIVE_BOUNDING_BOX | 320 | tessellation | gl_BoundingBox output | GLSL ES 3.20 §7.1.2 | render | FULLY_VALIDATED | es32-tessellation-terrain |
 | GLSL320.BLEND_EQUATION_LAYOUT | 320 | interface | layout(blend_support_*) for advanced blending | GLSL ES 3.20 §4.4.2 | render | NOT_STARTED |  |
 | GLSL320.PRECISE | 320 | precision | precise qualifier | GLSL ES 3.20 §4.9 | compile | NOT_STARTED |  |

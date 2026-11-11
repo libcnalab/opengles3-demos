@@ -133,21 +133,21 @@
 | ES30.TEXTURE.PIXEL_STORE | 3.0 | textures | UNPACK_ROW_LENGTH/SKIP_PIXELS/SKIP_ROWS/IMAGE_HEIGHT/SKIP_IMAGES; PACK_* | ES 3.0 §3.7.1 | FULLY_VALIDATED | es30-pixel-buffer-objects, es30-texture-3d-and-arrays |
 | ES30.TEXTURE.FORMAT_VALIDATION | 3.0 | textures | Invalid format/type/internalformat combinations rejected | ES 3.0 §3.8.3 | FULLY_VALIDATED | es30-immutable-storage |
 | ES30.TEXTURE.COMPLETENESS_INTEGER | 3.0 | textures | Integer/float texture completeness vs filter rules | ES 3.0 §3.8.13 | FULLY_VALIDATED | es30-integer-float-textures |
-| ES30.SAMPLER.OBJECTS | 3.0 | textures | Sampler objects override texture sampling state | ES 3.0 §3.8.2 | FULLY_VALIDATED | es30-sampler-objects, es30-shadow-mapping, es32-layered-rendering |
+| ES30.SAMPLER.OBJECTS | 3.0 | textures | Sampler objects override texture sampling state | ES 3.0 §3.8.2 | FULLY_VALIDATED | es30-sampler-objects, es30-shadow-mapping, es32-layered-rendering, es32-multisample-array-and-border-color |
 | ES30.SAMPLER.SAME_TEXTURE | 3.0 | textures | Two samplers reading the same texture differently | ES 3.0 §3.8.2 | FULLY_VALIDATED | es30-sampler-objects, es30-shadow-mapping |
 | ES30.SAMPLER.QUERY | 3.0 | textures | glGetSamplerParameter* / glIsSampler / SAMPLER_BINDING | ES 3.0 §6.1.5 | FULLY_VALIDATED | es30-sampler-objects |
 | ES30.FBO.MRT | 3.0 | framebuffer | Multiple render targets glDrawBuffers + layout(location) | ES 3.0 §4.2.1 | FULLY_VALIDATED | es30-deferred-shading, es30-multiple-render-targets, es32-float-targets-and-indexed-blend |
 | ES30.FBO.READ_DRAW | 3.0 | framebuffer | Separate READ/DRAW framebuffer bindings + glReadBuffer | ES 3.0 §4.4.1 §4.3.1 | FULLY_VALIDATED | es30-framebuffer-blit-msaa, es30-multiple-render-targets |
 | ES30.FBO.BLIT | 3.0 | framebuffer | glBlitFramebuffer color/depth/stencil + filters + scaling | ES 3.0 §4.3.3 | FULLY_VALIDATED | es30-framebuffer-blit-msaa |
 | ES30.FBO.MSAA_RENDERBUFFER | 3.0 | framebuffer | glRenderbufferStorageMultisample + resolve blit | ES 3.0 §4.4.2 | FULLY_VALIDATED | es30-framebuffer-blit-msaa |
-| ES30.FBO.LAYER | 3.0 | framebuffer | glFramebufferTextureLayer (3D / 2D array layers) | ES 3.0 §4.4.2 | FULLY_VALIDATED | es30-framebuffer-invalidate, es30-texture-3d-and-arrays, es32-cube-map-array, es32-layered-rendering |
+| ES30.FBO.LAYER | 3.0 | framebuffer | glFramebufferTextureLayer (3D / 2D array layers) | ES 3.0 §4.4.2 | FULLY_VALIDATED | es30-framebuffer-invalidate, es30-texture-3d-and-arrays, es32-cube-map-array, es32-layered-rendering, es32-multisample-array-and-border-color |
 | ES30.FBO.INVALIDATE | 3.0 | framebuffer | glInvalidateFramebuffer / glInvalidateSubFramebuffer | ES 3.0 §4.5 | FULLY_VALIDATED | es30-framebuffer-invalidate |
 | ES30.FBO.CLEAR_BUFFER | 3.0 | framebuffer | glClearBuffer{fv iv uiv fi} per draw buffer | ES 3.0 §4.2.3 | FULLY_VALIDATED | es30-multiple-render-targets, es32-float-targets-and-indexed-blend, es32-layered-rendering |
 | ES30.FBO.SRGB | 3.0 | framebuffer | sRGB render targets: encoding on write; FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING | ES 3.0 §4.1.8 | FULLY_VALIDATED | es30-post-processing, es30-srgb |
 | ES30.FBO.DEPTH_STENCIL_ATTACHMENT | 3.0 | framebuffer | DEPTH_STENCIL_ATTACHMENT point | ES 3.0 §4.4.2 | FULLY_VALIDATED | es20-framebuffer-objects, es30-multiple-render-targets |
 | ES30.FBO.INTEGER_TARGET | 3.0 | framebuffer | Integer color attachments + glClearBufferiv/uiv + readback | ES 3.0 §4.4.4 | FULLY_VALIDATED | es30-multiple-render-targets |
 | ES30.FBO.ATTACHMENT_QUERY | 3.0 | framebuffer | COMPONENT_TYPE / color sizes / TEXTURE_LAYER attachment queries | ES 3.0 §6.1.13 | FULLY_VALIDATED | es30-deferred-shading, es30-framebuffer-invalidate, es32-float-targets-and-indexed-blend, es32-layered-rendering |
-| ES30.INTERNALFORMAT.QUERY | 3.0 | framebuffer | glGetInternalformativ NUM_SAMPLE_COUNTS / SAMPLES | ES 3.0 §6.1.15 | FULLY_VALIDATED | es30-framebuffer-blit-msaa, es31-multisample-textures |
+| ES30.INTERNALFORMAT.QUERY | 3.0 | framebuffer | glGetInternalformativ NUM_SAMPLE_COUNTS / SAMPLES | ES 3.0 §6.1.15 | FULLY_VALIDATED | es30-framebuffer-blit-msaa, es31-multisample-textures, es32-multisample-array-and-border-color |
 | ES30.TF.BASIC | 3.0 | transform-feedback | glTransformFeedbackVaryings + begin/end capture into a buffer | ES 3.0 §2.15 | FULLY_VALIDATED | es30-transform-feedback, es32-geometry-shaders, test-glsl300-builtins |
 | ES30.TF.MODES | 3.0 | transform-feedback | INTERLEAVED_ATTRIBS vs SEPARATE_ATTRIBS | ES 3.0 §2.15.2 | FULLY_VALIDATED | es30-transform-feedback |
 | ES30.TF.OBJECTS | 3.0 | transform-feedback | Transform feedback objects gen/bind/delete/isTransformFeedback | ES 3.0 §2.15.1 | FULLY_VALIDATED | es30-transform-feedback |
@@ -201,7 +201,7 @@
 | ES32.GEOMETRY.BASIC | 3.2 | geometry | Geometry shaders: input/output layouts EmitVertex/EndPrimitive | ES 3.2 §11.3 | FULLY_VALIDATED | es32-geometry-shaders |
 | ES32.GEOMETRY.AMPLIFICATION | 3.2 | geometry | Primitive amplification + invocations | ES 3.2 §11.3.4 | FULLY_VALIDATED | es32-geometry-shaders |
 | ES32.GEOMETRY.ADJACENCY | 3.2 | geometry | Adjacency primitive types | ES 3.2 §10.1.8-11 | FULLY_VALIDATED | es32-geometry-shaders |
-| ES32.GEOMETRY.LAYERED | 3.2 | geometry | gl_Layer layered rendering + glFramebufferTexture | ES 3.2 §9.8 | FULLY_VALIDATED | es32-layered-rendering |
+| ES32.GEOMETRY.LAYERED | 3.2 | geometry | gl_Layer layered rendering + glFramebufferTexture | ES 3.2 §9.8 | FULLY_VALIDATED | es32-layered-rendering, es32-multisample-array-and-border-color |
 | ES32.TESS.TRIANGLES | 3.2 | tessellation | Tessellation control/evaluation with triangle domain | ES 3.2 §11.2 | FULLY_VALIDATED | es32-tessellation-domains |
 | ES32.TESS.QUADS | 3.2 | tessellation | Quad domain | ES 3.2 §11.2.2 | FULLY_VALIDATED | es32-tessellation-domains, es32-tessellation-terrain |
 | ES32.TESS.ISOLINES | 3.2 | tessellation | Isoline domain | ES 3.2 §11.2.2 | FULLY_VALIDATED | es32-tessellation-domains |
@@ -211,8 +211,8 @@
 | ES32.PRIMITIVE_BOUNDING_BOX | 3.2 | tessellation | glPrimitiveBoundingBox + gl_BoundingBox | ES 3.2 §13.2 | FULLY_VALIDATED | es32-tessellation-terrain |
 | ES32.TEXTURE.BUFFER | 3.2 | textures | Buffer textures glTexBuffer/glTexBufferRange + samplerBuffer | ES 3.2 §8.9 | FULLY_VALIDATED | es32-texture-buffer |
 | ES32.TEXTURE.CUBE_ARRAY | 3.2 | textures | Cube map array textures | ES 3.2 §8.5 | FULLY_VALIDATED | es32-cube-map-array |
-| ES32.TEXTURE.MS_ARRAY | 3.2 | textures | glTexStorage3DMultisample 2D multisample array | ES 3.2 §8.8 | NOT_STARTED |  |
-| ES32.TEXTURE.BORDER_COLOR | 3.2 | textures | CLAMP_TO_BORDER + TEXTURE_BORDER_COLOR + glTexParameterI*/SamplerParameterI* | ES 3.2 §8.10 §8.14.2 | NOT_STARTED |  |
+| ES32.TEXTURE.MS_ARRAY | 3.2 | textures | glTexStorage3DMultisample 2D multisample array | ES 3.2 §8.8 | FULLY_VALIDATED | es32-multisample-array-and-border-color |
+| ES32.TEXTURE.BORDER_COLOR | 3.2 | textures | CLAMP_TO_BORDER + TEXTURE_BORDER_COLOR + glTexParameterI*/SamplerParameterI* | ES 3.2 §8.10 §8.14.2 | FULLY_VALIDATED | es32-multisample-array-and-border-color |
 | ES32.TEXTURE.ASTC | 3.2 | textures | ASTC LDR compressed textures (required in ES 3.2) | ES 3.2 §8.7 | NOT_STARTED |  |
 | ES32.TEXTURE.COPY_IMAGE | 3.2 | textures | glCopyImageSubData between textures/renderbuffers | ES 3.2 §16.2.2 | NOT_STARTED |  |
 | ES32.FBO.FLOAT_TARGETS | 3.2 | framebuffer | Floating-point color-renderable formats (RGBA16F/32F/R11F_G11F_B10F) | ES 3.2 §9.4.3 | FULLY_VALIDATED | es32-float-targets-and-indexed-blend |

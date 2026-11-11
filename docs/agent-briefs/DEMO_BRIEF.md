@@ -57,6 +57,12 @@ matters more than speed.
 - If meta-gl cannot express something, do NOT work around it with raw casts. Report the gap (exact
   enum or function, spec evidence) and skip that check.
 
+## Window size
+The picture must fill the surface at any size: lay out cells relative to `env.width`/`env.height` (or in NDC),
+never in fixed pixels. Validation must PASS on a valid render at every size. Where a sample lands on a texel or
+edge boundary, accept either neighbour instead of skipping the pixel, keep every check non-vacuous, and throw
+`demo::Skip` from `init()` if the surface is too small. Run at least 256x256, 800x800, 640x480 and 333x777.
+
 ## Build and test (inside your worktree)
 ```
 cmake --preset debug -DOGLES3_METAGL_SOURCE_DIR=/rv/data/development/github.com/libcna/meta-gl

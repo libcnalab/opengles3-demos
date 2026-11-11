@@ -109,11 +109,12 @@ proves that an uninitialized child terminates even on a valid call, which was th
 - **Finding:** the old `test_overflow_glsizei` called the raw `GLsizei` overload, where `size_t` 2^31 narrows silently
   to INT_MIN. It never reached `checked_glsizei`; the size check exists only in the span and string_view overloads.
 
-### O12 — documented "unsupported bitfields terminate" contract is not enforced
+### O12 — documented "unsupported bitfields terminate" contract was not enforced — RESOLVED (docs, meta-gl `333d777`)
 `include/metagl/Functions.hpp` ("Invalid Input Contract") says unsupported bitfields terminate. `to_gl_bitfield` is a
 plain `static_cast`, so `glClear`, `glMapBufferRange` and others forward any bits to the driver, which reports
-INVALID_VALUE as ES specifies. Either the comment or the code should change. This is the owner's call: enforcing it
-could break dependents that pass extra bits. Found by the O8 work.
+INVALID_VALUE as ES specifies. The owner decided (2026-11-11) to correct the documentation rather than add a check that could break dependents.
+The Functions.hpp contract comment and the README now say that bitfields are forwarded unchanged and that the
+driver reports invalid bits as INVALID_VALUE. Found by the O8 work.
 
 ### O9 — `glGetInternalformativ` cannot name compressed formats
 `glGetInternalformativ` takes `InternalFormat`, which has no compressed values, and there is no

@@ -87,8 +87,13 @@ independent validation, then education.
 - **Capstone es30-interactive-3d-scene** is merged: mouse/WASD camera, technique toggles 1-6, 50 checks on every
   driver. New runtime input: `Demo::on_mouse`, `Env::key_held`, `Env::frame_seconds`.
 
+**Owner decisions (2026-11-11, before the night):**
+- O12: correct the meta-gl docs, not the code (done, 333d777 pushed).
+- Codex audit findings: fix them autonomously after verifying each against the spec, run the full matrix, commit
+  locally, and summarise in the morning.
+
 **Running**
-- A Claude subagent on meta-gl O8: a mock loader so meta-gl's own contract death tests prove their contracts.
+- (done) A Claude subagent on meta-gl O8: a mock loader so meta-gl's own contract death tests prove their contracts.
   Branch opengles3-demos/enum-gaps, not pushed yet; the integrator reviews and pushes.
 - Codex phase 6 audits: background job from 22:05, three waves of two (es20+es31, es32+es30a, es30b+tests), -j 1.
   Reports go to ../opengles3-demos-worktrees/audit-*.report.md. Triage each finding against the spec.

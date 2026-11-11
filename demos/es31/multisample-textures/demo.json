@@ -1,0 +1,92 @@
+{
+  "name": "es31-multisample-textures",
+  "title": "Multisample textures and the sample mask",
+  "min_es": "3.1",
+  "glsl": [
+    "310 es"
+  ],
+  "category": "es31",
+  "order": 520,
+  "summary": "glTexStorage2DMultisample (fixedsamplelocations TRUE and FALSE) rendered into through framebuffer attachments, every sample read back exactly with texelFetch of sampler2DMS / isampler2DMS / usampler2DMS (each sample given its own content with glSampleMaski), textureSize, glGetMultisamplefv, the sample-count and sample-mask limits, glGetInternalformativ on TEXTURE_2D_MULTISAMPLE, the sample mask on a triangle's partial coverage, and the INVALID_ENUM / INVALID_VALUE / INVALID_OPERATION cases of ES 3.2 sections 8.8, 8.10, 8.11, 9.2, 13.8.3 and 20.3. Nothing depends on the implementation-defined sample positions.",
+  "spec": [
+    "ES 3.2 §8.8 Multisample Textures (glTexStorage2DMultisample, sample count rule, fixedsamplelocations, errors)",
+    "ES 3.2 §8.10 Texture Parameters (sampler state is INVALID_ENUM on multisample targets), §8.11.3 Texture Level Parameter Queries, §8.18 Immutable-Format Texture Images",
+    "ES 3.2 §9.2.3.1 Multisample Queries (SAMPLES, SAMPLE_BUFFERS), §9.2.8 Attaching Texture Images to a Framebuffer (TEXTURE_2D_MULTISAMPLE attachments), §9.2.4 / §9.2.6 Renderbuffer Objects and Queries (RENDERBUFFER_SAMPLES), §9.4.2 Whole Framebuffer Completeness (INCOMPLETE_MULTISAMPLE)",
+    "ES 3.2 §11.1.3.3 Multisample Texel Fetches, §11.1.3.4 Texture Queries (textureSize)",
+    "ES 3.2 §13.4 Multisampling (GetMultisamplefv, SAMPLE_POSITION), §13.8.3 Multisample Fragment Operations (SAMPLE_MASK, SampleMaski), Appendix A Invariance",
+    "ES 3.2 §20.3 Internal Format Queries (SAMPLES / NUM_SAMPLE_COUNTS on TEXTURE_2D_MULTISAMPLE), chapter 21 state tables (MAX_SAMPLE_MASK_WORDS, MAX_COLOR_TEXTURE_SAMPLES, MAX_DEPTH_TEXTURE_SAMPLES, MAX_INTEGER_SAMPLES)",
+    "GLSL ES 3.10 §8.9.1 Texture Query Functions (textureSize(gsampler2DMS)), §8.9.2 Texel Lookup Functions (texelFetch(gsampler2DMS, ivec2, int sample)), §4.7.4 Default Precision Qualifiers"
+  ],
+  "api": {
+    "glTexStorage2DMultisample": "RGBA8 (fixedsamplelocations TRUE and FALSE), RGBA8UI, RGBA8I, RGB10_A2, RG8, R8, SRGB8_ALPHA8, DEPTH_COMPONENT16/24/32F, DEPTH24_STENCIL8, DEPTH32F_STENCIL8 allocated with every sample count glGetInternalformativ reports (SAMPLES of the attached framebuffer between the request and the next larger count; every sample of RGBA8/RGBA8UI/RGBA8I written and read back exactly); the sample count and fixedsamplelocations observed through framebuffer completeness; INVALID_ENUM for target TEXTURE_2D and for RGB9_E5, INVALID_VALUE for samples 0, width/height 0 and width > MAX_TEXTURE_SIZE, INVALID_OPERATION for too many samples, texture 0 and a texture that already has storage",
+    "glGetMultisamplefv": "SAMPLE_POSITION of every sample of fixed and non-fixed textures in [0, 1]; identical for two fixedsamplelocations textures of different size and format; INVALID_VALUE for index == SAMPLES, 1000, and on the single-sample default framebuffer",
+    "glSampleMaski": "word 0 set to 0, all ones, 0x55555555, 0xAAAAAAAA, bits beyond SAMPLES, one bit per sample, all but one sample, 0xA5A5A5A5 (read back): the samples written are exactly the ones the mask lets through, also on a triangle's partial coverage; INVALID_VALUE for MAX_SAMPLE_MASK_WORDS",
+    "glEnable": "SAMPLE_MASK restricts writes to the masked samples and is ignored by a single-sample framebuffer (SAMPLE_BUFFERS = 0); DEPTH_TEST for the per-sample depth writes",
+    "glDisable": "SAMPLE_MASK disabled: a stored mask of 0 is ignored and every sample is written; DITHER disabled for exact 8-bit results",
+    "glIsEnabled": "SAMPLE_MASK false initially, true after glEnable, false after glDisable",
+    "glGetIntegeri_v": "SAMPLE_MASK_VALUE of every word is all ones initially and equals the value set with glSampleMaski",
+    "glGetIntegerv": "MAX_SAMPLE_MASK_WORDS, MAX_COLOR/DEPTH_TEXTURE_SAMPLES, MAX_INTEGER_SAMPLES, MAX_SAMPLES, MAX_TEXTURE_SIZE, and SAMPLES / SAMPLE_BUFFERS of the draw framebuffer (multisample texture attached: SAMPLES = its sample count, SAMPLE_BUFFERS 1; single-sample: 0 and 0)",
+    "glGetInternalformativ": "NUM_SAMPLE_COUNTS and SAMPLES on TEXTURE_2D_MULTISAMPLE for twelve formats: positive and descending, the largest at least the limit section 20.3.1 names; count 1 writes only the maximum, count 0 writes nothing; INVALID_VALUE for count -1, INVALID_ENUM for RGB9_E5",
+    "glGetTexLevelParameteriv": "TEXTURE_WIDTH, TEXTURE_HEIGHT and TEXTURE_INTERNAL_FORMAT of level 0 of a multisample texture equal the allocation; level 1 and -1 -> INVALID_VALUE",
+    "glGetTexParameteriv": "TEXTURE_IMMUTABLE_FORMAT is TRUE for a multisample texture",
+    "glTexParameteri": "MIN_FILTER and WRAP_S on TEXTURE_2D_MULTISAMPLE -> INVALID_ENUM, BASE_LEVEL 1 -> INVALID_OPERATION, BASE_LEVEL 0 accepted",
+    "glTexImage2D": "target TEXTURE_2D_MULTISAMPLE -> INVALID_ENUM",
+    "glTexStorage2D": "target TEXTURE_2D_MULTISAMPLE -> INVALID_ENUM; single-sample RGBA8 / RGBA32I / RGBA32UI 1024 x 32 targets for the fetched samples",
+    "glGenerateMipmap": "target TEXTURE_2D_MULTISAMPLE -> INVALID_ENUM",
+    "glBindTexture": "a multisample texture bound to TEXTURE_2D -> INVALID_OPERATION; TEXTURE_2D_MULTISAMPLE bound to the sampler unit for every fetch",
+    "glActiveTexture": "unit 0 for every fetch",
+    "glGenTextures": "multisample and single-sample textures",
+    "glDeleteTextures": "cleanup, final glGetError == NO_ERROR",
+    "glFramebufferTexture2D": "TEXTURE_2D_MULTISAMPLE attached as color 0 and as depth / depth-stencil: rendering into it is read back sample by sample; level 1 -> INVALID_VALUE; TEXTURE_2D with a multisample texture and TEXTURE_2D_MULTISAMPLE with a 2D texture -> INVALID_OPERATION",
+    "glCheckFramebufferStatus": "COMPLETE for every allocated format and count; INCOMPLETE_MULTISAMPLE for a fixedsamplelocations FALSE texture with a renderbuffer, for two textures that differ in fixedsamplelocations, and for a multisample texture with a single-sample texture; COMPLETE for a texture + renderbuffer with equal sample counts and fixed locations",
+    "glGenFramebuffers": "one framebuffer per multisample texture, three single-sample result framebuffers",
+    "glBindFramebuffer": "multisample framebuffers as draw targets, single-sample ones as the fetch targets, the window for the final cells",
+    "glDeleteFramebuffers": "cleanup",
+    "glGenRenderbuffers": "a multisample renderbuffer for the completeness rules",
+    "glBindRenderbuffer": "target of the renderbuffer storage call",
+    "glRenderbufferStorageMultisample": "RGBA8 renderbuffer with the texture's sample count: RENDERBUFFER_SAMPLES decides whether the mixed framebuffer is complete",
+    "glFramebufferRenderbuffer": "multisample renderbuffer attached next to a multisample texture",
+    "glGetRenderbufferParameteriv": "RENDERBUFFER_SAMPLES compared with the texture's sample count",
+    "glDeleteRenderbuffers": "cleanup",
+    "glClearBufferfv": "sentinel before every float fetch: a draw that wrote nothing would fail the exact comparison",
+    "glClearBufferiv": "sentinel before every signed integer fetch and before every textureSize query",
+    "glClearBufferuiv": "sentinel before every unsigned integer fetch",
+    "glClear": "depth cleared to 1 in the depth samples test; window cleared to black",
+    "glClearDepthf": "1.0: every depth sample is overwritten by the per-sample depth draws (ALWAYS)",
+    "glDepthFunc": "ALWAYS: each sample receives its own depth through the sample mask; read back through sampler2DMS",
+    "glDepthMask": "TRUE during the per-sample depth writes",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE, RGBA_INTEGER/INT and RGBA_INTEGER/UNSIGNED_INT readback of the single-sample targets that the samples were fetched into, and of the window",
+    "glViewport": "target-sized viewports for the pattern draws, strip-sized viewports for the fetches, 128 x 128 cells for the window",
+    "glUseProgram": "pattern, triangle, fetch, show and size programs per sampler kind",
+    "glGetUniformLocation": "u_ms, u_sample, u_texels, u_z, u_tri, u_size, u_origin, u_cell, u_samples, u_cols located; their effects are visible in the results",
+    "glUniform1i": "sampler unit, pattern number, cell geometry",
+    "glUniform1f": "NDC depth of the depth writes, target size of the triangle",
+    "glUniform2i": "texture size and window cell origin",
+    "glUniform2fv": "triangle corners; classified pixels match its geometry",
+    "glDrawArrays": "one triangle per pattern draw, per fetch and per window cell",
+    "glDeleteProgram": "cleanup"
+  },
+  "features": [
+    "ES31.TEXTURE.MULTISAMPLE",
+    "ES31.SAMPLE_MASK",
+    "ES30.INTERNALFORMAT.QUERY",
+    "ES20.ERRORS.INVALID_ENUM",
+    "ES20.ERRORS.INVALID_VALUE",
+    "ES20.ERRORS.INVALID_OPERATION"
+  ],
+  "glsl_features": [
+    "GLSL310.FN.TEXTURE_MS"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "state-query",
+    "gl-error",
+    "negative"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5 (subagent)",
+    "notes": "256x256 radeonsi es-max capture viewed (llvmpipe and zink captures are byte-identical to it; all three use 4 samples). Four 128x128 cells, each a 2x2 grid of 64x64 sub-cells, one per sample, with the 16x12 texels visible as 4x5-pixel blocks. Every sub-cell is a smooth gradient (red growing to the right, green upwards) with a diagonal seam where an 8-bit channel wraps, and the seam position and the blue level change from sample to sample, so the four samples of a cell are clearly distinct. The four cells (RGBA8 fixed, RGBA8 not fixed, RGBA8UI, RGBA8I) look the same, as they should: they hold the same pattern numbers. No black sub-cells, stray pixels or seams between cells."
+  }
+}

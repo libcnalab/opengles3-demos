@@ -1,0 +1,77 @@
+{
+  "name": "es20-indexed-drawing",
+  "title": "Indexed drawing",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es20-foundations",
+  "order": 50,
+  "summary": "glDrawElements with UNSIGNED_BYTE/SHORT/INT indices and byte offsets into the index buffer, vertex reuse, glBufferSubData and glBufferData re-specification (size/usage queries, orphaning), glIsBuffer, and the VAO-owned ELEMENT_ARRAY_BUFFER binding, validated against a CPU barycentric reference.",
+  "spec": [
+    "ES 3.0 §2.5 Errors",
+    "ES 3.0 §2.9 Vertex Arrays, §2.9.3 Drawing Commands",
+    "ES 3.0 §2.10.1 Creating and Binding Buffer Objects, §2.10.2 Creating Buffer Object Data Stores",
+    "ES 3.0 §2.10.4 Effects of Accessing Outside Buffer Bounds, §2.10.6 Vertex Arrays in Buffer Objects",
+    "ES 3.0 §2.10.7 Array Indices in Buffer Objects, §2.10.8 Buffer Object State",
+    "ES 3.0 §2.11 Vertex Array Objects",
+    "ES 3.0 §3.6.1 Basic Polygon Rasterization (attribute interpolation)",
+    "ES 3.0 §6.1.9 Buffer Object Queries",
+    "ES 3.0 Tables 2.7, 2.8, 6.2, 6.3, 6.4, 6.28",
+    "GLSL ES 3.00 §4.3.4 Input Variables, §4.3.8.1 Input Layout Qualifiers"
+  ],
+  "api": {
+    "glGenBuffers": "vertex and index buffers feeding the validated draws",
+    "glBindBuffer": "ELEMENT_ARRAY_BUFFER binding recorded per VAO (queried); unbinding with a VAO bound detaches only that VAO's index buffer; deleting a bound buffer resets the binding",
+    "glBufferData": "index/vertex data observed through pixels; BUFFER_SIZE and BUFFER_USAGE read back after every specification, all nine usage values round-trip; negative size -> INVALID_VALUE; NULL data = orphaning",
+    "glBufferSubData": "index range and one vertex rewritten between draws, observed through pixels; size/usage unchanged; offset+size past the end and negative offset -> INVALID_VALUE; no buffer bound -> INVALID_OPERATION",
+    "glDeleteBuffers": "glIsBuffer FALSE afterwards, ARRAY_BUFFER_BINDING reset to 0; cleanup with final glGetError == NO_ERROR",
+    "glIsBuffer": "FALSE for a generated unbound name, TRUE after bind, FALSE after delete",
+    "glGetBufferParameteriv": "BUFFER_SIZE and BUFFER_USAGE of 7 static buffers and after each step of the mutation sequence; INVALID_OPERATION with no buffer bound",
+    "glGenVertexArrays": "six VAOs with different index buffers",
+    "glBindVertexArray": "selects the index buffer: two VAOs draw different triangle sets without glBindBuffer",
+    "glDeleteVertexArrays": "cleanup, final glGetError == NO_ERROR",
+    "glEnableVertexAttribArray": "position and color arrays sourced from the vertex buffers (VAOs and VAO 0)",
+    "glDisableVertexAttribArray": "VAO 0 arrays reset after the client-index draw",
+    "glVertexAttribPointer": "interleaved stride/offset recorded per VAO; observed through pixels",
+    "glGetVertexAttribiv": "VERTEX_ATTRIB_ARRAY_BUFFER_BINDING still the same buffer after re-specification",
+    "glDrawElements": "UNSIGNED_BYTE / UNSIGNED_SHORT / UNSIGNED_INT (indices > 65535) indices, byte offset into the buffer, partial counts, client-memory indices on VAO 0; count = -1 -> INVALID_VALUE and nothing drawn",
+    "glDrawArrays": "54 expanded vertices produce the same picture as the indexed draw",
+    "glGetIntegerv": "ELEMENT_ARRAY_BUFFER_BINDING per VAO, ARRAY_BUFFER_BINDING across VAO switches",
+    "glGetInteger64v": "MAX_ELEMENT_INDEX >= 2^24 - 1",
+    "glGetError": "negative-case errors read right after the offending call, drained and compared in expect_gl_error",
+    "glUseProgram": "mesh program used for all draws",
+    "glDeleteProgram": "cleanup",
+    "glViewport": "one viewport per tile; centroid pixels probed",
+    "glClearColor": "absent triangles and tile corners show the clear color",
+    "glClear": "COLOR_BUFFER_BIT",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE readback of every probed pixel"
+  },
+  "features": [
+    "ES20.BUFFER.IBO",
+    "ES20.DRAW.ELEMENTS",
+    "ES20.BUFFER.SUBDATA",
+    "ES20.BUFFER.REALLOC",
+    "ES20.BUFFER.QUERY",
+    "ES30.VAO.SWITCHING",
+    "ES20.BUFFER.VBO",
+    "ES20.DRAW.ARRAYS"
+  ],
+  "glsl_features": [
+    "GLSL300.VERSION",
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.LAYOUT.LOCATION",
+    "GLSL300.FRAG.OUTPUT"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "negative",
+    "gl-error"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet (subagent)",
+    "notes": "256x256 radeonsi es-max capture: 4x4 tiles of the same colorful 3x3-cell mesh on a dark-blue background. Row 0: three identical full meshes (UBYTE, USHORT, UINT) and a fourth missing its bottom row of cells. Row 1: full mesh; mesh with a dark hole in the center; mesh with a bright white displaced vertex in the center; mesh with inverted colors. Row 2: mesh with rotated colors; a checkerboard of cell pairs; full mesh; full mesh (client indices). Row 3: full mesh (non-indexed); an empty tile (failed draw); full mesh (failed glBufferSubData left it intact); only the bottom row of cells. Smooth gradients, no stray triangles and no magenta decoy anywhere."
+  }
+}

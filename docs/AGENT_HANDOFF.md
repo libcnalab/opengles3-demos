@@ -4,7 +4,7 @@ _Keep this file current. It is the first thing any agent reads._
 
 ## Current phase
 
-**Phase 1 (infrastructure) complete; Phase 2 (ES 2.0 foundations) starting.** Last update: 2026-11-11.
+**Phases 2-5 (demos) in progress; ES 2.0/3.0/3.1 largely done, ES 3.2 and 3D underway.** Last update: 2026-11-11 16:30.
 
 ## Done
 
@@ -46,25 +46,27 @@ cmake --build --preset debug --target coverage
 
 ## Next tasks (in order)
 
-1. Merge the parallel foundation-demo branches (clear/scissor, topology, vertex attributes, indexed
-   drawing, depth, stencil, blending, culling) after review + full 4-driver matrix.
-2. More shader-test cases (3.10 image/atomic/memory-qualifier rules, 3.20 geometry/tess negatives).
-3. Remaining Stage 1–3 demos from `docs/DEMO_CATALOG.md` (es20-uniforms, textures, mipmaps,
-   cube map, framebuffer objects, copy-tex-image, read-pixels, ...).
-4. `tests/negative/` death tests for meta-gl contract violations (`std::terminate`).
-5. Stage 3–4 (textures, framebuffers, ES 3.0 data paths), then `glsl300-builtins` via transform feedback.
-6. `diagnostics-capabilities`.
+1. Integrate the running agents (below) one by one: merge, full matrix, view captures, verify every
+   claimed deviation against the spec and extensions, record it, regenerate coverage, remove the worktree.
+2. Codex (after 22:00 CET): ES 3.0 items 6, 10, 14, 16-20 and item 35, then 57, 59 and 62 if they are still open.
+3. More 3D: fog, particles (CPU and compute), skybox.
+4. Phase 6 audit (coverage gaps: run `coverage` and read docs/generated/COVERAGE_SUMMARY.md), then phase 7
+   final verification on a clean build.
 
-## In flight (2026-11-11 ~15:50)
+## In flight (2026-11-11 16:30)
 
-Merged: batches 1-4 (ES 2.0 foundations, ES 3.0, ES 3.1): 49 executables, 304/304 runs PASS,
-308/358 entry points with evidence. Running:
-- batch 5: 3D compositions (backlog 40-45: camera/MVP, lighting, normal mapping, shadow mapping,
-  deferred shading, post-processing) — the owner asked for real 3D demos.
-- batch 6: ES 3.2 items 50+51, 52+53, 54+55, 58, 61.
-Still open: ES 3.2 items 56, 57, 59, 60, 62; ES 3.0 items 6, 10, 14, 16-20; item 35 (glsl310 built-ins).
-Integration procedure: see the previous lessons (verify deviations against spec + extensions;
-es-min is an override; no invented requirements); merge, run, view, record, regenerate, clean up.
+Merged: 58 executables, 350/350 runs PASS, 329/358 entry points with evidence. That includes the 3D demos
+camera, normal mapping, post-processing, shadow mapping and deferred shading, and the ES 3.2 demos
+debug-output, float-targets-and-indexed-blend, texture-buffer and cube-map-array.
+meta-gl G8 (transpose = GL_TRUE) is fixed on its branch (`3bb7411`).
+Running Claude subagents (worktrees under .claude/worktrees/):
+- es30-lighting (backlog 41)
+- es32 geometry-shaders + layered-rendering (50+51)
+- es32 tessellation-domains + tessellation-terrain (52+53)
+- es32 multisample-array-and-border-color (56)
+- es32 base-vertex-and-robustness (60)
+Still unassigned: 57 (ASTC + copy image), 59 (advanced blend + sample shading), 62 (glsl320 built-ins),
+35 (glsl310 built-ins), ES 3.0 items 6, 10, 14, 16-20.
 
 ## Parallel work / Codex
 

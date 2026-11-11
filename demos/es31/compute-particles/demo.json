@@ -1,0 +1,81 @@
+{
+  "name": "es31-compute-particles",
+  "title": "Compute particles: an SSBO fountain simulated on the GPU",
+  "min_es": "3.1",
+  "glsl": [
+    "310 es"
+  ],
+  "category": "es31",
+  "order": 370,
+  "summary": "A 3D particle fountain simulated entirely on the GPU: a compute shader integrates 16384 std430 particles (semi-implicit Euler, gravity, a vortex around the vertical axis, drag, an inelastic ground bounce, deterministic hash-based respawn at three CPU-rotated nozzles, counted by an atomic counter) and the same buffer object feeds instanced additive billboards over a ground grid after glMemoryBarrier(VERTEX_ATTRIB_ARRAY_BARRIER_BIT). Validated by reading the SSBO back with glMapBufferRange and comparing every component with a CPU model that carries a rounding-error bound derived from the GLSL ES 3.10 precision table (one step from bit-identical inputs and a 90-step trajectory), exact respawn counts, the std430 layout queried with glGetProgramResourceiv, p.length() under glBindBufferRange, negative controls, and pixel probes of a render-check scene drawn before and after the compute step.",
+  "spec": [
+    "ES 3.2 §17 Compute Shaders (DispatchCompute, work groups)",
+    "ES 3.2 §7.8 Shader Buffer Variables and Shader Storage Blocks; §7.6.2.2 Standard Uniform Block Layout (std430 rules: vec3 base alignment 16, size 12; array stride; BUFFER_DATA_SIZE of a runtime-sized array counts one element)",
+    "ES 3.2 §7.3.1 Program Interfaces (BUFFER_VARIABLE OFFSET, TOP_LEVEL_ARRAY_STRIDE; SHADER_STORAGE_BLOCK BUFFER_DATA_SIZE)",
+    "ES 3.2 §7.11.2 Shader Memory Access Synchronization (SHADER_STORAGE_BARRIER_BIT between steps and against the previous draw's vertex fetches, VERTEX_ATTRIB_ARRAY_BARRIER_BIT before the draw, BUFFER_UPDATE_BARRIER_BIT before MapBufferRange, CopyBufferSubData and BufferSubData)",
+    "ES 3.2 §7.7 Atomic Counter Buffers; §6.1.1 BindBufferRange (SHADER_STORAGE_BUFFER, ATOMIC_COUNTER_BUFFER); §6.3 Mapping and Unmapping Buffer Data; §6.5 Copying Between Buffers",
+    "ES 3.2 §10.3.1 / §10.5 Generic vertex attribute arrays, VertexAttribDivisor, DrawArraysInstanced",
+    "ES 3.2 §15.1.5 Blending (ONE, ONE on a fixed-point buffer)",
+    "GLSL ES 3.10 §4.7.1 Range and Precision (highp: + - * correctly rounded within 1 ULP, a*b+c fused or not, / within 2.5 ULP, comparisons exact, subnormals may flush) - the basis of the error bound",
+    "GLSL ES 3.10 §4.3.7 Buffer Variables, §4.3.9 Interface Blocks, §4.4.4 Uniform and Shader Storage Block Layout Qualifiers (std430, binding), §4.1.9 Arrays (runtime-sized last member, .length()); §4.4.6 atomic counter layout; §8.10 atomicCounterIncrement; §7.1.3 gl_GlobalInvocationID; §4.4.1.1 local_size_x"
+  ],
+  "api": {
+    "glDispatchCompute": "128 groups per display step, 32 groups (4096 invocations) for the 4000-particle trajectory, 1 group for the render check: every particle's state after 1 and after 90 steps is within the derived rounding bound of the CPU model",
+    "glMemoryBarrier": "SHADER_STORAGE between consecutive steps and after the draw (WAR on the vertex fetch), VERTEX_ATTRIB_ARRAY before the instanced draw (render check: the quads appear at the positions the compute step stored), BUFFER_UPDATE before glMapBufferRange / glCopyBufferSubData / glBufferSubData: read-back data matches the model",
+    "glBindBufferBase": "SHADER_STORAGE_BUFFER binding 0 (p.length() = buffer size / 32) and ATOMIC_COUNTER_BUFFER binding 0",
+    "glBindBufferRange": "SHADER_STORAGE_BUFFER range of 4000 elements in a 4096-element buffer: the 96 guard elements stay bit-identical",
+    "glMapBufferRange": "READ mapping of the particle buffers and the atomic counter after BUFFER_UPDATE_BARRIER_BIT; compared with the CPU model",
+    "glUnmapBuffer": "after every read-back",
+    "glCopyBufferSubData": "copies the developed fountain into the scratch buffer of the step-wise check (the copied state is the model input)",
+    "glBufferSubData": "resets the atomic counter to 0 before each counted run; the GPU count equals the model's respawn count",
+    "glGetProgramResourceIndex": "BUFFER_VARIABLE p[0].pos / age / vel / life and SHADER_STORAGE_BLOCK Particles are active",
+    "glGetProgramResourceiv": "OFFSET 0 / 12 / 16 / 28, TOP_LEVEL_ARRAY_STRIDE 32, BUFFER_DATA_SIZE 32 (std430)",
+    "glVertexAttribPointer": "vec4 at offsets 0 and 16 with stride 32 straight from the SSBO buffer object (and the vec2 quad corner): the render probes find each instance at its stored position",
+    "glVertexAttribDivisor": "divisor 1 on the two particle attributes: one billboard per particle at its own position",
+    "glDrawArraysInstanced": "TRIANGLE_STRIP of 4 vertices x 17 instances in the render check (16384 in the display)",
+    "glBlendFunc": "ONE, ONE: render-check pixels equal clear + flat colour, the doubly covered target clear + 2 x flat colour",
+    "glEnableVertexAttribArray": "attributes 0, 1, 2",
+    "glGenVertexArrays": "display and render-check VAOs (both reference the particle buffers as ARRAY_BUFFER)",
+    "glBindVertexArray": "per draw",
+    "glGenBuffers": "particle, counter, quad, grid and validation buffers",
+    "glBufferData": "initial particle states (CPU-defined state of the trajectory check, uploaded positions of the render check outside the view)",
+    "glUniform1f": "simulation parameters; the CPU model uses the identical float values",
+    "glUniform1ui": "u_step seeds the respawn hash: the GPU respawn values equal the CPU hash exactly (checked through positions, velocities and lives)",
+    "glUniformMatrix4fv": "view / projection of the render check: quads at the CPU-projected pixels",
+    "glReadPixels": "RGBA / UNSIGNED_BYTE of the render-check image",
+    "glClear": "COLOR | DEPTH; the clear colour is the expected background of the probes",
+    "glDeleteBuffers": "cleanup, final glGetError == NO_ERROR",
+    "glDeleteVertexArrays": "cleanup",
+    "glDeleteProgram": "cleanup",
+    "glUniform2fv": "u_arm[3]: the three nozzle directions of each step (computed on the CPU, trig has no defined GLSL precision); respawned velocities match the model that uses the same floats"
+  },
+  "features": [
+    "ES31.COMPUTE.DISPATCH",
+    "ES31.COMPUTE.TO_RENDER",
+    "ES31.SSBO.BASIC",
+    "ES31.SSBO.STD430",
+    "ES31.BARRIER.MEMORY",
+    "ES31.ATOMIC.COUNTERS",
+    "ES30.BUFFER.MAP_RANGE",
+    "ES30.DRAW.INSTANCED",
+    "ES30.ATTRIB.DIVISOR"
+  ],
+  "glsl_features": [
+    "GLSL310.COMPUTE.LAYOUT",
+    "GLSL310.SSBO",
+    "GLSL310.ATOMIC_COUNTERS",
+    "GLSL310.LAYOUT.BINDING"
+  ],
+  "validation": [
+    "readback",
+    "state-query",
+    "pixel-reference",
+    "negative-control",
+    "gl-error"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-opus-5.5 (subagent)",
+    "notes": "Viewed build/debug/test-results/es31-compute-particles_gpu_es-max.png (256x256) and the zink capture (visually identical), plus direct captures at 800x800 and 333x777. Dark blue-black sky over a fading blue ground grid; three spiral jets leave the emitter at the centre in ice blue, turn white/orange at their apex and come down into three curved orange-violet trails on the grid (a rotating sprinkler bent by the vortex). The fountain fills the middle of the frame at every size; on the 333x777 portrait surface it spans the width with empty sky above and grid below."
+  }
+}

@@ -1,0 +1,121 @@
+#version 310 es
+// One simulation step of the particle system: semi-implicit Euler under gravity, a vortex around a vertical axis,
+// linear drag and an inelastic bounce on the ground plane. A particle whose age reaches its life is respawned at the
+// emitter from a hash of (particle index, step number), never from the clock, so every run is reproducible.
+//
+// Every float expression is written out scalar by scalar, in the order the CPU model in main.cpp evaluates it:
+// the validation bounds the rounding error of exactly this expression tree with the per-operation precision of
+// GLSL ES 3.10 section 4.7.1 (+ - * correctly rounded, a*b+c fused or not, / within 2.5 ULP). No built-in whose
+// precision is undefined there (sin, cos, length, ...) is used.
+precision highp float;
+precision highp int;
+
+layout(local_size_x = 128) in;
+
+// std430 (GLSL ES 3.10 section 4.4.5, ES 3.2 section 7.6.2.2): vec3 has a base alignment of 16 but a size of 12,
+// so the float that follows it fills the remaining four bytes: pos 0, age 12, vel 16, life 28, array stride 32.
+struct Particle
+{
+    vec3 pos;
+    float age;   // in steps; always an integer value, so += 1.0 and the comparison with life are exact
+    vec3 vel;
+    float life;  // in steps; an integer value
+};
+
+layout(std430, binding = 0) buffer Particles
+{
+    Particle p[];  // runtime-sized: p.length() follows the size of the bound range
+};
+
+layout(binding = 0, offset = 0) uniform atomic_uint u_spawned;  // number of respawns (exactly known on the CPU)
+
+uniform float u_dt;      // step (s)
+uniform float u_gdt;     // gravity * dt, precomputed on the CPU
+uniform float u_swirl;   // tangential vortex strength
+uniform float u_pull;    // radial strength (negative = outwards)
+uniform float u_soft;    // softening of 1 / r^2 near the axis
+uniform float u_damp;    // velocity factor per step (1 - drag * dt), precomputed
+uniform float u_ground;  // y of the ground plane
+uniform float u_rest;    // restitution of the bounce
+uniform float u_fric;    // tangential velocity factor of the bounce
+uniform vec2 u_axis;     // (x, z) of the vortex axis
+uniform vec3 u_emitter;
+uniform float u_jitter;  // emitter size in x and z
+uniform vec2 u_arm[3];   // horizontal unit directions of the three nozzles at this step (rotated by the CPU)
+uniform float u_radial;  // mean horizontal launch speed along the nozzle
+uniform float u_spread;  // range of the horizontal speed along the nozzle
+uniform float u_side;    // range of the horizontal speed across the nozzle
+uniform float u_speed;   // minimum launch speed (up)
+uniform float u_speed_var;
+uniform uint u_life_min;
+uniform uint u_life_var;
+uniform uint u_step;     // global step number: seeds the respawn hash
+
+uint hash(uint x)
+{
+    x ^= x >> 16;
+    x *= 0x7feb352du;
+    x ^= x >> 15;
+    x *= 0x846ca68bu;
+    x ^= x >> 16;
+    return x;
+}
+
+// 24 random bits -> [0, 1). The conversion of an integer below 2^24 and the scaling by 2^-24 are both exact.
+float unit(uint h)
+{
+    return float(h >> 8u) * (1.0 / 16777216.0);
+}
+
+void main()
+{
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= uint(p.length())) return;  // the last work group is partially outside the bound range
+
+    Particle q = p[i];
+    q.age += 1.0;
+    if (q.age >= q.life)
+    {
+        uint h0 = hash(i * 0x9e3779b9u + hash(u_step ^ 0x632be5abu));
+        uint h1 = hash(h0);
+        uint h2 = hash(h1);
+        uint h3 = hash(h2);
+        uint h4 = hash(h3);
+        uint h5 = hash(h4);
+        uint h6 = hash(h5);
+        vec2 d = u_arm[h5 % 3u];  // which nozzle
+        float along = u_radial + (unit(h2) - 0.5) * u_spread;
+        float across = (unit(h4) - 0.5) * u_side;
+        q.pos.x = u_emitter.x + (unit(h0) - 0.5) * u_jitter;
+        q.pos.y = u_emitter.y;
+        q.pos.z = u_emitter.z + (unit(h1) - 0.5) * u_jitter;
+        q.vel.x = d.x * along - d.y * across;
+        q.vel.y = u_speed + unit(h3) * u_speed_var;
+        q.vel.z = d.y * along + d.x * across;
+        q.age = 0.0;
+        q.life = float(u_life_min + h6 % u_life_var);
+        atomicCounterIncrement(u_spawned);
+    }
+    else
+    {
+        float rx = q.pos.x - u_axis.x;
+        float rz = q.pos.z - u_axis.y;
+        float d2 = rx * rx + rz * rz + u_soft;
+        float ax = (-u_swirl * rz - u_pull * rx) / d2;
+        float az = (u_swirl * rx - u_pull * rz) / d2;
+        q.vel.x = (q.vel.x + ax * u_dt) * u_damp;
+        q.vel.y = (q.vel.y - u_gdt) * u_damp;
+        q.vel.z = (q.vel.z + az * u_dt) * u_damp;
+        q.pos.x = q.pos.x + q.vel.x * u_dt;
+        q.pos.y = q.pos.y + q.vel.y * u_dt;
+        q.pos.z = q.pos.z + q.vel.z * u_dt;
+        if (q.pos.y < u_ground)
+        {
+            q.pos.y = u_ground + (u_ground - q.pos.y) * u_rest;
+            q.vel.y = -q.vel.y * u_rest;
+            q.vel.x = q.vel.x * u_fric;
+            q.vel.z = q.vel.z * u_fric;
+        }
+    }
+    p[i] = q;
+}

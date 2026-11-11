@@ -24,7 +24,10 @@
 
 | `es20-uniforms` (38-way branch over 70+ uniforms) | correct execution | softpipe returns wrong comparison results for every branch after the third; same shader is correct on radeonsi, llvmpipe and zink, and each construct works in isolation on softpipe → softpipe backend miscompilation. Reproduce: `GALLIUM_DRIVER=softpipe LIBGL_ALWAYS_SOFTWARE=1 es20-uniforms --headless --validate` |
 
-Because of the last row, softpipe is not used as a general correctness oracle. It runs only where
+| `es20-vertex-attributes` (printed note, not asserted) | ES 3.0 §2.5: a command that generates an error has no effect on GL state | radeonsi/llvmpipe: a client-memory `glVertexAttribPointer` on a non-zero VAO correctly raises INVALID_OPERATION but still stores the pointer (`glGetVertexAttribPointerv` returns it) |
+| `es20-vertex-attributes` (printed note, not asserted) | ES 3.0 §2.5: output parameters are not modified on error | `glGetVertexAttribiv(MAX_VERTEX_ATTRIBS, ...)` raises INVALID_VALUE but writes 0 to the output |
+
+Because of the softpipe miscompilation row, softpipe is not used as a general correctness oracle. It runs only where
 its native ES 3.1 boundary is informative (ES 3.2 executables must SKIP, plus version-gating tests
 that opt in with `"extra_drivers": ["softpipe"]`).
 

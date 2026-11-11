@@ -7,7 +7,7 @@
 | GLSL100.ATTRIBUTE_VARYING | 100 | interface | attribute / varying / gl_FragColor / gl_FragData | GLSL ES 1.00 §4.3 | compile+render | NOT_STARTED |  |
 | GLSL100.TEXTURE2D | 100 | builtins | texture2D / textureCube / texture2DProj / texture2DLod (VS) | GLSL ES 1.00 §8.7 | render | NOT_STARTED |  |
 | GLSL100.MIX_VERSIONS | 100 | interface | Linking 100 with 300 es shaders is an error | GLSL ES 3.00 §1.5; ES 3.0 §2.12.3 | negative | NOT_STARTED |  |
-| GLSL300.VERSION | 300 | structure | #version 300 es as the first line; removed 1.00 keywords | GLSL ES 3.00 §3.4 §1.5 | compile+negative | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-shader-compilation, es30-hello-triangle |
+| GLSL300.VERSION | 300 | structure | #version 300 es as the first line; removed 1.00 keywords | GLSL ES 3.00 §3.4 §1.5 | compile+negative | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-indexed-drawing, es20-shader-compilation, es20-vertex-attributes, es30-hello-triangle |
 | GLSL300.PREPROCESSOR | 300 | structure | #define/#undef/#if/#ifdef/#elif/#else/#endif/#error/#pragma/#extension/#line, __LINE__ __FILE__ __VERSION__ GL_ES | GLSL ES 3.00 §3.4 | compile+negative | NOT_STARTED |  |
 | GLSL300.COMMENTS_TOKENS | 300 | structure | Comments; identifiers; reserved words (__ prefix / gl_ prefix errors) | GLSL ES 3.00 §3.5-3.8 | negative | NOT_STARTED |  |
 | GLSL300.TYPES.SCALAR_VECTOR | 300 | types | bool/int/uint/float, vec/ivec/uvec/bvec 2-4 | GLSL ES 3.00 §4.1 | compute-check | NOT_STARTED |  |
@@ -18,12 +18,12 @@
 | GLSL300.TYPES.IMPLICIT_CONVERSION | 300 | types | No implicit conversions in ES (int->float is an error) | GLSL ES 3.00 §4.1.10 | negative | NOT_STARTED |  |
 | GLSL300.SCOPE | 300 | structure | Scoping rules; redeclaration errors; shadowing | GLSL ES 3.00 §4.2 | compile+negative | NOT_STARTED |  |
 | GLSL300.QUAL.CONST | 300 | qualifiers | const and constant expressions (incl. built-in calls) | GLSL ES 3.00 §4.3.2-4.3.3 | compile+negative | NOT_STARTED |  |
-| GLSL300.IO.IN_OUT | 300 | interface | in/out storage qualifiers vertex->fragment | GLSL ES 3.00 §4.3.4 §4.3.6 | render | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es30-hello-triangle |
-| GLSL300.UNIFORM | 300 | interface | Default-block uniforms incl. arrays/structs | GLSL ES 3.00 §4.3.5 | render | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-shader-compilation, es20-uniforms |
+| GLSL300.IO.IN_OUT | 300 | interface | in/out storage qualifiers vertex->fragment | GLSL ES 3.00 §4.3.4 §4.3.6 | render | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-indexed-drawing, es20-vertex-attributes, es30-hello-triangle |
+| GLSL300.UNIFORM | 300 | interface | Default-block uniforms incl. arrays/structs | GLSL ES 3.00 §4.3.5 | render | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-shader-compilation, es20-uniforms, es20-vertex-attributes |
 | GLSL300.INTERFACE_BLOCK | 300 | interface | Uniform blocks with instance names / arrays of blocks | GLSL ES 3.00 §4.3.7 | render | NOT_STARTED |  |
-| GLSL300.LAYOUT.LOCATION | 300 | interface | layout(location) on VS inputs and FS outputs | GLSL ES 3.00 §4.3.8.1-4.3.8.2 | render | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es30-hello-triangle |
+| GLSL300.LAYOUT.LOCATION | 300 | interface | layout(location) on VS inputs and FS outputs | GLSL ES 3.00 §4.3.8.1-4.3.8.2 | render | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-indexed-drawing, es20-vertex-attributes, es30-hello-triangle |
 | GLSL300.LAYOUT.BLOCK | 300 | interface | shared/packed/std140, row_major/column_major | GLSL ES 3.00 §4.3.8.3 | state | NOT_STARTED |  |
-| GLSL300.FRAG.OUTPUT | 300 | interface | User-declared fragment outputs (no gl_FragColor) | GLSL ES 3.00 §4.3.6 | render | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es30-hello-triangle |
+| GLSL300.FRAG.OUTPUT | 300 | interface | User-declared fragment outputs (no gl_FragColor) | GLSL ES 3.00 §4.3.6 | render | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-indexed-drawing, es20-vertex-attributes, es30-hello-triangle |
 | GLSL300.FRAG.MRT | 300 | interface | Multiple fragment outputs to draw buffers | GLSL ES 3.00 §4.3.8.2 | render | NOT_STARTED |  |
 | GLSL300.INTERP.SMOOTH_FLAT | 300 | interface | smooth / flat interpolation qualifiers | GLSL ES 3.00 §4.3.9 | render | NOT_STARTED |  |
 | GLSL300.INTERP.CENTROID | 300 | interface | centroid in/out | GLSL ES 3.00 §4.3.9 | render | NOT_STARTED |  |

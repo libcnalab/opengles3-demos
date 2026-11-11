@@ -29,20 +29,20 @@
 | ES20.SHADER.BINARY | 2.0 | shaders | glShaderBinary + SHADER_BINARY_FORMATS (may legitimately be empty) | ES 3.0 §2.12.2 | FULLY_VALIDATED | es20-shader-compilation |
 | ES20.PROGRAM.VALIDATE | 2.0 | shaders | glValidateProgram + VALIDATE_STATUS (e.g. sampler type conflict on one unit) | ES 3.0 §2.12.3 §2.12.9 | FULLY_VALIDATED | es20-shader-compilation |
 | ES20.PROGRAM.ATTACHED | 2.0 | shaders | glGetAttachedShaders / ATTACHED_SHADERS | ES 3.0 §6.1.12 | FULLY_VALIDATED | es20-shader-compilation |
-| ES20.ATTRIB.BIND_LOCATION | 2.0 | vertex-input | glBindAttribLocation before link vs glGetAttribLocation | ES 3.0 §2.12.5 | NOT_STARTED |  |
-| ES20.ATTRIB.ACTIVE_QUERY | 2.0 | vertex-input | glGetActiveAttrib enumeration (name/type/size) | ES 3.0 §2.12.5 | NOT_STARTED |  |
-| ES20.ATTRIB.CONSTANT | 2.0 | vertex-input | Current (constant) generic attribute values glVertexAttrib*f[v] | ES 3.0 §2.8 | NOT_STARTED |  |
-| ES20.ATTRIB.FORMATS | 2.0 | vertex-input | Attribute types BYTE/UBYTE/SHORT/USHORT/FLOAT/FIXED with normalized flag | ES 3.0 §2.9 Table 2.4 | NOT_STARTED |  |
-| ES20.ATTRIB.INTERLEAVED | 2.0 | vertex-input | Interleaved vs planar layouts; stride and offset | ES 3.0 §2.9 | NOT_STARTED |  |
-| ES20.ATTRIB.QUERY | 2.0 | vertex-input | glGetVertexAttrib*/glGetVertexAttribPointerv state queries | ES 3.0 §6.1.10 | NOT_STARTED |  |
-| ES20.ATTRIB.CLIENT_ARRAYS | 2.0 | vertex-input | Client-memory vertex arrays on the default VAO (legal only with VAO 0) | ES 3.0 §2.9 §2.11 | NOT_STARTED |  |
-| ES20.BUFFER.VBO | 2.0 | buffers | Vertex buffer objects (ARRAY_BUFFER) glGenBuffers/glBindBuffer/glBufferData | ES 3.0 §2.10 | FULLY_VALIDATED | es20-culling-front-face, es30-hello-triangle |
-| ES20.BUFFER.IBO | 2.0 | buffers | Index buffers (ELEMENT_ARRAY_BUFFER) with UBYTE/USHORT/UINT indices | ES 3.0 §2.10.7 | NOT_STARTED |  |
-| ES20.BUFFER.SUBDATA | 2.0 | buffers | glBufferSubData partial updates | ES 3.0 §2.10.2 | NOT_STARTED |  |
-| ES20.BUFFER.REALLOC | 2.0 | buffers | glBufferData re-specification (orphaning) and size/usage queries | ES 3.0 §2.10.2 §6.1.9 | NOT_STARTED |  |
-| ES20.BUFFER.QUERY | 2.0 | buffers | glGetBufferParameteriv / glIsBuffer | ES 3.0 §6.1.9 | NOT_STARTED |  |
-| ES20.DRAW.ARRAYS | 2.0 | drawing | glDrawArrays | ES 3.0 §2.9.3 | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es30-hello-triangle |
-| ES20.DRAW.ELEMENTS | 2.0 | drawing | glDrawElements with index buffer | ES 3.0 §2.9.3 | NOT_STARTED |  |
+| ES20.ATTRIB.BIND_LOCATION | 2.0 | vertex-input | glBindAttribLocation before link vs glGetAttribLocation | ES 3.0 §2.12.5 | FULLY_VALIDATED | es20-vertex-attributes |
+| ES20.ATTRIB.ACTIVE_QUERY | 2.0 | vertex-input | glGetActiveAttrib enumeration (name/type/size) | ES 3.0 §2.12.5 | FULLY_VALIDATED | es20-vertex-attributes |
+| ES20.ATTRIB.CONSTANT | 2.0 | vertex-input | Current (constant) generic attribute values glVertexAttrib*f[v] | ES 3.0 §2.8 | FULLY_VALIDATED | es20-vertex-attributes |
+| ES20.ATTRIB.FORMATS | 2.0 | vertex-input | Attribute types BYTE/UBYTE/SHORT/USHORT/FLOAT/FIXED with normalized flag | ES 3.0 §2.9 Table 2.4 | FULLY_VALIDATED | es20-vertex-attributes |
+| ES20.ATTRIB.INTERLEAVED | 2.0 | vertex-input | Interleaved vs planar layouts; stride and offset | ES 3.0 §2.9 | FULLY_VALIDATED | es20-vertex-attributes |
+| ES20.ATTRIB.QUERY | 2.0 | vertex-input | glGetVertexAttrib*/glGetVertexAttribPointerv state queries | ES 3.0 §6.1.12 | FULLY_VALIDATED | es20-vertex-attributes |
+| ES20.ATTRIB.CLIENT_ARRAYS | 2.0 | vertex-input | Client-memory vertex arrays on the default VAO (legal only with VAO 0) | ES 3.0 §2.9 §2.11 | FULLY_VALIDATED | es20-vertex-attributes |
+| ES20.BUFFER.VBO | 2.0 | buffers | Vertex buffer objects (ARRAY_BUFFER) glGenBuffers/glBindBuffer/glBufferData | ES 3.0 §2.10 | FULLY_VALIDATED | es20-culling-front-face, es20-indexed-drawing, es20-vertex-attributes, es30-hello-triangle |
+| ES20.BUFFER.IBO | 2.0 | buffers | Index buffers (ELEMENT_ARRAY_BUFFER) with UBYTE/USHORT/UINT indices | ES 3.0 §2.10.7 | FULLY_VALIDATED | es20-indexed-drawing |
+| ES20.BUFFER.SUBDATA | 2.0 | buffers | glBufferSubData partial updates | ES 3.0 §2.10.2 | FULLY_VALIDATED | es20-indexed-drawing |
+| ES20.BUFFER.REALLOC | 2.0 | buffers | glBufferData re-specification (orphaning) and size/usage queries | ES 3.0 §2.10.2 §6.1.9 | FULLY_VALIDATED | es20-indexed-drawing |
+| ES20.BUFFER.QUERY | 2.0 | buffers | glGetBufferParameteriv / glIsBuffer | ES 3.0 §6.1.9 | FULLY_VALIDATED | es20-indexed-drawing |
+| ES20.DRAW.ARRAYS | 2.0 | drawing | glDrawArrays | ES 3.0 §2.9.3 | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-indexed-drawing, es30-hello-triangle |
+| ES20.DRAW.ELEMENTS | 2.0 | drawing | glDrawElements with index buffer | ES 3.0 §2.9.3 | FULLY_VALIDATED | es20-indexed-drawing |
 | ES20.DRAW.TOPOLOGY | 2.0 | drawing | Primitive types POINTS/LINES/LINE_LOOP/LINE_STRIP/TRIANGLES/STRIP/FAN | ES 3.0 §2.7.1 | NOT_STARTED |  |
 | ES20.DRAW.POINT_SIZE | 2.0 | drawing | gl_PointSize + ALIASED_POINT_SIZE_RANGE + gl_PointCoord | ES 3.0 §3.4 | NOT_STARTED |  |
 | ES20.DRAW.LINE_WIDTH | 2.0 | drawing | glLineWidth + ALIASED_LINE_WIDTH_RANGE (only 1.0 guaranteed) | ES 3.0 §3.5 | NOT_STARTED |  |
@@ -89,8 +89,8 @@
 | ES20.FLUSH_FINISH | 2.0 | sync | glFlush / glFinish | ES 3.0 §5.1 | NOT_STARTED |  |
 | ES20.LIGHTING.SHADER | 2.0 | shading | Shader-based lighting (directional/point/spot; Phong/Blinn-Phong) with normal matrix | n/a (composition) | NOT_STARTED |  |
 | ES20.CAMERA.MVP | 2.0 | shading | Model/view/projection matrices; perspective vs orthographic; camera movement | n/a (composition) | NOT_STARTED |  |
-| ES30.VAO.BASIC | 3.0 | vertex-input | Vertex array objects: gen/bind/delete/isVertexArray; per-VAO attribute state | ES 3.0 §2.11 | FULLY_VALIDATED | es20-culling-front-face, es30-hello-triangle |
-| ES30.VAO.SWITCHING | 3.0 | vertex-input | Multiple VAOs with different configurations; ELEMENT_ARRAY_BUFFER is VAO state | ES 3.0 §2.11 | NOT_STARTED |  |
+| ES30.VAO.BASIC | 3.0 | vertex-input | Vertex array objects: gen/bind/delete/isVertexArray; per-VAO attribute state | ES 3.0 §2.11 | FULLY_VALIDATED | es20-culling-front-face, es20-vertex-attributes, es30-hello-triangle |
+| ES30.VAO.SWITCHING | 3.0 | vertex-input | Multiple VAOs with different configurations; ELEMENT_ARRAY_BUFFER is VAO state | ES 3.0 §2.11 | FULLY_VALIDATED | es20-indexed-drawing |
 | ES30.ATTRIB.INTEGER | 3.0 | vertex-input | glVertexAttribIPointer + ivec/uvec inputs; glVertexAttribI4*; glGetVertexAttribI* | ES 3.0 §2.8-2.9 | BUILD_PASSED | test-glsl300-builtins |
 | ES30.ATTRIB.PACKED | 3.0 | vertex-input | INT_2_10_10_10_REV / UNSIGNED_INT_2_10_10_10_REV and HALF_FLOAT attributes | ES 3.0 §2.9.2 | NOT_STARTED |  |
 | ES30.ATTRIB.DIVISOR | 3.0 | vertex-input | glVertexAttribDivisor per-instance attributes | ES 3.0 §2.9 | NOT_STARTED |  |

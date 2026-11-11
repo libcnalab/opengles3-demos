@@ -30,7 +30,7 @@ ES20.ATTRIB.ACTIVE_QUERY,2.0,vertex-input,glGetActiveAttrib enumeration (name/ty
 ES20.ATTRIB.CONSTANT,2.0,vertex-input,Current (constant) generic attribute values glVertexAttrib*f[v],ES 3.0 §2.8,pixel
 ES20.ATTRIB.FORMATS,2.0,vertex-input,Attribute types BYTE/UBYTE/SHORT/USHORT/FLOAT/FIXED with normalized flag,ES 3.0 §2.9 Table 2.4,pixel
 ES20.ATTRIB.INTERLEAVED,2.0,vertex-input,Interleaved vs planar layouts; stride and offset,ES 3.0 §2.9,pixel
-ES20.ATTRIB.QUERY,2.0,vertex-input,glGetVertexAttrib*/glGetVertexAttribPointerv state queries,ES 3.0 §6.1.10,state
+ES20.ATTRIB.QUERY,2.0,vertex-input,glGetVertexAttrib*/glGetVertexAttribPointerv state queries,ES 3.0 §6.1.12,state
 ES20.ATTRIB.CLIENT_ARRAYS,2.0,vertex-input,Client-memory vertex arrays on the default VAO (legal only with VAO 0),ES 3.0 §2.9 §2.11,pixel
 ES20.BUFFER.VBO,2.0,buffers,Vertex buffer objects (ARRAY_BUFFER) glGenBuffers/glBindBuffer/glBufferData,ES 3.0 §2.10,pixel
 ES20.BUFFER.IBO,2.0,buffers,Index buffers (ELEMENT_ARRAY_BUFFER) with UBYTE/USHORT/UINT indices,ES 3.0 §2.10.7,pixel

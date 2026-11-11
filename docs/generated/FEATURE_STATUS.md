@@ -66,18 +66,18 @@
 | ES20.UNIFORM.MATRIX | 2.0 | uniforms | glUniformMatrix{234}fv (transpose must be GL_FALSE) | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-uniforms |
 | ES20.UNIFORM.ARRAY_STRUCT | 2.0 | uniforms | Uniform arrays and structs (element/member locations) | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-uniforms |
 | ES20.UNIFORM.ACTIVE_QUERY | 2.0 | uniforms | glGetActiveUniform enumeration | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-uniforms |
-| ES20.TEXTURE.2D | 2.0 | textures | 2D textures: glGenTextures/glBindTexture/glTexImage2D/glActiveTexture | ES 3.0 §3.8.1 §3.8.3 | NOT_STARTED |  |
-| ES20.TEXTURE.SUBIMAGE | 2.0 | textures | glTexSubImage2D updates | ES 3.0 §3.8.5 | NOT_STARTED |  |
+| ES20.TEXTURE.2D | 2.0 | textures | 2D textures: glGenTextures/glBindTexture/glTexImage2D/glActiveTexture | ES 3.0 §3.8.1 §3.8.3 | FULLY_VALIDATED | es20-textures-2d |
+| ES20.TEXTURE.SUBIMAGE | 2.0 | textures | glTexSubImage2D updates | ES 3.0 §3.8.5 | FULLY_VALIDATED | es20-textures-2d |
 | ES20.TEXTURE.COPY | 2.0 | textures | glCopyTexImage2D / glCopyTexSubImage2D from framebuffer | ES 3.0 §3.8.5 | NOT_STARTED |  |
-| ES20.TEXTURE.FILTER | 2.0 | textures | NEAREST/LINEAR mag+min filtering | ES 3.0 §3.8.10-11 | NOT_STARTED |  |
-| ES20.TEXTURE.WRAP | 2.0 | textures | REPEAT/CLAMP_TO_EDGE/MIRRORED_REPEAT | ES 3.0 §3.8.10 | NOT_STARTED |  |
+| ES20.TEXTURE.FILTER | 2.0 | textures | NEAREST/LINEAR mag+min filtering | ES 3.0 §3.8.10-11 | FULLY_VALIDATED | es20-textures-2d |
+| ES20.TEXTURE.WRAP | 2.0 | textures | REPEAT/CLAMP_TO_EDGE/MIRRORED_REPEAT | ES 3.0 §3.8.10 | FULLY_VALIDATED | es20-textures-2d |
 | ES20.TEXTURE.MIPMAP | 2.0 | textures | Mipmap chains + glGenerateMipmap + mipmap min filters | ES 3.0 §3.8.10 | NOT_STARTED |  |
 | ES20.TEXTURE.CUBE | 2.0 | textures | Cube map textures + face selection | ES 3.0 §3.8.9 | NOT_STARTED |  |
-| ES20.TEXTURE.UNITS | 2.0 | textures | Multiple texture units / MAX_COMBINED_TEXTURE_IMAGE_UNITS | ES 3.0 §3.8.1 | NOT_STARTED |  |
-| ES20.TEXTURE.UNPACK_ALIGNMENT | 2.0 | textures | GL_UNPACK_ALIGNMENT effect on uploads | ES 3.0 §3.7.1 | NOT_STARTED |  |
-| ES20.TEXTURE.UNSIZED_FORMATS | 2.0 | textures | Unsized RGBA/RGB/LUMINANCE/LUMINANCE_ALPHA/ALPHA + packed 565/4444/5551 types | ES 3.0 §3.8.3 Table 3.3 | NOT_STARTED |  |
-| ES20.TEXTURE.COMPLETENESS | 2.0 | textures | Incomplete texture sampling returns (0 | 0 | NOT_STARTED |  |
-| ES20.TEXTURE.QUERY | 2.0 | textures | glGetTexParameter* / glIsTexture | ES 3.0 §6.1.4 | NOT_STARTED |  |
+| ES20.TEXTURE.UNITS | 2.0 | textures | Multiple texture units / MAX_COMBINED_TEXTURE_IMAGE_UNITS | ES 3.0 §3.8.1 | FULLY_VALIDATED | es20-textures-2d |
+| ES20.TEXTURE.UNPACK_ALIGNMENT | 2.0 | textures | GL_UNPACK_ALIGNMENT effect on uploads | ES 3.0 §3.7.1 | FULLY_VALIDATED | es20-textures-2d |
+| ES20.TEXTURE.UNSIZED_FORMATS | 2.0 | textures | Unsized RGBA/RGB/LUMINANCE/LUMINANCE_ALPHA/ALPHA + packed 565/4444/5551 types | ES 3.0 §3.8.3 Table 3.3 | FULLY_VALIDATED | es20-textures-2d |
+| ES20.TEXTURE.COMPLETENESS | 2.0 | textures | Incomplete texture sampling returns (0 | 0 | FULLY_VALIDATED | es20-textures-2d |
+| ES20.TEXTURE.QUERY | 2.0 | textures | glGetTexParameter* / glIsTexture | ES 3.0 §6.1.4 | FULLY_VALIDATED | es20-textures-2d |
 | ES20.FBO.RENDER_TO_TEXTURE | 2.0 | framebuffer | Framebuffer objects with texture color attachment (render to texture) | ES 3.0 §4.4 | NOT_STARTED |  |
 | ES20.FBO.RENDERBUFFER | 2.0 | framebuffer | Renderbuffers (color/depth/stencil) glRenderbufferStorage | ES 3.0 §4.4.2 | NOT_STARTED |  |
 | ES20.FBO.COMPLETENESS | 2.0 | framebuffer | glCheckFramebufferStatus incl. intentionally incomplete cases | ES 3.0 §4.4.4 | NOT_STARTED |  |

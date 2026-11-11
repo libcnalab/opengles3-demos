@@ -1,11 +1,11 @@
 function,introduced,registry_feature,in_metagl,demos,verification,runtime_status,limitations,evidence
-glActiveTexture,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glActiveTexture,2.0,GL_ES_VERSION_2_0,yes,es20-textures-2d,unit 3 sampled in cell 14; ACTIVE_TEXTURE = GL_TEXTURE3,FULLY_VALIDATED,,es20-textures-2d:FULLY_VALIDATED
 glAttachShader,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,ATTACHED_SHADERS = 2 / both stages attached before link,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glBindAttribLocation,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glBindBuffer,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,ARRAY_BUFFER binding captured by attrib pointers,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
 glBindFramebuffer,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glBindRenderbuffer,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glBindTexture,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glBindTexture,2.0,GL_ES_VERSION_2_0,yes,es20-textures-2d,per-unit binding (TEXTURE_BINDING_2D on unit 3); 2D texture on CUBE_MAP target -> INVALID_OPERATION,FULLY_VALIDATED,,es20-textures-2d:FULLY_VALIDATED
 glBlendColor,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glBlendEquation,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glBlendEquationSeparate,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
@@ -32,14 +32,14 @@ glDeleteFramebuffers,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glDeleteProgram,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,"deferred while current (glIsProgram TRUE, still renders), deleted when replaced / cleanup",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glDeleteRenderbuffers,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glDeleteShader,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,"deferred while attached (glIsShader TRUE, DELETE_STATUS TRUE); deleted on detach; 0 ignored / deleted after detach",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
-glDeleteTextures,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glDeleteTextures,2.0,GL_ES_VERSION_2_0,yes,es20-textures-2d,binding reverts to 0,FULLY_VALIDATED,,es20-textures-2d:FULLY_VALIDATED
 glDepthFunc,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glDepthMask,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glDepthRangef,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glDetachShader,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,ATTACHED_SHADERS = 0 afterwards; link status kept / shaders detached after link,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glDisable,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,SCISSOR_TEST,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glDisableVertexAttribArray,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glDrawArrays,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,TRIANGLES; interior pixels match CPU reference,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
+glDrawArrays,2.0,GL_ES_VERSION_2_0,yes,es20-textures-2d es30-hello-triangle,TRIANGLE_STRIP quads per cell / TRIANGLES; interior pixels match CPU reference,FULLY_VALIDATED,,es20-textures-2d:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glDrawElements,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glEnable,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,SCISSOR_TEST,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glEnableVertexAttribArray,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,both attributes sourced from the buffer,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
@@ -51,7 +51,7 @@ glFrontFace,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGenBuffers,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,VBO feeding the validated draw,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
 glGenFramebuffers,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGenRenderbuffers,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glGenTextures,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glGenTextures,2.0,GL_ES_VERSION_2_0,yes,es20-textures-2d,12 texture objects; a generated-but-unbound name is not yet a texture,FULLY_VALIDATED,,es20-textures-2d:FULLY_VALIDATED
 glGenerateMipmap,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetActiveAttrib,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetActiveUniform,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,"names (name[0] for arrays), sizes and types of 12 uniforms",FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
@@ -62,7 +62,7 @@ glGetBufferParameteriv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetError,2.0,GL_ES_VERSION_2_0,yes,diagnostics-capabilities,INVALID_VALUE for out-of-range glGetStringi,FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED
 glGetFloatv,2.0,GL_ES_VERSION_2_0,yes,diagnostics-capabilities,"point/line width ranges contain 1.0, LOD bias, interpolation offsets",FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED
 glGetFramebufferAttachmentParameteriv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glGetIntegerv,2.0,GL_ES_VERSION_2_0,yes,diagnostics-capabilities es30-hello-triangle,"~100 implementation limits checked against per-version minimums / CURRENT_PROGRAM, VERTEX_ARRAY_BINDING",FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
+glGetIntegerv,2.0,GL_ES_VERSION_2_0,yes,diagnostics-capabilities es20-textures-2d es30-hello-triangle,"~100 implementation limits checked against per-version minimums / UNPACK_ALIGNMENT (meta-gl G1), ACTIVE_TEXTURE, TEXTURE_BINDING_2D / CURRENT_PROGRAM, VERTEX_ARRAY_BINDING",FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED es20-textures-2d:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glGetProgramInfoLog,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,printed for link failure,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glGetProgramiv,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es20-uniforms es30-hello-triangle,"LINK_STATUS, ATTACHED_SHADERS, DELETE_STATUS, VALIDATE_STATUS / ACTIVE_UNIFORMS, ACTIVE_UNIFORM_MAX_LENGTH / LINK_STATUS queried",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es20-uniforms:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glGetRenderbufferParameteriv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
@@ -71,8 +71,8 @@ glGetShaderPrecisionFormat,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,all
 glGetShaderSource,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,returned source equals the concatenated strings,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glGetShaderiv,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,"COMPILE_STATUS, SHADER_TYPE, SOURCE_LENGTH (=len+1), INFO_LOG_LENGTH, DELETE_STATUS / COMPILE_STATUS queried",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glGetString,2.0,GL_ES_VERSION_2_0,yes,diagnostics-capabilities,VERSION/VENDOR/RENDERER/SHADING_LANGUAGE_VERSION equal meta-gl Capabilities; EXTENSIONS set equals glGetStringi set,FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED
-glGetTexParameterfv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glGetTexParameteriv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glGetTexParameterfv,2.0,GL_ES_VERSION_2_0,yes,es20-textures-2d,MAG_FILTER as float,FULLY_VALIDATED,,es20-textures-2d:FULLY_VALIDATED
+glGetTexParameteriv,2.0,GL_ES_VERSION_2_0,yes,es20-textures-2d,filters/wraps and the default MIN_FILTER,FULLY_VALIDATED,,es20-textures-2d:FULLY_VALIDATED
 glGetUniformLocation,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es20-uniforms,"u_color located in each program / struct-member, struct-array and array-element names resolved",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es20-uniforms:FULLY_VALIDATED
 glGetUniformfv,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,float/vector/matrix values read back exactly,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
 glGetUniformiv,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,int and bool values read back exactly,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
@@ -86,10 +86,10 @@ glIsFramebuffer,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glIsProgram,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,"TRUE while current-and-flagged, FALSE afterwards",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glIsRenderbuffer,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glIsShader,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,"TRUE while flagged and attached, FALSE after final detach",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
-glIsTexture,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glIsTexture,2.0,GL_ES_VERSION_2_0,yes,es20-textures-2d,"FALSE before first bind, TRUE after, FALSE after delete",FULLY_VALIDATED,,es20-textures-2d:FULLY_VALIDATED
 glLineWidth,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glLinkProgram,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,"LINK_STATUS TRUE for valid programs, FALSE for varying mismatch and missing FS / LINK_STATUS == GL_TRUE required",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
-glPixelStorei,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glPixelStorei,2.0,GL_ES_VERSION_2_0,yes,es20-textures-2d,UNPACK_ALIGNMENT 4 (padded rows) vs 1 (tight) give identical texels; value 3 -> INVALID_VALUE,FULLY_VALIDATED,,es20-textures-2d:FULLY_VALIDATED
 glPolygonOffset,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glReadPixels,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,RGBA/UNSIGNED_BYTE readback of the default framebuffer,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
 glReleaseShaderCompiler,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,compilation still succeeds afterwards,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
@@ -104,15 +104,15 @@ glStencilMask,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glStencilMaskSeparate,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glStencilOp,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glStencilOpSeparate,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glTexImage2D,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glTexParameterf,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glTexParameterfv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glTexParameteri,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glTexParameteriv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glTexSubImage2D,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glTexImage2D,2.0,GL_ES_VERSION_2_0,yes,es20-textures-2d,RGBA/RGB/LUMINANCE/LUMINANCE_ALPHA/ALPHA and 565/4444/5551 uploads pixel-verified; border=1 and width=-1 -> INVALID_VALUE,FULLY_VALIDATED,,es20-textures-2d:FULLY_VALIDATED
+glTexParameterf,2.0,GL_ES_VERSION_2_0,yes,es20-textures-2d,MAG_FILTER as float (read back),FULLY_VALIDATED,,es20-textures-2d:FULLY_VALIDATED
+glTexParameterfv,2.0,GL_ES_VERSION_2_0,yes,es20-textures-2d,WRAP_T (read back),FULLY_VALIDATED,,es20-textures-2d:FULLY_VALIDATED
+glTexParameteri,2.0,GL_ES_VERSION_2_0,yes,es20-textures-2d,MIN_FILTER (read back),FULLY_VALIDATED,,es20-textures-2d:FULLY_VALIDATED
+glTexParameteriv,2.0,GL_ES_VERSION_2_0,yes,es20-textures-2d,WRAP_S (read back),FULLY_VALIDATED,,es20-textures-2d:FULLY_VALIDATED
+glTexSubImage2D,2.0,GL_ES_VERSION_2_0,yes,es20-textures-2d,2x2 patch replaces exactly those texels; out-of-range -> INVALID_VALUE,FULLY_VALIDATED,,es20-textures-2d:FULLY_VALIDATED
 glUniform1f,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
 glUniform1fv,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
-glUniform1i,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es20-uniforms,sampler unit reassignment resolves the validation failure / cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es20-uniforms:FULLY_VALIDATED
+glUniform1i,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es20-textures-2d es20-uniforms,sampler unit reassignment resolves the validation failure / sampler unit assignment (0 and 3) / cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es20-textures-2d:FULLY_VALIDATED es20-uniforms:FULLY_VALIDATED
 glUniform1iv,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
 glUniform2f,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
 glUniform2fv,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED

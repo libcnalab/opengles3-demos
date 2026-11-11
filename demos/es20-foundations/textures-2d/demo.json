@@ -1,0 +1,64 @@
+{
+  "name": "es20-textures-2d",
+  "title": "2D textures: filtering, wrapping, formats, units",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es20-foundations",
+  "order": 130,
+  "summary": "Texture objects/units, NEAREST/LINEAR, three wrap modes, sub-image, unpack alignment, legacy unsized + packed formats, incomplete textures; all checked against a CPU sampler.",
+  "spec": [
+    "ES 3.0 §3.7.1 Pixel Storage Modes",
+    "ES 3.0 §3.8.1 Texture Objects, §3.8.3 Texture Image Specification (Table 3.3 unsized formats)",
+    "ES 3.0 §3.8.5 Alternate Texture Image Specification (TexSubImage2D)",
+    "ES 3.0 §3.8.10 Texture Minification (Table 3.22 wrap, bilinear eq.), §3.8.11 Magnification",
+    "ES 3.0 §3.8.13 Texture Completeness, §3.9.2 (incomplete -> (0,0,0,1)), Table 3.24",
+    "GLSL ES 3.00 §8.8 Texture Lookup Functions"
+  ],
+  "api": {
+    "glGenTextures": "12 texture objects; a generated-but-unbound name is not yet a texture",
+    "glBindTexture": "per-unit binding (TEXTURE_BINDING_2D on unit 3); 2D texture on CUBE_MAP target -> INVALID_OPERATION",
+    "glActiveTexture": "unit 3 sampled in cell 14; ACTIVE_TEXTURE = GL_TEXTURE3",
+    "glTexImage2D": "RGBA/RGB/LUMINANCE/LUMINANCE_ALPHA/ALPHA and 565/4444/5551 uploads pixel-verified; border=1 and width=-1 -> INVALID_VALUE",
+    "glTexSubImage2D": "2x2 patch replaces exactly those texels; out-of-range -> INVALID_VALUE",
+    "glTexParameteri": "MIN_FILTER (read back)",
+    "glTexParameterf": "MAG_FILTER as float (read back)",
+    "glTexParameteriv": "WRAP_S (read back)",
+    "glTexParameterfv": "WRAP_T (read back)",
+    "glGetTexParameteriv": "filters/wraps and the default MIN_FILTER",
+    "glGetTexParameterfv": "MAG_FILTER as float",
+    "glIsTexture": "FALSE before first bind, TRUE after, FALSE after delete",
+    "glDeleteTextures": "binding reverts to 0",
+    "glPixelStorei": "UNPACK_ALIGNMENT 4 (padded rows) vs 1 (tight) give identical texels; value 3 -> INVALID_VALUE",
+    "glGetIntegerv": "UNPACK_ALIGNMENT (meta-gl G1), ACTIVE_TEXTURE, TEXTURE_BINDING_2D",
+    "glDrawArrays": "TRIANGLE_STRIP quads per cell",
+    "glUniform1i": "sampler unit assignment (0 and 3)"
+  },
+  "features": [
+    "ES20.TEXTURE.2D",
+    "ES20.TEXTURE.SUBIMAGE",
+    "ES20.TEXTURE.FILTER",
+    "ES20.TEXTURE.WRAP",
+    "ES20.TEXTURE.UNITS",
+    "ES20.TEXTURE.UNPACK_ALIGNMENT",
+    "ES20.TEXTURE.UNSIZED_FORMATS",
+    "ES20.TEXTURE.COMPLETENESS",
+    "ES20.TEXTURE.QUERY"
+  ],
+  "glsl_features": [
+    "GLSL300.FN.TEXTURE.BASIC",
+    "GLSL300.TYPES.SAMPLERS",
+    "GLSL300.BUILTIN_VARS.VS"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "negative"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-opus-5.5",
+    "notes": "radeonsi: NEAREST/LINEAR/REPEAT(3x3)/MIRRORED rows correct; clamp stretches edges; white sub-image patch; align4==align1; legacy formats; unit-3 magenta half; incomplete cell black."
+  }
+}

@@ -6,3 +6,4 @@
 | diagnostics-capabilities | 3.0 | diagnostics | Capabilities, limits and extensions | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS softpipe:es-max=PASS softpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es20-shader-compilation | 3.0 | es20-foundations | Shader and program objects | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS softpipe:es-max=PASS softpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-hello-triangle | 3.0 | es30 | Hello Triangle | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS softpipe:es-max=PASS softpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| test-metagl-contracts | 3.0 | tests | meta-gl contracts | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS softpipe:es-max=PASS softpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |

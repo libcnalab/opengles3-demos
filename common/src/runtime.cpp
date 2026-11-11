@@ -340,6 +340,7 @@ namespace demo
         // --- 3. demo ---------------------------------------------------------------------------
         Env env{info, options};
         env.source_dir = std::string(info.source_dir);
+        env.gl_loader = platform->loader();
         env.context_version = rep.context_version;
         env.interactive = windowed && !options.validate && options.frames < 0;
         env.rng.seed(options.seed);

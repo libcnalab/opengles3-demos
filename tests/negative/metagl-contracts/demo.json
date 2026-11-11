@@ -1,0 +1,16 @@
+{
+  "name": "test-metagl-contracts",
+  "title": "meta-gl contracts",
+  "min_es": "3.0",
+  "glsl": [],
+  "category": "tests",
+  "order": 1,
+  "summary": "meta-gl invalid-input termination (fork + SIGABRT) and the lost/restored context life cycle.",
+  "spec": ["meta-gl README 'Invalid Input Contract'", "meta-gl Loader.hpp RestoreCurrentContext", "meta-gl ContextEvents.hpp", "ES 3.0 §2.12.6 (UniformMatrix transpose must be FALSE)"],
+  "api": {
+    "glClear": "terminates after MarkContextLost; clears correctly after RestoreCurrentContext (pixel-checked)"
+  },
+  "features": ["ES20.CONTEXT.INIT"],
+  "glsl_features": [],
+  "validation": ["negative", "state-query", "pixel-reference"]
+}

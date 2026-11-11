@@ -1,1 +1,16 @@
-# Integration/negative test executables are added in a later step.
+# Every directory tests/<group>/<test>/ with a CMakeLists.txt is one independent test executable
+# (same conventions as demos/, discovered automatically).
+file(GLOB demo_groups LIST_DIRECTORIES true RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/*")
+list(SORT demo_groups)
+foreach(group IN LISTS demo_groups)
+    if(NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${group}")
+        continue()
+    endif()
+    file(GLOB demo_dirs LIST_DIRECTORIES true RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/${group}/*")
+    list(SORT demo_dirs)
+    foreach(dir IN LISTS demo_dirs)
+        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${dir}/CMakeLists.txt")
+            add_subdirectory("${dir}")
+        endif()
+    endforeach()
+endforeach()

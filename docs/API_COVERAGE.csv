@@ -14,7 +14,7 @@ glBlendFuncSeparate,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glBufferData,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,vertex data observed through rendered colors,FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
 glBufferSubData,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glCheckFramebufferStatus,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glClear,2.0,GL_ES_VERSION_2_0,yes,diagnostics-capabilities es30-hello-triangle,scissored clears draw the version strip (pixel-checked) / COLOR_BUFFER_BIT,FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
+glClear,2.0,GL_ES_VERSION_2_0,yes,diagnostics-capabilities es30-hello-triangle test-metagl-contracts,scissored clears draw the version strip (pixel-checked) / COLOR_BUFFER_BIT / terminates after MarkContextLost; clears correctly after RestoreCurrentContext (pixel-checked),FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED test-metagl-contracts:FULLY_VALIDATED
 glClearColor,2.0,GL_ES_VERSION_2_0,yes,diagnostics-capabilities es30-hello-triangle,version strip colors / corner pixels equal the clear color,FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glClearDepthf,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glClearStencil,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,

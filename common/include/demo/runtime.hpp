@@ -75,6 +75,9 @@ namespace demo
         bool interactive = false;    ///< windowed and not --validate / --frames
         std::mt19937 rng;            ///< deterministic (seeded with --seed)
         std::string source_dir;      ///< demo source directory (Info::source_dir)
+        /// The GetProcAddress-style loader the runtime passed to metagl::Initialize (needed only by
+        /// tests of meta-gl's reload path, e.g. metagl::RestoreCurrentContext).
+        void* (*gl_loader)(const char*) = nullptr;
 
         /// Absolute path of a file in the demo source directory, e.g. "shaders/triangle.vert".
         [[nodiscard]] std::string asset_path(std::string_view relative) const;

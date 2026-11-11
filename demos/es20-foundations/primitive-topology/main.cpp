@@ -55,9 +55,11 @@ namespace
     // Layout, palette, vertex data types
     // ---------------------------------------------------------------------------------------------
     constexpr int kCell = 64;
-    constexpr int kColumns = 4;
-    constexpr int kRows = 4;
-    constexpr int kCellCount = kColumns * kRows;
+    constexpr int kCellCount = 16;
+    // The 16 cells are arranged as 4x4, 8x2 or 2x8, whichever fits the surface (chosen in init()).
+    // The cell content is defined in exact cell-local pixels, so a cell is never scaled.
+    int g_columns = 4;
+    int g_rows = 4;
 
     struct Rect
     {
@@ -82,10 +84,10 @@ namespace
 
     constexpr int index_of(Cell c) { return static_cast<int>(c); }
 
-    constexpr Rect cell_rect(Cell c)
+    Rect cell_rect(Cell c)
     {
         const int i = index_of(c);
-        return {(i % kColumns) * kCell, (kRows - 1 - i / kColumns) * kCell, kCell, kCell};
+        return {(i % g_columns) * kCell, (g_rows - 1 - i / g_columns) * kCell, kCell, kCell};
     }
 
     constexpr Color kSurface{0.02f, 0.02f, 0.03f, 1.0f};
@@ -647,9 +649,28 @@ namespace
     public:
         void init(demo::Env& env) override
         {
-            if (env.width < kCell * kColumns || env.height < kCell * kRows)
-                throw demo::Failure(std::format("the gallery needs at least a {}x{} surface (got {}x{})", kCell * kColumns,
-                                                kCell * kRows, env.width, env.height));
+            // Pick the arrangement that fits the surface and whose aspect ratio is closest to it. The
+            // expected images are exact per-pixel rasterization models of 64x64 cells; a surface that
+            // fits none of 256x256, 512x128 and 128x512 cannot show them, so it is skipped rather than shrunk.
+            bool fits = false;
+            double best = 0.0;
+            for (const int columns : {4, 8, 2})
+            {
+                const int rows = kCellCount / columns;
+                if (env.width < kCell * columns || env.height < kCell * rows) continue;
+                const double mismatch = std::abs(std::log(static_cast<double>(env.width) / env.height *
+                                                          static_cast<double>(rows) / columns));
+                if (!fits || mismatch < best)
+                {
+                    fits = true;
+                    best = mismatch;
+                    g_columns = columns;
+                    g_rows = rows;
+                }
+            }
+            if (!fits)
+                throw demo::Skip(std::format("the 16 cells of 64x64 px need a 256x256, 512x128 or 128x512 surface (got {}x{})",
+                                             env.width, env.height));
 
             // Two programs share the vertex shader: flat color, and gl_PointCoord visualization.
             solid_ = demo::build_program(env, "shaders/primitive.vert", "shaders/solid.frag");

@@ -28,6 +28,12 @@ which pixels passed. A panel thus displays the content of a buffer you cannot re
 The image is a 4x4 grid of 64x64-pixel panels. Each panel is one experiment, isolated from its
 neighbours by its own scissor box and viewport. Panels are named A-P in reading order.
 
+The experiments are exact to the pixel (scissor edges, 4-pixel depth columns), so a panel is always
+64x64 pixels and is never scaled. The 16 panels are arranged as 4x4, 8x2 or 2x8, whichever fits
+the surface with the closest aspect ratio (at the default size: 4x4, as in the table below), with
+the bottom row at window y = 0. **Minimum surface:** 256x256, 512x128 or 128x512. On a surface
+that fits none of them the demo reports `SKIP_UNSUPPORTED` instead of shrinking the experiments.
+
 | | col 1 | col 2 | col 3 | col 4 |
 |---|---|---|---|---|
 | **row 1** | **A** `glClearColor` + `glClear(COLOR)` fills the box | **B** a scissored clear changes only a 40x30 box | **C** `glColorMask`: a white clear writes only R, G, B or A in four strips | **D** the same masks applied to a draw |

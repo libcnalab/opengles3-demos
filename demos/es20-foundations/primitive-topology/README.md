@@ -23,6 +23,11 @@ The image is a 4x4 grid of 64x64-pixel cells, numbered 0-15 in reading order. Ea
 own viewport and scissor box, so large points and wide lines cannot leak into a neighbour. All
 vertices live in one buffer object; each draw selects its range with `first` and `count`.
 
+The expected images are exact per-pixel models, so a cell is always 64x64 pixels and is never
+scaled. The 16 cells are arranged as 4x4, 8x2 or 2x8, whichever fits the surface with the closest
+aspect ratio (at the default size: 4x4, as in the table below). **Minimum surface:** 256x256,
+512x128 or 128x512. On a surface that fits none of them the demo reports `SKIP_UNSUPPORTED`.
+
 | | col 1 | col 2 | col 3 | col 4 |
 |---|---|---|---|---|
 | **row 1** | **0** `GL_POINTS`: seven size-1 points at fractional positions, then sizes 2-11, one vertex per point | **1** one large point drawn by a fragment shader that shows `gl_PointCoord` (red = s, green = t) | **2** `GL_LINES`: 6 vertices = 3 separate segments | **3** `GL_LINE_STRIP`: the same 6 vertices = 5 connected segments |

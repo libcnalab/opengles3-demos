@@ -27,6 +27,8 @@
 | `es20-vertex-attributes` (printed note, not asserted) | ES 3.0 §2.5: a command that generates an error has no effect on GL state | radeonsi/llvmpipe: a client-memory `glVertexAttribPointer` on a non-zero VAO correctly raises INVALID_OPERATION but still stores the pointer (`glGetVertexAttribPointerv` returns it) |
 | `es20-vertex-attributes` (printed note, not asserted) | ES 3.0 §2.5: output parameters are not modified on error | `glGetVertexAttribiv(MAX_VERTEX_ATTRIBS, ...)` raises INVALID_VALUE but writes 0 to the output |
 
+| `es20-depth-test` cell 13 | ES 3.0 §3.9.2.3 / ES 3.2 §14.2.3: fragment depth is clamped to [0,1]; "the depth range computation is not applied" | radeonsi clamps `gl_FragDepth` into [near, far] (llvmpipe and zink conform). Reported as XFAIL on "radeonsi" via `Check::expect_or_known_deviation` |
+
 Because of the softpipe miscompilation row, softpipe is not used as a general correctness oracle. It runs only where
 its native ES 3.1 boundary is informative (ES 3.2 executables must SKIP, plus version-gating tests
 that opt in with `"extra_drivers": ["softpipe"]`).

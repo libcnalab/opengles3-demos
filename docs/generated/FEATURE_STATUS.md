@@ -11,14 +11,14 @@
 | ES20.ERRORS.INVALID_OPERATION | 2.0 | errors | GL_INVALID_OPERATION generation (state-dependent misuse) | ES 3.0 §2.5 | NOT_STARTED |  |
 | ES20.ERRORS.INVALID_FB_OP | 2.0 | errors | GL_INVALID_FRAMEBUFFER_OPERATION on incomplete framebuffer | ES 3.0 §4.4.4 | NOT_STARTED |  |
 | ES20.VIEWPORT | 2.0 | transform | glViewport mapping NDC->window; MAX_VIEWPORT_DIMS | ES 3.0 §2.13.1 | NOT_STARTED |  |
-| ES20.DEPTH_RANGE | 2.0 | transform | glDepthRangef mapping of NDC z to window z | ES 3.0 §2.13.1 | NOT_STARTED |  |
+| ES20.DEPTH_RANGE | 2.0 | transform | glDepthRangef mapping of NDC z to window z | ES 3.0 §2.13.1 | FULLY_VALIDATED | es20-depth-test |
 | ES20.CLIP.VOLUME | 2.0 | transform | Clip-volume clipping of primitives (-w<=x | y | NOT_STARTED |  |
 | ES20.COORDS.SYSTEMS | 2.0 | transform | Object->eye->clip->NDC->window coordinate chain (shader-based) | ES 3.0 §2.13 | NOT_STARTED |  |
-| ES20.SCISSOR | 2.0 | fragment-ops | Scissor test (glScissor + GL_SCISSOR_TEST) | ES 3.0 §4.1.2 | FULLY_VALIDATED | es20-culling-front-face |
+| ES20.SCISSOR | 2.0 | fragment-ops | Scissor test (glScissor + GL_SCISSOR_TEST) | ES 3.0 §4.1.2 | FULLY_VALIDATED | es20-culling-front-face, es20-depth-test, es20-stencil-test |
 | ES20.CLEAR.COLOR | 2.0 | framebuffer | glClear color + glClearColor | ES 3.0 §4.2.3 | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es30-hello-triangle |
-| ES20.CLEAR.DEPTH | 2.0 | framebuffer | glClear depth + glClearDepthf | ES 3.0 §4.2.3 | NOT_STARTED |  |
-| ES20.CLEAR.STENCIL | 2.0 | framebuffer | glClear stencil + glClearStencil | ES 3.0 §4.2.3 | NOT_STARTED |  |
-| ES20.CLEAR.SCISSORED | 2.0 | framebuffer | Clear honours scissor and write masks | ES 3.0 §4.2.3 | NOT_STARTED |  |
+| ES20.CLEAR.DEPTH | 2.0 | framebuffer | glClear depth + glClearDepthf | ES 3.0 §4.2.3 | FULLY_VALIDATED | es20-depth-test |
+| ES20.CLEAR.STENCIL | 2.0 | framebuffer | glClear stencil + glClearStencil | ES 3.0 §4.2.3 | FULLY_VALIDATED | es20-stencil-test |
+| ES20.CLEAR.SCISSORED | 2.0 | framebuffer | Clear honours scissor and write masks | ES 3.0 §4.2.3 | FULLY_VALIDATED | es20-depth-test, es20-stencil-test |
 | ES20.SHADER.COMPILE_LINK | 2.0 | shaders | Shader/program object creation compile link use | ES 3.0 §2.12.1-2.12.3 | FULLY_VALIDATED | es20-shader-compilation, es30-hello-triangle |
 | ES20.SHADER.COMPILE_ERROR | 2.0 | shaders | Compile failure diagnostics (COMPILE_STATUS=FALSE + info log) | ES 3.0 §2.12.1 | FULLY_VALIDATED | es20-shader-compilation |
 | ES20.SHADER.LINK_ERROR | 2.0 | shaders | Link failure diagnostics (interface mismatch / missing main) | ES 3.0 §2.12.3 | FULLY_VALIDATED | es20-shader-compilation |
@@ -49,12 +49,12 @@
 | ES20.RASTER.INTERPOLATION | 2.0 | rasterization | Perspective-correct smooth interpolation of varyings | ES 3.0 §3.6.1 | FULLY_VALIDATED | es30-hello-triangle |
 | ES20.RASTER.FRONT_FACE | 2.0 | rasterization | glFrontFace + gl_FrontFacing | ES 3.0 §3.6.1 | FULLY_VALIDATED | es20-culling-front-face |
 | ES20.RASTER.CULL | 2.0 | rasterization | glCullFace + GL_CULL_FACE | ES 3.0 §3.6.1 | FULLY_VALIDATED | es20-culling-front-face |
-| ES20.RASTER.POLYGON_OFFSET | 2.0 | rasterization | glPolygonOffset + POLYGON_OFFSET_FILL | ES 3.0 §3.6.2 | NOT_STARTED |  |
-| ES20.DEPTH.TEST | 2.0 | fragment-ops | Depth test enable + glDepthFunc (all 8 functions) | ES 3.0 §4.1.5 | NOT_STARTED |  |
-| ES20.DEPTH.MASK | 2.0 | fragment-ops | glDepthMask write mask | ES 3.0 §4.2.2 | NOT_STARTED |  |
-| ES20.STENCIL.TEST | 2.0 | fragment-ops | Stencil test glStencilFunc/glStencilOp (all ops incl. wrap) | ES 3.0 §4.1.4 | NOT_STARTED |  |
-| ES20.STENCIL.SEPARATE | 2.0 | fragment-ops | glStencilFuncSeparate/glStencilOpSeparate/glStencilMaskSeparate front vs back | ES 3.0 §4.1.4 | NOT_STARTED |  |
-| ES20.STENCIL.MASK | 2.0 | fragment-ops | glStencilMask write mask | ES 3.0 §4.2.2 | NOT_STARTED |  |
+| ES20.RASTER.POLYGON_OFFSET | 2.0 | rasterization | glPolygonOffset + POLYGON_OFFSET_FILL | ES 3.0 §3.6.2 | FULLY_VALIDATED | es20-depth-test |
+| ES20.DEPTH.TEST | 2.0 | fragment-ops | Depth test enable + glDepthFunc (all 8 functions) | ES 3.0 §4.1.5 | FULLY_VALIDATED | es20-depth-test |
+| ES20.DEPTH.MASK | 2.0 | fragment-ops | glDepthMask write mask | ES 3.0 §4.2.2 | FULLY_VALIDATED | es20-depth-test |
+| ES20.STENCIL.TEST | 2.0 | fragment-ops | Stencil test glStencilFunc/glStencilOp (all ops incl. wrap) | ES 3.0 §4.1.4 | FULLY_VALIDATED | es20-stencil-test |
+| ES20.STENCIL.SEPARATE | 2.0 | fragment-ops | glStencilFuncSeparate/glStencilOpSeparate/glStencilMaskSeparate front vs back | ES 3.0 §4.1.4 | FULLY_VALIDATED | es20-stencil-test |
+| ES20.STENCIL.MASK | 2.0 | fragment-ops | glStencilMask write mask | ES 3.0 §4.2.2 | FULLY_VALIDATED | es20-stencil-test |
 | ES20.BLEND.FUNC | 2.0 | fragment-ops | glBlendFunc factors incl. constant color/alpha and SRC_ALPHA_SATURATE | ES 3.0 §4.1.7 | FULLY_VALIDATED | es20-blending |
 | ES20.BLEND.SEPARATE | 2.0 | fragment-ops | glBlendFuncSeparate / glBlendEquationSeparate | ES 3.0 §4.1.7 | FULLY_VALIDATED | es20-blending |
 | ES20.BLEND.EQUATION | 2.0 | fragment-ops | FUNC_ADD/SUBTRACT/REVERSE_SUBTRACT (MIN/MAX: ES 3.0) | ES 3.0 §4.1.7 | FULLY_VALIDATED | es20-blending |
@@ -84,21 +84,21 @@
 | ES20.FBO.QUERY | 2.0 | framebuffer | glGetFramebufferAttachmentParameteriv / glGetRenderbufferParameteriv / glIs* | ES 3.0 §6.1.13-14 | NOT_STARTED |  |
 | ES20.FBO.FEEDBACK_LOOP | 2.0 | framebuffer | Texture feedback loop rules (undefined results - documented not rendered) | ES 3.0 §4.4.3 | NOT_STARTED |  |
 | ES20.READPIXELS | 2.0 | framebuffer | glReadPixels incl. IMPLEMENTATION_COLOR_READ_FORMAT/TYPE and PACK_ALIGNMENT | ES 3.0 §4.3.2 | NOT_STARTED |  |
-| ES20.STATE.QUERIES | 2.0 | state | glGetBooleanv/Integerv/Floatv/glIsEnabled; data conversion rules | ES 3.0 §6.1.1-6.1.2 | NOT_STARTED |  |
+| ES20.STATE.QUERIES | 2.0 | state | glGetBooleanv/Integerv/Floatv/glIsEnabled; data conversion rules | ES 3.0 §6.1.1-6.1.2 | FULLY_VALIDATED | es20-depth-test, es20-stencil-test |
 | ES20.HINT | 2.0 | state | glHint GENERATE_MIPMAP_HINT (FRAGMENT_SHADER_DERIVATIVE_HINT: ES 3.0) | ES 3.0 §5.3 | NOT_STARTED |  |
 | ES20.FLUSH_FINISH | 2.0 | sync | glFlush / glFinish | ES 3.0 §5.1 | NOT_STARTED |  |
 | ES20.LIGHTING.SHADER | 2.0 | shading | Shader-based lighting (directional/point/spot; Phong/Blinn-Phong) with normal matrix | n/a (composition) | NOT_STARTED |  |
 | ES20.CAMERA.MVP | 2.0 | shading | Model/view/projection matrices; perspective vs orthographic; camera movement | n/a (composition) | NOT_STARTED |  |
 | ES30.VAO.BASIC | 3.0 | vertex-input | Vertex array objects: gen/bind/delete/isVertexArray; per-VAO attribute state | ES 3.0 §2.11 | FULLY_VALIDATED | es20-culling-front-face, es20-vertex-attributes, es30-hello-triangle |
 | ES30.VAO.SWITCHING | 3.0 | vertex-input | Multiple VAOs with different configurations; ELEMENT_ARRAY_BUFFER is VAO state | ES 3.0 §2.11 | FULLY_VALIDATED | es20-indexed-drawing |
-| ES30.ATTRIB.INTEGER | 3.0 | vertex-input | glVertexAttribIPointer + ivec/uvec inputs; glVertexAttribI4*; glGetVertexAttribI* | ES 3.0 §2.8-2.9 | BUILD_PASSED | test-glsl300-builtins |
+| ES30.ATTRIB.INTEGER | 3.0 | vertex-input | glVertexAttribIPointer + ivec/uvec inputs; glVertexAttribI4*; glGetVertexAttribI* | ES 3.0 §2.8-2.9 | FULLY_VALIDATED | test-glsl300-builtins |
 | ES30.ATTRIB.PACKED | 3.0 | vertex-input | INT_2_10_10_10_REV / UNSIGNED_INT_2_10_10_10_REV and HALF_FLOAT attributes | ES 3.0 §2.9.2 | NOT_STARTED |  |
 | ES30.ATTRIB.DIVISOR | 3.0 | vertex-input | glVertexAttribDivisor per-instance attributes | ES 3.0 §2.9 | NOT_STARTED |  |
 | ES30.DRAW.INSTANCED | 3.0 | drawing | glDrawArraysInstanced / glDrawElementsInstanced + gl_InstanceID | ES 3.0 §2.9.3 | NOT_STARTED |  |
 | ES30.DRAW.RANGE_ELEMENTS | 3.0 | drawing | glDrawRangeElements + MAX_ELEMENTS_VERTICES/INDICES | ES 3.0 §2.9.3 | NOT_STARTED |  |
 | ES30.DRAW.PRIMITIVE_RESTART | 3.0 | drawing | PRIMITIVE_RESTART_FIXED_INDEX | ES 3.0 §2.9.3 | NOT_STARTED |  |
 | ES30.DRAW.MAX_ELEMENT_INDEX | 3.0 | drawing | MAX_ELEMENT_INDEX limit query | ES 3.0 §2.9.3 | NOT_STARTED |  |
-| ES30.BUFFER.MAP_RANGE | 3.0 | buffers | glMapBufferRange read/write + glUnmapBuffer + glGetBufferPointerv | ES 3.0 §2.10.3 | BUILD_PASSED | test-glsl300-builtins |
+| ES30.BUFFER.MAP_RANGE | 3.0 | buffers | glMapBufferRange read/write + glUnmapBuffer + glGetBufferPointerv | ES 3.0 §2.10.3 | FULLY_VALIDATED | test-glsl300-builtins |
 | ES30.BUFFER.MAP_FLAGS | 3.0 | buffers | INVALIDATE_RANGE/INVALIDATE_BUFFER/UNSYNCHRONIZED semantics + illegal combinations | ES 3.0 §2.10.3 | NOT_STARTED |  |
 | ES30.BUFFER.FLUSH_EXPLICIT | 3.0 | buffers | MAP_FLUSH_EXPLICIT_BIT + glFlushMappedBufferRange | ES 3.0 §2.10.3 | NOT_STARTED |  |
 | ES30.BUFFER.COPY | 3.0 | buffers | glCopyBufferSubData via COPY_READ/COPY_WRITE (+ overlap error) | ES 3.0 §2.10.5 | NOT_STARTED |  |
@@ -147,12 +147,12 @@
 | ES30.FBO.INTEGER_TARGET | 3.0 | framebuffer | Integer color attachments + glClearBufferiv/uiv + readback | ES 3.0 §4.4.4 | NOT_STARTED |  |
 | ES30.FBO.ATTACHMENT_QUERY | 3.0 | framebuffer | COMPONENT_TYPE / color sizes / TEXTURE_LAYER attachment queries | ES 3.0 §6.1.13 | NOT_STARTED |  |
 | ES30.INTERNALFORMAT.QUERY | 3.0 | framebuffer | glGetInternalformativ NUM_SAMPLE_COUNTS / SAMPLES | ES 3.0 §6.1.15 | NOT_STARTED |  |
-| ES30.TF.BASIC | 3.0 | transform-feedback | glTransformFeedbackVaryings + begin/end capture into a buffer | ES 3.0 §2.15 | BUILD_PASSED | test-glsl300-builtins |
+| ES30.TF.BASIC | 3.0 | transform-feedback | glTransformFeedbackVaryings + begin/end capture into a buffer | ES 3.0 §2.15 | FULLY_VALIDATED | test-glsl300-builtins |
 | ES30.TF.MODES | 3.0 | transform-feedback | INTERLEAVED_ATTRIBS vs SEPARATE_ATTRIBS | ES 3.0 §2.15.2 | NOT_STARTED |  |
 | ES30.TF.OBJECTS | 3.0 | transform-feedback | Transform feedback objects gen/bind/delete/isTransformFeedback | ES 3.0 §2.15.1 | NOT_STARTED |  |
 | ES30.TF.PAUSE_RESUME | 3.0 | transform-feedback | glPauseTransformFeedback / glResumeTransformFeedback | ES 3.0 §2.15.2 | NOT_STARTED |  |
 | ES30.TF.RENDER_CAPTURED | 3.0 | transform-feedback | Render a later pass from captured vertex data | ES 3.0 §2.15 | NOT_STARTED |  |
-| ES30.TF.RASTERIZER_DISCARD | 3.0 | transform-feedback | RASTERIZER_DISCARD with capture | ES 3.0 §3.1 | BUILD_PASSED | test-glsl300-builtins |
+| ES30.TF.RASTERIZER_DISCARD | 3.0 | transform-feedback | RASTERIZER_DISCARD with capture | ES 3.0 §3.1 | FULLY_VALIDATED | test-glsl300-builtins |
 | ES30.TF.QUERY | 3.0 | transform-feedback | glGetTransformFeedbackVarying + TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN query | ES 3.0 §2.16 §6.1.11 | NOT_STARTED |  |
 | ES30.TF.ERRORS | 3.0 | transform-feedback | Overflow/insufficient buffer and state-change errors while active | ES 3.0 §2.15.2 | NOT_STARTED |  |
 | ES30.QUERY.OCCLUSION | 3.0 | queries | ANY_SAMPLES_PASSED / ANY_SAMPLES_PASSED_CONSERVATIVE | ES 3.0 §4.1.6 | NOT_STARTED |  |

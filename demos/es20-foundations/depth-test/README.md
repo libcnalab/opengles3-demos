@@ -94,10 +94,11 @@ Run: `es20-depth-test --headless --validate --capture out.png`.
 ES 3.0 §3.9.2.3 (unchanged in ES 3.1 and 3.2) says the depth range is **not** applied to a depth
 written by a fragment shader. Stripe 3 of cell 13 tests this: with `glDepthRangef(0.5, 1)` and
 `EQUAL`, a shader depth of 0.25 must stay 0.25 and fail against the stored 0.5. Mesa's llvmpipe
-behaves like that. Mesa's radeonsi (25.0.7, reference machine) clamps the exported depth into the
-depth range, turning 0.25 into 0.5, so the test passes. `validate()` accepts either of those two
-outcomes (anything else fails), prints a `NOTE` for the second, and names the deviation in the check
-text. It is deliberately not listed as a verified feature in `demo.json`.
+and zink behave like that. Mesa's radeonsi (25.0.7, reference machine) clamps the exported depth into
+the depth range, turning 0.25 into 0.5, so the test passes. The check is strict. Only on a renderer
+whose name contains "radeonsi" is the failure recorded as an XFAIL known deviation, via
+`Check::expect_or_known_deviation`. Every other driver must conform, and if radeonsi is fixed the
+check reports XPASS. The deviation is listed in `docs/KNOWN_LIMITATIONS.md`.
 
 ## Pitfalls
 

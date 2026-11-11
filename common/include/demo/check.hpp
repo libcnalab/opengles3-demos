@@ -37,6 +37,15 @@ namespace demo
 
         bool expect_near(double actual, double expected, double tolerance, std::string_view what);
 
+        /// Strict check with a *documented* driver deviation: when `ok` is false and GL_RENDERER contains
+        /// `renderer_substring`, the result is recorded as XFAIL (passing, but labelled) with `reason`, which
+        /// must also be listed in docs/KNOWN_LIMITATIONS.md. Every other driver gets the strict check. If
+        /// the named driver starts conforming, the check passes and is labelled XPASS.
+        bool expect_or_known_deviation(bool ok, std::string_view what, std::string_view detail,
+                                       std::string_view renderer_substring, std::string_view reason);
+
+        [[nodiscard]] int known_deviations() const noexcept { return xfail_; }
+
         /// Drains the GL error queue; passes when it was empty.
         bool expect_no_gl_error(std::string_view what);
 
@@ -54,6 +63,7 @@ namespace demo
     private:
         int passed_ = 0;
         int failed_ = 0;
+        int xfail_ = 0;
         std::vector<CheckRecord> records_;
     };
 

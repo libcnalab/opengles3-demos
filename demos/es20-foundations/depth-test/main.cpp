@@ -658,31 +658,21 @@ namespace
 
         // ---- gl_FragDepth versus the depth range: a spec rule that not every driver follows -----------
 
-        /// ES 3.0 §3.9.2.3: "the depth range computation is not applied" to gl_FragDepth. Mesa's llvmpipe
-        /// follows this (the EQUAL test of stripe 3 fails: 0.25 != 0.5, the base stays). Mesa's radeonsi
-        /// (observed with 25.0.7) clamps the shader's depth into [n, f] = [0.5, 1] on export, turning 0.25
-        /// into 0.5, so EQUAL passes and the stripe shows. Both outcomes are accepted - anything else is a
-        /// failure - but the deviation is reported, because the specification is unambiguous here.
+        /// ES 3.0 §3.9.2.3 (ES 3.2 §14.2.3): the shader's depth is clamped to [0, 1] and "the depth range
+        /// computation is not applied". With DepthRangef(0.5, 1), a written 0.25 therefore stays 0.25 and the
+        /// EQUAL test against the stored 0.5 must fail (the base color stays). llvmpipe and zink conform;
+        /// radeonsi (Mesa 25.0.7) clamps the value into [n, f] = [0.5, 1], so EQUAL passes. That is recorded
+        /// as a renderer-specific XFAIL (docs/KNOWN_LIMITATIONS.md); every other driver gets the strict check.
         void check_frag_depth_vs_range(demo::Check& check) const
         {
             const demo::Rgba8 got = demo::read_pixel(range_probe_.x, range_probe_.y);
-            auto is = [&](const Color& c) {
-                const demo::Rgba8 want = to_rgba8(c);
-                for (std::size_t i = 0; i < 4; ++i)
-                    if (std::abs(int{got[i]} - int{want[i]}) > 1) return false;
-                return true;
-            };
-            if (is(kBase))
-                check.expect(true, "gl_FragDepth is not affected by DepthRangef(0.5, 1): 0.25 stays 0.25, EQUAL vs 0.5 fails (§3.9.2.3)");
-            else if (is(kNear))
-            {
-                check.expect(true, "gl_FragDepth with DepthRangef(0.5, 1): driver clamped 0.25 into [n, f] (EQUAL vs 0.5 passed)",
-                             "DEVIATION from ES 3.0 §3.9.2.3: the depth range must not be applied to gl_FragDepth");
-                std::cout << "     NOTE: this driver clamps gl_FragDepth into the depth range; ES 3.0 §3.9.2.3 says it must not.\n";
-            }
-            else
-                check.expect(false, "gl_FragDepth with a non-default depth range produced an unexpected color",
-                             std::format("pixel({},{}) = {}", range_probe_.x, range_probe_.y, demo::format_rgba(got)));
+            const demo::Rgba8 want = to_rgba8(kBase);
+            bool ok = true;
+            for (std::size_t i = 0; i < 4; ++i) ok = ok && std::abs(int{got[i]} - int{want[i]}) <= 1;
+            check.expect_or_known_deviation(
+                ok, "gl_FragDepth is not remapped by DepthRangef(0.5, 1): 0.25 stays 0.25, EQUAL vs 0.5 fails (§3.9.2.3)",
+                std::format("pixel({},{}) = {} expected {}", range_probe_.x, range_probe_.y, demo::format_rgba(got), demo::format_rgba(want)),
+                "radeonsi", "Mesa 25.0.7 radeonsi clamps gl_FragDepth into [near, far]");
         }
 
         // ---- state queries ---------------------------------------------------------------------

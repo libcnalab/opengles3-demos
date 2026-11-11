@@ -38,8 +38,10 @@ matters more than speed.
   (8-bit quantization ±1, filter weights, ...). Probe away from primitive edges and texel boundaries.
 - Include at least one **negative control** or mutation argument showing that a check can fail.
 - Use defined error cases (`check.expect_gl_error`) where the spec defines them.
-- Never loosen a check to make a driver pass. If a driver contradicts the normative text, report it
-  with the spec quote. The integrator decides between XFAIL and a demo bug.
+- Never loosen a check to make a driver pass, and never "accept either outcome". If a driver
+  contradicts the normative text, keep the strict check and use
+  `check.expect_or_known_deviation(ok, what, detail, "<GL_RENDERER substring>", "<reason>")`. Quote the
+  spec in your report, and the integrator adds the row to docs/KNOWN_LIMITATIONS.md.
 - If meta-gl cannot express something, do NOT work around it with raw casts. Report the gap (exact
   enum or function, spec evidence) and skip that check.
 

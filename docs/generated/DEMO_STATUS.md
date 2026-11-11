@@ -9,8 +9,10 @@
 | es20-indexed-drawing | 3.0 | es20-foundations | Indexed drawing | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es20-uniforms | 3.0 | es20-foundations | Uniform variables | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es20-culling-front-face | 3.0 | es20-foundations | Face culling and front-face winding | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| es20-depth-test | 3.0 | es20-foundations | Depth buffer test | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| es20-stencil-test | 3.0 | es20-foundations | Stencil buffer test | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es20-blending | 3.0 | es20-foundations | Blending | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es20-textures-2d | 3.0 | es20-foundations | 2D textures: filtering, wrapping, formats, units | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-hello-triangle | 3.0 | es30 | Hello Triangle | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | test-metagl-contracts | 3.0 | tests | meta-gl contracts | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
-| test-glsl300-builtins | 3.0 | tests | GLSL ES 3.00 built-in functions (numeric) | BUILD_PASSED |  |
+| test-glsl300-builtins | 3.0 | tests | GLSL ES 3.00 built-in functions (numeric) | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |

@@ -29,6 +29,18 @@ namespace demo
         return expect(ok, what, std::format("actual={} expected={} tol={}", actual, expected, tolerance));
     }
 
+    bool Check::expect_or_known_deviation(bool ok, std::string_view what, std::string_view detail,
+                                          std::string_view renderer_substring, std::string_view reason)
+    {
+        const GLubyte* r = metagl::glGetString(metagl::StringName::Renderer);
+        const std::string_view renderer = r != nullptr ? reinterpret_cast<const char*>(r) : "";
+        if (renderer.find(renderer_substring) == std::string_view::npos) return expect(ok, what, detail);
+        if (!ok) ++xfail_;
+        return expect(true, what,
+                      std::format("{} on '{}': {}{}{}", ok ? "XPASS (driver now conforms)" : "XFAIL known driver deviation",
+                                  renderer_substring, reason, detail.empty() ? "" : " | ", detail));
+    }
+
     bool Check::expect_no_gl_error(std::string_view what)
     {
         const metagl::ErrorCode e = drain_gl_errors();

@@ -7,7 +7,7 @@
 | GLSL100.ATTRIBUTE_VARYING | 100 | interface | attribute / varying / gl_FragColor / gl_FragData | GLSL ES 1.00 §4.3 | compile+render | NOT_STARTED |  |
 | GLSL100.TEXTURE2D | 100 | builtins | texture2D / textureCube / texture2DProj / texture2DLod (VS) | GLSL ES 1.00 §8.7 | render | NOT_STARTED |  |
 | GLSL100.MIX_VERSIONS | 100 | interface | Linking 100 with 300 es shaders is an error | GLSL ES 3.00 §1.5; ES 3.0 §2.12.3 | negative | NOT_STARTED |  |
-| GLSL300.VERSION | 300 | structure | #version 300 es as the first line; removed 1.00 keywords | GLSL ES 3.00 §3.4 §1.5 | compile+negative | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-indexed-drawing, es20-shader-compilation, es20-vertex-attributes, es30-hello-triangle |
+| GLSL300.VERSION | 300 | structure | #version 300 es as the first line; removed 1.00 keywords | GLSL ES 3.00 §3.4 §1.5 | compile+negative | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-depth-test, es20-indexed-drawing, es20-shader-compilation, es20-stencil-test, es20-vertex-attributes, es30-hello-triangle |
 | GLSL300.PREPROCESSOR | 300 | structure | #define/#undef/#if/#ifdef/#elif/#else/#endif/#error/#pragma/#extension/#line, __LINE__ __FILE__ __VERSION__ GL_ES | GLSL ES 3.00 §3.4 | compile+negative | NOT_STARTED |  |
 | GLSL300.COMMENTS_TOKENS | 300 | structure | Comments; identifiers; reserved words (__ prefix / gl_ prefix errors) | GLSL ES 3.00 §3.5-3.8 | negative | NOT_STARTED |  |
 | GLSL300.TYPES.SCALAR_VECTOR | 300 | types | bool/int/uint/float, vec/ivec/uvec/bvec 2-4 | GLSL ES 3.00 §4.1 | compute-check | NOT_STARTED |  |
@@ -19,11 +19,11 @@
 | GLSL300.SCOPE | 300 | structure | Scoping rules; redeclaration errors; shadowing | GLSL ES 3.00 §4.2 | compile+negative | NOT_STARTED |  |
 | GLSL300.QUAL.CONST | 300 | qualifiers | const and constant expressions (incl. built-in calls) | GLSL ES 3.00 §4.3.2-4.3.3 | compile+negative | NOT_STARTED |  |
 | GLSL300.IO.IN_OUT | 300 | interface | in/out storage qualifiers vertex->fragment | GLSL ES 3.00 §4.3.4 §4.3.6 | render | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-indexed-drawing, es20-vertex-attributes, es30-hello-triangle |
-| GLSL300.UNIFORM | 300 | interface | Default-block uniforms incl. arrays/structs | GLSL ES 3.00 §4.3.5 | render | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-shader-compilation, es20-uniforms, es20-vertex-attributes |
+| GLSL300.UNIFORM | 300 | interface | Default-block uniforms incl. arrays/structs | GLSL ES 3.00 §4.3.5 | render | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-depth-test, es20-shader-compilation, es20-stencil-test, es20-uniforms, es20-vertex-attributes |
 | GLSL300.INTERFACE_BLOCK | 300 | interface | Uniform blocks with instance names / arrays of blocks | GLSL ES 3.00 §4.3.7 | render | NOT_STARTED |  |
 | GLSL300.LAYOUT.LOCATION | 300 | interface | layout(location) on VS inputs and FS outputs | GLSL ES 3.00 §4.3.8.1-4.3.8.2 | render | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-indexed-drawing, es20-vertex-attributes, es30-hello-triangle |
 | GLSL300.LAYOUT.BLOCK | 300 | interface | shared/packed/std140, row_major/column_major | GLSL ES 3.00 §4.3.8.3 | state | NOT_STARTED |  |
-| GLSL300.FRAG.OUTPUT | 300 | interface | User-declared fragment outputs (no gl_FragColor) | GLSL ES 3.00 §4.3.6 | render | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-indexed-drawing, es20-vertex-attributes, es30-hello-triangle |
+| GLSL300.FRAG.OUTPUT | 300 | interface | User-declared fragment outputs (no gl_FragColor) | GLSL ES 3.00 §4.3.6 | render | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-depth-test, es20-indexed-drawing, es20-stencil-test, es20-vertex-attributes, es30-hello-triangle |
 | GLSL300.FRAG.MRT | 300 | interface | Multiple fragment outputs to draw buffers | GLSL ES 3.00 §4.3.8.2 | render | NOT_STARTED |  |
 | GLSL300.INTERP.SMOOTH_FLAT | 300 | interface | smooth / flat interpolation qualifiers | GLSL ES 3.00 §4.3.9 | render | NOT_STARTED |  |
 | GLSL300.INTERP.CENTROID | 300 | interface | centroid in/out | GLSL ES 3.00 §4.3.9 | render | NOT_STARTED |  |
@@ -32,7 +32,7 @@
 | GLSL300.PRECISION.DEFAULT | 300 | precision | Default precision statements; missing float precision in FS is an error | GLSL ES 3.00 §4.5.4 | negative | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-shader-compilation, es30-hello-triangle |
 | GLSL300.INVARIANT | 300 | precision | invariant qualifier + #pragma STDGL invariant(all) | GLSL ES 3.00 §4.6 | compile | NOT_STARTED |  |
 | GLSL300.OPERATORS | 300 | expressions | Arithmetic, relational, logical, ternary, comma, ++/-- | GLSL ES 3.00 §5.1 | compute-check | NOT_STARTED |  |
-| GLSL300.OPERATORS.BITWISE | 300 | expressions | Integer bitwise ~ & \| ^ << >> and % | GLSL ES 3.00 §5.1 | compute-check | BUILD_PASSED | test-glsl300-builtins |
+| GLSL300.OPERATORS.BITWISE | 300 | expressions | Integer bitwise ~ & \| ^ << >> and % | GLSL ES 3.00 §5.1 | compute-check | FULLY_VALIDATED | test-glsl300-builtins |
 | GLSL300.CONSTRUCTORS | 300 | expressions | Scalar/vector/matrix/struct/array constructors and conversions | GLSL ES 3.00 §5.4 | compute-check | NOT_STARTED |  |
 | GLSL300.SWIZZLE | 300 | expressions | Component selection xyzw/rgba/stpq; l-value swizzles | GLSL ES 3.00 §5.5 | compute-check | NOT_STARTED |  |
 | GLSL300.MATRIX_OPS | 300 | expressions | Matrix*vector, vector*matrix, matrix*matrix, component-wise ops | GLSL ES 3.00 §5.10-5.11 | compute-check | NOT_STARTED |  |
@@ -40,17 +40,17 @@
 | GLSL300.PARAM_QUALIFIERS | 300 | statements | in/out/inout parameters | GLSL ES 3.00 §6.1.1 | compute-check | NOT_STARTED |  |
 | GLSL300.CONTROL_FLOW | 300 | statements | if/else, switch, for, while, do-while, break/continue/return | GLSL ES 3.00 §6.2-6.4 | compute-check | FULLY_VALIDATED | es20-uniforms |
 | GLSL300.DISCARD | 300 | statements | discard in fragment shader | GLSL ES 3.00 §6.4 | render | FULLY_VALIDATED | es20-blending |
-| GLSL300.BUILTIN_VARS.VS | 300 | builtins | gl_VertexID, gl_InstanceID, gl_Position, gl_PointSize | GLSL ES 3.00 §7.1 | render | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-shader-compilation, es20-textures-2d |
-| GLSL300.BUILTIN_VARS.FS | 300 | builtins | gl_FragCoord, gl_FrontFacing, gl_PointCoord, gl_FragDepth | GLSL ES 3.00 §7.2 | render | FULLY_VALIDATED | es20-culling-front-face |
+| GLSL300.BUILTIN_VARS.VS | 300 | builtins | gl_VertexID, gl_InstanceID, gl_Position, gl_PointSize | GLSL ES 3.00 §7.1 | render | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-depth-test, es20-shader-compilation, es20-stencil-test, es20-textures-2d |
+| GLSL300.BUILTIN_VARS.FS | 300 | builtins | gl_FragCoord, gl_FrontFacing, gl_PointCoord, gl_FragDepth | GLSL ES 3.00 §7.2 | render | FULLY_VALIDATED | es20-culling-front-face, es20-depth-test, es20-stencil-test |
 | GLSL300.BUILTIN_CONSTANTS | 300 | builtins | gl_Max* built-in constants match API limits | GLSL ES 3.00 §7.3 | compute-check | NOT_STARTED |  |
 | GLSL300.BUILTIN_UNIFORMS | 300 | builtins | gl_DepthRange | GLSL ES 3.00 §7.4 | render | NOT_STARTED |  |
-| GLSL300.FN.TRIG | 300 | builtins | radians degrees sin cos tan asin acos atan(1,2 args) sinh cosh tanh asinh acosh atanh | GLSL ES 3.00 §8.1 | compute-check | BUILD_PASSED | test-glsl300-builtins |
-| GLSL300.FN.EXP | 300 | builtins | pow exp log exp2 log2 sqrt inversesqrt | GLSL ES 3.00 §8.2 | compute-check | BUILD_PASSED | test-glsl300-builtins |
-| GLSL300.FN.COMMON | 300 | builtins | abs sign floor trunc round roundEven ceil fract mod modf min max clamp mix(incl. bvec) step smoothstep isnan isinf floatBitsToInt/Uint intBitsToFloat uintBitsToFloat | GLSL ES 3.00 §8.3 | compute-check | BUILD_PASSED | test-glsl300-builtins |
-| GLSL300.FN.PACKING | 300 | builtins | packSnorm2x16 unpackSnorm2x16 packUnorm2x16 unpackUnorm2x16 packHalf2x16 unpackHalf2x16 | GLSL ES 3.00 §8.4 | compute-check | BUILD_PASSED | test-glsl300-builtins |
-| GLSL300.FN.GEOMETRIC | 300 | builtins | length distance dot cross normalize faceforward reflect refract | GLSL ES 3.00 §8.5 | compute-check | BUILD_PASSED | test-glsl300-builtins |
-| GLSL300.FN.MATRIX | 300 | builtins | matrixCompMult outerProduct transpose determinant inverse | GLSL ES 3.00 §8.6 | compute-check | BUILD_PASSED | test-glsl300-builtins |
-| GLSL300.FN.VECREL | 300 | builtins | lessThan lessThanEqual greaterThan greaterThanEqual equal notEqual any all not | GLSL ES 3.00 §8.7 | compute-check | BUILD_PASSED | test-glsl300-builtins |
+| GLSL300.FN.TRIG | 300 | builtins | radians degrees sin cos tan asin acos atan(1,2 args) sinh cosh tanh asinh acosh atanh | GLSL ES 3.00 §8.1 | compute-check | FULLY_VALIDATED | test-glsl300-builtins |
+| GLSL300.FN.EXP | 300 | builtins | pow exp log exp2 log2 sqrt inversesqrt | GLSL ES 3.00 §8.2 | compute-check | FULLY_VALIDATED | test-glsl300-builtins |
+| GLSL300.FN.COMMON | 300 | builtins | abs sign floor trunc round roundEven ceil fract mod modf min max clamp mix(incl. bvec) step smoothstep isnan isinf floatBitsToInt/Uint intBitsToFloat uintBitsToFloat | GLSL ES 3.00 §8.3 | compute-check | FULLY_VALIDATED | test-glsl300-builtins |
+| GLSL300.FN.PACKING | 300 | builtins | packSnorm2x16 unpackSnorm2x16 packUnorm2x16 unpackUnorm2x16 packHalf2x16 unpackHalf2x16 | GLSL ES 3.00 §8.4 | compute-check | FULLY_VALIDATED | test-glsl300-builtins |
+| GLSL300.FN.GEOMETRIC | 300 | builtins | length distance dot cross normalize faceforward reflect refract | GLSL ES 3.00 §8.5 | compute-check | FULLY_VALIDATED | test-glsl300-builtins |
+| GLSL300.FN.MATRIX | 300 | builtins | matrixCompMult outerProduct transpose determinant inverse | GLSL ES 3.00 §8.6 | compute-check | FULLY_VALIDATED | test-glsl300-builtins |
+| GLSL300.FN.VECREL | 300 | builtins | lessThan lessThanEqual greaterThan greaterThanEqual equal notEqual any all not | GLSL ES 3.00 §8.7 | compute-check | FULLY_VALIDATED | test-glsl300-builtins |
 | GLSL300.FN.TEXTURE.BASIC | 300 | builtins | texture textureProj textureSize | GLSL ES 3.00 §8.8 | render | FULLY_VALIDATED | es20-textures-2d |
 | GLSL300.FN.TEXTURE.LOD | 300 | builtins | textureLod textureProjLod textureGrad textureProjGrad | GLSL ES 3.00 §8.8 | render | NOT_STARTED |  |
 | GLSL300.FN.TEXTURE.OFFSET | 300 | builtins | textureOffset texelFetchOffset textureLodOffset textureGradOffset etc. + offset limits | GLSL ES 3.00 §8.8 | render | NOT_STARTED |  |

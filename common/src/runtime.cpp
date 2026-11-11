@@ -388,6 +388,16 @@ namespace demo
             env.width = vp[2];
             env.height = vp[3];
         }
+        if (!windowed && (env.width != options.width || env.height != options.height))
+        {
+            // The initial viewport is the size of the default framebuffer (ES 3.0 §2.12.1). Mesa's software
+            // drivers (llvmpipe, zink on lavapipe) create a 0x0 drawable for multisampled surfaceless
+            // pbuffers, so the demo cannot render; report the environment instead of failing the demo.
+            rep.outcome = Outcome::BlockedEnvironment;
+            rep.reason = std::format("default framebuffer is {}x{}, requested {}x{} pbuffer (samples={})", env.width,
+                                     env.height, options.width, options.height, info.samples);
+            return finish(options, info, rep, runtime_checks, demo_checks);
+        }
 
         std::unique_ptr<Demo> demo = factory();
         bool initialized = false;

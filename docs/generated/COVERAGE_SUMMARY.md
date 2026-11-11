@@ -5,19 +5,19 @@ Result directories: build/debug/test-results
 
 ## Core API entry points (by introducing ES version)
 
-| ES | total | passed | passed % | NOT_STARTED | FULLY_VALIDATED |
-|---|---|---|---|---|---|
-| 2.0 | 142 | 141 | 99% | 1 | 141 |
-| 3.0 | 104 | 104 | 100% | 0 | 104 |
-| 3.1 | 68 | 68 | 100% | 0 | 68 |
-| 3.2 | 44 | 44 | 100% | 0 | 44 |
+| ES | total | passed | passed % | FULLY_VALIDATED |
+|---|---|---|---|---|
+| 2.0 | 142 | 142 | 100% | 142 |
+| 3.0 | 104 | 104 | 100% | 104 |
+| 3.1 | 68 | 68 | 100% | 68 |
+| 3.2 | 44 | 44 | 100% | 44 |
 
 ## Semantic features (by introducing ES version)
 
 | ES | total | passed | passed % | NOT_STARTED | FULLY_VALIDATED |
 |---|---|---|---|---|---|
-| 2.0 | 87 | 85 | 98% | 2 | 85 |
-| 3.0 | 78 | 74 | 95% | 4 | 74 |
+| 2.0 | 87 | 86 | 99% | 1 | 86 |
+| 3.0 | 78 | 77 | 99% | 1 | 77 |
 | 3.1 | 30 | 30 | 100% | 0 | 30 |
 | 3.2 | 31 | 31 | 100% | 0 | 31 |
 
@@ -26,7 +26,7 @@ Result directories: build/debug/test-results
 | GLSL | total | passed | passed % | NOT_STARTED | FULLY_VALIDATED |
 |---|---|---|---|---|---|
 | 100 | 4 | 0 | 0% | 4 | 0 |
-| 300 | 51 | 39 | 76% | 12 | 39 |
+| 300 | 51 | 40 | 78% | 11 | 40 |
 | 310 | 23 | 17 | 74% | 6 | 17 |
 | 320 | 16 | 13 | 81% | 3 | 13 |
 
@@ -34,4 +34,4 @@ Result directories: build/debug/test-results
 
 | status | count |
 |---|---|
-| FULLY_VALIDATED | 71 |
+| FULLY_VALIDATED | 72 |

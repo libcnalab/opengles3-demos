@@ -71,6 +71,7 @@
 | `es30-program-binary` | ES 3.0 §2.12.4: `length` must equal the binary's length, otherwise loading fails with LINK_STATUS FALSE | a binary passed with 16 extra trailing bytes loads with LINK_STATUS TRUE (Mesa `check_crc32` only rejects a header size larger than `length`). All Mesa drivers |
 | `es30-program-binary` | ES 3.0 §2.5: an erroring command has no effect on GL state | `glProgramBinary` raising INVALID_ENUM (unlisted format) or INVALID_VALUE (`length` -1) still unlinks the program (`_mesa_clear_shader_program_data` runs before validation). All Mesa drivers |
 | `es30-program-binary` | ES 3.0 §2.5: an erroring command does not modify values through pointer arguments | an erroring `glGetProgramBinary` (not linked, or `bufSize` too small) writes `*length = 0`. All Mesa drivers |
+| environment (runtime check) | EGL 1.5 §3.5.2: a pbuffer has the requested `EGL_WIDTH`×`EGL_HEIGHT`; ES 3.0 §2.12.1: the initial viewport is the surface size | llvmpipe and zink (lavapipe): a surfaceless pbuffer from a 4-sample config (`EGL_SAMPLES` 4, `SAMPLE_BUFFERS` 1) yields a 0x0 default framebuffer; `glReadPixels` raises INVALID_OPERATION. radeonsi works. The runtime reports BLOCKED_ENVIRONMENT. So `ES30.MULTISAMPLE.DEFAULT` is exercised only on radeonsi, and es30-flat-centroid uses multisample renderbuffers instead |
 
 Not deviations (verified during integration): Mesa accepting `glGenerateMipmap` on R32F and unsized
 `RGB + FLOAT` uploads is correct, because the contexts expose `GL_OES_texture_float_linear`,

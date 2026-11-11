@@ -61,12 +61,12 @@ float-targets-and-indexed-blend, texture-buffer, cube-map-array, geometry-shader
 tessellation-domains and tessellation-terrain.
 meta-gl G8 (transpose = GL_TRUE) is fixed on its branch (`3bb7411`).
 Running Claude subagents (worktrees under .claude/worktrees/):
-- es30 flat-centroid (17)
 - es30 occlusion-queries (14)
 - es30 glsl-texture-functions (19)
 Still unassigned: 62 (glsl320 built-ins), 35 (glsl310 built-ins),
 ES 3.0 items 10, 14, 16-20, 3D fog and skybox.
-Entry points still without evidence (2026-11-11 17:00): SampleCoverage (17).
+All 358 core entry points have passing evidence (2026-11-11 17:50).
+Open: ES30.MULTISAMPLE.DEFAULT needs a demo with `Info::samples = 4` (BLOCKED_ENVIRONMENT on llvmpipe/zink, see KNOWN_LIMITATIONS).
 
 ## Parallel work / Codex
 

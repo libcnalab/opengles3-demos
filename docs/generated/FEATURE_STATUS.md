@@ -7,8 +7,8 @@
 | ES20.CONTEXT.STRINGS | 2.0 | context | GL_VENDOR/RENDERER/VERSION/SHADING_LANGUAGE_VERSION strings and version parsing | ES 3.0 §6.1.6 | FULLY_VALIDATED | diagnostics-capabilities |
 | ES20.ERRORS.GETERROR | 2.0 | errors | glGetError semantics: sticky flags; command ignored on error | ES 3.0 §2.5 | NOT_STARTED |  |
 | ES20.ERRORS.INVALID_ENUM | 2.0 | errors | GL_INVALID_ENUM generation (only reachable via raw casts through typed wrappers) | ES 3.0 §2.5 Table 2.3 | FULLY_VALIDATED | es30-instancing, es30-vertex-array-objects |
-| ES20.ERRORS.INVALID_VALUE | 2.0 | errors | GL_INVALID_VALUE generation (negative sizes/out-of-range indices) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-copy-and-read-pixels, es20-culling-front-face, es30-instancing, es30-vertex-array-objects |
-| ES20.ERRORS.INVALID_OPERATION | 2.0 | errors | GL_INVALID_OPERATION generation (state-dependent misuse) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-copy-and-read-pixels, es30-vertex-array-objects |
+| ES20.ERRORS.INVALID_VALUE | 2.0 | errors | GL_INVALID_VALUE generation (negative sizes/out-of-range indices) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-copy-and-read-pixels, es20-culling-front-face, es30-buffer-mapping, es30-instancing, es30-uniform-buffer-objects, es30-vertex-array-objects |
+| ES20.ERRORS.INVALID_OPERATION | 2.0 | errors | GL_INVALID_OPERATION generation (state-dependent misuse) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-copy-and-read-pixels, es30-buffer-mapping, es30-vertex-array-objects |
 | ES20.ERRORS.INVALID_FB_OP | 2.0 | errors | GL_INVALID_FRAMEBUFFER_OPERATION on incomplete framebuffer | ES 3.0 §4.4.4 | FULLY_VALIDATED | es20-framebuffer-objects |
 | ES20.VIEWPORT | 2.0 | transform | glViewport mapping NDC->window; MAX_VIEWPORT_DIMS | ES 3.0 §2.13.1 | FULLY_VALIDATED | es20-clear-viewport-scissor |
 | ES20.DEPTH_RANGE | 2.0 | transform | glDepthRangef mapping of NDC z to window z | ES 3.0 §2.13.1 | FULLY_VALIDATED | es20-clear-viewport-scissor, es20-depth-test |
@@ -36,12 +36,12 @@
 | ES20.ATTRIB.INTERLEAVED | 2.0 | vertex-input | Interleaved vs planar layouts; stride and offset | ES 3.0 §2.9 | FULLY_VALIDATED | es20-vertex-attributes, es30-vertex-array-objects |
 | ES20.ATTRIB.QUERY | 2.0 | vertex-input | glGetVertexAttrib*/glGetVertexAttribPointerv state queries | ES 3.0 §6.1.12 | FULLY_VALIDATED | es20-vertex-attributes, es30-vertex-array-objects |
 | ES20.ATTRIB.CLIENT_ARRAYS | 2.0 | vertex-input | Client-memory vertex arrays on the default VAO (legal only with VAO 0) | ES 3.0 §2.9 §2.11 | FULLY_VALIDATED | es20-vertex-attributes |
-| ES20.BUFFER.VBO | 2.0 | buffers | Vertex buffer objects (ARRAY_BUFFER) glGenBuffers/glBindBuffer/glBufferData | ES 3.0 §2.10 | FULLY_VALIDATED | es20-culling-front-face, es20-indexed-drawing, es20-primitive-topology, es20-vertex-attributes, es30-hello-triangle |
+| ES20.BUFFER.VBO | 2.0 | buffers | Vertex buffer objects (ARRAY_BUFFER) glGenBuffers/glBindBuffer/glBufferData | ES 3.0 §2.10 | FULLY_VALIDATED | es20-culling-front-face, es20-indexed-drawing, es20-primitive-topology, es20-vertex-attributes, es30-buffer-mapping, es30-hello-triangle |
 | ES20.BUFFER.IBO | 2.0 | buffers | Index buffers (ELEMENT_ARRAY_BUFFER) with UBYTE/USHORT/UINT indices | ES 3.0 §2.10.7 | FULLY_VALIDATED | es20-indexed-drawing, es30-instancing |
-| ES20.BUFFER.SUBDATA | 2.0 | buffers | glBufferSubData partial updates | ES 3.0 §2.10.2 | FULLY_VALIDATED | es20-indexed-drawing |
+| ES20.BUFFER.SUBDATA | 2.0 | buffers | glBufferSubData partial updates | ES 3.0 §2.10.2 | FULLY_VALIDATED | es20-indexed-drawing, es30-buffer-mapping, es30-uniform-buffer-objects |
 | ES20.BUFFER.REALLOC | 2.0 | buffers | glBufferData re-specification (orphaning) and size/usage queries | ES 3.0 §2.10.2 §6.1.9 | FULLY_VALIDATED | es20-indexed-drawing |
-| ES20.BUFFER.QUERY | 2.0 | buffers | glGetBufferParameteriv / glIsBuffer | ES 3.0 §6.1.9 | FULLY_VALIDATED | es20-indexed-drawing |
-| ES20.DRAW.ARRAYS | 2.0 | drawing | glDrawArrays | ES 3.0 §2.9.3 | FULLY_VALIDATED | es20-blending, es20-copy-and-read-pixels, es20-culling-front-face, es20-framebuffer-objects, es20-indexed-drawing, es20-primitive-topology, es30-hello-triangle, es30-instancing, es30-vertex-array-objects |
+| ES20.BUFFER.QUERY | 2.0 | buffers | glGetBufferParameteriv / glIsBuffer | ES 3.0 §6.1.9 | FULLY_VALIDATED | es20-indexed-drawing, es30-buffer-mapping |
+| ES20.DRAW.ARRAYS | 2.0 | drawing | glDrawArrays | ES 3.0 §2.9.3 | FULLY_VALIDATED | es20-blending, es20-copy-and-read-pixels, es20-culling-front-face, es20-framebuffer-objects, es20-indexed-drawing, es20-primitive-topology, es30-buffer-mapping, es30-hello-triangle, es30-instancing, es30-vertex-array-objects |
 | ES20.DRAW.ELEMENTS | 2.0 | drawing | glDrawElements with index buffer | ES 3.0 §2.9.3 | FULLY_VALIDATED | es20-indexed-drawing, es30-instancing, es30-vertex-array-objects |
 | ES20.DRAW.TOPOLOGY | 2.0 | drawing | Primitive types POINTS/LINES/LINE_LOOP/LINE_STRIP/TRIANGLES/STRIP/FAN | ES 3.0 §2.7.1 | FULLY_VALIDATED | es20-primitive-topology |
 | ES20.DRAW.POINT_SIZE | 2.0 | drawing | gl_PointSize + ALIASED_POINT_SIZE_RANGE + gl_PointCoord | ES 3.0 §3.4 | FULLY_VALIDATED | es20-primitive-topology |
@@ -98,21 +98,21 @@
 | ES30.DRAW.RANGE_ELEMENTS | 3.0 | drawing | glDrawRangeElements + MAX_ELEMENTS_VERTICES/INDICES | ES 3.0 §2.9.3 | FULLY_VALIDATED | es30-instancing |
 | ES30.DRAW.PRIMITIVE_RESTART | 3.0 | drawing | PRIMITIVE_RESTART_FIXED_INDEX | ES 3.0 §2.9.3 | FULLY_VALIDATED | es30-instancing |
 | ES30.DRAW.MAX_ELEMENT_INDEX | 3.0 | drawing | MAX_ELEMENT_INDEX limit query | ES 3.0 §2.9.3 | FULLY_VALIDATED | es30-instancing |
-| ES30.BUFFER.MAP_RANGE | 3.0 | buffers | glMapBufferRange read/write + glUnmapBuffer + glGetBufferPointerv | ES 3.0 §2.10.3 | FULLY_VALIDATED | test-glsl300-builtins |
-| ES30.BUFFER.MAP_FLAGS | 3.0 | buffers | INVALIDATE_RANGE/INVALIDATE_BUFFER/UNSYNCHRONIZED semantics + illegal combinations | ES 3.0 §2.10.3 | NOT_STARTED |  |
-| ES30.BUFFER.FLUSH_EXPLICIT | 3.0 | buffers | MAP_FLUSH_EXPLICIT_BIT + glFlushMappedBufferRange | ES 3.0 §2.10.3 | NOT_STARTED |  |
-| ES30.BUFFER.COPY | 3.0 | buffers | glCopyBufferSubData via COPY_READ/COPY_WRITE (+ overlap error) | ES 3.0 §2.10.5 | NOT_STARTED |  |
-| ES30.BUFFER.PARAM64 | 3.0 | buffers | glGetBufferParameteri64v (BUFFER_SIZE / MAP_LENGTH / MAP_OFFSET) | ES 3.0 §6.1.9 | NOT_STARTED |  |
+| ES30.BUFFER.MAP_RANGE | 3.0 | buffers | glMapBufferRange read/write + glUnmapBuffer + glGetBufferPointerv | ES 3.0 §2.10.3 | FULLY_VALIDATED | es30-buffer-mapping, test-glsl300-builtins |
+| ES30.BUFFER.MAP_FLAGS | 3.0 | buffers | INVALIDATE_RANGE/INVALIDATE_BUFFER/UNSYNCHRONIZED semantics + illegal combinations | ES 3.0 §2.10.3 | FULLY_VALIDATED | es30-buffer-mapping |
+| ES30.BUFFER.FLUSH_EXPLICIT | 3.0 | buffers | MAP_FLUSH_EXPLICIT_BIT + glFlushMappedBufferRange | ES 3.0 §2.10.3 | FULLY_VALIDATED | es30-buffer-mapping |
+| ES30.BUFFER.COPY | 3.0 | buffers | glCopyBufferSubData via COPY_READ/COPY_WRITE (+ overlap error) | ES 3.0 §2.10.5 | FULLY_VALIDATED | es30-buffer-mapping |
+| ES30.BUFFER.PARAM64 | 3.0 | buffers | glGetBufferParameteri64v (BUFFER_SIZE / MAP_LENGTH / MAP_OFFSET) | ES 3.0 §6.1.9 | FULLY_VALIDATED | es30-buffer-mapping |
 | ES30.BUFFER.PBO_PACK | 3.0 | buffers | PIXEL_PACK_BUFFER: asynchronous glReadPixels into a buffer | ES 3.0 §3.7.1 §4.3.2 | FULLY_VALIDATED | es30-pixel-buffer-objects |
 | ES30.BUFFER.PBO_UNPACK | 3.0 | buffers | PIXEL_UNPACK_BUFFER: texture upload from a buffer | ES 3.0 §3.7.1 | FULLY_VALIDATED | es30-pixel-buffer-objects |
-| ES30.BUFFER.INVALID_RANGES | 3.0 | buffers | Out-of-range offsets/lengths produce INVALID_VALUE | ES 3.0 §2.10 | NOT_STARTED |  |
-| ES30.UBO.BASIC | 3.0 | uniforms | Uniform blocks + glUniformBlockBinding + glBindBufferBase | ES 3.0 §2.12.6.2 | NOT_STARTED |  |
-| ES30.UBO.RANGE | 3.0 | uniforms | glBindBufferRange with UNIFORM_BUFFER_OFFSET_ALIGNMENT | ES 3.0 §2.12.6.2 | NOT_STARTED |  |
-| ES30.UBO.STD140 | 3.0 | uniforms | std140 layout rules incl. arrays/matrices/structs (offsets verified) | ES 3.0 §2.12.6.2; GLSL 3.00 §4.3.8.3 | NOT_STARTED |  |
-| ES30.UBO.ROW_MAJOR | 3.0 | uniforms | row_major vs column_major in blocks (IS_ROW_MAJOR / MATRIX_STRIDE) | GLSL 3.00 §4.3.8.3 | NOT_STARTED |  |
-| ES30.UBO.INTROSPECTION | 3.0 | uniforms | glGetUniformBlockIndex/glGetActiveUniformBlockiv/Name/glGetUniformIndices/glGetActiveUniformsiv | ES 3.0 §2.12.6 | NOT_STARTED |  |
-| ES30.UBO.SHARED | 3.0 | uniforms | One UBO shared by several programs; update between draws | ES 3.0 §2.12.6.2 | NOT_STARTED |  |
-| ES30.UBO.LIMITS | 3.0 | uniforms | MAX_UNIFORM_BLOCK_SIZE / MAX_*_UNIFORM_BLOCKS / MAX_UNIFORM_BUFFER_BINDINGS | ES 3.0 §6.2 | FULLY_VALIDATED | diagnostics-capabilities |
+| ES30.BUFFER.INVALID_RANGES | 3.0 | buffers | Out-of-range offsets/lengths produce INVALID_VALUE | ES 3.0 §2.10 | FULLY_VALIDATED | es30-buffer-mapping |
+| ES30.UBO.BASIC | 3.0 | uniforms | Uniform blocks + glUniformBlockBinding + glBindBufferBase | ES 3.0 §2.12.6.2 | FULLY_VALIDATED | es30-uniform-buffer-objects |
+| ES30.UBO.RANGE | 3.0 | uniforms | glBindBufferRange with UNIFORM_BUFFER_OFFSET_ALIGNMENT | ES 3.0 §2.12.6.2 | FULLY_VALIDATED | es30-uniform-buffer-objects |
+| ES30.UBO.STD140 | 3.0 | uniforms | std140 layout rules incl. arrays/matrices/structs (offsets verified) | ES 3.0 §2.12.6.2; GLSL 3.00 §4.3.8.3 | FULLY_VALIDATED | es30-uniform-buffer-objects |
+| ES30.UBO.ROW_MAJOR | 3.0 | uniforms | row_major vs column_major in blocks (IS_ROW_MAJOR / MATRIX_STRIDE) | GLSL 3.00 §4.3.8.3 | FULLY_VALIDATED | es30-uniform-buffer-objects |
+| ES30.UBO.INTROSPECTION | 3.0 | uniforms | glGetUniformBlockIndex/glGetActiveUniformBlockiv/Name/glGetUniformIndices/glGetActiveUniformsiv | ES 3.0 §2.12.6 | FULLY_VALIDATED | es30-uniform-buffer-objects |
+| ES30.UBO.SHARED | 3.0 | uniforms | One UBO shared by several programs; update between draws | ES 3.0 §2.12.6.2 | FULLY_VALIDATED | es30-uniform-buffer-objects |
+| ES30.UBO.LIMITS | 3.0 | uniforms | MAX_UNIFORM_BLOCK_SIZE / MAX_*_UNIFORM_BLOCKS / MAX_UNIFORM_BUFFER_BINDINGS | ES 3.0 §6.2 | FULLY_VALIDATED | diagnostics-capabilities, es30-uniform-buffer-objects |
 | ES30.UNIFORM.UINT | 3.0 | uniforms | glUniform{1234}ui[v] / glGetUniformuiv | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-uniforms |
 | ES30.UNIFORM.NONSQUARE | 3.0 | uniforms | glUniformMatrix{2x3 3x2 2x4 4x2 3x4 4x3}fv | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-uniforms |
 | ES30.TEXTURE.3D | 3.0 | textures | 3D textures glTexImage3D/glTexSubImage3D/glCopyTexSubImage3D | ES 3.0 §3.8.3 | NOT_STARTED |  |

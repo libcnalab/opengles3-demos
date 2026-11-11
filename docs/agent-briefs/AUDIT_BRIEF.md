@@ -24,6 +24,21 @@ Spec text (greppable): `/tmp/claude-1000/-rv-data-development-github-com-libcnal
 7. **Size independence.** The layout fills any window and validation never FAILs a valid render at other sizes.
    Spot-check one or two sizes, e.g. `--width 333 --height 777`.
 
+8. **Guaranteed vs implementation-dependent.** Classify every assertion as normatively guaranteed,
+   implementation-defined, implementation-dependent, undefined, or merely empirical (holds on Mesa). Only the
+   first may be a hard check. Flag every hard check of the others. Examples: multisample resolve as an average
+   (see VALIDATION.md "Suite-wide assumptions"), filter weights, rasterization of edge pixels, derivative
+   precision. A conformant non-Mesa implementation must not FAIL.
+9. **Known-deviation scope.** For each `expect_or_known_deviation`, is the matched substring as narrow as the
+   evidence? "Mesa" is justified only if the deviation reproduces on radeonsi, llvmpipe AND zink. Report
+   over-broad matches.
+10. **Version claims.** `es-min` runs use `MESA_GLES_VERSION_OVERRIDE` and prove only API-version detection, not
+    ES 3.0/3.1 conformance (Mesa stays an ES 3.2 driver). Flag any README or demo.json wording that claims more.
+11. **Manifest vs code.** Every function in `demo.json` `api` is actually called on a validated path, and its
+    effect, return value or state change is checked. A call alone is not coverage.
+12. **Unsafe negatives.** Calls known to crash a driver must run only in an isolated child process with a
+    timeout. Undefined GPU operations must not run at all.
+
 ## How
 Build once (`cmake --preset debug -DOGLES3_METAGL_SOURCE_DIR=/rv/data/development/github.com/libcna/meta-gl &&
 cmake --build --preset debug -j 2`; ALWAYS `-j 2`: CPU limit). Run individual demos with

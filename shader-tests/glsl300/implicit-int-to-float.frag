@@ -1,6 +1,6 @@
 #version 300 es
 // @expect: compile-fail
-// @spec: GLSL ES 3.00 §4.1.10 Implicit Conversions - there are no implicit conversions
+// @spec: GLSL ES 3.00 §4 (chapter introduction) "There are no implicit conversions between types"; §5.8 the two sides of = "must have the same type"
 // @feature: GLSL300.TYPES.IMPLICIT_CONVERSION
 precision mediump float;
 out vec4 o;

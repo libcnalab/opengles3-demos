@@ -1,0 +1,21 @@
+#version 310 es
+// @expect: link-pass
+// @spec: GLSL ES 3.10 §7.2 Built-In Constants - the compute, image and atomic counter constants are constant expressions with at least the listed minimum values
+// @feature: GLSL310.BUILTIN_CONSTANTS
+layout(local_size_x = 1) in;
+layout(std430, binding = 0) buffer Out { int v[]; } result;
+void main()
+{
+    int ok[(gl_MaxImageUnits >= 4 && gl_MaxVertexImageUniforms >= 0 && gl_MaxFragmentImageUniforms >= 0
+            && gl_MaxComputeImageUniforms >= 4 && gl_MaxCombinedImageUniforms >= 4
+            && gl_MaxCombinedShaderOutputResources >= 4
+            && all(greaterThanEqual(gl_MaxComputeWorkGroupCount, ivec3(65535)))
+            && all(greaterThanEqual(gl_MaxComputeWorkGroupSize, ivec3(128, 128, 64)))
+            && gl_MaxComputeUniformComponents >= 512 && gl_MaxComputeTextureImageUnits >= 16
+            && gl_MaxComputeAtomicCounters >= 8 && gl_MaxComputeAtomicCounterBuffers >= 1
+            && gl_MaxVertexAtomicCounters >= 0 && gl_MaxFragmentAtomicCounters >= 0
+            && gl_MaxCombinedAtomicCounters >= 8 && gl_MaxAtomicCounterBindings >= 1
+            && gl_MaxFragmentAtomicCounterBuffers >= 0 && gl_MaxVertexAtomicCounterBuffers >= 0
+            && gl_MaxCombinedAtomicCounterBuffers >= 1 && gl_MaxAtomicCounterBufferSize >= 32) ? 1 : -1];
+    result.v[0] = ok.length();
+}

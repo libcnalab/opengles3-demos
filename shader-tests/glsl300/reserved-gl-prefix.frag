@@ -1,6 +1,6 @@
 #version 300 es
 // @expect: compile-fail
-// @spec: GLSL ES 3.00 §3.8 Identifiers - identifiers starting with "gl_" are reserved
+// @spec: GLSL ES 3.00 §3.9 Identifiers "Identifiers starting with "gl_" are reserved for use by OpenGL ES, and may not be declared in a shader as either a variable or a function"
 // @feature: GLSL300.COMMENTS_TOKENS
 precision mediump float;
 out vec4 o;

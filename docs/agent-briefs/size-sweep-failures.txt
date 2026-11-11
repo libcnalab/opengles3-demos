@@ -1,0 +1,115 @@
+== es20-blending_200x1000 RESULT: FAIL
+   [FAIL] composite left cluster, drawn red-green-blue: green (1 layers): (106,202,118,255) - 1x1 px region: expected (106,202,118,255) but found (180,105,71,255) (max deviation 97, tolerance 2)
+== es20-clear-viewport-scissor_1000x200 RESULT: FAIL
+== es20-clear-viewport-scissor_200x1000 RESULT: FAIL
+== es20-copy-and-read-pixels_333x777 RESULT: FAIL
+== es20-cube-map_1000x200 RESULT: FAIL
+   [FAIL] no GL error after the last frame - glGetError() = GL_INVALID_VALUE
+   [FAIL] skybox: at least three different faces are visible (the test is not confined to one face) - 0 faces with more than 100 probes
+   [FAIL] face tile 0: directions on the plane of the +X face return that face's 2x2 image upright and unmirrored - tile pixel (0,0): got (0,0,0,0) expected texel (0,0) = (220,50,50,255)
+== es20-indexed-drawing_1000x200 RESULT: FAIL
+   [FAIL] UNSIGNED_BYTE indices - 18 triangles show the interpolated colors, 0 absent ones show the clear color - tile corner = (38,38,0,255); 
+   [FAIL] UNSIGNED_SHORT indices - 18 triangles show the interpolated colors, 0 absent ones show the clear color - tile corner = (38,38,0,255); 
+   [FAIL] UNSIGNED_INT indices 70000..70015 (a 16-bit truncation would show the magenta decoy) - 18 triangles show the interpolated colors, 0 absent ones show the clear color - tile corner = (38,38,0,255); 
+== es20-indexed-drawing_200x1000 RESULT: FAIL
+   [FAIL] UNSIGNED_BYTE indices - 18 triangles show the interpolated colors, 0 absent ones show the clear color - tile corner = (38,38,0,255); 
+   [FAIL] UNSIGNED_SHORT indices - 18 triangles show the interpolated colors, 0 absent ones show the clear color - tile corner = (38,38,0,255); 
+   [FAIL] UNSIGNED_INT indices 70000..70015 (a 16-bit truncation would show the magenta decoy) - 18 triangles show the interpolated colors, 0 absent ones show the clear color - tile corner = (38,38,0,255); 
+== es20-primitive-topology_1000x200 RESULT: FAIL
+== es20-primitive-topology_200x1000 RESULT: FAIL
+== es20-stencil-test_1000x200 RESULT: FAIL
+   [FAIL] portal: radius 0.38 - inside the window: the stencil-masked inner world - pixel(49,-2) = (0,0,0,0) expected (255,153,51,255) tol 1
+   [FAIL] portal: radius 0.61 - on the outline ring (stencil != 1 around the window) - pixel(64,-21) = (0,0,0,0) expected (255,255,255,255) tol 1
+   [FAIL] portal: radius 0.98 - outside the outline: the outer world - pixel(22,-26) = (0,0,0,0) expected (51,102,204,255) tol 1
+== es20-stencil-test_200x1000 RESULT: FAIL
+   [FAIL] StencilFunc(GREATER, ref 50, mask 0xff) on stored 100: ref < stored - pixel(200,993) = (0,0,0,0) expected (0,102,102,255) tol 0
+   [FAIL] StencilFunc(GREATER, ref 100, mask 0xff) on stored 100: ref == stored - pixel(200,979) = (0,0,0,0) expected (0,102,102,255) tol 0
+   [FAIL] StencilFunc(GREATER, ref 150, mask 0xff) on stored 100: ref > stored - pixel(200,965) = (0,0,0,0) expected (100,102,102,255) tol 0
+== es20-uniforms_1000x200 RESULT: FAIL
+   [FAIL] all 38 uniform cells are green (shader sees the exact uploaded values) - red cells: 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 
+== es30-deferred-shading_1000x200 RESULT: FAIL
+   [FAIL] control (c): with the normal plane overwritten by (0, 1, 0) the image differs from the forward reference on >= 5% of the pixels - max difference 196 steps, worst = 126.00 of its per-pixel budget at (501,132), m
+== es30-instancing_1000x200 RESULT: FAIL
+   [FAIL] cell 3: the 16 drawn slots show the model colors and the other 0 slots stay background - 0:(0,0,128,255)vs(20,30,50,255) 1:(85,0,128,255)vs(20,30,50,255) 2:(170,0,128,255)vs(20,30,50,255) 
+   [FAIL] cell 5: the 2 drawn slots show the model colors and the other 14 slots stay background - 1:(0,0,128,255)vs(20,30,50,255) 
+   [FAIL] cell 5: the model has the small square beside the first quad (sanity)
+== es30-instancing_200x1000 RESULT: FAIL
+   [FAIL] cell 3: the 16 drawn slots show the model colors and the other 0 slots stay background - 0:(0,0,128,255)vs(20,30,50,255) 
+   [FAIL] cell 8: ribbon quad at x = -0.8 is drawn - probe lies within 1 px of a model edge (demo bug)
+   [FAIL] cell 9: ribbon quad at x = -0.8 is drawn - probe lies within 1 px of a model edge (demo bug)
+== es30-interactive-3d-scene_1000x200 RESULT: FAIL
+   [FAIL] start pose: sky, lit ground, objects and instances are all represented - sky 1364 ground lit 995 shadow 57 objects 7 instances 195
+== es30-interactive-3d-scene_200x1000 RESULT: FAIL
+   [FAIL] start pose: sky, lit ground, objects and instances are all represented - sky 1828 ground lit 1383 shadow 28 objects 4 instances 10
+   [FAIL] shadow pose: lit AND shadowed ground at CPU-predicted points - lit 1784 shadowed 28
+   [FAIL] key 1 (shadows off): the image changes at the 28 pixels where the CPU predicts a change - predicted 28 (need >= 30), changed 28
+== es30-lighting_200x1000 RESULT: FAIL
+   [FAIL] ambient only: checker tile A shows ambient * albedo A (gamma-encoded) - probe setup failed: the CPU ray through the projected pixel does not hit the expected, stable surface
+   [FAIL] ambient only: the neighbouring tile shows ambient * albedo B - probe setup failed: the CPU ray through the projected pixel does not hit the expected, stable surface
+   [FAIL] ambient only: a sphere is flat ka * albedo, no shading without a light - probe setup failed: the CPU ray through the projected pixel does not hit the expected, stable surface
+== es30-lighting_333x777 RESULT: FAIL
+   [FAIL] ambient only: a sphere is flat ka * albedo, no shading without a light - probe setup failed: the CPU ray through the projected pixel does not hit the expected, stable surface
+   [FAIL] ambient only: Phong sphere matches the CPU reference - 0 pixels compared, max channel diff 0 (tol 3)
+   [FAIL] ambient only: Blinn-Phong sphere matches the CPU reference - 0 pixels compared, max channel diff 0 (tol 3)
+== es30-multisample-default-framebuffer_1000x200 RESULT: BLOCKED_ENVIRONMENT
+== es30-multisample-default-framebuffer_200x1000 RESULT: BLOCKED_ENVIRONMENT
+== es30-multisample-default-framebuffer_333x777 RESULT: BLOCKED_ENVIRONMENT
+== es30-normal-mapping_200x1000 RESULT: FAIL
+   [FAIL] 0 probes on the visible faces of the rotated crate
+   [FAIL] rotating crate (model matrix 0.55 rad, normal matrix, tangent frame rotated with the model): 0 probes match the CPU model, max error 0.00/255, tolerance 1.25
+== es30-skybox-and-fog_1000x200 RESULT: FAIL
+   [FAIL] face-coded environment: glass without the Fresnel-Schlick reflection term (refraction only) is rejected - 2 of 2 discriminating pixels (of 1489) reject it
+   [FAIL] negative control: with gl_Position = clip instead of clip.xyww the sky cube hides the ground and every object - 21580 pixels compared with the sky along their ray, 2941 differ
+== es30-skybox-and-fog_200x1000 RESULT: FAIL
+   [FAIL] face-coded environment: glass without the Fresnel-Schlick reflection term (refraction only) is rejected - 2 of 2 discriminating pixels (of 1489) reject it
+   [FAIL] negative control: with gl_Position = clip instead of clip.xyww the sky cube hides the ground and every object - 21580 pixels compared with the sky along their ray, 2665 differ
+== es30-uniform-buffer-objects_1000x200 RESULT: FAIL
+   [FAIL] block Mistake with every vec3 padded to 16 bytes: only a green, s, b, c, t magenta (wrong values) - m_a (cell 48: (0,0,0,0)) m_s (cell 49: (0,0,0,0)) m_b (cell 50: (0,0,0,0)) m_c (cell 51: (0,0,0,0)) m_t (cell 
+   [FAIL] block Queried (packed): data packed at the QUERIED offsets and strides reads back correctly, 6 green cells - q_scalar (cell 54: (0,0,0,0)) q_vec3 (cell 55: (0,0,0,0)) q_after (cell 56: (0,0,0,0)) q_mat3 (cell 5
+   [FAIL] cells that test nothing keep the neutral gap color - cell 53 is (0,0,0,0) cell 60 is (0,0,0,0) cell 63 is (0,0,0,0) 
+== es31-compute-indirect-and-to-render_1000x200 RESULT: FAIL
+   [FAIL] 5 surviving sectors are drawn by glDrawElementsIndirect in their palette color at the triangle centroids - pixel (64,227) is (0,0,0,0) expected (191,128,64,255)
+   [FAIL] 5 culled sectors / the center / a gap between two triangles show the clear color - pixel (89,217) is (0,0,0,0) expected (26,26,36,255)
+   [FAIL] top-right cell shows that image through a sampler (6 probes: tile corners marked white, orange and blue tiles) - pixel (173,209) is (0,0,0,0) expected (10,51,92,255)
+== es31-compute-indirect-and-to-render_200x1000 RESULT: FAIL
+   [FAIL] top-right cell shows that image through a sampler (6 probes: tile corners marked white, orange and blue tiles) - pixel (255,255) is (0,0,0,0) expected (230,128,26,255)
+   [FAIL] bottom-right upper strip: imageStore (r32f) then texelFetch of the same pixel, glMemoryBarrierByRegion(TEXTURE_FETCH) between (all 8192 pixels within 1) - pixel (200,64) is (0,0,0,0) expected (16,239,128,255)
+   [FAIL] bottom-right lower strip: buffer store then buffer load of the same pixel in fragment shaders, glMemoryBarrierByRegion(SHADER_STORAGE) between (all 8192 pixels within 1) - pixel (200,0) is (0,0,0,0) expected (1
+== es31-image-load-store_1000x200 RESULT: FAIL
+   [FAIL] cell (0,0): the uploaded source image, fetched by a sampler, matches the CPU image at 8 probes - pixel (10,202) is (0,0,0,0) expected (40,40,128,255)
+   [FAIL] cell (0,1): the blur output texture, fetched by a sampler, matches the CPU blur at 8 probes - pixel (74,202) is (0,0,0,0) expected (40,40,128,255)
+   [FAIL] cell (0,2): the Sobel output texture, fetched by a sampler, matches the CPU Sobel at 8 probes - pixel (138,202) is (0,0,0,0) expected (21,21,21,255)
+== es31-image-load-store_200x1000 RESULT: FAIL
+   [FAIL] cell (0,3): imageLoad in a fragment shader shows the inverted source at 8 probes - pixel (202,202) is (0,0,0,0) expected (215,215,127,255)
+   [FAIL] cell (1,3): array layer 3 shows the values of the layered binding (layered = TRUE) - pixel (204,140) is (0,0,0,0) expected (146,146,18,255)
+   [FAIL] cell (2,3): 3D slice 3 shows the values of the layered binding (layered = TRUE) - pixel (204,76) is (0,0,0,0) expected (146,18,146,255)
+== es31-program-interface-query_1000x200 RESULT: FAIL
+   [FAIL] cell 0: u_tint at layout(location = 4), used by BOTH stages - pixel(16,160) = (64,191,255,255) expected (143,143,48,255)
+   [FAIL] cell 1: u_weights[3] written with one glUniform1fv at location 8 (elements at 8, 9, 10) - pixel(80,160) = (64,191,255,255) expected (64,191,32,255)
+   [FAIL] cell 2: struct u_light, members at locations 20 and 21 - pixel(144,160) = (191,255,64,255) expected (191,96,48,255)
+== es31-program-interface-query_200x1000 RESULT: FAIL
+   [FAIL] cell 0: u_tint at layout(location = 4), used by BOTH stages - pixel(16,160) = (26,26,31,255) expected (143,143,48,255)
+   [FAIL] cell 1: u_weights[3] written with one glUniform1fv at location 8 (elements at 8, 9, 10) - pixel(80,160) = (26,26,31,255) expected (64,191,32,255)
+   [FAIL] cell 2: struct u_light, members at locations 20 and 21 - pixel(144,160) = (26,26,31,255) expected (191,96,48,255)
+== es31-program-interface-query_333x777 RESULT: FAIL
+   [FAIL] cell 0: u_tint at layout(location = 4), used by BOTH stages - pixel(16,160) = (26,26,31,255) expected (143,143,48,255)
+   [FAIL] cell 1: u_weights[3] written with one glUniform1fv at location 8 (elements at 8, 9, 10) - pixel(80,160) = (26,26,31,255) expected (64,191,32,255)
+   [FAIL] cell 2: struct u_light, members at locations 20 and 21 - pixel(144,160) = (26,26,31,255) expected (191,96,48,255)
+== es31-program-pipelines_1000x200 RESULT: FAIL
+   [FAIL] cell 8 (B0  glProgramUniform3f on programs that are neither current nor active (orange, dark blue)): four quadrants match the CPU model
+   [FAIL] cell 9 (B1  glActiveShaderProgram(vertex A) + glUniform3f(0, ...): updates A's u_tint (violet)): four quadrants match the CPU model
+   [FAIL] cell 10 (B2  the same glUniform3f(0, ...) call with vertex B active: updates B's u_tint (teal)): four quadrants match the CPU model
+== es31-ssbo-std430_1000x200 RESULT: FAIL
+   [FAIL] fragment shader reading the flag buffer: row 3 cells are green (member verified) / magenta (predicted mismatch), never red - member 1 is (0,0,0,0) (want (0,255,0,255)) member 2 is (0,0,0,0) (want (0,255,0,255))
+   [FAIL] the area below the bar charts keeps the clear colour (nothing leaked) - (255,0,255,255)
+   [FAIL] vertex shader reading values[]: band 0 draws 32 bars of 31 px, each as high as its value (colour within 1 of the 8-bit quantisation) - bar 0 inside (0,0,0,0) want (20,235,102,255); bar 0 above (0,0,0,0); bar 1 
+== es31-ssbo-std430_200x1000 RESULT: FAIL
+   [FAIL] vertex shader reading values[]: band 0 draws 32 bars of 6 px, each as high as its value (colour within 1 of the 8-bit quantisation) - bar 15 inside (157,98,102,255) want (39,216,102,255); bar 15 above (157,98,1
+   [FAIL] vertex shader reading values[]: band 1 draws 16 bars of 12 px, each as high as its value (colour within 1 of the 8-bit quantisation) - bar 14 inside (14,16,22,255) want (157,98,102,255); bar 15 inside (157,98,1
+== es31-ssbo-std430_333x777 RESULT: FAIL
+   [FAIL] vertex shader reading values[]: band 0 draws 32 bars of 10 px, each as high as its value (colour within 1 of the 8-bit quantisation) - bar 14 inside (14,16,22,255) want (157,98,102,255); bar 15 inside (157,98,1
+   [FAIL] vertex shader reading values[]: band 1 draws 16 bars of 20 px, each as high as its value (colour within 1 of the 8-bit quantisation) - bar 13 inside (137,118,102,255) want (20,235,102,255); bar 13 above (137,11
+== es32-geometry-shaders_1000x200 RESULT: FAIL
+   [FAIL] cell C (adjacency silhouette): the comparison is not vacuous (1228 covered pixels compared, >= 2000 needed)
+== es32-texture-buffer_200x1000 RESULT: FAIL
+   [FAIL] instanced scene: 20453 pixel probes (every 3rd pixel, edges excluded) equal the ray-cast colour of the instance the per-instance buffer texels describe (+-1) - 0 wrong of 20453 compared, 23 instances visible; f

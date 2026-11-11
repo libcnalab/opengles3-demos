@@ -61,7 +61,8 @@ matters more than speed.
 The picture must fill the surface at any size: lay out cells relative to `env.width`/`env.height` (or in NDC),
 never in fixed pixels. Validation must PASS on a valid render at every size. Where a sample lands on a texel or
 edge boundary, accept either neighbour instead of skipping the pixel, keep every check non-vacuous, and throw
-`demo::Skip` from `init()` if the surface is too small. Run at least 256x256, 800x800, 640x480 and 333x777.
+`demo::Skip` from `init()` if the surface is too small (state the minimum in the README). Run at least 256x256, 800x800,
+640x480 and 333x777, and `tools/sweep_sizes.sh build/debug 333x777 1000x200 200x1000` (llvmpipe, all executables).
 
 ## Build and test (inside your worktree)
 ```

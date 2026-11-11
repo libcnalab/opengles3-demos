@@ -1,0 +1,78 @@
+{
+  "name": "es20-clear-viewport-scissor",
+  "title": "Clear, viewport and scissor",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es20-foundations",
+  "order": 20,
+  "summary": "Clear values and masks, the scissor test, the viewport transform and glDepthRangef in a 4x4 gallery; depth and stencil contents are observed through depth- and stencil-tested probe draws, validated against a CPU-painted reference.",
+  "spec": [
+    "ES 3.0 §2.5 GL Errors",
+    "ES 3.0 §2.13.1 Controlling the Viewport (viewport transform, DepthRangef, MAX_VIEWPORT_DIMS)",
+    "ES 3.0 §2.18 Primitive Clipping",
+    "ES 3.0 §4.1.2 Scissor Test",
+    "ES 3.0 §4.1.4 Stencil Test and §4.1.5 Depth Buffer Test (used as observers)",
+    "ES 3.0 §4.2.2 Fine Control of Buffer Updates",
+    "ES 3.0 §4.2.3 Clearing the Buffers",
+    "ES 3.0 §4.3.2 Reading Pixels",
+    "ES 3.0 §6.1 state tables 6.5, 6.11, 6.12 and 6.28 (queried values and initial state)",
+    "GLSL ES 3.00 §4.3.5 Uniform Variables, §4.5.4 Default Precision Qualifiers, §7.1 Vertex Shader Special Variables (gl_VertexID, gl_Position)"
+  ],
+  "api": {
+    "glClear": "COLOR, DEPTH and STENCIL singly and combined; honours scissor box and write masks; an empty mask clears nothing and raises no error",
+    "glClearColor": "cleared pixels equal round(c*255) +-1; out-of-range components are clamped; GL_COLOR_CLEAR_VALUE round trip and initial (0,0,0,0)",
+    "glClearDepthf": "observed through GL_LESS probe quads (depth ruler, scissored and masked clears, combined clear); GL_DEPTH_CLEAR_VALUE round trip, clamping to [0,1], initial 1.0",
+    "glClearStencil": "observed through per-bit stencil EQUAL probes (bit ruler, masked clears, combined clear); value masked to the stencil planes; GL_STENCIL_CLEAR_VALUE round trip, initial 0",
+    "glViewport": "NDC squares land on the exact pixel rectangles of the viewport transform (small, offset, negative-origin and four-quadrant viewports); clear ignores it; oversized width clamped to MAX_VIEWPORT_DIMS; negative size -> INVALID_VALUE with state unchanged; GL_VIEWPORT initial value and round trip",
+    "glScissor": "clears and draws are cut to exactly left<=x<left+width, bottom<=y<bottom+height (corner and neighbour pixels checked); 0x0 and zero-width boxes reject everything; negative size -> INVALID_VALUE with state unchanged; GL_SCISSOR_BOX initial value and round trip",
+    "glEnable": "GL_SCISSOR_TEST on cuts the draw to the box; GL_DEPTH_TEST and GL_STENCIL_TEST gate the probe quads (without them every probe would be lit)",
+    "glDisable": "GL_SCISSOR_TEST off makes the scissor box irrelevant (panel O); GL_DEPTH_TEST off before the stencil probes of panel K (otherwise they would fail the depth test)",
+    "glIsEnabled": "SCISSOR_TEST initially FALSE, TRUE after glEnable, FALSE after glDisable",
+    "glColorMask": "each of R, G, B, A enabled alone on a clear, and R+B+A / G on a draw: only those channels change; GL_COLOR_WRITEMASK round trip and initial value; an all-false mask leaves the buffer untouched",
+    "glDepthMask": "a depth clear with the mask off leaves the old depth (probe still passes where the depth is 1.0); GL_DEPTH_WRITEMASK round trip and initial TRUE",
+    "glStencilMask": "partial-nibble clears give (old & ~mask) | (clear & mask) in the stencil bit ruler; mask 0 clears nothing; GL_STENCIL_WRITEMASK and back mask round trip, initial all ones",
+    "glStencilMaskSeparate": "front mask 0xFF / back mask 0x00 still clears all bits (a clear uses the front mask); BACK only changes GL_STENCIL_BACK_WRITEMASK",
+    "glDepthRangef": "four ranges incl. reversed (1,0): the probe passes or fails exactly as z_w = (f-n)/2 z_d + (n+f)/2 predicts; GL_DEPTH_RANGE round trip, clamping to [0,1]",
+    "glStencilFunc": "EQUAL with ref == mask == (1<<bit) isolates one stencil bit; EQUAL 0x42 / 0x41 accept and reject the cleared value",
+    "glGetIntegerv": "GL_VIEWPORT, GL_SCISSOR_BOX, GL_STENCIL_CLEAR_VALUE, GL_STENCIL_WRITEMASK, GL_STENCIL_BACK_WRITEMASK, GL_MAX_VIEWPORT_DIMS",
+    "glGetFloatv": "GL_COLOR_CLEAR_VALUE, GL_DEPTH_CLEAR_VALUE, GL_DEPTH_RANGE",
+    "glGetBooleanv": "GL_COLOR_WRITEMASK, GL_DEPTH_WRITEMASK",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE readback of the whole default framebuffer; every gallery check is a comparison with it",
+    "glDrawArrays": "TRIANGLE_STRIP with 4 vertices (probe quads) and TRIANGLES with 3 (oversized and viewport triangles); pixels checked",
+    "glUseProgram": "probe program current for all draws",
+    "glGetUniformLocation": "u_vertex, u_z and u_color located",
+    "glUniform2fv": "u_vertex[4] corner array steers the probe geometry (visible in every panel)",
+    "glUniform1f": "u_z (NDC depth) decides the depth-probe results",
+    "glUniform4f": "u_color observed in the pixels"
+  },
+  "features": [
+    "ES20.CLEAR.COLOR",
+    "ES20.CLEAR.DEPTH",
+    "ES20.CLEAR.STENCIL",
+    "ES20.CLEAR.SCISSORED",
+    "ES20.VIEWPORT",
+    "ES20.SCISSOR",
+    "ES20.COLOR_MASK",
+    "ES20.DEPTH_RANGE"
+  ],
+  "glsl_features": [
+    "GLSL300.VERSION",
+    "GLSL300.UNIFORM",
+    "GLSL300.BUILTIN_VARS.VS",
+    "GLSL300.FRAG.OUTPUT",
+    "GLSL300.PRECISION.DEFAULT"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "negative",
+    "gl-error"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet (subagent)",
+    "notes": "256x256 radeonsi capture (es-max) viewed: 4x4 gallery of flat panels, no bleed between neighbours. Top row: blue clear; navy panel with a gold box; four strips (pink R, mint G, blue B, dark-blue A-only) over the base color; orange left half / teal right half. Row 2: depth ruler staircase growing 2/6/10/14 columns from bottom to top; green panel with a dark square (masked second clear left no mark); cyan blocks showing the four depth ranges (one diagonal pair, one full column, one empty column); slate panel with an orange viewport rectangle. Row 3: stencil bit-ruler patterns; purple panel with a yellow block in its upper right (the depth and stencil probes that passed); steel panel with an amber box. Bottom row: teal viewport rectangle with a pink inner rectangle; four triangles in four quadrants; mint and coral squares from the negative-origin viewport; violet rectangle from the clipped triangle. llvmpipe captures differ from it by at most 1 per channel."
+  }
+}

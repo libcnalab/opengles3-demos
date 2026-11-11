@@ -55,15 +55,16 @@ cmake --build --preset debug --target coverage
 5. Stage 3–4 (textures, framebuffers, ES 3.0 data paths), then `glsl300-builtins` via transform feedback.
 6. `diagnostics-capabilities`.
 
-## In flight (2026-11-11 ~15:45)
+## In flight (2026-11-11 ~15:50)
 
-Batches 1-3 (28 demos) merged; full suite 220/220 PASS; 239/358 entry points with evidence.
-Batch 4 (ES 3.1, Claude subagents in `.claude/worktrees/agent-*`): backlog items 21-34.
-Integration procedure per branch: merge; `cmake --preset debug`; `ctest -R <names>`; view captures;
-verify every claimed driver deviation yourself against the spec AND the exposed extensions
-(false positives so far: accept-either check, R32F mipmaps, RGB+FLOAT, sRGB accuracy, TF mode under
-es-min); record real deviations in KNOWN_LIMITATIONS.md; regenerate coverage; remove the worktree.
-Codex (after ~22:00): ES 3.0 items 6, 10, 14, 16-20 and 35 via `tools/agents/codex_demo.sh`.
+Merged: batches 1-4 (ES 2.0 foundations, ES 3.0, ES 3.1): 49 executables, 304/304 runs PASS,
+308/358 entry points with evidence. Running:
+- batch 5: 3D compositions (backlog 40-45: camera/MVP, lighting, normal mapping, shadow mapping,
+  deferred shading, post-processing) — the owner asked for real 3D demos.
+- batch 6: ES 3.2 items 50+51, 52+53, 54+55, 58, 61.
+Still open: ES 3.2 items 56, 57, 59, 60, 62; ES 3.0 items 6, 10, 14, 16-20; item 35 (glsl310 built-ins).
+Integration procedure: see the previous lessons (verify deviations against spec + extensions;
+es-min is an override; no invented requirements); merge, run, view, record, regenerate, clean up.
 
 ## Parallel work / Codex
 

@@ -1,0 +1,140 @@
+#version 310 es
+// Atomic memory functions (GLSL ES 3.10 section 8.11) on buffer variables and on shared variables.
+// Every one of the 65536 invocations (512 work groups of 128) applies each operation to the SAME word, with a
+// value derived from its global index by a hash. The final value of every order-independent operation (add, min,
+// max, and, or, xor) is therefore known exactly in advance, whatever the interleaving. atomicExchange and
+// atomicCompSwap are order dependent, so what is checked about them are SET properties (see the application).
+precision highp float;
+precision highp int;
+
+layout(local_size_x = 128) in;
+
+layout(std430, binding = 0) buffer Acc
+{
+    uint add_u;      //  0  atomicAdd(uint)
+    int  add_i;      //  1  atomicAdd(int), data of both signs
+    uint min_u;      //  2  atomicMin(uint)
+    uint max_u;      //  3  atomicMax(uint)
+    int  min_i;      //  4  atomicMin(int)
+    int  max_i;      //  5  atomicMax(int)
+    uint and_u;      //  6  atomicAnd
+    uint or_u;       //  7  atomicOr
+    uint xor_u;      //  8  atomicXor
+    uint sub_u;      //  9  atomicAdd of 2^32 - 3: subtracts 3 modulo 2^32
+    uint cas_inc;    // 10  lock-free increment built on atomicCompSwap (1024 of the invocations take part)
+    uint ticket;     // 11  atomicAdd(1) used as a ticket dispenser
+    uint exch;       // 12  atomicExchange
+    uint cas_owner;  // 13  atomicCompSwap(owner, 0, id): exactly one invocation claims it
+    uint pad0;       // 14
+    uint pad1;       // 15
+    uint hist[16];   // 16  atomicAdd on 16 words chosen by data
+} a;
+
+layout(std430, binding = 1) buffer Out
+{
+    uint v[];        // 3 * u_n: [0,n) value returned by atomicExchange, [n,2n) returned by atomicCompSwap, [2n,3n) ticket histogram
+} o;
+
+layout(std430, binding = 2) buffer Groups
+{
+    uint v[];        // 8 words per work group: the results of the shared-variable atomics
+} g;
+
+uniform uint u_n;
+
+shared uint sh_sum;
+shared uint sh_max;
+shared uint sh_or;
+shared uint sh_xor;
+shared int  sh_min;
+shared uint sh_and;
+shared uint sh_owner;
+shared uint sh_winners;
+
+// lowbias32: a good 32-bit integer hash. The application computes the same function (unsigned arithmetic wraps).
+uint hash(uint x)
+{
+    x ^= x >> 16;
+    x *= 0x7feb352du;
+    x ^= x >> 15;
+    x *= 0x846ca68bu;
+    x ^= x >> 16;
+    return x;
+}
+
+void main()
+{
+    uint i = gl_GlobalInvocationID.x;
+    uint h = hash(i);
+
+    // ---- atomics on buffer variables ----------------------------------------------------------------
+    atomicAdd(a.add_u, h % 1000u);
+    atomicAdd(a.add_i, int(h % 2001u) - 1000);
+    atomicMin(a.min_u, h);
+    atomicMax(a.max_u, h);
+    atomicMin(a.min_i, int(h));
+    atomicMax(a.max_i, int(h));
+    atomicAnd(a.and_u, ~(1u << (4u + (h >> 8) % 16u)));   // clears one bit of 4..19
+    atomicOr(a.or_u, 1u << ((h >> 3) % 24u));
+    atomicXor(a.xor_u, h);
+    atomicAdd(a.sub_u, 0u - 3u);
+    atomicAdd(a.hist[((h % 16u) * ((h >> 7) % 16u)) / 15u], 1u);
+
+    uint t = atomicAdd(a.ticket, 1u);                     // a ticket: returned exactly once each
+    if (t < u_n) atomicAdd(o.v[2u * u_n + t], 1u);
+
+    o.v[i] = atomicExchange(a.exch, i + 1u);              // whatever was there before: order dependent
+    o.v[u_n + i] = atomicCompSwap(a.cas_owner, 0u, i + 1u);   // 0 for the one winner, the winner's id + 1 for the others
+
+    if ((i & 63u) == 0u)
+    {
+        // A compare-and-swap loop: read, try to publish old + 1, retry with the value somebody else published.
+        uint old = a.cas_inc;
+        for (;;)
+        {
+            uint seen = atomicCompSwap(a.cas_inc, old, old + 1u);
+            if (seen == old) break;
+            old = seen;
+        }
+    }
+
+    // ---- atomics on shared variables: one result per work group --------------------------------------
+    if (gl_LocalInvocationIndex == 0u)
+    {
+        sh_sum = 0u;
+        sh_max = 0u;
+        sh_or = 0u;
+        sh_xor = 0u;
+        sh_min = 0x7fffffff;
+        sh_and = 0xffffffffu;
+        sh_owner = 0u;
+        sh_winners = 0u;
+    }
+    // barrier() alone does not order memory (GLSL ES 3.10 section 8.14): the initialisation must be made visible first.
+    memoryBarrierShared();
+    barrier();
+
+    atomicAdd(sh_sum, h & 0xfffu);
+    atomicMax(sh_max, h);
+    atomicOr(sh_or, 1u << (h % 32u));
+    atomicXor(sh_xor, h);
+    atomicMin(sh_min, int(h));
+    atomicAnd(sh_and, ~(1u << ((h >> 5) % 32u)));
+    if (atomicCompSwap(sh_owner, 0u, gl_LocalInvocationIndex + 1u) == 0u) atomicAdd(sh_winners, 1u);
+
+    memoryBarrierShared();
+    barrier();
+
+    if (gl_LocalInvocationIndex == 0u)
+    {
+        uint base = gl_WorkGroupID.x * 8u;
+        g.v[base + 0u] = sh_sum;
+        g.v[base + 1u] = sh_max;
+        g.v[base + 2u] = sh_or;
+        g.v[base + 3u] = sh_xor;
+        g.v[base + 4u] = uint(sh_min);
+        g.v[base + 5u] = sh_winners;
+        g.v[base + 6u] = sh_owner;
+        g.v[base + 7u] = sh_and;
+    }
+}

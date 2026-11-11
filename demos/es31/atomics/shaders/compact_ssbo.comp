@@ -1,0 +1,27 @@
+#version 310 es
+// The same compaction with atomicAdd on a buffer variable as the append pointer (dst.n). The only difference from
+// compact_counter.comp is where the counter lives: an atomic counter buffer there, a shader storage block here.
+precision highp float;
+precision highp int;
+
+layout(local_size_x = 128) in;
+
+layout(std430, binding = 0) readonly buffer In  { uint v[]; } src;
+layout(std430, binding = 1) buffer Out
+{
+    uint n;               // the append pointer
+    uint idx[16384];
+    uint val[16384];
+} dst;
+
+void main()
+{
+    uint i = gl_GlobalInvocationID.x;
+    uint d = src.v[i];
+    if (((d / 300u) & 1u) == 0u)
+    {
+        uint slot = atomicAdd(dst.n, 1u);
+        dst.idx[slot] = i;
+        dst.val[slot] = d;
+    }
+}

@@ -1,0 +1,40 @@
+#version 310 es
+// Runtime-sized arrays as the last member of a shader storage block (GLSL ES 3.10 section 4.1.9): their length
+// is not known to the shader compiler, it comes from the size of the buffer range bound to the block
+// (glBindBufferRange). The shader records what length() returned, writes one value into every element that
+// length() says exists, and touches nothing else, so the application can check both the reported length and
+// that no byte outside the bound range changed.
+precision highp float;
+precision highp int;
+
+layout(local_size_x = 64) in;
+
+struct Rec { float a; float b; float c; };   // std430: alignment 4, size 12 (a stride that is not a power of two)
+
+layout(std430, binding = 0) buffer Samples
+{
+    uint  n_samples;     // offset 0: length() as the shader saw it
+    uint  tag;           // offset 4
+    float values[];      // offset 8, stride 4
+} s;
+
+layout(std430, binding = 1) buffer Records
+{
+    uint n_records;      // offset 0: length() as the shader saw it
+    Rec  recs[];         // offset 4 (a structure of floats has alignment 4 in std430), stride 12
+} r;
+
+void main()
+{
+    uint i  = gl_GlobalInvocationID.x;
+    int  ns = s.values.length();
+    int  nr = r.recs.length();
+    if (i == 0u)
+    {
+        s.n_samples = uint(ns);
+        s.tag       = 0xC0FFEEu;
+        r.n_records = uint(nr);
+    }
+    if (i < uint(ns)) s.values[i] = float(1u + (i * 7u) % 13u);
+    if (i < uint(nr)) r.recs[i]   = Rec(float(i), float(2u * i + 1u), float(3u * i + 2u));
+}

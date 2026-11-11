@@ -1,0 +1,76 @@
+{
+  "name": "es20-depth-test",
+  "title": "Depth buffer test",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es20-foundations",
+  "order": 90,
+  "summary": "Eight depth functions, write mask (also for glClear), clear value, depth range, polygon offset and gl_FragDepth, verified through which of two overlapping quads wins; plus initial-state and round-trip queries.",
+  "spec": [
+    "ES 3.0 §2.13.1 Controlling the Viewport (DepthRangef, window-space z)",
+    "ES 3.0 §3.6.2 Depth Offset (equations 3.9-3.11)",
+    "ES 3.0 §3.9.2.3 Shader Outputs (gl_FragDepth is clamped, not remapped by the depth range)",
+    "ES 3.0 §4.1.5 Depth Buffer Test",
+    "ES 3.0 §4.2.2 Fine Control of Buffer Updates (DepthMask)",
+    "ES 3.0 §4.2.3 Clearing the Buffers (ClearDepthf; clears obey masks and scissor)",
+    "ES 3.0 §4.3.2 Reading Pixels (only color is readable: depth is observed through colors)",
+    "ES 3.0 §4.4.5 Effects of Framebuffer State on Framebuffer Dependent Values (DEPTH_BITS)",
+    "ES 3.0 §6.1.1 Simple Queries",
+    "GLSL ES 3.00 §4.6 Variance and the Invariant Qualifier",
+    "GLSL ES 3.00 §7.1 Vertex Shader Special Variables (gl_VertexID, gl_Position)",
+    "GLSL ES 3.00 §7.2 Fragment Shader Special Variables (gl_FragDepth, gl_FragCoord)"
+  ],
+  "api": {
+    "glEnable": "DEPTH_TEST on/off decides whether depth is tested and stored (cell 8); POLYGON_OFFSET_FILL on/off decides whether glPolygonOffset applies (cells 14-15); SCISSOR_TEST confines clears (cells 10-11)",
+    "glDisable": "same states; a disabled depth test passes a farther fragment and stores nothing; FILL disabled leaves a coplanar decal losing LESS",
+    "glIsEnabled": "DEPTH_TEST and POLYGON_OFFSET_FILL: initially FALSE, TRUE after glEnable, FALSE after glDisable",
+    "glDepthFunc": "all 8 functions x 3 fragment depths (nearer/equal/farther than the stored 0.5) = 24 pixel probes against a CPU truth table; GL_DEPTH_FUNC read back for all 8",
+    "glDepthMask": "FALSE: a passing fragment's color lands but its depth is not stored (later 0.4 fragment still passes), TRUE stores it; FALSE also makes glClear(DEPTH) a no-op; GL_DEPTH_WRITEMASK read back",
+    "glDepthRangef": "same NDC z gives different window z in four stripes (default, [0.5,1], [0,0.5], reversed [1,0]) and flips the LESS outcome; GL_DEPTH_RANGE read back incl. clamping of (-1,2) to (0,1); gl_FragDepth-vs-range rule observed with a documented radeonsi deviation",
+    "glClearDepthf": "four bands cleared to -3, 0.4, 0.6, 5 (clamped to [0,1]) decide whether a 0.5 fragment passes LESS; GL_DEPTH_CLEAR_VALUE read back incl. clamping",
+    "glClear": "COLOR|DEPTH per cell; scissored DEPTH-only clears; glClear(DEPTH) with DepthMask(FALSE) leaves the stored depth untouched",
+    "glClearColor": "cell background color observed where a failed fragment leaves the cleared color",
+    "glPolygonOffset": "negative units lets a coplanar decal win LESS, positive units makes it lose LEQUAL, factor scales the depth slope of a tilted quad (factor -8 wins, -0.25 and units-only lose); POLYGON_OFFSET_FACTOR/UNITS read back",
+    "glViewport": "per-cell viewport maps the quads to the probed pixels",
+    "glScissor": "restricts the depth clears of cells 10 and 11 to a half / quarter of the cell",
+    "glGetBooleanv": "DEPTH_WRITEMASK",
+    "glGetIntegerv": "DEPTH_FUNC, DEPTH_BITS",
+    "glGetFloatv": "DEPTH_RANGE, DEPTH_CLEAR_VALUE, POLYGON_OFFSET_FACTOR, POLYGON_OFFSET_UNITS",
+    "glGetUniformLocation": "u_rect/u_depth/u_color/u_depth_line located (setup fails otherwise)",
+    "glUniform2f": "per-quad depth (u_depth) and gl_FragDepth line (u_depth_line) observed through depth outcomes",
+    "glUniform4f": "quad rectangle and color observed in the image",
+    "glUseProgram": "plain and gl_FragDepth programs both rendered the probed pixels",
+    "glDrawArrays": "TRIANGLE_STRIP quads without vertex attributes (gl_VertexID)",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE readback of the 56 probe pixels (via Check::expect_pixel and read_pixel)",
+    "glDeleteProgram": "cleanup, final glGetError == NO_ERROR"
+  },
+  "features": [
+    "ES20.DEPTH.TEST",
+    "ES20.DEPTH.MASK",
+    "ES20.DEPTH_RANGE",
+    "ES20.RASTER.POLYGON_OFFSET",
+    "ES20.CLEAR.DEPTH",
+    "ES20.CLEAR.SCISSORED",
+    "ES20.SCISSOR",
+    "ES20.STATE.QUERIES"
+  ],
+  "glsl_features": [
+    "GLSL300.VERSION",
+    "GLSL300.UNIFORM",
+    "GLSL300.FRAG.OUTPUT",
+    "GLSL300.BUILTIN_VARS.VS",
+    "GLSL300.BUILTIN_VARS.FS"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "gl-error"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet (subagent)",
+    "notes": "256x256 radeonsi capture: 4x4 grid of blue cells separated by black lines. Row 0: NEVER all blue, LESS green stripe only, EQUAL yellow only, LEQUAL green+yellow. Row 1: GREATER magenta only, NOTEQUAL green+magenta, GEQUAL yellow+magenta, ALWAYS all three stripes. Row 2: test-off cell shows a magenta left stripe and green/orange right stripe; depth-mask cell has orange over the yellow (mask off) left stripe and green right; masked-clear cell blue left / green right; clear-value cell dark with green only in the right half. Row 3: depth-range cell green/blue/green/blue; gl_FragDepth cell with green, orange-over-blue, green and a green/blue ramp; offset cells show the coplanar decals (green and yellow win, others blue) and a single green decal in the tilted cell. Matches the CPU truth tables; no artifacts at cell borders. On radeonsi the third gl_FragDepth stripe is green (documented clamp-to-depth-range deviation); llvmpipe shows it blue."
+  }
+}

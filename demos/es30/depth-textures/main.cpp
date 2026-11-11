@@ -1983,10 +1983,10 @@ namespace
         check.expect(complete_always == 1.0f, "control: complete DEPTH_COMPONENT32F with compare func ALWAYS returns 1.0",
                      std::format("got {}", complete_always));
         // ES 3.0 §3.9.2.1: "(0, 0, 0, 1) will be returned for a non-shadow sampler and 0 for a shadow sampler".
-        const char* zink_reason = "zink returns 1.0 (the ALWAYS result) for a shadow lookup on a mipmap-incomplete depth texture instead of 0";
+        const char* zink_reason = "lavapipe (the Vulkan driver under zink and under ANGLE in this matrix) returns 1.0 (the ALWAYS result) for a shadow lookup on a mipmap-incomplete depth texture instead of 0";
         check.expect_or_known_deviation(incomplete_always == 0.0f,
                                         "mipmap-incomplete DEPTH_COMPONENT32F (level 0 only, NEAREST_MIPMAP_NEAREST): shadow lookup returns 0 even with ALWAYS (§3.9.2.1)",
-                                        std::format("got {}", incomplete_always), "zink", zink_reason);
+                                        std::format("got {}", incomplete_always), "Vulkan", zink_reason);
 
         // GenerateMipmap: depth formats are neither color-renderable nor texture-filterable (§3.8.10.5).
         for (int u : {kUp16Short, kUp24Int, kUp32Float, kUp24S8, kUp32FS8})
@@ -2002,7 +2002,7 @@ namespace
         check.expect_gl_error(mgl::ErrorCode::InvalidOperation, "GenerateMipmap on the level-0-only DEPTH_COMPONENT32F texture -> INVALID_OPERATION");
         const float after = bits_to_float(probe(kModeShadow2D, one)[0][0]);
         check.expect_or_known_deviation(after == 0.0f, "after the rejected GenerateMipmap the texture is still mipmap-incomplete (shadow lookup 0)",
-                                        std::format("got {}", after), "zink", zink_reason);
+                                        std::format("got {}", after), "Vulkan", zink_reason);
         bind_unit(kUnitShadow2D, TT::Texture2D, mgl::TextureId{0}, mgl::SamplerId{0});
         mgl::glDeleteTextures(1, &mut);
 

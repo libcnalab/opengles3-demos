@@ -35,6 +35,10 @@ set(OGLES3_ANGLE_DIR "" CACHE PATH "Directory with an ANGLE libEGL.so/libGLESv2.
 if(NOT OGLES3_ANGLE_DIR AND EXISTS "$ENV{HOME}/Android/Sdk/emulator/lib64/gles_angle/libEGL.so")
     set(OGLES3_ANGLE_DIR "$ENV{HOME}/Android/Sdk/emulator/lib64/gles_angle" CACHE PATH "" FORCE)
 endif()
+# Vulkan driver under ANGLE. Default: lavapipe (software), so the test matrix never sends ANGLE's Vulkan work to the
+# real GPU. One ANGLE/RADV case faulted the GPU and caused amdgpu ring timeouts that froze the desktop (2026-11-11).
+# Set to the RADV ICD JSON only on purpose, on a machine whose display does not depend on that GPU.
+set(OGLES3_ANGLE_VULKAN_ICD "/usr/share/vulkan/icd.d/lvp_icd.json" CACHE FILEPATH "Vulkan ICD JSON used by the 'angle' test driver")
 option(OGLES3_TEST_MIN_VERSION "Also run every demo on a context limited to its minimum ES version (Mesa only)" ON)
 
 # --- meta-gl -------------------------------------------------------------------------------

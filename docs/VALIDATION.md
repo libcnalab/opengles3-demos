@@ -70,8 +70,14 @@ GL ES front-end and GLSL translator, here with the Vulkan backend on RADV.
 - **Version:** the build exposes **ES 3.1 natively**. ES 3.2 executables are SKIP_UNSUPPORTED. The context is not
   produced by a version override, so ANGLE gives the only native lower-version (3.1) evidence in the matrix.
   ES 3.0 requests also return a 3.1 context, as EGL allows.
-- **Shared code:** the backend still runs on Mesa's RADV Vulkan driver. Rasterization and texture hardware are
-  shared with radeonsi; the API front-end and the shader compiler are not.
+- **Vulkan driver under ANGLE: lavapipe (software) by default** (`OGLES3_ANGLE_VULKAN_ICD`). On 2026-11-11 one
+  ANGLE/RADV case faulted the GPU. Repeated runs caused amdgpu `ring gfx timeout, soft recovered` events (72 kernel
+  log lines between 20:23 and 20:38) and visible desktop freezes. The ANGLE matrix therefore never touches the real
+  GPU by default. Point `OGLES3_ANGLE_VULKAN_ICD` at the RADV ICD only on purpose. ANGLE's API front-end and
+  shader compiler are independent of Mesa; lavapipe, the backend, is the same Vulkan driver that zink uses.
+- **GPU-fault safety rule:** a case known to fault or hang a hardware GPU must not run in the default matrix,
+  not even in a child process. A child process protects the runner, not the machine. It needs an explicit opt-in
+  variable (e.g. `OGLES3_RUN_GPU_FAULT_CASES=1`).
 
 ## Known driver deviations (XFAIL)
 

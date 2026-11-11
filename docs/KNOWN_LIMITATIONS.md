@@ -75,7 +75,7 @@
 | `es30-occlusion-queries` | ES 3.0 §6.1.7: once a query reports available, all earlier queries of the same type are available; an occlusion result is boolean | zink (lavapipe), only after QUERY_RESULT_AVAILABLE has been polled to TRUE: QUERY_RESULT returns a partial sample count (e.g. 30), or 0 for a visible box, and earlier queries still report unavailable. Blocking reads are correct. The polled behaviour is nondeterministic: in a given run many of the zink-matched polled checks pass (XPASS in generated/DEVIATIONS.md) |
 | **crash** (worked around) `es30-glsl-texture-functions` | correct execution of a valid shader | a fragment shader with a `switch` over about 80 texture-lookup cases segfaults in libgallium on the first draw on llvmpipe and zink (the llvmpipe backtrace shows a recursion about 80 frames deep). The demo compiles the shader six times, once per sampler family (`#define GROUP n`), so no check needs an XFAIL |
 | `es30-depth-textures` | ES 3.0 §3.8.13 / ES 3.2 §8.17: a sized depth(-stencil) texture with `TEXTURE_COMPARE_MODE` NONE and a non-NEAREST filter is incomplete, so it returns (0,0,0,1) | Mesa filters the texture and returns the filtered depth (e.g. 0.75). This affects 5 filter settings × 2 formats; no exposed extension relaxes the rule. All Mesa drivers |
-| `es30-depth-textures` | ES 3.0 §3.9.2.1: an incomplete texture returns 0 for a shadow sampler | zink: a mipmap-incomplete DEPTH_COMPONENT32F returns 1.0 (the ALWAYS result) |
+| `es30-depth-textures` | ES 3.0 §3.9.2.1: an incomplete texture returns 0 for a shadow sampler | lavapipe (seen through zink and through ANGLE on lavapipe; matched on "Vulkan"): a mipmap-incomplete DEPTH_COMPONENT32F returns 1.0 (the ALWAYS result) |
 | `test-glsl-language` | GLSL ES 3.00 §5.8: "Expressions on the left of an assignment are evaluated before expressions on the right" | `y[j] = ++j` stores into `y[1]` (the index is evaluated after the right side). `x[i++] = i` is correct. GLSL 1.00 and 3.00. All Mesa drivers |
 | `test-glsl-language` | GLSL ES 3.00 §6.1.1: arguments are evaluated once, left to right, and an `out` argument yields the l-value used for copy-out | `store(arr[j], ++j)` writes `arr[1]`. All Mesa drivers |
 | `shader-tests/glsl300` texture2D case | GLSL ES 3.00 §8.8 lists only the new lookup functions; §6.1 requires a prototype or definition before a call | `texture2D()` compiles in a `#version 300 es` shader. All Mesa drivers |
@@ -84,7 +84,7 @@
 | `test-glsl320-builtins` | GLSL ES 3.20 §4.3.9: a block's type qualifier "may optionally include layout qualifiers, the auxiliary storage qualifier patch, and the precise qualifier"; §4.9: precise on a block applies to each member | `layout(std430, binding = 2) precise writeonly buffer PreciseOut { ... };` (either qualifier order) fails with "syntax error, unexpected NEW_IDENTIFIER". All Mesa drivers |
 
 
-### ANGLE 2.1.17841 (Vulkan backend, ES 3.1), matched on "ANGLE"
+### ANGLE 2.1.17841 (ES 3.1, Vulkan backend: lavapipe by default, RADV on request), matched on "ANGLE"
 
 | Case | Rule | Observed |
 |---|---|---|
@@ -115,7 +115,7 @@
 | `es31-multisample-textures` | ES 3.2 §8.14.4: `GenerateMipmap` target list | `TEXTURE_2D_MULTISAMPLE` raises no error (INVALID_ENUM expected) |
 | `es30-flat-centroid` | ES 3.0 §4.1.3 / 3.2 §13.8.3: no coverage changes unless SAMPLE_BUFFERS is one | SAMPLE_COVERAGE / SAMPLE_ALPHA_TO_COVERAGE are applied on a single-sample FBO (SAMPLE_BUFFERS 0, RENDERBUFFER_SAMPLES 0) |
 | `es30-framebuffer-blit-msaa` | ES 3.0 §4.3.3: "Only pixels whose centers lie within the destination rectangle are written" | a multisample resolve of (20,30)-(100,90) also writes up to (128,128) (RGBA8 and RGBA8UI) |
-| **crash** (child process) `es30-immutable-storage` | ES 3.0 §3.8.3: a depth format with TEXTURE_3D → INVALID_OPERATION, no effect | SIGSEGV in `glTexStorage3D(TEXTURE_3D, DEPTH_COMPONENT16)` (in libvulkan_radeon) |
+| `es30-immutable-storage` (child process) | ES 3.0 §3.8.3: a depth format with TEXTURE_3D → INVALID_OPERATION, no effect | the front-end accepts `glTexStorage3D(TEXTURE_3D, DEPTH_COMPONENT16)`: with lavapipe it creates the storage; with RADV it segfaults in libvulkan_radeon |
 | `es30-program-binary` | ES 3.0 §2.12.4: loading "will fail" unless binary/length are exactly what GetProgramBinary returned | a byte inverted in the middle or at the end, a flipped bit, length − 1 and length + 16 all load with LINK_STATUS TRUE (only a corrupted header is rejected) |
 | **crash** (child process) `es30-program-binary` | same rule: a failed load raises no error | SIGILL in `glProgramBinary` for a binary truncated to half its length |
 | `es30-program-binary` | ES 3.0 §2.5 (negative sizei → INVALID_VALUE) | `glProgramBinary` with length −1 raises no error |

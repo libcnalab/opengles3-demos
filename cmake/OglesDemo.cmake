@@ -66,7 +66,8 @@ function(ogles_register_gl_tests)
             elseif(driver STREQUAL "angle")
                 # Also preload libGLESv2 (as a native ANGLE application links it); without it eglInitialize fails.
                 set(env "OGLES3_EGL_PLATFORM=angle" "LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/angle-shim:${OGLES3_ANGLE_DIR}"
-                        "LD_PRELOAD=${OGLES3_ANGLE_DIR}/libGLESv2.so")
+                        "LD_PRELOAD=${OGLES3_ANGLE_DIR}/libGLESv2.so"
+                        "VK_ICD_FILENAMES=${OGLES3_ANGLE_VULKAN_ICD}" "VK_DRIVER_FILES=${OGLES3_ANGLE_VULKAN_ICD}")
             elseif(NOT driver STREQUAL "gpu")
                 message(FATAL_ERROR "unknown OGLES3_TEST_DRIVERS entry '${driver}'")
             endif()

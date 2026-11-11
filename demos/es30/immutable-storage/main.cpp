@@ -1190,10 +1190,14 @@ namespace
                 const ChildResult r = run_child(kDepth3dChild, std::chrono::seconds{30});
                 const std::string what = "isolated child: glTexStorage3D(TEXTURE_3D) with DEPTH_COMPONENT16 -> INVALID_OPERATION with no effect "
                                          "(section 3.8.3: depth textures are 2D, 2D array or cube), and the process survives";
-                if (r.passed() || r.died_in_call())
+                // ANGLE's front-end accepts the call (seen on its lavapipe backend: no error, storage created); on its RADV
+                // backend the accepted call then segfaults. Both outcomes are the same documented deviation.
+                const bool angle_accepts = r.exited && r.returned_from_call() &&
+                                           r.output.find("expected GL_INVALID_OPERATION") != std::string::npos;
+                if (r.passed() || r.died_in_call() || angle_accepts)
                     check.expect_or_known_deviation(r.passed(), what, r.describe(), "ANGLE",
-                                                    "ANGLE segfaults in glTexStorage3D(TEXTURE_3D, DEPTH_COMPONENT16) instead of raising INVALID_OPERATION "
-                                                    "(ES 3.0 3.8.3)");
+                                                    "ANGLE accepts glTexStorage3D(TEXTURE_3D, DEPTH_COMPONENT16) instead of raising INVALID_OPERATION "
+                                                    "(ES 3.0 3.8.3); with the RADV backend the call then segfaults");
                 else
                     check.expect(false, what, r.describe());
             }

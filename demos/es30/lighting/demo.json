@@ -1,0 +1,92 @@
+{
+  "name": "es30-lighting",
+  "title": "Lighting: directional, point, spot; Phong vs Blinn-Phong",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es30",
+  "order": 460,
+  "summary": "A lit 3D scene (checkered ground, spheres, boxes from procedural meshes, perspective camera) with ambient, directional, attenuated point and smooth-cone spot lights; Phong vs Blinn-Phong highlights, a correct vs a naive normal matrix on a non-uniformly scaled box, and per-vertex (Gouraud) vs per-fragment shading. Animated in windowed mode with keyboard control; validated against a CPU ray-cast evaluation of the same equations (analytic ground / sphere / box hits, exact barycentrics on the coarse mesh) in 70 per-object pixel sweeps and 86 further checks (named probes under isolated lights, matrix readbacks, defined errors, negative controls).",
+  "spec": [
+    "ES 3.0 §2.12.6.1 Loading Uniform Variables In The Default Uniform Block (UniformMatrix{34}fv with transpose = FALSE, size/count INVALID_OPERATION cases, location -1 ignored)",
+    "ES 3.0 §6.1.12 Shader and Program Queries (GetUniformfv returns matrices in column-major order)",
+    "ES 3.0 §2.9 Vertex Arrays / §2.11 Vertex Array Objects (ELEMENT_ARRAY_BUFFER binding is vertex-array state)",
+    "ES 3.0 §3.6.1 Basic Polygon Rasterization (front/back determination eq. 3.6, FrontFace, CullFace, perspective-correct interpolation eq. 3.7)",
+    "ES 3.0 §4.1.5 Depth Buffer Test",
+    "ES 3.0 §2.1.6.2 Conversion from Floating-Point to Normalized Fixed-Point (8-bit result is one of the two closest values)",
+    "GLSL ES 3.00 §4.5.1 Range and Precision (highp is IEEE single precision with the ULP table; pow inherits from exp2/log2), §4.5.4 Default Precision Qualifiers",
+    "GLSL ES 3.00 §8.3 Common Functions (clamp, max, mix, mod, floor, smoothstep), §8.5 Geometric Functions (normalize, dot, length, reflect)"
+  ],
+  "api": {
+    "glGenVertexArrays": "one VAO per mesh (ground grid, smooth sphere, coarse sphere, cube, cone); every drawn mesh matches the CPU geometry in the pixel sweeps",
+    "glBindVertexArray": "VAO bound per draw; the index buffer is recorded in it and the draws still hit the CPU-predicted pixels",
+    "glDeleteVertexArrays": "cleanup, final glGetError == NO_ERROR",
+    "glGenBuffers": "vertex and index buffer per mesh",
+    "glBindBuffer": "ARRAY_BUFFER and ELEMENT_ARRAY_BUFFER (the latter bound while the VAO is bound)",
+    "glBufferData": "interleaved position + normal floats and uint16 indices, observed through ray-cast pixel comparisons (positions) and lighting (normals)",
+    "glDeleteBuffers": "cleanup",
+    "glEnableVertexAttribArray": "attributes 0 (position) and 1 (normal)",
+    "glVertexAttribPointer": "stride/offset of the interleaved layout, observed through geometry and lighting of every object",
+    "glDrawElements": "TRIANGLES with UNSIGNED_SHORT indices from the VAO; 10 404 CPU-checked triangles; pixels of all objects match the CPU ray casts",
+    "glUseProgram": "lighting program (per fragment) and Gouraud program (per vertex) selected per object",
+    "glGetUniformLocation": "full names of struct members (u_material.albedo, u_spot.cos_inner, ...) resolve and the uploaded values reach the shader",
+    "glUniform1i": "u_material.model selects Phong / Blinn-Phong: highlight probes match the matching CPU model and miss the other by >= 12 steps",
+    "glUniform1f": "shininess, checker size, spot cone cosines: spot probes on the axis, in the falloff and outside the cone match to 1-2 steps",
+    "glUniform3f": "light colours/positions/directions/attenuation, eye, material colours: all sweeps match; the attenuation negative control changes the result by 31 steps",
+    "glUniformMatrix4fv": "u_model, u_view, u_proj with transpose = FALSE: read back column-major equal to the CPU matrices; the projected lamp centres land on the CPU-predicted pixels; the wrong-size call on a mat3 uniform is INVALID_OPERATION",
+    "glUniformMatrix3fv": "u_normal_matrix = demo::math::normal_matrix(model): read back equal; crystal faces shaded as S^-1 R n predicts; the naive mat3(model) crystal matches the naive model and differs by 23 steps; count 2 on a non-array uniform is INVALID_OPERATION and leaves the value unchanged",
+    "glGetUniformfv": "mat4 and mat3 uniforms of both programs read back bit-exact (column-major order, ES 3.0 6.1.12)",
+    "glEnable": "DEPTH_TEST and CULL_FACE; with the ground drawn last the objects stay in front only because the depth test is on",
+    "glDisable": "DEPTH_TEST negative control: the sphere pixel then shows the ground drawn later",
+    "glDepthFunc": "LESS: reversed draw order sweep (all objects) still matches the CPU reference",
+    "glCullFace": "BACK and FRONT: the upward ground is drawn or culled (clear colour) as predicted",
+    "glFrontFace": "CCW and CW: the same four combinations; all 10 404 mesh triangles are CCW from outside",
+    "glClearColor": "ray-through-nothing / culled pixels equal the clear colour",
+    "glClear": "COLOR | DEPTH every frame; many consecutive frames in validate() all match their CPU reference",
+    "glViewport": "full-surface viewport maps NDC to the CPU-projected pixels",
+    "glReadPixels": "whole-frame RGBA8 readback for every configuration",
+    "glGetError": "expect_gl_error(INVALID_OPERATION) after the two rejected matrix uploads; no error after location -1 uploads",
+    "glDeleteProgram": "cleanup"
+  },
+  "features": [
+    "ES20.LIGHTING.SHADER",
+    "ES20.CAMERA.MVP",
+    "ES20.UNIFORM.MATRIX",
+    "ES20.RASTER.INTERPOLATION",
+    "ES20.BUFFER.VBO",
+    "ES20.BUFFER.IBO",
+    "ES20.DRAW.ELEMENTS",
+    "ES30.VAO.BASIC",
+    "ES20.CLEAR.COLOR",
+    "ES20.ERRORS.INVALID_OPERATION"
+  ],
+  "glsl_features": [
+    "GLSL300.VERSION",
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.LAYOUT.LOCATION",
+    "GLSL300.FRAG.OUTPUT",
+    "GLSL300.PRECISION.DEFAULT",
+    "GLSL300.UNIFORM",
+    "GLSL300.TYPES.STRUCT",
+    "GLSL300.TYPES.MATRIX",
+    "GLSL300.MATRIX_OPS",
+    "GLSL300.FN.GEOMETRIC",
+    "GLSL300.FN.EXP",
+    "GLSL300.FN.COMMON",
+    "GLSL300.CONTROL_FLOW",
+    "GLSL300.FUNCTIONS",
+    "GLSL300.BUILTIN_VARS.VS"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "gl-error",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5 (subagent)",
+    "notes": "Viewed gpu es-max and zink es-min captures (256x256, visually identical) plus 512x512 windowed/animated frames at t = 2, 5 and 8 s. Checkered slate-blue ground (finer and darker toward the top); back row two gold spheres (left blotchy faceted highlight = per-vertex, right smooth = per-fragment); middle row two teal stretched boxes, the right one (naive normal matrix) visibly darker on its left face; front row two red spheres, the right (Blinn-Phong) with a clearly larger soft highlight than the left (Phong). A warm orange pool with a small emissive lamp between the front and middle rows, a cool white spot pool with a soft edge on the floor to its left, a small pale cone (spot lamp) at the top edge. In animation the lamps move, the cone sweeps, the boxes rotate and the camera sways; xdotool key presses 2, 3, b, n, g, d turned the lights off, equalised the boxes and orbited the camera as documented."
+  }
+}

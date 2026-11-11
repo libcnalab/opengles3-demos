@@ -61,7 +61,7 @@
 | ES20.BLEND.COLOR | 2.0 | fragment-ops | glBlendColor constant | ES 3.0 §4.1.7 | FULLY_VALIDATED | es20-blending, es32-float-targets-and-indexed-blend |
 | ES20.COLOR_MASK | 2.0 | fragment-ops | glColorMask per-channel write mask | ES 3.0 §4.2.2 | FULLY_VALIDATED | es20-clear-viewport-scissor, es32-float-targets-and-indexed-blend |
 | ES20.DITHER | 2.0 | fragment-ops | GL_DITHER enable state (effect implementation-dependent) | ES 3.0 §4.1.9 | FULLY_VALIDATED | es20-blending, es20-state-queries-errors |
-| ES20.SAMPLE_COVERAGE | 2.0 | multisample | glSampleCoverage + SAMPLE_ALPHA_TO_COVERAGE | ES 3.0 §4.1.3 | FAILED | es30-flat-centroid |
+| ES20.SAMPLE_COVERAGE | 2.0 | multisample | glSampleCoverage + SAMPLE_ALPHA_TO_COVERAGE | ES 3.0 §4.1.3 | FULLY_VALIDATED | es30-flat-centroid |
 | ES20.UNIFORM.SCALAR_VECTOR | 2.0 | uniforms | glUniform{1234}{f | i}[v] and glGetUniform* | FULLY_VALIDATED | es20-uniforms |
 | ES20.UNIFORM.MATRIX | 2.0 | uniforms | glUniformMatrix{234}fv (transpose must be GL_FALSE) | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-transformations-camera, es20-uniforms, es30-lighting, es30-skybox-and-fog |
 | ES20.UNIFORM.ARRAY_STRUCT | 2.0 | uniforms | Uniform arrays and structs (element/member locations) | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-uniforms |
@@ -138,8 +138,8 @@
 | ES30.SAMPLER.QUERY | 3.0 | textures | glGetSamplerParameter* / glIsSampler / SAMPLER_BINDING | ES 3.0 §6.1.5 | FULLY_VALIDATED | es30-sampler-objects |
 | ES30.FBO.MRT | 3.0 | framebuffer | Multiple render targets glDrawBuffers + layout(location) | ES 3.0 §4.2.1 | FULLY_VALIDATED | es30-deferred-shading, es30-multiple-render-targets, es32-advanced-blend-and-sample-shading, es32-float-targets-and-indexed-blend, test-glsl-language |
 | ES30.FBO.READ_DRAW | 3.0 | framebuffer | Separate READ/DRAW framebuffer bindings + glReadBuffer | ES 3.0 §4.4.1 §4.3.1 | FULLY_VALIDATED | es30-framebuffer-blit-msaa, es30-multiple-render-targets, es30-multisample-default-framebuffer, test-driver-crash-readpixels-none |
-| ES30.FBO.BLIT | 3.0 | framebuffer | glBlitFramebuffer color/depth/stencil + filters + scaling | ES 3.0 §4.3.3 | VISUALLY_VERIFIED | es30-framebuffer-blit-msaa, es30-multisample-default-framebuffer |
-| ES30.FBO.MSAA_RENDERBUFFER | 3.0 | framebuffer | glRenderbufferStorageMultisample + resolve blit | ES 3.0 §4.4.2 | FAILED | es30-flat-centroid, es30-framebuffer-blit-msaa |
+| ES30.FBO.BLIT | 3.0 | framebuffer | glBlitFramebuffer color/depth/stencil + filters + scaling | ES 3.0 §4.3.3 | FULLY_VALIDATED | es30-framebuffer-blit-msaa, es30-multisample-default-framebuffer |
+| ES30.FBO.MSAA_RENDERBUFFER | 3.0 | framebuffer | glRenderbufferStorageMultisample + resolve blit | ES 3.0 §4.4.2 | FULLY_VALIDATED | es30-flat-centroid, es30-framebuffer-blit-msaa |
 | ES30.FBO.LAYER | 3.0 | framebuffer | glFramebufferTextureLayer (3D / 2D array layers) | ES 3.0 §4.4.2 | FULLY_VALIDATED | es30-depth-textures, es30-framebuffer-invalidate, es30-texture-3d-and-arrays, es32-cube-map-array, es32-layered-rendering, es32-multisample-array-and-border-color |
 | ES30.FBO.INVALIDATE | 3.0 | framebuffer | glInvalidateFramebuffer / glInvalidateSubFramebuffer | ES 3.0 §4.5 | FULLY_VALIDATED | es30-framebuffer-invalidate |
 | ES30.FBO.CLEAR_BUFFER | 3.0 | framebuffer | glClearBuffer{fv iv uiv fi} per draw buffer | ES 3.0 §4.2.3 | FULLY_VALIDATED | es30-depth-textures, es30-multiple-render-targets, es32-advanced-blend-and-sample-shading, es32-float-targets-and-indexed-blend, es32-layered-rendering |
@@ -162,8 +162,8 @@
 | ES30.SYNC.ERRORS | 3.0 | sync | Invalid sync usage (flags/timeout) errors | ES 3.0 §5.2 | FULLY_VALIDATED | es30-sync-objects |
 | ES30.PROGRAM.BINARY | 3.0 | shaders | glGetProgramBinary/glProgramBinary + PROGRAM_BINARY_RETRIEVABLE_HINT + fallback | ES 3.0 §2.12.4 | FULLY_VALIDATED | es30-program-binary |
 | ES30.PROGRAM.FRAG_DATA_LOCATION | 3.0 | shaders | glGetFragDataLocation | ES 3.0 §3.9.2 | FULLY_VALIDATED | es30-multiple-render-targets |
-| ES30.RASTER.FLAT | 3.0 | rasterization | flat qualifier + provoking vertex (last vertex in ES 3.0) | ES 3.0 §2.17 | FAILED | es30-flat-centroid |
-| ES30.RASTER.CENTROID | 3.0 | rasterization | centroid interpolation with multisampling | ES 3.0 §3.6.3 | FAILED | es30-flat-centroid |
+| ES30.RASTER.FLAT | 3.0 | rasterization | flat qualifier + provoking vertex (last vertex in ES 3.0) | ES 3.0 §2.17 | FULLY_VALIDATED | es30-flat-centroid |
+| ES30.RASTER.CENTROID | 3.0 | rasterization | centroid interpolation with multisampling | ES 3.0 §3.6.3 | FULLY_VALIDATED | es30-flat-centroid |
 | ES30.BLEND.MINMAX | 3.0 | fragment-ops | MIN/MAX blend equations | ES 3.0 §4.1.7 | FULLY_VALIDATED | es20-blending, es32-float-targets-and-indexed-blend |
 | ES30.STATE.INDEXED | 3.0 | state | glGetIntegeri_v / glGetInteger64i_v / glGetInteger64v / glGetStringi(EXTENSIONS) | ES 3.0 §6.1.1 | FULLY_VALIDATED | diagnostics-capabilities, es20-state-queries-errors, es32-float-targets-and-indexed-blend |
 | ES30.MULTISAMPLE.DEFAULT | 3.0 | multisample | Multisampled default framebuffer; SAMPLES / SAMPLE_BUFFERS | ES 3.0 §3.3 | VISUALLY_VERIFIED | es30-multisample-default-framebuffer |

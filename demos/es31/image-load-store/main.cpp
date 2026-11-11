@@ -44,6 +44,7 @@
 #include <poll.h>
 #include <signal.h>
 #include <spawn.h>
+#include <cstdlib>
 #include <sys/resource.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -697,8 +698,18 @@ namespace
 
             // The non-layered store into a 3D-texture slice crashes one driver (see SliceStoreChild). It is made first in a
             // child process, on every driver; the parent repeats it for the displayed image only when the child survived it.
-            slice3d_child_ = run_child(kSliceChild, std::chrono::seconds{30});
-            slice3d_in_process_ = slice3d_child_.exited;
+            // On ANGLE (Vulkan/RADV) this store raises a GPU page fault and an amdgpu context reset. The GPU is shared with
+            // the desktop, so the known-faulting case runs there only on explicit request (OGLES3_RUN_GPU_FAULT_CASES=1).
+            const char* renderer = reinterpret_cast<const char*>(mgl::glGetString(mgl::StringName::Renderer));
+            const char* opt_in = std::getenv("OGLES3_RUN_GPU_FAULT_CASES");
+            slice3d_not_run_ = renderer != nullptr && std::string_view(renderer).find("ANGLE") != std::string_view::npos &&
+                               !(opt_in != nullptr && std::string_view(opt_in) == "1");
+            if (slice3d_not_run_)
+                std::cout << "note: the non-layered 3D-slice store is NOT run on ANGLE (known GPU page fault / context reset, see "
+                             "KNOWN_LIMITATIONS); set OGLES3_RUN_GPU_FAULT_CASES=1 to run it\n";
+            else
+                slice3d_child_ = run_child(kSliceChild, std::chrono::seconds{30});
+            slice3d_in_process_ = !slice3d_not_run_ && slice3d_child_.exited;
             if (!slice3d_in_process_)
                 std::cout << "note: the non-layered 3D-slice store is not repeated in-process (the child did not survive it); slice "
                           << k3dSingleSlice << " keeps the layered values\n";
@@ -1061,6 +1072,7 @@ namespace
         mgl::FramebufferId fbo_{};
         mgl::TextureId tex_src_{}, tex_blur_{}, tex_sobel_{}, tex_arr_{}, tex_3d_{}, tex_lvl_a_{}, tex_lvl_b_{}, tex_frag_{};
         ChildResult slice3d_child_;
+        bool slice3d_not_run_ = false;
         bool slice3d_in_process_ = true;  // the 3D slice was overwritten through the non-layered binding in this process
 
         /// Is layer `l` of the array (row 1) or slice `l` of the 3D texture (row 2) overwritten by the non-layered binding?
@@ -1709,6 +1721,7 @@ namespace
         check_filters(check);
         check_formats(check);
         check_layers(check);
+        if (!slice3d_not_run_)
         {
             // The isolated child (see SliceStoreChild): only a death inside the store/read-back is the documented deviation;
             // any other outcome (wrong values, a crash during setup) is a plain failure on every driver.

@@ -113,6 +113,14 @@
 | `es31-stencil-texturing-and-level-queries` | ES 3.2 §8.11.3: compressed formats report the post-decompression component types | RGB8_ETC2 R/G/B types read NONE |
 | `es31-stencil-texturing-and-level-queries`, `es31-multisample-textures` | ES 3.1 §8.8 / 3.2 §8.11.3: multisample textures have only level 0 | `GetTexLevelParameteriv(…, level 1)` raises no error |
 | `es31-multisample-textures` | ES 3.2 §8.14.4: `GenerateMipmap` target list | `TEXTURE_2D_MULTISAMPLE` raises no error (INVALID_ENUM expected) |
+| `es30-flat-centroid` | ES 3.0 §4.1.3 / 3.2 §13.8.3: no coverage changes unless SAMPLE_BUFFERS is one | SAMPLE_COVERAGE / SAMPLE_ALPHA_TO_COVERAGE are applied on a single-sample FBO (SAMPLE_BUFFERS 0, RENDERBUFFER_SAMPLES 0) |
+| `es30-framebuffer-blit-msaa` | ES 3.0 §4.3.3: "Only pixels whose centers lie within the destination rectangle are written" | a multisample resolve of (20,30)-(100,90) also writes up to (128,128) (RGBA8 and RGBA8UI) |
+| **crash** (child process) `es30-immutable-storage` | ES 3.0 §3.8.3: a depth format with TEXTURE_3D → INVALID_OPERATION, no effect | SIGSEGV in `glTexStorage3D(TEXTURE_3D, DEPTH_COMPONENT16)` (in libvulkan_radeon) |
+| `es30-program-binary` | ES 3.0 §2.12.4: loading "will fail" unless binary/length are exactly what GetProgramBinary returned | a byte inverted in the middle or at the end, a flipped bit, length − 1 and length + 16 all load with LINK_STATUS TRUE (only a corrupted header is rejected) |
+| **crash** (child process) `es30-program-binary` | same rule: a failed load raises no error | SIGILL in `glProgramBinary` for a binary truncated to half its length |
+| `es30-program-binary` | ES 3.0 §2.5 (negative sizei → INVALID_VALUE) | `glProgramBinary` with length −1 raises no error |
+| `es30-program-binary` | ES 3.0 §2.5: an erroring command changes no pointer outputs | `glGetProgramBinary` with a too-small bufSize writes `*binaryFormat` and `*length = 0` |
+| **GPU fault** (not run by default) `es31-image-load-store` | ES 3.2 §8.23: a 3D slice bound with layered = FALSE is accessed as a 2D image | `imageStore` raises a RADV GPU page fault and an amdgpu context reset; the next synchronizing call hangs. The GPU is shared with the desktop, so the case runs on ANGLE only with `OGLES3_RUN_GPU_FAULT_CASES=1`, in a child process |
 | intermittent (not reproduced) `es31-image-load-store` | correct execution | one SIGSEGV of `es31-image-load-store:zink:es-min` during a full `ctest -j6` run on 2026-11-11. Not reproduced in 16 sequential and 90 parallel (3×15×2) repeats. No check is changed; if it recurs, isolate the call in a child process |
 
 Not deviations (verified during integration): `es31-framebuffer-no-attachments` SAMPLE_BUFFERS/SAMPLES of an
@@ -120,7 +128,8 @@ attachment-less FBO with default samples 4 was our misreading. §9.2.3.1 derives
 attachments, so the check now asserts only the §9.2.3.1 relation between them. `DEPTH_STENCIL_ATTACHMENT` with nothing
 attached may give NONE (Mesa) or INVALID_OPERATION (ANGLE), since the text supports both. ANGLE conforms on three rules
 where Mesa has XFAILs (default-framebuffer attachment query, deleting an active query, Draw*Indirect during
-transform feedback); this supports our readings of them. The earlier `es31-atomics` row ("Mesa rejects an atomic counter
+transform feedback); this supports our readings of them. The old es30-framebuffer-blit-msaa requirement that the RGBA8 interior of a sub-rectangle resolve equal the
+whole-image resolve was our over-assertion (resolve is implementation-dependent); it is now only printed. The earlier `es31-atomics` row ("Mesa rejects an atomic counter
 without binding") was our misreading: GLSL ES 3.20 §4.4.6 makes it a compile-time error (the change log calls it
 a clarification), and Mesa and ANGLE both reject it correctly. Further: Mesa accepting `glGenerateMipmap` on R32F and unsized
 `RGB + FLOAT` uploads is correct, because the contexts expose `GL_OES_texture_float_linear`,

@@ -39,6 +39,12 @@ and the runs where the matched driver passed it (XPASS). Spec quotes and explana
 | es30-etc2-eac | SIGNED_RG11_EAC 4x4: all 16 texels match the Appendix C decoder (the exact 11-bit value (never truncated below 11 bits, C.1.5 / C.1.7); larg | ANGLE | angle:native |  |  |
 | es30-etc2-eac | glCompressedTexSubImage2D RGB8_ETC2 2x2 at (4, 4) of the 6x6 texture -> no error (width + xoffset = TEXTURE_WIDTH) | ANGLE | angle:native |  |  |
 | es30-etc2-eac | magnified picture: the 36 texels of the padded 6x6 RGB8_ETC2 cell match the CPU decoder | ANGLE | angle:native |  |  |
+| es30-flat-centroid | single-sample FBO: SAMPLE_ALPHA_TO_COVERAGE alpha 0 has no effect - every pixel is written | ANGLE | angle:native |  |  |
+| es30-flat-centroid | single-sample FBO: SAMPLE_COVERAGE 0.5 has no effect - every pixel's stencil incremented exactly once | ANGLE | angle:native |  |  |
+| es30-flat-centroid | single-sample FBO: SAMPLE_COVERAGE value 0 has no effect - every pixel is written | ANGLE | angle:native |  |  |
+| es30-flat-centroid | single-sample FBO: SAMPLE_COVERAGE value 1 inverted has no effect - every pixel is written | ANGLE | angle:native |  |  |
+| es30-framebuffer-blit-msaa | ...and writes no pixel outside that rectangle (every other pixel keeps the clear color) | ANGLE | angle:native |  |  |
+| es30-framebuffer-blit-msaa | integer sub-rectangle resolve: no pixel outside the rectangle is written (all keep the sentinel) | ANGLE | angle:native |  |  |
 | es30-framebuffer-blit-msaa | multisample RGBA8 -> SRGB8_ALPHA8: the formats are not identical -> INVALID_OPERATION | zink | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
 | es30-framebuffer-invalidate | cells 11..13 (3D slices 1..3 copied with glBlitFramebuffer) equal their CPU patterns after re-rendering every image (rendering after invalid | ANGLE | angle:native |  |  |
 | es30-framebuffer-invalidate | cells 11..13 (3D slices 1..3 copied with glBlitFramebuffer) equal their CPU patterns after the end-of-frame invalidation of the default fram | ANGLE | angle:native |  |  |
@@ -47,6 +53,7 @@ and the runs where the matched driver passed it (XPASS). Spec quotes and explana
 | es30-framebuffer-invalidate | default framebuffer: querying DEPTH_STENCIL_ATTACHMENT (not BACK, DEPTH or STENCIL) -> INVALID_OPERATION | zink | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
 | es30-framebuffer-invalidate | framebuffer object: COLOR_ATTACHMENT8 (= MAX_COLOR_ATTACHMENTS) -> INVALID_OPERATION | ANGLE | angle:native |  |  |
 | es30-framebuffer-invalidate | framebuffer object: attachment GL_BACK (a default framebuffer name) -> INVALID_ENUM | ANGLE | angle:native |  |  |
+| es30-immutable-storage | isolated child: glTexStorage3D(TEXTURE_3D) with DEPTH_COMPONENT16 -> INVALID_OPERATION with no effect (section 3.8.3: depth textures are 2D, | ANGLE | angle:native |  |  |
 | es30-integer-float-textures | R32I with RED_INTEGER / FLOAT -> INVALID_OPERATION (Table 3.2 lists only INT for R32I) | zink | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
 | es30-integer-float-textures | RGB9_E5 (FLOAT data): texelFetch() returns the same exact words | ANGLE | angle:native |  |  |
 | es30-integer-float-textures | RGB9_E5 (FLOAT data): texture() returns all 64 texels as the exact 32-bit words (256 words compared) | ANGLE | angle:native |  |  |
@@ -80,10 +87,17 @@ and the runs where the matched driver passed it (XPASS). Spec quotes and explana
 | es30-occlusion-queries | scene, polled: every ANY_SAMPLES_PASSED query issued before an available one is available | zink | zink:es-max zink:es-min |  |  |
 | es30-occlusion-queries | scene, polled: every ANY_SAMPLES_PASSED_CONSERVATIVE query issued before an available one is available | zink | zink:es-max zink:es-min |  |  |
 | es30-pixel-buffer-objects | glReadPixels(RGBA_INTEGER, UNSIGNED_INT) into a pack buffer at byte offset 2 (not a multiple of 4) -> INVALID_OPERATION (4.3.2.4) | ANGLE | angle:native |  |  |
-| es30-program-binary | binary with 16 extra bytes (length + 16): no error, LINK_STATUS FALSE, PROGRAM_BINARY_LENGTH 0 | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-program-binary | binary a single flipped bit (one third into the binary) (isolated child): glProgramBinary generates no error, LINK_STATUS FALSE, PROGRAM_BIN | ANGLE | angle:native |  |  |
+| es30-program-binary | binary last byte inverted (isolated child): glProgramBinary generates no error, LINK_STATUS FALSE, PROGRAM_BINARY_LENGTH 0, and the process  | ANGLE | angle:native |  |  |
+| es30-program-binary | binary one byte in the middle inverted (isolated child): glProgramBinary generates no error, LINK_STATUS FALSE, PROGRAM_BINARY_LENGTH 0, and | ANGLE | angle:native |  |  |
+| es30-program-binary | binary truncated by one byte (length - 1) (isolated child): glProgramBinary generates no error, LINK_STATUS FALSE, PROGRAM_BINARY_LENGTH 0,  | ANGLE | angle:native |  |  |
+| es30-program-binary | binary truncated to half its length (isolated child): glProgramBinary generates no error, LINK_STATUS FALSE, PROGRAM_BINARY_LENGTH 0, and th | ANGLE | angle:native |  |  |
+| es30-program-binary | binary with 16 extra bytes (length + 16) (isolated child): glProgramBinary generates no error, LINK_STATUS FALSE, PROGRAM_BINARY_LENGTH 0, a | Mesa | angle:native gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
 | es30-program-binary | glGetProgramBinary on a failed load: length was not written (ES 3.0 §2.5) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
 | es30-program-binary | glGetProgramBinary on a never-linked program: length was not written (ES 3.0 §2.5) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
-| es30-program-binary | glGetProgramBinary with a too-small bufSize: length was not written (ES 3.0 §2.5) | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-program-binary | glGetProgramBinary with a too-small bufSize: binaryFormat was not written | ANGLE | angle:native |  |  |
+| es30-program-binary | glGetProgramBinary with a too-small bufSize: length was not written (ES 3.0 §2.5) | Mesa | angle:native gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
+| es30-program-binary | glProgramBinary with length -1 -> INVALID_VALUE | ANGLE | angle:native |  |  |
 | es30-program-binary | the INVALID_ENUM call had no effect: the program is still linked | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
 | es30-program-binary | the INVALID_VALUE call had no effect: the program is still linked | Mesa | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |
 | es30-sync-objects | glGetSynciv with bufSize 0 reports length 0 ("the actual number of integers replaced is returned in length") | zink | gpu:es-max gpu:es-min llvmpipe:es-max llvmpipe:es-min zink:es-max zink:es-min |  |  |

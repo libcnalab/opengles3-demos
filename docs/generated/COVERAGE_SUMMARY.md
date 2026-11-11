@@ -3,7 +3,7 @@
 
 Result directories: build/debug/test-results
 
-Source revision: 0303e5f (with uncommitted changes)
+Source revision: 6d716c3 (with uncommitted changes)
 
 Only results from the current executables count. A result is ignored when its executable was
 rebuilt after the run, or when the demo's sources, `common/` or the CMake glue are newer than the
@@ -21,12 +21,12 @@ ES 3.2 driver, not conformance of a native ES 3.0/3.1 implementation (see VALIDA
 
 ## Semantic features (by introducing ES version)
 
-| ES | total | passed | passed % | DOCUMENTED_ONLY | FAILED | VISUALLY_VERIFIED | FULLY_VALIDATED |
-|---|---|---|---|---|---|---|---|
-| 2.0 | 87 | 85 | 98% | 1 | 1 | 0 | 85 |
-| 3.0 | 78 | 75 | 96% | 0 | 3 | 2 | 73 |
-| 3.1 | 30 | 30 | 100% | 0 | 0 | 0 | 30 |
-| 3.2 | 31 | 31 | 100% | 0 | 0 | 0 | 31 |
+| ES | total | passed | passed % | DOCUMENTED_ONLY | VISUALLY_VERIFIED | FULLY_VALIDATED |
+|---|---|---|---|---|---|---|
+| 2.0 | 87 | 86 | 99% | 1 | 0 | 86 |
+| 3.0 | 78 | 78 | 100% | 0 | 1 | 77 |
+| 3.1 | 30 | 30 | 100% | 0 | 0 | 30 |
+| 3.2 | 31 | 31 | 100% | 0 | 0 | 31 |
 
 ## GLSL ES features (by language version)
 
@@ -41,6 +41,5 @@ ES 3.2 driver, not conformance of a native ES 3.0/3.1 implementation (see VALIDA
 
 | status | count |
 |---|---|
-| FAILED | 2 |
-| FULLY_VALIDATED | 79 |
+| FULLY_VALIDATED | 81 |
 | VISUALLY_VERIFIED | 1 |

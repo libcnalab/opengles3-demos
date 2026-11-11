@@ -64,7 +64,6 @@ Running Claude subagents (worktrees under .claude/worktrees/):
 - es32 advanced-blend-and-sample-shading (59)
 - es30 etc2-eac (6)
 - es32 astc-and-copy-image (57)
-- es31 compute-particles (3D showcase)
 Still unassigned: 62 (glsl320 built-ins), 35 (glsl310 built-ins),
 ES 3.0 items 10, 14, 16-20, 3D fog and skybox.
 Entry points still without evidence (2026-11-11 17:00): CompressedTexSubImage2D, CompressedTexImage3D,

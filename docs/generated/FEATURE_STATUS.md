@@ -7,15 +7,15 @@
 | ES20.CONTEXT.STRINGS | 2.0 | context | GL_VENDOR/RENDERER/VERSION/SHADING_LANGUAGE_VERSION strings and version parsing | ES 3.0 §6.1.6 | FULLY_VALIDATED | diagnostics-capabilities |
 | ES20.ERRORS.GETERROR | 2.0 | errors | glGetError semantics: sticky flags; command ignored on error | ES 3.0 §2.5 | NOT_STARTED |  |
 | ES20.ERRORS.INVALID_ENUM | 2.0 | errors | GL_INVALID_ENUM generation (only reachable via raw casts through typed wrappers) | ES 3.0 §2.5 Table 2.3 | FULLY_VALIDATED | es30-instancing, es30-vertex-array-objects |
-| ES20.ERRORS.INVALID_VALUE | 2.0 | errors | GL_INVALID_VALUE generation (negative sizes/out-of-range indices) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-culling-front-face, es30-instancing, es30-vertex-array-objects |
-| ES20.ERRORS.INVALID_OPERATION | 2.0 | errors | GL_INVALID_OPERATION generation (state-dependent misuse) | ES 3.0 §2.5 | FULLY_VALIDATED | es30-vertex-array-objects |
-| ES20.ERRORS.INVALID_FB_OP | 2.0 | errors | GL_INVALID_FRAMEBUFFER_OPERATION on incomplete framebuffer | ES 3.0 §4.4.4 | NOT_STARTED |  |
+| ES20.ERRORS.INVALID_VALUE | 2.0 | errors | GL_INVALID_VALUE generation (negative sizes/out-of-range indices) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-copy-and-read-pixels, es20-culling-front-face, es30-instancing, es30-vertex-array-objects |
+| ES20.ERRORS.INVALID_OPERATION | 2.0 | errors | GL_INVALID_OPERATION generation (state-dependent misuse) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-copy-and-read-pixels, es30-vertex-array-objects |
+| ES20.ERRORS.INVALID_FB_OP | 2.0 | errors | GL_INVALID_FRAMEBUFFER_OPERATION on incomplete framebuffer | ES 3.0 §4.4.4 | FULLY_VALIDATED | es20-framebuffer-objects |
 | ES20.VIEWPORT | 2.0 | transform | glViewport mapping NDC->window; MAX_VIEWPORT_DIMS | ES 3.0 §2.13.1 | FULLY_VALIDATED | es20-clear-viewport-scissor |
 | ES20.DEPTH_RANGE | 2.0 | transform | glDepthRangef mapping of NDC z to window z | ES 3.0 §2.13.1 | FULLY_VALIDATED | es20-clear-viewport-scissor, es20-depth-test |
 | ES20.CLIP.VOLUME | 2.0 | transform | Clip-volume clipping of primitives (-w<=x | y | NOT_STARTED |  |
 | ES20.COORDS.SYSTEMS | 2.0 | transform | Object->eye->clip->NDC->window coordinate chain (shader-based) | ES 3.0 §2.13 | NOT_STARTED |  |
 | ES20.SCISSOR | 2.0 | fragment-ops | Scissor test (glScissor + GL_SCISSOR_TEST) | ES 3.0 §4.1.2 | FULLY_VALIDATED | es20-clear-viewport-scissor, es20-culling-front-face, es20-depth-test, es20-stencil-test |
-| ES20.CLEAR.COLOR | 2.0 | framebuffer | glClear color + glClearColor | ES 3.0 §4.2.3 | FULLY_VALIDATED | es20-blending, es20-clear-viewport-scissor, es20-culling-front-face, es30-hello-triangle |
+| ES20.CLEAR.COLOR | 2.0 | framebuffer | glClear color + glClearColor | ES 3.0 §4.2.3 | FULLY_VALIDATED | es20-blending, es20-clear-viewport-scissor, es20-copy-and-read-pixels, es20-culling-front-face, es20-framebuffer-objects, es30-hello-triangle |
 | ES20.CLEAR.DEPTH | 2.0 | framebuffer | glClear depth + glClearDepthf | ES 3.0 §4.2.3 | FULLY_VALIDATED | es20-clear-viewport-scissor, es20-depth-test |
 | ES20.CLEAR.STENCIL | 2.0 | framebuffer | glClear stencil + glClearStencil | ES 3.0 §4.2.3 | FULLY_VALIDATED | es20-clear-viewport-scissor, es20-stencil-test |
 | ES20.CLEAR.SCISSORED | 2.0 | framebuffer | Clear honours scissor and write masks | ES 3.0 §4.2.3 | FULLY_VALIDATED | es20-clear-viewport-scissor, es20-depth-test, es20-stencil-test |
@@ -41,7 +41,7 @@
 | ES20.BUFFER.SUBDATA | 2.0 | buffers | glBufferSubData partial updates | ES 3.0 §2.10.2 | FULLY_VALIDATED | es20-indexed-drawing |
 | ES20.BUFFER.REALLOC | 2.0 | buffers | glBufferData re-specification (orphaning) and size/usage queries | ES 3.0 §2.10.2 §6.1.9 | FULLY_VALIDATED | es20-indexed-drawing |
 | ES20.BUFFER.QUERY | 2.0 | buffers | glGetBufferParameteriv / glIsBuffer | ES 3.0 §6.1.9 | FULLY_VALIDATED | es20-indexed-drawing |
-| ES20.DRAW.ARRAYS | 2.0 | drawing | glDrawArrays | ES 3.0 §2.9.3 | FULLY_VALIDATED | es20-blending, es20-culling-front-face, es20-indexed-drawing, es20-primitive-topology, es30-hello-triangle, es30-instancing, es30-vertex-array-objects |
+| ES20.DRAW.ARRAYS | 2.0 | drawing | glDrawArrays | ES 3.0 §2.9.3 | FULLY_VALIDATED | es20-blending, es20-copy-and-read-pixels, es20-culling-front-face, es20-framebuffer-objects, es20-indexed-drawing, es20-primitive-topology, es30-hello-triangle, es30-instancing, es30-vertex-array-objects |
 | ES20.DRAW.ELEMENTS | 2.0 | drawing | glDrawElements with index buffer | ES 3.0 §2.9.3 | FULLY_VALIDATED | es20-indexed-drawing, es30-instancing, es30-vertex-array-objects |
 | ES20.DRAW.TOPOLOGY | 2.0 | drawing | Primitive types POINTS/LINES/LINE_LOOP/LINE_STRIP/TRIANGLES/STRIP/FAN | ES 3.0 §2.7.1 | FULLY_VALIDATED | es20-primitive-topology |
 | ES20.DRAW.POINT_SIZE | 2.0 | drawing | gl_PointSize + ALIASED_POINT_SIZE_RANGE + gl_PointCoord | ES 3.0 §3.4 | FULLY_VALIDATED | es20-primitive-topology |
@@ -68,7 +68,7 @@
 | ES20.UNIFORM.ACTIVE_QUERY | 2.0 | uniforms | glGetActiveUniform enumeration | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-uniforms |
 | ES20.TEXTURE.2D | 2.0 | textures | 2D textures: glGenTextures/glBindTexture/glTexImage2D/glActiveTexture | ES 3.0 §3.8.1 §3.8.3 | FULLY_VALIDATED | es20-textures-2d |
 | ES20.TEXTURE.SUBIMAGE | 2.0 | textures | glTexSubImage2D updates | ES 3.0 §3.8.5 | FULLY_VALIDATED | es20-textures-2d |
-| ES20.TEXTURE.COPY | 2.0 | textures | glCopyTexImage2D / glCopyTexSubImage2D from framebuffer | ES 3.0 §3.8.5 | NOT_STARTED |  |
+| ES20.TEXTURE.COPY | 2.0 | textures | glCopyTexImage2D / glCopyTexSubImage2D from framebuffer | ES 3.0 §3.8.5 | FULLY_VALIDATED | es20-copy-and-read-pixels |
 | ES20.TEXTURE.FILTER | 2.0 | textures | NEAREST/LINEAR mag+min filtering | ES 3.0 §3.8.10-11 | FULLY_VALIDATED | es20-textures-2d, es30-sampler-objects |
 | ES20.TEXTURE.WRAP | 2.0 | textures | REPEAT/CLAMP_TO_EDGE/MIRRORED_REPEAT | ES 3.0 §3.8.10 | FULLY_VALIDATED | es20-textures-2d, es30-sampler-objects |
 | ES20.TEXTURE.MIPMAP | 2.0 | textures | Mipmap chains + glGenerateMipmap + mipmap min filters | ES 3.0 §3.8.10 | FULLY_VALIDATED | es20-mipmaps |
@@ -78,12 +78,12 @@
 | ES20.TEXTURE.UNSIZED_FORMATS | 2.0 | textures | Unsized RGBA/RGB/LUMINANCE/LUMINANCE_ALPHA/ALPHA + packed 565/4444/5551 types | ES 3.0 §3.8.3 Table 3.3 | FULLY_VALIDATED | es20-textures-2d |
 | ES20.TEXTURE.COMPLETENESS | 2.0 | textures | Incomplete texture sampling returns (0 | 0 | FULLY_VALIDATED | es20-cube-map, es20-mipmaps, es20-textures-2d, es30-sampler-objects |
 | ES20.TEXTURE.QUERY | 2.0 | textures | glGetTexParameter* / glIsTexture | ES 3.0 §6.1.4 | FULLY_VALIDATED | es20-textures-2d |
-| ES20.FBO.RENDER_TO_TEXTURE | 2.0 | framebuffer | Framebuffer objects with texture color attachment (render to texture) | ES 3.0 §4.4 | FULLY_VALIDATED | es30-multiple-render-targets |
-| ES20.FBO.RENDERBUFFER | 2.0 | framebuffer | Renderbuffers (color/depth/stencil) glRenderbufferStorage | ES 3.0 §4.4.2 | NOT_STARTED |  |
-| ES20.FBO.COMPLETENESS | 2.0 | framebuffer | glCheckFramebufferStatus incl. intentionally incomplete cases | ES 3.0 §4.4.4 | NOT_STARTED |  |
-| ES20.FBO.QUERY | 2.0 | framebuffer | glGetFramebufferAttachmentParameteriv / glGetRenderbufferParameteriv / glIs* | ES 3.0 §6.1.13-14 | NOT_STARTED |  |
+| ES20.FBO.RENDER_TO_TEXTURE | 2.0 | framebuffer | Framebuffer objects with texture color attachment (render to texture) | ES 3.0 §4.4 | FULLY_VALIDATED | es20-framebuffer-objects, es30-multiple-render-targets |
+| ES20.FBO.RENDERBUFFER | 2.0 | framebuffer | Renderbuffers (color/depth/stencil) glRenderbufferStorage | ES 3.0 §4.4.2 | FULLY_VALIDATED | es20-framebuffer-objects |
+| ES20.FBO.COMPLETENESS | 2.0 | framebuffer | glCheckFramebufferStatus incl. intentionally incomplete cases | ES 3.0 §4.4.4 | FULLY_VALIDATED | es20-framebuffer-objects |
+| ES20.FBO.QUERY | 2.0 | framebuffer | glGetFramebufferAttachmentParameteriv / glGetRenderbufferParameteriv / glIs* | ES 3.0 §6.1.13-14 | FULLY_VALIDATED | es20-framebuffer-objects |
 | ES20.FBO.FEEDBACK_LOOP | 2.0 | framebuffer | Texture feedback loop rules (undefined results - documented not rendered) | ES 3.0 §4.4.3 | NOT_STARTED |  |
-| ES20.READPIXELS | 2.0 | framebuffer | glReadPixels incl. IMPLEMENTATION_COLOR_READ_FORMAT/TYPE and PACK_ALIGNMENT | ES 3.0 §4.3.2 | NOT_STARTED |  |
+| ES20.READPIXELS | 2.0 | framebuffer | glReadPixels incl. IMPLEMENTATION_COLOR_READ_FORMAT/TYPE and PACK_ALIGNMENT | ES 3.0 §4.3.2 | FULLY_VALIDATED | es20-copy-and-read-pixels |
 | ES20.STATE.QUERIES | 2.0 | state | glGetBooleanv/Integerv/Floatv/glIsEnabled; data conversion rules | ES 3.0 §6.1.1-6.1.2 | FULLY_VALIDATED | es20-depth-test, es20-stencil-test |
 | ES20.HINT | 2.0 | state | glHint GENERATE_MIPMAP_HINT (FRAGMENT_SHADER_DERIVATIVE_HINT: ES 3.0) | ES 3.0 §5.3 | FULLY_VALIDATED | es20-mipmaps |
 | ES20.FLUSH_FINISH | 2.0 | sync | glFlush / glFinish | ES 3.0 §5.1 | NOT_STARTED |  |
@@ -143,7 +143,7 @@
 | ES30.FBO.INVALIDATE | 3.0 | framebuffer | glInvalidateFramebuffer / glInvalidateSubFramebuffer | ES 3.0 §4.5 | NOT_STARTED |  |
 | ES30.FBO.CLEAR_BUFFER | 3.0 | framebuffer | glClearBuffer{fv iv uiv fi} per draw buffer | ES 3.0 §4.2.3 | FULLY_VALIDATED | es30-multiple-render-targets |
 | ES30.FBO.SRGB | 3.0 | framebuffer | sRGB render targets: encoding on write; FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING | ES 3.0 §4.1.8 | NOT_STARTED |  |
-| ES30.FBO.DEPTH_STENCIL_ATTACHMENT | 3.0 | framebuffer | DEPTH_STENCIL_ATTACHMENT point | ES 3.0 §4.4.2 | FULLY_VALIDATED | es30-multiple-render-targets |
+| ES30.FBO.DEPTH_STENCIL_ATTACHMENT | 3.0 | framebuffer | DEPTH_STENCIL_ATTACHMENT point | ES 3.0 §4.4.2 | FULLY_VALIDATED | es20-framebuffer-objects, es30-multiple-render-targets |
 | ES30.FBO.INTEGER_TARGET | 3.0 | framebuffer | Integer color attachments + glClearBufferiv/uiv + readback | ES 3.0 §4.4.4 | FULLY_VALIDATED | es30-multiple-render-targets |
 | ES30.FBO.ATTACHMENT_QUERY | 3.0 | framebuffer | COMPONENT_TYPE / color sizes / TEXTURE_LAYER attachment queries | ES 3.0 §6.1.13 | NOT_STARTED |  |
 | ES30.INTERNALFORMAT.QUERY | 3.0 | framebuffer | glGetInternalformativ NUM_SAMPLE_COUNTS / SAMPLES | ES 3.0 §6.1.15 | NOT_STARTED |  |

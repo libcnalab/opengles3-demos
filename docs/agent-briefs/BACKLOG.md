@@ -4,10 +4,10 @@ The order follows `docs/DEMO_CATALOG.md`. Each line is one delegable task: direc
 followed by feature IDs. Claim an item by moving it to "In progress" with the agent and branch.
 
 ## In progress
-- es20 clear/viewport/scissor, primitive topology, vertex attributes, indexed drawing, depth test,
-  stencil test (Claude subagents, 2026-11-11)
-- es20 mipmaps, cube map, framebuffer objects, copy-and-read-pixels; es30 vertex-array-objects,
-  instancing, multiple-render-targets, sampler-objects (Claude subagents, 2026-11-11)
+(none)
+
+## Done
+All Stage 1–4 foundation demos listed as implemented in DEMO_CATALOG.md (merged 2026-11-11).
 
 ## Next (ES 3.0)
 1. `es30/texture-3d-and-arrays` → ES30.TEXTURE.3D, ES30.TEXTURE.2D_ARRAY, ES30.FBO.LAYER

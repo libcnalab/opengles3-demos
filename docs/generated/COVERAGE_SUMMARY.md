@@ -7,7 +7,7 @@ Result directories: build/debug/test-results
 
 | ES | total | passed | passed % | NOT_STARTED | FULLY_VALIDATED |
 |---|---|---|---|---|---|
-| 2.0 | 142 | 130 | 92% | 12 | 130 |
+| 2.0 | 142 | 132 | 93% | 10 | 132 |
 | 3.0 | 104 | 47 | 45% | 57 | 47 |
 | 3.1 | 68 | 0 | 0% | 68 | 0 |
 | 3.2 | 44 | 0 | 0% | 44 | 0 |
@@ -16,8 +16,8 @@ Result directories: build/debug/test-results
 
 | ES | total | passed | passed % | NOT_STARTED | FULLY_VALIDATED |
 |---|---|---|---|---|---|
-| 2.0 | 86 | 67 | 78% | 19 | 67 |
-| 3.0 | 78 | 22 | 28% | 56 | 22 |
+| 2.0 | 86 | 70 | 81% | 16 | 70 |
+| 3.0 | 78 | 23 | 29% | 55 | 23 |
 | 3.1 | 30 | 2 | 7% | 28 | 2 |
 | 3.2 | 31 | 1 | 3% | 30 | 1 |
 
@@ -34,4 +34,4 @@ Result directories: build/debug/test-results
 
 | status | count |
 |---|---|
-| FULLY_VALIDATED | 17 |
+| FULLY_VALIDATED | 19 |

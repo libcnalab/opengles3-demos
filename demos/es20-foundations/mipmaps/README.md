@@ -132,13 +132,14 @@ after the repair would fail the second.
 
 ## Findings
 
-- **Mesa accepts `glGenerateMipmap` on an `R32F` / `RGBA32F` base level** (radeonsi, llvmpipe and zink, es-min and
-  es-max). ES 3.0 §3.8.10.5: "If the levelbase array was not specified with an unsized internal format from
-  table 3.3 or a sized internal format that is both color-renderable and texture-filterable according to
-  table 3.13, an INVALID_OPERATION error is generated." Table 3.13 marks `R32F`/`RG32F`/`RGBA32F` as neither
-  renderable nor filterable (ES 3.2 Table 8.10: color-renderable, *not* filterable), so the error is required.
-  The same call correctly fails with `RGBA8UI` and `DEPTH_COMPONENT24` (and `RGB32F`), which is what the demo
-  asserts; the `R32F` result is only printed as a `note:`.
+- **`glGenerateMipmap` on an `R32F` base level depends on extensions.** ES 3.0 §3.8.10.5 requires the base
+  level to be both color-renderable and texture-filterable, otherwise INVALID_OPERATION. In core ES, `R32F`
+  is never filterable, and it is color-renderable only in ES 3.2. Extensions amend those tables, though:
+  `GL_OES_texture_float_linear` makes it filterable, and `GL_EXT_color_buffer_float` makes it renderable.
+  Mesa exposes both on every context here, so the call is legal, and Mesa accepts it. (This was first
+  suspected to be a Mesa deviation. It is not.) The demo computes the expectation from the context's
+  extensions without using them, and asserts it strictly. `RGBA8UI` (not filterable) and `DEPTH_COMPONENT24`
+  (not a color format) must always fail.
 
 ## Pitfalls
 

@@ -567,6 +567,7 @@ namespace
 
         void validate(demo::Env& env, demo::Check& check) override
         {
+            env_version_ = env.context_version;
             const Layout lay = layout_of(env);
             const Image fb = read_fb(lay);
             check_level_selection(check, lay, fb);
@@ -591,6 +592,7 @@ namespace
         }
 
     private:
+        demo::Version env_version_{};
         enum : std::size_t { kLadderTex, kStripesTex, kCheckerTex, kScenarioBase, kTexCount = kScenarioBase + 2 * kScenarioCount };
 
         [[nodiscard]] mgl::TextureId broken(int s) const { return tex_[kScenarioBase + 2 * static_cast<std::size_t>(s)]; }
@@ -1218,9 +1220,7 @@ namespace
 
             // --- glGenerateMipmap needs a colour-renderable AND texture-filterable base level (section 3.8.10.5) ----
             // RGBA8UI is colour-renderable but an integer format is not filterable; DEPTH_COMPONENT24 is not a colour
-            // format at all. Both must give INVALID_OPERATION. (R32F / RGBA32F belong in this list too - Table 3.13 marks
-            // them neither renderable nor filterable in ES 3.0 and not filterable in ES 3.2 - but Mesa accepts them,
-            // see the note below and the README.)
+            // format at all. Both must give INVALID_OPERATION.
             {
                 mgl::glBindTexture(mgl::TextureTarget::Texture2D, npot_tex);
                 const std::array<std::uint32_t, 16> zeros{};
@@ -1237,15 +1237,22 @@ namespace
                 check.expect_gl_error(mgl::ErrorCode::InvalidOperation,
                                       "glGenerateMipmap on a DEPTH_COMPONENT24 base level (not colour-renderable) -> INVALID_OPERATION");
 
-                // Informational only: R32F is neither color-renderable (ES 3.0) nor texture-filterable (ES 3.0, 3.2), so the
-                // spec requires INVALID_OPERATION here as well. Mesa (radeonsi, llvmpipe, zink) returns no error.
+                // R32F: in core ES it is not texture-filterable (ES 3.0 Table 3.13 / ES 3.2 Table 8.10) and only ES 3.2
+                // makes it color-renderable, so core alone requires INVALID_OPERATION. Extensions amend those tables:
+                // GL_OES_texture_float_linear makes it filterable, GL_EXT_color_buffer_float (or ES 3.2) renderable. The
+                // expectation is therefore computed from the context; no extension is *used*.
+                const bool renderable = env_version_ >= demo::Version{3, 2} || mgl::HasExtension("GL_EXT_color_buffer_float");
+                const bool filterable = mgl::HasExtension("GL_OES_texture_float_linear");
                 mgl::glTexImage2D(mgl::TextureTarget::Texture2D, 0, mgl::InternalFormat::R32F, 4, 4, 0, mgl::PixelFormat::Red,
                                   mgl::PixelType::Float, zeros.data());
-                (void)demo::drain_gl_errors();
+                check.expect_no_gl_error("a 4x4 R32F upload is legal");
                 mgl::glGenerateMipmap(mgl::TextureTarget::Texture2D);
-                const mgl::ErrorCode r32f = demo::drain_gl_errors();
-                std::cout << std::format("   note: glGenerateMipmap on an R32F base level -> {} (the spec requires GL_INVALID_OPERATION; not asserted)\n",
-                                         demo::error_name(r32f));
+                if (renderable && filterable)
+                    check.expect_no_gl_error("glGenerateMipmap on R32F succeeds: renderable and filterable on this context "
+                                             "(ES 3.2 or EXT_color_buffer_float, plus OES_texture_float_linear)");
+                else
+                    check.expect_gl_error(mgl::ErrorCode::InvalidOperation,
+                                          "glGenerateMipmap on R32F -> INVALID_OPERATION (not both renderable and filterable here)");
             }
 
             mgl::glHint(mgl::HintTarget::GenerateMipmap, mgl::HintMode::Nicest);  // as in init(): the visible checker used NICEST

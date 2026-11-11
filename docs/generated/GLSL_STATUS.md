@@ -12,7 +12,7 @@
 | GLSL300.COMMENTS_TOKENS | 300 | structure | Comments; identifiers; reserved words (__ prefix / gl_ prefix errors) | GLSL ES 3.00 §3.5-3.8 | negative | NOT_STARTED |  |
 | GLSL300.TYPES.SCALAR_VECTOR | 300 | types | bool/int/uint/float, vec/ivec/uvec/bvec 2-4 | GLSL ES 3.00 §4.1 | compute-check | NOT_STARTED |  |
 | GLSL300.TYPES.MATRIX | 300 | types | mat2..mat4 and non-square matCxR; column-major indexing | GLSL ES 3.00 §4.1.6 | compute-check | FULLY_VALIDATED | es20-uniforms |
-| GLSL300.TYPES.SAMPLERS | 300 | types | sampler2D/3D/Cube/2DArray, *Shadow, isampler*/usampler*; opaque rules | GLSL ES 3.00 §4.1.7 | render+negative | FULLY_VALIDATED | es20-textures-2d, es30-sampler-objects |
+| GLSL300.TYPES.SAMPLERS | 300 | types | sampler2D/3D/Cube/2DArray, *Shadow, isampler*/usampler*; opaque rules | GLSL ES 3.00 §4.1.7 | render+negative | FULLY_VALIDATED | es20-cube-map, es20-mipmaps, es20-textures-2d, es30-sampler-objects |
 | GLSL300.TYPES.STRUCT | 300 | types | Structures; nested; constructors; equality | GLSL ES 3.00 §4.1.8 | compute-check | FULLY_VALIDATED | es20-uniforms |
 | GLSL300.TYPES.ARRAY | 300 | types | Arrays; array constructors; .length(); assignment/comparison of arrays | GLSL ES 3.00 §4.1.9 | compute-check | FULLY_VALIDATED | es20-uniforms |
 | GLSL300.TYPES.IMPLICIT_CONVERSION | 300 | types | No implicit conversions in ES (int->float is an error) | GLSL ES 3.00 §4.1.10 | negative | NOT_STARTED |  |
@@ -40,7 +40,7 @@
 | GLSL300.PARAM_QUALIFIERS | 300 | statements | in/out/inout parameters | GLSL ES 3.00 §6.1.1 | compute-check | NOT_STARTED |  |
 | GLSL300.CONTROL_FLOW | 300 | statements | if/else, switch, for, while, do-while, break/continue/return | GLSL ES 3.00 §6.2-6.4 | compute-check | FULLY_VALIDATED | es20-uniforms |
 | GLSL300.DISCARD | 300 | statements | discard in fragment shader | GLSL ES 3.00 §6.4 | render | FULLY_VALIDATED | es20-blending |
-| GLSL300.BUILTIN_VARS.VS | 300 | builtins | gl_VertexID, gl_InstanceID, gl_Position, gl_PointSize | GLSL ES 3.00 §7.1 | render | FULLY_VALIDATED | es20-blending, es20-clear-viewport-scissor, es20-culling-front-face, es20-depth-test, es20-primitive-topology, es20-shader-compilation, es20-stencil-test, es20-textures-2d, es30-multiple-render-targets, es30-sampler-objects |
+| GLSL300.BUILTIN_VARS.VS | 300 | builtins | gl_VertexID, gl_InstanceID, gl_Position, gl_PointSize | GLSL ES 3.00 §7.1 | render | FULLY_VALIDATED | es20-blending, es20-clear-viewport-scissor, es20-cube-map, es20-culling-front-face, es20-depth-test, es20-mipmaps, es20-primitive-topology, es20-shader-compilation, es20-stencil-test, es20-textures-2d, es30-multiple-render-targets, es30-sampler-objects |
 | GLSL300.BUILTIN_VARS.FS | 300 | builtins | gl_FragCoord, gl_FrontFacing, gl_PointCoord, gl_FragDepth | GLSL ES 3.00 §7.2 | render | FULLY_VALIDATED | es20-culling-front-face, es20-depth-test, es20-primitive-topology, es20-stencil-test, es30-multiple-render-targets |
 | GLSL300.BUILTIN_CONSTANTS | 300 | builtins | gl_Max* built-in constants match API limits | GLSL ES 3.00 §7.3 | compute-check | NOT_STARTED |  |
 | GLSL300.BUILTIN_UNIFORMS | 300 | builtins | gl_DepthRange | GLSL ES 3.00 §7.4 | render | NOT_STARTED |  |
@@ -51,7 +51,7 @@
 | GLSL300.FN.GEOMETRIC | 300 | builtins | length distance dot cross normalize faceforward reflect refract | GLSL ES 3.00 §8.5 | compute-check | FULLY_VALIDATED | test-glsl300-builtins |
 | GLSL300.FN.MATRIX | 300 | builtins | matrixCompMult outerProduct transpose determinant inverse | GLSL ES 3.00 §8.6 | compute-check | FULLY_VALIDATED | test-glsl300-builtins |
 | GLSL300.FN.VECREL | 300 | builtins | lessThan lessThanEqual greaterThan greaterThanEqual equal notEqual any all not | GLSL ES 3.00 §8.7 | compute-check | FULLY_VALIDATED | test-glsl300-builtins |
-| GLSL300.FN.TEXTURE.BASIC | 300 | builtins | texture textureProj textureSize | GLSL ES 3.00 §8.8 | render | FULLY_VALIDATED | es20-textures-2d, es30-sampler-objects |
+| GLSL300.FN.TEXTURE.BASIC | 300 | builtins | texture textureProj textureSize | GLSL ES 3.00 §8.8 | render | FULLY_VALIDATED | es20-cube-map, es20-mipmaps, es20-textures-2d, es30-sampler-objects |
 | GLSL300.FN.TEXTURE.LOD | 300 | builtins | textureLod textureProjLod textureGrad textureProjGrad | GLSL ES 3.00 §8.8 | render | NOT_STARTED |  |
 | GLSL300.FN.TEXTURE.OFFSET | 300 | builtins | textureOffset texelFetchOffset textureLodOffset textureGradOffset etc. + offset limits | GLSL ES 3.00 §8.8 | render | NOT_STARTED |  |
 | GLSL300.FN.TEXTURE.FETCH | 300 | builtins | texelFetch on 2D/3D/2DArray (+ integer samplers) | GLSL ES 3.00 §8.8 | render | FULLY_VALIDATED | es30-multiple-render-targets |

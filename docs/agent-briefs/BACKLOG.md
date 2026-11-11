@@ -34,8 +34,17 @@ Remaining ES 3.0 items for Codex: 6, 10, 14, 16, 17, 18, 19, 20.
 
 20. `tests/negative/driver-crash-readpixels-none` → run the Mesa crash case (READ_BUFFER NONE + integer attachment) in a child process; report crash as a known deviation, PASS when the driver raises INVALID_OPERATION
 
-## Then: compositions (ES 3.0)
-lighting, normal-mapping, post-processing (blur/Sobel/gamma), fog, deferred-shading, shadow-mapping, particles-transform-feedback.
+## 3D compositions (prioritized by the owner on 2026-11-11: "I don't see 3D demos")
+Real 3D scenes: perspective camera, depth buffer, animation in windowed mode (time = frame/60),
+keyboard camera control (Demo::on_key), and deterministic validation at a fixed frame (CPU-projected
+points, analytic lighting at chosen pixels). In progress (Claude subagents, batch 5):
+40. `es20-foundations/transformations-camera` → ES20.CAMERA.MVP, ES20.COORDS.SYSTEMS, ES20.CLIP.VOLUME
+41. `es30/lighting` → ES20.LIGHTING.SHADER (directional/point/spot, Phong vs Blinn-Phong, normal matrix)
+42. `es30/normal-mapping` → normal + specular maps, tangent space
+43. `es30/shadow-mapping` → ES30.TEXTURE.DEPTH, depth FBO, sampler2DShadow + PCF; GLSL300.FN.TEXTURE.SHADOW
+44. `es30/deferred-shading` → G-buffer via MRT, light accumulation
+45. `es30/post-processing` → render-to-texture 3D scene + blur, Sobel, gamma
+Later: fog, particles (transform feedback), compute particles (ES 3.1), skybox/environment mapping.
 
 ## ES 3.1 (min_es "3.1", GLSL 310 es; cite ES 3.2 numbering)
 21. `es31/compute-basics` → ES31.COMPUTE.DISPATCH, ES31.COMPUTE.LIMITS; GLSL310.COMPUTE.LAYOUT, GLSL310.COMPUTE.BUILTINS

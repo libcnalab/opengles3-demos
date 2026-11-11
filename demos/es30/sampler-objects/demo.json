@@ -1,0 +1,81 @@
+{
+  "name": "es30-sampler-objects",
+  "title": "Sampler objects: sampling state separate from textures",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es30",
+  "order": 210,
+  "summary": "Sampler objects override a texture's filters, wrap modes and LOD range; one texture bound to two units with two samplers in one draw; unbinding, deleting and modifying bound samplers; round trips of glSamplerParameter{i,f,iv,fv} through glGetSamplerParameter{i,f}v, SAMPLER_BINDING per unit, glIsSampler life cycle and the defined errors.",
+  "spec": [
+    "ES 3.0 §3.8.2 Sampler Objects (GenSamplers, BindSampler, SamplerParameter*, DeleteSamplers; sampler state supersedes texture state while bound)",
+    "ES 3.0 §3.8.7 Texture Parameters (Table 3.20 legal values; ES 3.2 §8.10 for the INVALID_ENUM error), §3.8.14 Texture State (initial values), Table 6.10 (sampler state)",
+    "ES 3.0 §3.8.13.1 Effects of Sampler Objects on Texture Completeness, §3.9.2.1 (incomplete texture samples as (0, 0, 0, 1))",
+    "ES 3.0 §3.8.10 Texture Minification (3.8.10.1 LOD clamping, equation 3.18; 3.8.10.2 Table 3.22 wrap modes and bilinear weights; 3.8.10.4 mipmap level selection, equations 3.23-3.25), §3.8.11 Magnification",
+    "ES 3.0 §2.3.1 Data Conversion For State-Setting Commands",
+    "ES 3.0 §6.1.5 Sampler Queries (IsSampler, GetSamplerParameter*), §6.1.1 (SAMPLER_BINDING)",
+    "GLSL ES 3.00 §4.1.7 Samplers, §8.8 Texture Lookup Functions"
+  ],
+  "api": {
+    "glGenSamplers": "sampler names for the cells (one is left in its initial state: it makes texture A incomplete on its unit); glIsSampler is TRUE for a generated but never used name; names reused after deletion",
+    "glDeleteSamplers": "deleting a sampler that is bound (to one or to two units) unbinds it and the cell shows the texture's own state again; unused names and 0 are ignored without error",
+    "glBindSampler": "sampler on a unit overrides the texture bound there (pixels match the CPU sampler); glBindSampler(unit, 0) restores the texture's state; INVALID_OPERATION for a deleted or never generated sampler, INVALID_VALUE for unit = MAX_COMBINED_TEXTURE_IMAGE_UNITS",
+    "glIsSampler": "FALSE for 0 and for never generated names, TRUE after glGenSamplers, FALSE after glDeleteSamplers",
+    "glSamplerParameteri": "MIN/MAG filter and WRAP_S/T of the sampler cells (pixels), MAX_LOD = 0 (pixel: level 0), MIN_LOD = -2 on a float parameter (read back as -2.0), COMPARE_FUNC read back; illegal values -> INVALID_ENUM and the old value stays; sampler 0 -> INVALID_OPERATION",
+    "glSamplerParameterf": "MIN_LOD = 3 (pixel: level 3), MIN_LOD = -3.25 read back exactly, MAG_FILTER and WRAP_R given as floats; deleted sampler -> INVALID_OPERATION",
+    "glSamplerParameteriv": "WRAP_S = MIRRORED_REPEAT in the right half of the split cell (pixels), COMPARE_MODE read back",
+    "glSamplerParameterfv": "MIN_LOD = MAX_LOD = 1.5 with LINEAR_MIPMAP_LINEAR (pixel: half level 1, half level 2), MAX_LOD = 7.5 and WRAP_T read back",
+    "glGetSamplerParameteriv": "initial values (NEAREST_MIPMAP_LINEAR, LINEAR, REPEAT x3, NONE, LEQUAL), round trips of every enum parameter, sampler MAG_FILTER unchanged by glTexParameter; never generated sampler -> INVALID_OPERATION",
+    "glGetSamplerParameterfv": "initial MIN_LOD/MAX_LOD (-1000, 1000), LOD round trips, an enum parameter returned as float; sampler 0 -> INVALID_OPERATION",
+    "glGetIntegerv": "SAMPLER_BINDING per unit via glActiveTexture (set, unbound, deleted while bound to two units), MAX_COMBINED_TEXTURE_IMAGE_UNITS",
+    "glActiveTexture": "selects the unit whose SAMPLER_BINDING / texture binding is queried or set",
+    "glGenTextures": "textures A, B (4x4) and M (64x64, 7 levels)",
+    "glBindTexture": "texture on units 0 and 1; the same texture on two units in one draw (split cells)",
+    "glTexImage2D": "RGBA8 uploads of A, B and of each of the 7 mipmap levels of M; observed through pixels",
+    "glTexParameteri": "own MIN/MAG filter and WRAP of A and B (observed when no sampler is bound); changed while a sampler is bound: the texture changes (glGetTexParameteriv) and the sampler does not",
+    "glTexParameterf": "own MIN_LOD = 3 of texture M: level 3 without sampler, overridden by a sampler",
+    "glGetTexParameteriv": "MAG_FILTER of the texture after glTexParameteri while a sampler is bound",
+    "glDeleteTextures": "cleanup, final glGetError == NO_ERROR",
+    "glUseProgram": "sampled program",
+    "glGetUniformLocation": "u_tex_a, u_tex_b, u_uv_scale, u_uv_offset, u_split located",
+    "glUniform1i": "sampler uniforms hold texture unit indices 0 and 1; u_split selects the two-unit mode",
+    "glUniform2f": "texture coordinate scale and offset; probed positions follow them",
+    "glDrawArrays": "TRIANGLE_STRIP quad per cell from gl_VertexID",
+    "glViewport": "cell viewports; probed pixels fall inside them",
+    "glClearColor": "backdrop",
+    "glClear": "COLOR_BUFFER_BIT",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE readback of every cell compared with the CPU sampler or the expected mip level color",
+    "glDeleteProgram": "cleanup"
+  },
+  "features": [
+    "ES30.SAMPLER.OBJECTS",
+    "ES30.SAMPLER.SAME_TEXTURE",
+    "ES30.SAMPLER.QUERY",
+    "ES20.TEXTURE.UNITS",
+    "ES20.TEXTURE.FILTER",
+    "ES20.TEXTURE.WRAP",
+    "ES20.TEXTURE.COMPLETENESS"
+  ],
+  "glsl_features": [
+    "GLSL300.VERSION",
+    "GLSL300.UNIFORM",
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.FRAG.OUTPUT",
+    "GLSL300.TYPES.SAMPLERS",
+    "GLSL300.FN.TEXTURE.BASIC",
+    "GLSL300.BUILTIN_VARS.VS",
+    "GLSL300.PRECISION.DEFAULT"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "gl-error",
+    "negative"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet (subagent)",
+    "notes": "256x256 radeonsi es-max capture viewed at 3x (llvmpipe and zink captures differ by at most 1/255 per channel). Bottom row: hard 3x3 tiles (A own NEAREST/REPEAT), smooth clamped streaks (A + LINEAR/CLAMP sampler), a split cell with hard tiles on the left and a solid black right half (incomplete texture), smooth clamped streaks (B own). Second row: hard tiles (B + NEAREST/REPEAT sampler), a split cell with tiled blocks on the left and smooth mirrored/clamped colors on the right, two identical smooth halves, two identical hard clamped halves. Third row: hard clamped streaks (TexParameter under a sampler), smooth 3x3 tiles (sampler unbound), solid green (level 1), solid yellow (level 3). Top row: solid red (level 0), teal mix of levels 1 and 2, yellow (level 3), green (level 1)."
+  }
+}

@@ -1073,12 +1073,13 @@ namespace
             check.expect(!shared_offset, "two atomic counters at the same binding and the same offset are rejected (\"offsets must be unique and non overlapping\", GLSL ES 3.10 section 4.4.6)", shared_offset ? "it compiled and linked" : log.substr(0, 160));
             const bool no_binding = compute_links(counter_shader("layout(offset = 4) uniform atomic_uint a;\n", "atomicCounterIncrement(a);\n"), log);
             check.expect(!no_binding, "an atomic counter declared with offset but without binding is rejected (\"error, must include binding\", GLSL ES 3.10 section 4.4.6)", no_binding ? "it compiled and linked" : log.substr(0, 160));
-            // "Any uniform sampler, image or atomic counter variable declared without a binding qualifier is initially bound to unit zero" (section 4.4.5)
-            // and (section 4.4.6) the offset of a counter without one is the next free offset of its binding: both counters below live in binding 0.
+            // A counter declared without ANY layout qualifier. GLSL ES 3.10 section 4.4.5 says opaque uniforms without a binding are "initially bound
+            // to unit zero", but the same specification excludes atomic_uint from structures "since there is no mechanism to specify the binding",
+            // and GLSL ES 3.20 (revision 6, "Clarify error conditions when declaring atomic counters") states the rule outright in section 4.4.6:
+            // "It is a compile-time error if any such declaration does not include a binding layout qualifier." Mesa and ANGLE both reject it.
             const bool implicit = compute_links(counter_shader("uniform atomic_uint a;\nuniform atomic_uint b;\n", "atomicCounterIncrement(a);\natomicCounterIncrement(b);\n"), log);
-            check.expect_or_known_deviation(implicit, "atomic counters declared without any layout qualifier compile and link: they are bound to binding 0 at consecutive offsets (GLSL ES 3.10 sections 4.4.5 and 4.4.6)",
-                                            log.substr(0, 200), "Mesa",
-                                            "Mesa rejects an atomic_uint without a binding qualifier (\"atomic counters require explicit binding point\", a desktop ARB_shader_atomic_counters rule); GLSL ES 3.10 section 4.4.5 binds it to unit zero");
+            check.expect(!implicit, "atomic counters declared without a binding layout qualifier are rejected (GLSL ES 3.20 section 4.4.6, clarifying GLSL ES 3.10 section 4.1.8)",
+                         implicit ? "it compiled and linked" : log.substr(0, 160));
             const bool in_struct = compute_links(counter_shader("struct S { atomic_uint c; };\nuniform S s;\n", "atomicCounterIncrement(s.c);\n"), log);
             check.expect(!in_struct, "an atomic_uint member inside a structure is rejected (\"since there is no mechanism to specify the binding\", GLSL ES 3.10 section 4.1.8)", in_struct ? "it compiled and linked" : log.substr(0, 160));
             check.expect_no_gl_error("the limit experiments leave no GL error");

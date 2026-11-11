@@ -902,17 +902,33 @@ namespace
                 {
                     const int exact = slots[k].exact_len;
                     if (exact >= 0 && lens[k] != exact) len_bad += std::format("slot {}: length() = {}, expected {}; ", k, lens[k], exact);
-                    if (exact < 0 && (lens[k] > slots[k].floor_len || lens[k] < 0)) len_bad += std::format("slot {}: length() = {} exceeds floor {}; ", k, lens[k], slots[k].floor_len);
+                    // For a range that is not a multiple of the stride neither GLSL ES 3.10 section 4.1.9 ("determined at run time based on the size of the
+                    // buffer object providing storage for the block") nor ES 3.2 section 7.8 gives a rounding rule: the value is only printed below.
                 }
                 check.expect(len_bad.empty(),
                              std::format("{}: length() of the runtime-sized array equals (bound size - offset of the array) / stride for the ranges whose size is an exact multiple: {}, {}, {} elements", what,
                                          slots[0].exact_len, slots[1].exact_len, slots[2].exact_len), len_bad);
                 const int partial = lens.back();
-                std::cout << std::format("   [note] {}: a range of {} bytes (not a multiple of the stride) gave length() = {} (floor would be {}){}\n", what,
-                                         slots.back().size, partial, slots.back().floor_len, partial == slots.back().floor_len ? " - exactly the floor" : "");
+                std::cout << std::format("   [note] {}: a range of {} bytes (not a multiple of the stride) gave length() = {} (floor would be {}){} - no rounding rule in the spec, not asserted\n", what,
+                                         slots.back().size, partial, slots.back().floor_len,
+                                         partial == slots.back().floor_len ? " - exactly the floor" : partial == slots.back().floor_len + 1 ? " - rounded UP: the last element extends past the range" : "");
+                // A partial range whose length() was rounded up makes the shader write an element that straddles the end of the range: what
+                // happens to its bytes past the range is not specified, so those bytes (and only those) are excluded from the comparison.
+                std::vector<bool> dont_care(actual.size(), false);
+                std::size_t straddling = 0;
+                for (std::size_t k = 0; k < slots.size(); ++k)
+                {
+                    if (slots[k].exact_len >= 0) continue;
+                    const auto end = static_cast<std::size_t>(slots[k].offset + slots[k].size);
+                    const std::size_t header = samples ? kSamplesHeader : kRecordsHeader, stride = samples ? 4 : kRecordStride;
+                    const auto written_end = static_cast<std::size_t>(slots[k].offset) + header + stride * static_cast<std::size_t>(std::max(lens[k], 0));
+                    for (std::size_t i = end; i < written_end && i < actual.size(); ++i, ++straddling) dont_care[i] = true;
+                }
+                if (straddling > 0)
+                    std::cout << std::format("   [note] {}: {} byte(s) past the partial range belong to the last element length() reports; not compared\n", what, straddling);
                 std::size_t diff = 0, first = actual.size();
                 for (std::size_t i = 0; i < actual.size(); ++i)
-                    if (actual[i] != expected[i])
+                    if (!dont_care[i] && actual[i] != expected[i])
                     {
                         if (first == actual.size()) first = i;
                         ++diff;
@@ -1329,8 +1345,13 @@ namespace
                 std::string at_log, over_log;
                 const bool at = compute_links(source(words), at_log);
                 const bool over = compute_links(source(words + 1), over_log);
-                check.expect(at, std::format("a block of exactly MAX_SHADER_STORAGE_BLOCK_SIZE = {} bytes ({} uints) links", max_block_size_, words), at_log.substr(0, 200));
-                check.expect(!over, std::format("a block of {} bytes (MAX_SHADER_STORAGE_BLOCK_SIZE + 4) fails to link", max_block_size_ + 4), over ? "it linked" : over_log.substr(0, 200));
+                const GLint64 over_bytes = (words + 1) * 4;
+                check.expect(at, std::format("a block of {} bytes ({} uints, the largest multiple of 4 <= MAX_SHADER_STORAGE_BLOCK_SIZE = {}) links", words * 4, words, max_block_size_), at_log.substr(0, 200));
+                // ES 3.1 section 7.8 / ES 3.2 section 7.8: "If the amount of storage required for the fixed size portion of any shader storage block
+                // (as reported by BUFFER_DATA_SIZE) exceeds this limit, a program will fail to link." "will", not "may".
+                check.expect_or_known_deviation(!over, std::format("a block of {} bytes (one uint more, > MAX_SHADER_STORAGE_BLOCK_SIZE = {}) fails to link", over_bytes, max_block_size_),
+                                                over ? "it linked" : over_log.substr(0, 200), "ANGLE",
+                                                "ANGLE links a block one uint larger than its MAX_SHADER_STORAGE_BLOCK_SIZE (2^32 - 1); section 7.8 says such a program will fail to link");
             }
             else
             {

@@ -47,7 +47,7 @@
     "glClearColor": "background pixels equal the clear colour",
     "glDisable": "DITHER, for exact colours",
     "glReadPixels": "RGBA/UNSIGNED_BYTE readback of grid cells and bars",
-    "glLinkProgram": "a compute shader with exactly MAX_COMPUTE_SHADER_STORAGE_BLOCKS blocks links, one more does not; a block of MAX_SHADER_STORAGE_BLOCK_SIZE bytes links, 4 bytes more does not",
+    "glLinkProgram": "a compute shader with exactly MAX_COMPUTE_SHADER_STORAGE_BLOCKS blocks links, one more does not; a block of the largest multiple of 4 bytes <= MAX_SHADER_STORAGE_BLOCK_SIZE links, one uint more does not (XFAIL on ANGLE)",
     "glCompileShader": "COMPILE_STATUS of the compute, vertex and fragment shaders used",
     "glDeleteProgram": "cleanup"
   },

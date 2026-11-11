@@ -103,8 +103,10 @@ for `n` = 32, 16, 4 elements (and a fourth range of 39 bytes, not a multiple of 
   `Rec` has stride 12, a std430 structure of three floats having alignment 4);
 - the whole buffer equals the predicted image: header words, the written elements, and **every other byte** (gaps, bytes
   past each range, the partial tail) still holds the canary — nothing was written beyond the bound range;
-- for the non-multiple range the spec gives no rounding rule, so the measured value is printed (all drivers here give the
-  floor) and only "no more than the floor" is asserted.
+- for the non-multiple range the spec gives no rounding rule, so the measured value is only printed, not asserted. The
+  Mesa drivers give the floor; ANGLE rounds the 39-byte `Samples` range *up* to 8 elements (the last one straddles the end of
+  the range) and gives the floor for the 93-byte `Records` range. The bytes of a straddling element that lie past the range
+  are excluded from the byte comparison, because what happens to them is not specified either.
 
 `BUFFER_DATA_SIZE` of a block ending in a runtime-sized array is computed "as if the array had one element" (§7.3.1), so
 `Samples` needs at least 12 bytes and `Records` 16. `ARRAY_SIZE` of such an array is 0.
@@ -142,7 +144,7 @@ barrier is *necessary* (without it the result is undefined, not necessarily wron
   glGetInteger64i_v`, an unaligned offset, size 0 — each `INVALID_VALUE`, and the failed calls change nothing.
 - **Limits**: ES 3.2 minimums (`MAX_COMPUTE_SHADER_STORAGE_BLOCKS` ≥ 4, `MAX_COMBINED_...` ≥ 4, bindings ≥ 4,
   `MAX_SHADER_STORAGE_BLOCK_SIZE` ≥ 2^27, alignment ≤ 256); a compute shader with exactly the limit of blocks links, one
-  more fails; a block of exactly `MAX_SHADER_STORAGE_BLOCK_SIZE` bytes links, 4 bytes more fails ("If the amount of storage
+  more fails; a block of the largest multiple of 4 bytes not above `MAX_SHADER_STORAGE_BLOCK_SIZE` links, one `uint` more fails ("If the amount of storage
   required for the fixed size portion of any shader storage block ... exceeds this limit, a program will fail to link").
 - **Negative controls**: one wrong word in an otherwise correct buffer makes exactly its member's flag 0; the GL's std430
   offsets compared with the std140 calculator mismatch at exactly the 14 variables where the calculators differ; the std430
@@ -160,9 +162,13 @@ barrier is *necessary* (without it the result is undefined, not necessarily wron
 - For a `row_major` matrix `MATRIX_STRIDE` is the stride between rows, not columns (`m2x3r` has three rows of two floats).
 - The names of arrays of structures: only element 0 is enumerated. Looking up `Probe.pairs[1].a` returns `GL_INVALID_INDEX`.
 
-## Known driver deviation
+## Known driver deviations
 
 `glBindBufferRange` with a negative offset that is a multiple of the alignment raises no error on Mesa (llvmpipe, radeonsi,
 zink), contrary to ES 3.2 §6.1.1 ("INVALID_VALUE if buffer is non-zero and offset is negative"). The demo keeps the strict
 expectation and reports XFAIL via `expect_or_known_deviation("Mesa")`; the binding is restored immediately and never used
 (see `es30-uniform-buffer-objects`, same behaviour).
+
+ANGLE (2.1.17841, Vulkan backend) reports `MAX_SHADER_STORAGE_BLOCK_SIZE` = 2^32 - 1 and still links a block of 2^32 bytes.
+ES 3.1 and ES 3.2 §7.8 both say such a program "will fail to link" (not "may"), so the check stays strict and is an XFAIL
+on ANGLE.

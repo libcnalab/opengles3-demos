@@ -135,6 +135,7 @@ namespace
         std::vector<Exp> expected;
         bool cross_stage_identical = false;  // GLSL ES 3.00 §4.6.3: VS and FS results must be bit-identical
         std::string mesa_deviation;          // documented Mesa deviation (strict check elsewhere, XFAIL on Mesa)
+        std::string angle_build_deviation;   // documented ANGLE deviation: the case must build, ANGLE rejects it (XFAIL on ANGLE)
     };
 
     std::string preamble(std::string_view version)
@@ -188,10 +189,17 @@ namespace
                      "c = 42u;\n"
                      "in\\\n"
                      "t spliced = 5;                // phase 6 joins 'in' and 't' into the keyword int\n"
-                     "int my__value = 6;            // names containing __ are reserved but legal (§3.8)\n"
-                     "r[0] = uvec4(ib(a), ib(b), c, ib(spliced));\n"
-                     "r[1].x = ib(my__value);\n",
-                     {I(2), I(7), U(1), I(5), I(6)}});
+                     "r[0] = uvec4(ib(a), ib(b), c, ib(spliced));\n",
+                     {I(2), I(7), U(1), I(5)}});
+        // "all identifiers containing two consecutive underscores (__) are reserved for use by underlying software layers. Defining such
+        // a name in a shader does not itself result in an error" (GLSL ES 3.00 section 3.8; 3.10/3.20 section 3.7). Its own case, so that
+        // ANGLE's rejection does not hide the comment and token checks above.
+        c.push_back({"an identifier containing __ (my__value) is reserved but legal (§3.8)",
+                     "",
+                     "int my__value = 6;\n"
+                     "r[0].x = ib(my__value);\n",
+                     {I(6)}, false, "",
+                     "ANGLE 2.1.17841 applies the GLSL ES 1.00 rule to 3.00 shaders and rejects the name (\"reserved as possible future keywords\")"});
 
         // ---------------- GLSL ES 3.00 §5.9 / §4.5.1: float arithmetic ------------------------------
         const double a = uf(0, 3), b = uf(2, 3), cc = uf(0, 0), d = uf(0, 1), big = uf(1, 0);
@@ -872,7 +880,9 @@ namespace
                                      : build(vertex_case_source(c, version), trivial_fs(version), kOut);
             if (b.program.value == 0)
             {
-                check.expect(false, std::format("[{}] {}: builds", fragment ? "fragment" : "vertex", c.name), b.log);
+                const std::string what = std::format("[{}] {}: builds", fragment ? "fragment" : "vertex", c.name);
+                if (c.angle_build_deviation.empty()) check.expect(false, what, b.log);
+                else check.expect_or_known_deviation(false, what, b.log, "ANGLE", c.angle_build_deviation);
                 return false;
             }
             out = fragment ? run_fragment(b.program) : run_vertex(b.program);

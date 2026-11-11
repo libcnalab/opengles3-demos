@@ -35,6 +35,7 @@
 #include <cstdio>
 #include <format>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace mgl = metagl;
@@ -58,6 +59,15 @@ namespace
     };
 
     constexpr std::array<float, 4> kClear = {0.10f, 0.10f, 0.12f, 1.0f};
+
+    // True when GL_RENDERER or GL_VERSION contains `s` (selects the driver a documented deviation applies to).
+    bool driver_is(std::string_view s)
+    {
+        std::string all;
+        for (const mgl::StringName n : {mgl::StringName::Renderer, mgl::StringName::Version})
+            if (const GLubyte* p = mgl::glGetString(n); p != nullptr) all += reinterpret_cast<const char*>(p);
+        return all.find(s) != std::string::npos;
+    }
 
     // Colors are chosen so that every channel is 0.25, 0.4, 0.75 or 1.0: unambiguous after quantization.
     constexpr Rgb kTintA{1.00f, 0.25f, 0.25f};  // vs_pair_normal   (red)
@@ -957,12 +967,32 @@ namespace
             check_one_pipeline(env, check, "progC for the fragment stage only (vertex stage from another program)", pipe(kP6), vs_mirror_, prog_combined_, false, 22);
 
             // Repair: replace the offending stage, validate again, the very same pipeline object becomes valid.
+            // ValidateProgramPipeline validates "the program pipeline object pipeline against the current GL state" (ES 3.2 section 11.1.3.11):
+            // `pipeline` need not be the bound one. The pipeline bound now is the invalid progC one (kP6), which must not leak into the result.
             mgl::glUseProgramStages(bad_loc, mgl::ShaderStageMask::Vertex, vs_normal_);
             mgl::glValidateProgramPipeline(bad_loc);
-            check.expect_eq(pipeline_param(bad_loc, PP::ValidateStatus), GL_TRUE, "mutation: replacing the offending vertex program with a matching one makes the same pipeline valid again");
+            {
+                const GLint st = pipeline_param(bad_loc, PP::ValidateStatus);
+                check.expect_or_known_deviation(st == GL_TRUE, "mutation: replacing the offending vertex program with a matching one makes the same pipeline valid again (validated while ANOTHER, invalid pipeline is bound)",
+                                                st == GL_TRUE ? "" : std::format("VALIDATE_STATUS {}, log \"{}\"", st, first_line(pipeline_log(bad_loc))), "ANGLE",
+                                                "ANGLE's glValidateProgramPipeline(p) checks the draw state of the currently BOUND pipeline instead of p (the log names the bound pipeline's error)");
+            }
             mgl::glUseProgramStages(bad_prec, mgl::ShaderStageMask::Fragment, fs_vertical_);
             mgl::glValidateProgramPipeline(bad_prec);
-            check.expect_eq(pipeline_param(bad_prec, PP::ValidateStatus), GL_TRUE, "mutation: replacing the mediump fragment program makes it valid again");
+            {
+                const GLint st = pipeline_param(bad_prec, PP::ValidateStatus);
+                check.expect_or_known_deviation(st == GL_TRUE, "mutation: replacing the mediump fragment program makes it valid again (validated while ANOTHER, invalid pipeline is bound)",
+                                                st == GL_TRUE ? "" : std::format("VALIDATE_STATUS {}, log \"{}\"", st, first_line(pipeline_log(bad_prec))), "ANGLE",
+                                                "ANGLE's glValidateProgramPipeline(p) checks the draw state of the currently BOUND pipeline instead of p (the log names the bound pipeline's error)");
+            }
+            // The same two repaired pipelines validated while bound (the usual pattern): strict on every driver.
+            for (const mgl::ProgramPipelineId repaired : {bad_loc, bad_prec})
+            {
+                mgl::glBindProgramPipeline(repaired);
+                mgl::glValidateProgramPipeline(repaired);
+                check.expect_eq(pipeline_param(repaired, PP::ValidateStatus), GL_TRUE,
+                                std::format("mutation: the repaired pipeline {} validated while bound -> VALIDATE_STATUS = TRUE", repaired == bad_loc ? "(vertex stage replaced)" : "(fragment stage replaced)"));
+            }
             mgl::glBindProgramPipeline(mgl::ProgramPipelineId{0});
             mgl::glDisable(mgl::Capability::ScissorTest);
         }
@@ -1003,10 +1033,16 @@ namespace
                 mgl::glProgramParameteri(late, mgl::ProgramParameter::Separable, GL_TRUE);
                 mgl::glUseProgramStages(p, SM::Vertex, late);
                 const bool raised = demo::drain_gl_errors() == EC::InvalidOperation;
+                // ES 3.1 and 3.2 section 7.3: "State set with this command does not take effect until after the next time LinkProgram or
+                // ProgramBinary is called successfully"; section 7.4: INVALID_OPERATION if program "was linked without the PROGRAM_SEPARABLE
+                // parameter set". Mesa and ANGLE both test the current flag instead; the spec text has no erratum that changes this.
+                const bool angle = driver_is("ANGLE");
                 check.expect_or_known_deviation(raised,
                     "PROGRAM_SEPARABLE set AFTER the link has no effect until the next link: glUseProgramStages -> INVALID_OPERATION (\"was linked without the PROGRAM_SEPARABLE parameter set\")",
                     raised ? "" : "no error: the flag set after the link was honoured immediately",
-                    "Mesa", "Mesa tests the flag set by glProgramParameteri at UseProgramStages time instead of the value that was in effect at the last link");
+                    angle ? "ANGLE" : "Mesa",
+                    angle ? "ANGLE tests the flag set by glProgramParameteri at UseProgramStages time instead of the value that was in effect at the last link"
+                          : "Mesa tests the flag set by glProgramParameteri at UseProgramStages time instead of the value that was in effect at the last link");
                 mgl::glLinkProgram(late);  // now linked WITH the flag
                 mgl::glUseProgramStages(p, SM::Vertex, late);
                 check.expect_no_gl_error("after glLinkProgram the program is separable and glUseProgramStages accepts it");
@@ -1029,7 +1065,13 @@ namespace
             const mgl::ShaderId shader = mgl::glCreateShader(mgl::ShaderType::Vertex);
             const mgl::ProgramId shader_as_program{shader.value};
             mgl::glUseProgramStages(p, SM::Vertex, shader_as_program);
-            check.expect_gl_error(EC::InvalidOperation, "glUseProgramStages with the name of a shader object -> INVALID_OPERATION");
+            {
+                // ES 3.1/3.2 section 7.4, UseProgramStages: "An INVALID_OPERATION error is generated if program is the name of a shader object."
+                const EC e = demo::drain_gl_errors();
+                check.expect_or_known_deviation(e == EC::InvalidOperation, "glUseProgramStages with the name of a shader object -> INVALID_OPERATION",
+                                                e == EC::InvalidOperation ? "" : std::format("glGetError() = {}", demo::error_name(e)), "ANGLE",
+                                                "ANGLE's glUseProgramStages reports INVALID_VALUE (\"not a program\") for the name of a shader object");
+            }
             mgl::glActiveShaderProgram(p, shader_as_program);
             check.expect_gl_error(EC::InvalidOperation, "glActiveShaderProgram with the name of a shader object -> INVALID_OPERATION");
             mgl::glProgramUniform1f(shader_as_program, mgl::UniformLocation{0}, 1.0f);

@@ -1,0 +1,86 @@
+{
+  "name": "es20-copy-and-read-pixels",
+  "title": "Copy and read pixels: glReadPixels, glCopyTexImage2D, glCopyTexSubImage2D",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es20-foundations",
+  "order": 150,
+  "summary": "glReadPixels with the required RGBA/UNSIGNED_BYTE pair and the implementation-chosen pair (decoded for eight renderbuffer formats), sub-rectangles, PACK_ALIGNMENT / PACK_ROW_LENGTH / PACK_SKIP_* layouts, reads over the framebuffer edge; glCopyTexImage2D into eight internal formats and glCopyTexSubImage2D patches checked texel by texel; the defined error cases of both command families.",
+  "spec": [
+    "ES 3.0 §3.7.1 Pixel Storage Modes (Tables 3.1, 4.4), §3.7.2 Transfer of Pixel Rectangles (§3.7.2.1 unpacking and packing, equation 3.13; §3.7.2.2 special interpretations, Table 3.6)",
+    "ES 3.0 §3.8.5 Alternate Texture Image Specification Commands (glCopyTexImage2D, glCopyTexSubImage2D, Tables 3.15 to 3.17), §3.8.5.1 Texture Copying Feedback Loops",
+    "ES 3.0 §3.8.3 Texture Image Specification (Tables 3.3, 3.11 and 3.13), §3.9.2 / Table 3.24 (what a shader sees for LUMINANCE, ALPHA and LUMINANCE_ALPHA)",
+    "ES 3.0 §4.3.1 Selecting a Buffer for Reading, §4.3.2 Reading Pixels (§4.3.2.1 obtaining pixels, §4.3.2.3 final conversion, Table 4.5), §4.3.3 Copying Pixels",
+    "ES 3.0 §4.4.4.4 Effects of Framebuffer Completeness on Framebuffer Operations, §4.4.5 Effects of Framebuffer State on Framebuffer Dependent Values",
+    "ES 3.0 §2.1.6.2 Conversion from Floating-Point to Normalized Fixed-Point (equation 2.3)",
+    "GLSL ES 3.00 §4.5.4 Default Precision Qualifiers, §7.1 gl_VertexID, §7.2 gl_FragCoord, §8.8 Texture Lookup Functions"
+  ],
+  "api": {
+    "glReadPixels": "RGBA/UNSIGNED_BYTE of a 64x64 chart equals the analytic image (+-1); six sub-rectangles equal the same block of the full read exactly; PACK_ALIGNMENT 1/2/4/8, PACK_ROW_LENGTH, PACK_SKIP_PIXELS/ROWS place every pixel where equation 3.13 says; the implementation-chosen pair of the default framebuffer, an RGBA8 chart and eight renderbuffer formats decodes to the expected values; reads over the edge: in-window pixels correct; INVALID_OPERATION for RGB/4444, RGBA/565, RGBA_INTEGER/UNSIGNED_INT on a fixed-point buffer, READ_BUFFER NONE and an empty read attachment",
+    "glPixelStorei": "PACK_ALIGNMENT 1/2/4/8, PACK_ROW_LENGTH, PACK_SKIP_PIXELS, PACK_SKIP_ROWS change the memory layout exactly as modelled; PACK_ALIGNMENT 3 and PACK_ROW_LENGTH -1 -> INVALID_VALUE, state unchanged",
+    "glGetIntegerv": "PACK_ALIGNMENT (initial 4, then each set value), PACK_ROW_LENGTH/SKIP_PIXELS/SKIP_ROWS, IMPLEMENTATION_COLOR_READ_FORMAT and _TYPE (used to read; INVALID_OPERATION with READ_BUFFER NONE)",
+    "glReadBuffer": "NONE makes glReadPixels, glCopyTexImage2D and glCopyTexSubImage2D fail with INVALID_OPERATION; COLOR_ATTACHMENT1 (no image attached) makes glReadPixels fail; COLOR_ATTACHMENT0 restores reading",
+    "glCopyTexImage2D": "RGBA, RGBA8, RGB, LUMINANCE, ALPHA, LUMINANCE_ALPHA, R8, RG8 from a whole chart and a 32x24 sub-rectangle: every texel equals the expected component mapping (exact through an attached framebuffer, +-1 when sampled); copies come from the READ framebuffer; RGB8 source -> RGBA/ALPHA/LUMINANCE_ALPHA and RGBA8 source -> RGB565/RGBA4 -> INVALID_OPERATION; border 1, a non-square cube face -> INVALID_VALUE; READ_BUFFER NONE -> INVALID_OPERATION",
+    "glCopyTexSubImage2D": "two patches (16x16 and 24x24) replace exactly their rectangles of a 64x64 texture, every other texel keeps its value; rectangle outside the level or negative offset -> INVALID_VALUE; READ_BUFFER NONE -> INVALID_OPERATION",
+    "glTexImage2D": "allocates the base texture of the glCopyTexSubImage2D scene from CPU data (texels observed after the patches)",
+    "glGenTextures": "eight copy targets, one patched texture, scratch texture",
+    "glBindTexture": "copy destinations and sampled textures",
+    "glDeleteTextures": "cleanup, final glGetError == NO_ERROR",
+    "glTexParameteri": "MIN/MAG_FILTER NEAREST: copied textures (level 0 only) are complete and sampled texel by texel",
+    "glActiveTexture": "unit 0 carries the texture sampled by the show program",
+    "glGenFramebuffers": "chart, scratch, attach and per-format framebuffers",
+    "glBindFramebuffer": "READ_FRAMEBUFFER = chart while DRAW_FRAMEBUFFER = default (the copies and reads use READ); FRAMEBUFFER for rendering",
+    "glDeleteFramebuffers": "cleanup",
+    "glFramebufferRenderbuffer": "RGBA8, RGB8, RGB565, RGBA4, RGB5_A1, RGB10_A2, RG8, R8 renderbuffers as COLOR_ATTACHMENT0 of read framebuffers",
+    "glFramebufferTexture2D": "copied textures attached to a framebuffer to read their texels back exactly",
+    "glCheckFramebufferStatus": "COMPLETE for every renderbuffer format above and for each renderable copied texture",
+    "glGenRenderbuffers": "chart, scratch and per-format renderbuffers",
+    "glBindRenderbuffer": "target for storage and parameter queries",
+    "glRenderbufferStorage": "eight color formats; component sizes read back to model the expected values",
+    "glGetRenderbufferParameteriv": "RED/GREEN/BLUE/ALPHA_SIZE of the actual storage select which components are expected to read back as 0,0,0,1",
+    "glDeleteRenderbuffers": "cleanup",
+    "glBlitFramebuffer": "1:1 NEAREST copy of the chart to the default framebuffer: the cell equals the chart exactly",
+    "glClearColor": "cleared color of each renderbuffer format is what the implementation-pair read decodes to",
+    "glClear": "COLOR_BUFFER_BIT of the format-test and scratch framebuffers",
+    "glViewport": "chart-sized and per-cell viewports",
+    "glUseProgram": "chart and show programs",
+    "glGetUniformLocation": "u_rect, u_tex, u_mode located; observed in the pixels",
+    "glUniform1i": "sampler unit and u_mode (RGB, alpha-as-gray, raw RGBA) select what the sampled copies show",
+    "glUniform4f": "u_rect places the chart quad and the texture quads",
+    "glDrawArrays": "TRIANGLE_STRIP, 4 vertices from gl_VertexID: chart and sampled textures",
+    "glDeleteProgram": "cleanup, final glGetError == NO_ERROR"
+  },
+  "features": [
+    "ES20.READPIXELS",
+    "ES20.TEXTURE.COPY",
+    "ES20.ERRORS.INVALID_OPERATION",
+    "ES20.ERRORS.INVALID_VALUE",
+    "ES20.CLEAR.COLOR",
+    "ES20.DRAW.ARRAYS"
+  ],
+  "glsl_features": [
+    "GLSL300.VERSION",
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.UNIFORM",
+    "GLSL300.FRAG.OUTPUT",
+    "GLSL300.PRECISION.DEFAULT",
+    "GLSL300.TYPES.SAMPLERS",
+    "GLSL300.BUILTIN_VARS.VS",
+    "GLSL300.BUILTIN_VARS.FS",
+    "GLSL300.FN.TEXTURE.BASIC"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "state-query",
+    "gl-error",
+    "negative"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5 (subagent)",
+    "notes": "256x256 radeonsi es-max capture viewed (all six matrix captures are byte-identical). Row 1: the test chart (red grows to the right, green upward, blue 8x8 checkerboard; it was blitted with its alpha 128..254 so a viewer shows it paler than the next cell); the full RGBA copy (identical, opaque); a uniform blue-gray texture with a small 16x16 patch lower left and a 24x24 patch upper right (two glCopyTexSubImage2D); the 32x24 RGBA8 sub-rectangle at 2x. Row 2: RGB sub-rectangle; LUMINANCE (gray ramp from the red channel); ALPHA shown as light gray (alpha 128+x+y); LUMINANCE_ALPHA (red ramp as gray). Row 3: R8 (black to red ramp) and RG8 (red and green ramps). The bottom row is empty by design."
+  }
+}

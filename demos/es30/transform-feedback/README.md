@@ -87,7 +87,11 @@ the capture, or the capture's output buffers, can drive it.
 - **Pixels.** Every pixel of every cell is compared with a CPU rendering model: flat-colored triangles (cell A) and point
   squares (B, C, D) built from the *CPU-computed* data, never from what was read back. Pixels within 1 px of a triangle edge
   and within 0.25 px of a point edge are skipped (rasterizer tie-breaking, point position snapping); the largest deviation on
-  radeonsi, llvmpipe and zink is 0/255 (tolerance ±1, the float -> 8-bit conversion).
+  radeonsi, llvmpipe and zink is 0/255 (tolerance ±1, the float -> 8-bit conversion). The check is non-vacuous at every
+  window size: the model's exact geometry predicts how many pixel centers of the cell are covered and how many are background,
+  and at least a quarter of the covered and half of the background pixels must be compared (never a fixed pixel count, which
+  would depend on the surface size). The four cells partition the surface exactly (`[0, w/2)` and `[w/2, w)`); below 128 × 128
+  the demo reports SKIP, because in smaller cells the mesh triangles are mostly edge band.
 - **Bytes.** Every capture buffer is read back through `glMapBufferRange` and compared *bit for bit* with the CPU model: the
   96 warped vertices (A), both ping-pong buffers after 11 and 10 steps (B, including the floor-bounce branch, which the model
   counts), the six records around the pause (C), and the three streams in their ranges (D). Buffers are pre-filled with `0xA5`, so

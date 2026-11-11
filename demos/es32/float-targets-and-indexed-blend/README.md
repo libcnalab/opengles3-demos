@@ -82,6 +82,13 @@ the float patterns (stripes: the R ladder, alternating rows: the sign; packed fo
 were clamped to zero). Bottom 64 rows: four MRT panels with four quadrants each; the RGBA8 panel is the saturated replace result,
 the other three show the additive, alpha-over and reverse-subtract results of the same draw through the signed curve.
 
+At other window sizes the same layout is scaled to the whole surface: the scene takes the top 5/8 of the height and the whole width
+and is **rendered at that size** (the RGBA16F target and its depth buffer are created with the size of the scene region, and a target
+narrower than the design aspect 256 : 160 keeps the design's horizontal field of view), the swatch row takes the next eighth (swatch
+*i* spans `(2 + 36 i)·w/256 .. (2 + 36 (i+1))·w/256`), and the MRT row the bottom quarter (panel *b* spans `b·w/4 .. (b+1)·w/4`).
+`compose.frag` maps each window pixel to the texel `local * textureSize / regionSize`, so the 16 x 16 swatches and the 64 x 64 MRT
+attachments are shown whole at any size. Below 128 x 128 the demo reports SKIP.
+
 ## How it is validated
 
 * **Float formats:** all seven formats are framebuffer complete as texture and as renderbuffer; `COMPONENT_TYPE` is `FLOAT`,
@@ -117,7 +124,9 @@ the other three show the additive, alpha-over and reverse-subtract results of th
   tolerance is a sanity bound of 0.5 % + 2^-12: the spec gives no accuracy for interpolation and shader arithmetic, and the only
   defined error is the RGBA16F storage (2^-11 relative, here accumulated over up to three roundings: opaque value, two halos). The
   measured worst deviation is printed (1.84e-3 relative). The window pixels of the same probes are compared with `min(hdr, 1)`
-  (left) and `m / (1 + m)` (right) within 1/255, and the swatches and MRT panels are compared with the signed curve.
+  (left) and `m / (1 + m)` (right) within 1/255 (or with the grey of the split columns), and the swatches and MRT panels are
+  compared with the signed curve at window pixels derived from the current layout with the shader's integer texel mapping. The
+  probe set grows with the scene (a 16-pixel grid plus aimed probes), so the counts above are those of the 256 x 256 window.
 
 ## Pitfalls
 

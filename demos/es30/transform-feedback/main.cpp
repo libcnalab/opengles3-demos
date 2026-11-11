@@ -55,11 +55,15 @@ namespace
     {
         int x, y, w, h;
     };
-    Rect cell_rect(int w, int h, int id)  // id 0 = top left, 1 = top right, 2 = bottom left, 3 = bottom right
+    // id 0 = top left, 1 = top right, 2 = bottom left, 3 = bottom right. The four cells partition the surface exactly
+    // (column 0 is [0, w/2), column 1 is [w/2, w)), so an odd width or height leaves no uncovered strip.
+    Rect cell_rect(int w, int h, int id)
     {
-        const int cw = w / 2, ch = h / 2;
-        return {(id % 2) * cw, id < 2 ? ch : 0, cw, ch};
+        const int x0 = id % 2 == 0 ? 0 : w / 2, x1 = id % 2 == 0 ? w / 2 : w;
+        const int y0 = id < 2 ? h / 2 : 0, y1 = id < 2 ? h : h / 2;
+        return {x0, y0, x1 - x0, y1 - y0};
     }
+    constexpr int kMinCell = 64;  // smallest cell side (pixels) at which the warped mesh still has a sizeable interior
 
     // -----------------------------------------------------------------------------------------
     // Source data and CPU models of the shaders
@@ -302,14 +306,42 @@ namespace
         return s;
     }
 
-    void expect_scan(demo::Check& check, const Scan& s, int min_inside, int min_outside, const std::string& what)
+    // How many pixel centers of the cell the model's exact geometry covers (no tie-breaking margin) and how many it leaves
+    // to the background. The scan has to compare at least a quarter of the covered and half of the background pixels, so the
+    // check can never pass on a cell that is all edge pixels, and the bound follows the cell size and the predicted geometry
+    // instead of a fixed pixel count. (A quarter: the 1-pixel tie-breaking band around each of the 32 small mesh triangles
+    // takes up to two thirds of their area in the smallest 64x64 cells.)
+    struct Predicted
     {
+        int covered = 0, background = 0;
+    };
+    Predicted predict(const std::vector<Prim>& scene, const Rect& r)
+    {
+        Predicted p;
+        for (int y = 0; y < r.h; ++y)
+            for (int x = 0; x < r.w; ++x)
+            {
+                const double px = x + 0.5, py = y + 0.5;
+                bool covered = false;
+                for (const Prim& prim : scene)
+                    covered = covered || (prim.triangle ? sample_triangle(prim, px, py, 0.0).cover != Cover::Outside
+                                                        : std::abs(px - prim.cx) <= prim.size / 2.0 && std::abs(py - prim.cy) <= prim.size / 2.0);
+                ++(covered ? p.covered : p.background);
+            }
+        return p;
+    }
+
+    void expect_scan(demo::Check& check, const Scan& s, const Predicted& predicted, const std::string& what)
+    {
+        const int min_inside = (predicted.covered + 3) / 4, min_outside = (predicted.background + 1) / 2;
         const bool enough = s.inside >= min_inside && s.outside >= min_outside;
         check.expect(s.bad == 0 && enough,
                      std::format("{}: {} covered + {} background pixels match the model (max deviation {}/255, {} edge pixels skipped)", what, s.inside,
                                  s.outside, s.max_dev, s.unsure),
                      s.bad ? std::format("{} mismatches; {}", s.bad, s.first_bad)
-                     : enough ? std::string{} : std::format("only {} covered / {} background pixels compared", s.inside, s.outside));
+                     : enough ? std::string{}
+                              : std::format("only {} covered / {} background pixels compared; the geometry predicts {} / {}, at least 1/4 and 1/2 are required",
+                                            s.inside, s.outside, predicted.covered, predicted.background));
     }
 
     // -----------------------------------------------------------------------------------------
@@ -416,6 +448,8 @@ namespace
     public:
         void init(demo::Env& env) override
         {
+            if (env.width < 2 * kMinCell || env.height < 2 * kMinCell)
+                throw demo::Skip(std::format("the 2x2 cell layout needs a surface of at least {0}x{0} pixels (got {1}x{2})", 2 * kMinCell, env.width, env.height));
             GLfloat point_range[2] = {};
             mgl::glGetFloatv(mgl::GetParameter::AliasedPointSizeRange, point_range);
             if (point_range[1] < 10.0f) throw demo::Skip("ALIASED_POINT_SIZE_RANGE maximum is below the 10 px points of the demo");
@@ -826,16 +860,17 @@ namespace
             {
                 CellId id;
                 std::vector<Prim> model;
-                int min_inside, min_outside;
             };
             std::vector<CellCase> cases;
-            cases.push_back({kCellMesh, scene_mesh(rect[kCellMesh], true), 2000, 8000});
-            cases.push_back({kCellParticles, scene_particles(final_state, rect[kCellParticles]), 900, 10000});
-            cases.push_back({kCellPause, scene_particles(recorded, rect[kCellPause]), 300, 14000});
-            cases.push_back({kCellStream, scene_stream(rect[kCellStream]), 700, 12000});
+            cases.push_back({kCellMesh, scene_mesh(rect[kCellMesh], true)});
+            cases.push_back({kCellParticles, scene_particles(final_state, rect[kCellParticles])});
+            cases.push_back({kCellPause, scene_particles(recorded, rect[kCellPause])});
+            cases.push_back({kCellStream, scene_stream(rect[kCellStream])});
             for (const CellCase& c : cases)
-                expect_scan(check, scan_cell(image, env.width, rect[static_cast<std::size_t>(c.id)], c.model), c.min_inside, c.min_outside,
-                            std::format("cell {}", kCellName[static_cast<std::size_t>(c.id)]));
+            {
+                const Rect& r = rect[static_cast<std::size_t>(c.id)];
+                expect_scan(check, scan_cell(image, env.width, r, c.model), predict(c.model, r), std::format("cell {}", kCellName[static_cast<std::size_t>(c.id)]));
+            }
 
             // Negative controls: the same pixels must DISAGREE with a model of a different configuration, so the scans above can fail.
             auto must_differ = [&](CellId id, const std::vector<Prim>& wrong, const char* what) {
@@ -1340,7 +1375,7 @@ namespace
             const GLuint prims_visible = capture_row(false);
             const std::vector<std::uint8_t> visible = demo::read_rgba8(0, 0, env.width, env.height);
             const bool visible_data = captured_ok();
-            expect_scan(check, scan_cell(visible, env.width, r, red_row), 400, 14000, "RASTERIZER_DISCARD disabled: the capture pass also draws the 8 red points");
+            expect_scan(check, scan_cell(visible, env.width, r, red_row), predict(red_row, r), "RASTERIZER_DISCARD disabled: the capture pass also draws the 8 red points");
             check.expect(prims_visible == 8 && visible_data, "RASTERIZER_DISCARD disabled: the 8 points are recorded as well (query 8, data equal)");
 
             // Discard ON: the identical capture leaves the framebuffer untouched; the recorded data is the same.
@@ -1348,7 +1383,7 @@ namespace
             const GLuint prims_hidden = capture_row(true);
             const std::vector<std::uint8_t> hidden = demo::read_rgba8(0, 0, env.width, env.height);
             const bool hidden_data = captured_ok();
-            expect_scan(check, scan_cell(hidden, env.width, r, {}), 0, 16000, "RASTERIZER_DISCARD enabled: the same capture pass produces no pixel at all");
+            expect_scan(check, scan_cell(hidden, env.width, r, {}), predict({}, r), "RASTERIZER_DISCARD enabled: the same capture pass produces no pixel at all");
             check.expect(prims_hidden == 8 && hidden_data, "RASTERIZER_DISCARD enabled: the same 8 points are recorded (query 8, data equal): capture happens before the discard");
             check.expect(scan_cell(hidden, env.width, r, red_row).bad >= 100, "negative control: the discarded cell disagrees with the model of the visible one");
 
@@ -1362,7 +1397,7 @@ namespace
             mgl::glClearBufferfv(mgl::FloatClearBuffer::Color, 0, blue.data());
             mgl::glDisable(mgl::Capability::ScissorTest);
             const std::vector<std::uint8_t> ignored = demo::read_rgba8(0, 0, env.width, env.height);
-            expect_scan(check, scan_cell(ignored, env.width, r, {}), 0, 16000, "RASTERIZER_DISCARD enabled: glClear (green) and glClearBufferfv (blue) leave the cell at the old clear color");
+            expect_scan(check, scan_cell(ignored, env.width, r, {}), predict({}, r), "RASTERIZER_DISCARD enabled: glClear (green) and glClearBufferfv (blue) leave the cell at the old clear color");
             mgl::glDisable(mgl::Capability::RasterizerDiscard);
             mgl::glEnable(mgl::Capability::ScissorTest);
             mgl::glScissor(r.x, r.y, r.w, r.h);

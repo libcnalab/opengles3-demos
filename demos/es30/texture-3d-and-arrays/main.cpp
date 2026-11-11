@@ -39,6 +39,7 @@ using W = mgl::TextureWrapMode;
 namespace
 {
     constexpr int kGrid = 8;                       // 8 x 8 panels
+    constexpr int kMinPanel = 16;                  // smallest panel side (pixels): every panel keeps >= 256 probes
     constexpr Rgba8 kGray{90, 90, 90, 255};        // filler for "this texel must not have been touched"
     constexpr int kTolLinear = 3;                  // see README "Tolerances"
     constexpr int kTolRendered = 1;                // 8-bit conversion of a computed color (+-1)
@@ -218,6 +219,19 @@ namespace
         return f < 0.1 || f > 0.9;
     }
 
+    // The texture coordinates (in (0, 1)) at which a probe is compared. Away from a texel boundary of a grid of `n` texels
+    // that is the probe's own coordinate; within 0.1 texel of a boundary the rasterizer's interpolation and the
+    // implementation's coordinate rounding may land on either side, so both neighbouring texel centers are candidates.
+    std::vector<double> candidates(double coord, int n)
+    {
+        if (n <= 0 || !near_edge(coord * n)) return {coord};
+        const double boundary = std::round(coord * n);
+        std::vector<double> out;
+        for (const double c : {boundary - 0.5, boundary + 0.5})
+            if (c > 0.0 && c < n) out.push_back(c / n);
+        return out;
+    }
+
     // ---------------------------------------------------------------------------------------------
     // Panels
     // ---------------------------------------------------------------------------------------------
@@ -235,8 +249,21 @@ namespace
         int lod = 0;
         std::function<Color(double, double)> ref;  // expected color at texture coordinates (s, t) in (0, 1)
         int tol = 0;
-        int boundary_w = 0, boundary_h = 0;  // NEAREST probes within 0.1 texel of a boundary of this grid are skipped
+        int boundary_w = 0, boundary_h = 0;  // NEAREST / texelFetch probes within 0.1 texel of a boundary of this grid accept either neighbour
     };
+
+    // Panel i of the 8 x 8 contact sheet (row 0 at the bottom). The panels partition the whole surface exactly: column gx
+    // spans [gx*w/8, (gx+1)*w/8), so the sheet fills any window and neighbouring panels differ by at most one pixel.
+    struct PanelRect
+    {
+        int x, y, w, h;
+    };
+    PanelRect panel_rect(std::size_t i, int w, int h)
+    {
+        const int gx = static_cast<int>(i) % kGrid, gy = static_cast<int>(i) / kGrid;
+        const int x0 = gx * w / kGrid, x1 = (gx + 1) * w / kGrid, y0 = gy * h / kGrid, y1 = (gy + 1) * h / kGrid;
+        return {x0, y0, x1 - x0, y1 - y0};
+    }
 
     struct Probe
     {
@@ -268,6 +295,8 @@ namespace
     public:
         void init(demo::Env& env) override
         {
+            if (env.width < kGrid * kMinPanel || env.height < kGrid * kMinPanel)
+                throw demo::Skip(std::format("the 8x8 contact sheet needs a surface of at least {0}x{0} pixels (got {1}x{2})", kGrid * kMinPanel, env.width, env.height));
             sample_program_ = demo::build_program(env, "shaders/quad.vert", "shaders/sample.frag");
             pattern_program_ = demo::build_program(env, "shaders/quad.vert", "shaders/pattern.frag");
 
@@ -308,11 +337,11 @@ namespace
             mgl::glUniform1i(u_tex3d, 0);       // sampler uniforms hold texture UNIT indices
             mgl::glUniform1i(u_tex_array, 1);   // ... and the two sampler types need different units
 
-            pw_ = std::min(env.width, env.height) / kGrid;
             for (std::size_t i = 0; i < panels_.size(); ++i)
             {
                 const Panel& p = panels_[i];
-                mgl::glViewport(static_cast<GLint>(i % kGrid) * pw_, static_cast<GLint>(i / kGrid) * pw_, pw_, pw_);
+                const PanelRect pr = panel_rect(i, env.width, env.height);
+                mgl::glViewport(pr.x, pr.y, pr.w, pr.h);
                 bind_for(p);
                 mgl::glUniform1i(u_mode, static_cast<int>(p.mode));
                 mgl::glUniform1f(u_r, p.r);
@@ -332,6 +361,7 @@ namespace
         {
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
             width_ = env.width;
+            height_ = env.height;
             frame_ = demo::read_rgba8(0, 0, env.width, env.height);
 
             check_limits(check);
@@ -601,6 +631,9 @@ namespace
             p.ref = [&v, index](double s, double t) {
                 return to_color(v.at(std::min(ifloor(s * v.w), v.w - 1), std::min(ifloor(t * v.h), v.h - 1), index));
             };
+            // The shader maps the panel onto the level's texels with ivec2(v_corner * size): near a texel boundary the
+            // interpolated v_corner may round to either texel, exactly as for NEAREST.
+            p.boundary_w = v.w, p.boundary_h = v.h;
             panels_.push_back(std::move(p));
         }
 
@@ -787,21 +820,33 @@ namespace
         }
 
         // Compares every pixel of panel `idx` with `ref`. Passing |got - want| <= tolerance + 0.5: the expected value is
-        // a real number, the framebuffer holds the rounded 8-bit value.
-        [[nodiscard]] Probe probe(std::size_t idx, const std::function<Color(double, double)>& ref, int tol, int boundary_w, int boundary_h) const
+        // a real number, the framebuffer holds the rounded 8-bit value. Probes within 0.1 texel of a boundary of the
+        // boundary_w x boundary_h grid either accept the color of either neighbouring texel (Boundary::AcceptEither, for
+        // the positive checks: every pixel is compared) or are left out (Boundary::Skip, for the negative controls, where a
+        // lenient comparison would make the wrong model look closer than it is).
+        enum class Boundary { AcceptEither, Skip };
+        [[nodiscard]] Probe probe(std::size_t idx, const std::function<Color(double, double)>& ref, int tol, int boundary_w, int boundary_h,
+                                  Boundary boundary = Boundary::AcceptEither) const
         {
             Probe r;
-            const int gx = static_cast<int>(idx) % kGrid, gy = static_cast<int>(idx) / kGrid;
-            for (int py = 0; py < pw_; ++py)
-                for (int px = 0; px < pw_; ++px)
+            const PanelRect pr = panel_rect(idx, width_, height_);
+            for (int py = 0; py < pr.h; ++py)
+                for (int px = 0; px < pr.w; ++px)
                 {
-                    const double s = (px + 0.5) / pw_, t = (py + 0.5) / pw_;
-                    if (boundary_w > 0 && near_edge(s * boundary_w)) continue;
-                    if (boundary_h > 0 && near_edge(t * boundary_h)) continue;
-                    const Color want = ref(s, t);
-                    const Rgba8 got = frame_pixel(gx * pw_ + px, gy * pw_ + py);
-                    double dev = 0.0;
-                    for (std::size_t c = 0; c < 4; ++c) dev = std::max(dev, std::abs(got[c] - want[c]));
+                    const double s = (px + 0.5) / pr.w, t = (py + 0.5) / pr.h;
+                    const std::vector<double> ss = candidates(s, boundary_w), ts = candidates(t, boundary_h);
+                    if (boundary == Boundary::Skip && (ss.size() != 1 || ss[0] != s || ts.size() != 1 || ts[0] != t)) continue;
+                    const Rgba8 got = frame_pixel(pr.x + px, pr.y + py);
+                    double dev = 1e9;
+                    Color want{};
+                    for (const double cs : ss)
+                        for (const double ct : ts)
+                        {
+                            const Color c = ref(cs, ct);
+                            double d = 0.0;
+                            for (std::size_t k = 0; k < 4; ++k) d = std::max(d, std::abs(got[k] - c[k]));
+                            if (d < dev) dev = d, want = c;
+                        }
                     ++r.probes;
                     r.max_dev = std::max(r.max_dev, dev);
                     if (dev > tol + 0.5 && r.bad++ == 0)
@@ -811,11 +856,11 @@ namespace
             return r;
         }
 
-        // Fraction of probes where the panel does NOT match `other` within `tol`.
+        // Fraction of probes where the panel does NOT match `other` within `tol` (texel-boundary probes left out).
         [[nodiscard]] double mismatch_fraction(std::size_t idx, const std::function<Color(double, double)>& other, int tol) const
         {
             const Panel& p = panels_[idx];
-            const Probe full = probe(idx, other, tol, p.boundary_w, p.boundary_h);
+            const Probe full = probe(idx, other, tol, p.boundary_w, p.boundary_h, Boundary::Skip);
             return full.probes > 0 ? static_cast<double>(full.bad) / full.probes : 0.0;
         }
 
@@ -1172,8 +1217,7 @@ namespace
         std::vector<Panel> panels_;
 
         int initial_image_height_ = -1, initial_skip_images_ = -1, seen_image_height_ = -1, seen_skip_images_ = -1;
-        int pw_ = 32;
-        int width_ = 0;
+        int width_ = 0, height_ = 0;
         std::vector<std::uint8_t> frame_;
     };
 }

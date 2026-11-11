@@ -22,10 +22,12 @@ the calls that fill such textures (`glTexImage3D`, `glTexSubImage3D`, `glCopyTex
 
 ## What the image shows
 
-A contact sheet of 8 x 8 panels of 32 x 32 pixels (panel 0 is at the lower left, numbers grow to the right and then
-upwards; in the capture the last row of panels is at the top). Every panel is one draw call that shows one
-slice, layer or lookup. The textures are tiny (4 x 4 texels per slice, each texel its own color) so that every
-texel is 8 x 8 pixels and can be told apart by eye.
+A contact sheet of 8 x 8 panels (panel 0 is at the lower left, numbers grow to the right and then upwards; in the
+capture the last row of panels is at the top). The panels partition the whole surface: column *i* spans
+`[i·w/8, (i+1)·w/8)` and row *j* `[j·h/8, (j+1)·h/8)`, so at 256 x 256 every panel is 32 x 32 pixels and on other
+surfaces the panels are as wide and as tall as the surface allows (below 128 x 128 the demo reports SKIP). Every panel
+is one draw call that shows one slice, layer or lookup. The textures are tiny (4 x 4 texels per slice, each texel its
+own color) so that at 256 x 256 every texel is 8 x 8 pixels and can be told apart by eye.
 
 | Panels | What is shown | Spec |
 |---|---|---|
@@ -93,9 +95,12 @@ calls stay legal). `pattern.frag` renders `base + gx * x + gy * y` from `gl_Frag
 
 117 checks in `validate()` (the runtime adds its own: context, version, `glGetError` after `init()`, after the last frame and after `shutdown()`). None of them only checks that a call returned.
 
-- **Panels (58 checks).** Every pixel of every panel (576 to 1024 probes) is compared with a CPU implementation of
-  equation 3.22, Table 3.22 and the array rules of section 3.8.10.2 (`sample_volume`, `sample_array`). `NEAREST`
-  probes within 0.1 texel of a texel boundary are skipped (where an implementation may round either way); the rest must be exact.
+- **Panels (58 checks).** Every pixel of every panel (1024 at 256 x 256) is compared with a CPU implementation of
+  equation 3.22, Table 3.22 and the array rules of section 3.8.10.2 (`sample_volume`, `sample_array`). For `NEAREST`
+  and for `texelFetch` (whose texel index `ivec2(v_corner * size)` comes from an interpolated coordinate) a probe within
+  0.1 texel of a texel boundary accepts the color of either neighbouring texel (an implementation may round either way;
+  which pixel lands there depends on the window size); every other probe must match its own texel exactly. The negative
+  controls leave the boundary probes out instead, so a lenient comparison cannot make a wrong model look closer.
   Texel data is 8-bit and the lookups need no arithmetic, so **tolerance 0** for `NEAREST`, `texelFetch`, `textureSize`,
   the uploads and the copies. **`LINEAR`: +-3/255.** ES 3.0 does not specify the precision of the filter weights. Hardware keeps
   at least 6 (usually 8) fractional bits; the trilinear error for texel steps of 60 per axis is at most 3 x 60/64 = 2.8, so 3 plus the 0.5 for

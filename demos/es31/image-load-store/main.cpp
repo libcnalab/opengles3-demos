@@ -27,7 +27,8 @@
 //   * Memory barriers between the passes: SHADER_IMAGE_ACCESS (image -> image), TEXTURE_FETCH (image ->
 //     sampler), FRAMEBUFFER (image -> ReadPixels), BUFFER_UPDATE (shader -> MapBufferRange).
 //
-// Image (256 x 256 window): a 4 x 4 contact sheet of 64 x 64 pixel cells (GL window coordinates, row 0 on top).
+// Image: a 4 x 4 contact sheet that fills the window (each cell is width/4 x height/4 pixels, row 0 on top; a texture
+// is stretched over its cell with texelFetch, so every pixel shows one known texel).
 //   row 0  source image | blur | Sobel | the source color-inverted by a fragment shader (imageLoad)
 //   row 1  layers 0..3 of an 8 x 8 x 4 2D array written with layered = TRUE, layer 2 overwritten through a
 //          non-layered binding (blue tint)
@@ -61,6 +62,7 @@
 #include <cstring>
 #include <format>
 #include <iostream>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -72,9 +74,28 @@ using demo::Rgba8;
 
 namespace
 {
-    constexpr int kWin = 256;
-    constexpr int kCell = 64;
     constexpr int kImg = 64;  // size of the filtered image
+    constexpr int kMinSurface = 64;  // smallest supported surface side: the fragment imageStore pass draws a 64 x 64 viewport
+
+    /// One cell of the 4 x 4 display grid in GL window coordinates. The grid tiles the surface exactly: the cell
+    /// boundaries are k * width / 4 and k * height / 4 (k = 0..4), so the picture fills the window at any size.
+    struct CellRect
+    {
+        int x0, y0, w, h;
+    };
+    CellRect cell_rect(int width, int height, int row, int col)  // row 0 is the top row (GL window y grows upwards)
+    {
+        const int band = 3 - row;
+        const int x0 = col * width / 4, x1 = (col + 1) * width / 4;
+        const int y0 = band * height / 4, y1 = (band + 1) * height / 4;
+        return {x0, y0, x1 - x0, y1 - y0};
+    }
+    /// The texel shown by pixel p (0-based inside the cell) of a cell n pixels long for a texture s texels long:
+    /// p * s / n, the integer expression of display.frag and frag_load.frag.
+    int texel_at(int p, int s, int n) { return p * s / n; }
+    /// A pixel near the middle of the pixels that show texel t (when the texture is magnified, that pixel shows t
+    /// itself; when it is minified, texel_at() of the result names the neighbour that is shown instead).
+    int pixel_for(int t, int s, int n) { return std::min(n - 1, ((2 * t + 1) * n) / (2 * s)); }
 
     using Words = std::array<std::uint32_t, 4>;
     enum class Kind { Float, Int, Uint };
@@ -623,6 +644,10 @@ namespace
     public:
         void init(demo::Env& env) override
         {
+            // The fragment imageStore pass writes one texel per pixel of a 64 x 64 viewport of the default framebuffer and
+            // the check requires all 4096 writes; pixels outside the surface produce no fragments.
+            if (env.width < kMinSurface || env.height < kMinSurface)
+                throw demo::Skip(std::format("the surface must be at least {0} x {0} pixels (got {1} x {2})", kMinSurface, env.width, env.height));
             max_image_units_ = demo::get_integer(mgl::GetParameter::MaxImageUnits);
             max_compute_images_ = demo::get_integer(mgl::GetParameter::MaxComputeImageUniforms);
             max_combined_images_ = demo::get_integer(mgl::GetParameter::MaxCombinedImageUniforms);
@@ -718,10 +743,12 @@ namespace
             run_passes();
         }
 
-        void render(demo::Env& /*env*/, int /*frame*/) override
+        void render(demo::Env& env, int /*frame*/) override
         {
+            win_w_ = env.width;
+            win_h_ = env.height;
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
-            mgl::glViewport(0, 0, kWin, kWin);
+            mgl::glViewport(0, 0, win_w_, win_h_);
             mgl::glClearColor(0.10f, 0.10f, 0.14f, 1.0f);
             mgl::glClear(mgl::ClearBufferBit::Color);
             mgl::glBindVertexArray(vao_);
@@ -737,31 +764,32 @@ namespace
 
             mgl::glUseProgram(prog_display_);
             // row 0: source, blur, Sobel (RGBA8, sampler2D)
-            show(0, 0, 0, tex_src_, 0, 0, 1);
-            show(0, 1, 0, tex_blur_, 0, 0, 1);
-            show(0, 2, 0, tex_sobel_, 0, 0, 1);
+            show(0, 0, 0, tex_src_, 0, 0);
+            show(0, 1, 0, tex_blur_, 0, 0);
+            show(0, 2, 0, tex_sobel_, 0, 0);
             // row 1: array layers; row 2: 3D slices
             for (int c = 0; c < 4; ++c)
             {
-                show(1, c, 1, mgl::TextureId{}, 0, c, 8);
-                show(2, c, 2, mgl::TextureId{}, 0, c, 8);
+                show(1, c, 1, mgl::TextureId{}, 0, c);
+                show(2, c, 2, mgl::TextureId{}, 0, c);
             }
             // row 3: levels 0, 1, 2 of texture B
-            show(3, 0, 0, tex_lvl_b_, 0, 0, 4);
-            show(3, 1, 0, tex_lvl_b_, 1, 0, 8);
-            show(3, 2, 0, tex_lvl_b_, 2, 0, 16);
+            show(3, 0, 0, tex_lvl_b_, 0, 0);
+            show(3, 1, 0, tex_lvl_b_, 1, 0);
+            show(3, 2, 0, tex_lvl_b_, 2, 0);
             if (have_fragment_images_)
             {
                 set_value_scale(1.0f / static_cast<float>(frag_value(kFragSize - 1, kFragSize - 1)), 0.0f);
-                show(3, 3, 3, mgl::TextureId{}, 0, 0, 1);
+                show(3, 3, 3, mgl::TextureId{}, 0, 0);
 
                 // row 0, cell 3: imageLoad in a fragment shader (the source image, color-inverted)
                 mgl::glUseProgram(prog_frag_load_);
                 mgl::glBindImageTexture(mgl::ImageUnit{0}, tex_src_, 0, GL_FALSE, 0, mgl::ImageAccess::ReadOnly, mgl::InternalFormat::Rgba8);
                 mgl::glMemoryBarrier(mgl::MemoryBarrierMask::ShaderImageAccess);
-                const int x0 = 3 * kCell, y0 = kWin - kCell;
-                mgl::glViewport(x0, y0, kCell, kCell);
-                mgl::glUniform2i(mgl::glGetUniformLocation(prog_frag_load_, "u_origin"), x0, y0);
+                const CellRect c = cell_rect(win_w_, win_h_, 0, 3);
+                mgl::glViewport(c.x0, c.y0, c.w, c.h);
+                mgl::glUniform2i(mgl::glGetUniformLocation(prog_frag_load_, "u_origin"), c.x0, c.y0);
+                mgl::glUniform2i(mgl::glGetUniformLocation(prog_frag_load_, "u_cell"), c.w, c.h);
                 mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 3);
             }
             mgl::glBindVertexArray(mgl::VertexArrayId{0});
@@ -873,20 +901,20 @@ namespace
         }
 
         /// Draws one display cell: row 0 is the top row (GL window y grows upwards).
-        void show(int row, int col, int mode, mgl::TextureId tex2d, int level, int layer, int scale)
+        void show(int row, int col, int mode, mgl::TextureId tex2d, int level, int layer)
         {
             if (mode == 0)
             {
                 mgl::glActiveTexture(mgl::TextureUnit::Texture0);
                 mgl::glBindTexture(mgl::TextureTarget::Texture2D, tex2d);
             }
-            const int x0 = col * kCell, y0 = kWin - kCell - row * kCell;
-            mgl::glViewport(x0, y0, kCell, kCell);
+            const CellRect c = cell_rect(win_w_, win_h_, row, col);
+            mgl::glViewport(c.x0, c.y0, c.w, c.h);
             mgl::glUniform1i(mgl::glGetUniformLocation(prog_display_, "u_mode"), mode);
             mgl::glUniform1i(mgl::glGetUniformLocation(prog_display_, "u_level"), level);
             mgl::glUniform1i(mgl::glGetUniformLocation(prog_display_, "u_layer"), layer);
-            mgl::glUniform1i(mgl::glGetUniformLocation(prog_display_, "u_scale"), scale);
-            mgl::glUniform2i(mgl::glGetUniformLocation(prog_display_, "u_origin"), x0, y0);
+            mgl::glUniform2i(mgl::glGetUniformLocation(prog_display_, "u_origin"), c.x0, c.y0);
+            mgl::glUniform2i(mgl::glGetUniformLocation(prog_display_, "u_cell"), c.w, c.h);
             mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 3);
         }
 
@@ -1056,6 +1084,7 @@ namespace
         void check_errors(demo::Check& check);
         void check_compile_errors(demo::Check& check);
 
+        int win_w_ = 0, win_h_ = 0;  // surface size of the last render(): the display grid is laid out relative to it
         int max_image_units_ = 0, max_compute_images_ = 0, max_combined_images_ = 0, max_fragment_images_ = 0;
         bool have_fragment_images_ = false;
         std::vector<UnitState> initial_;
@@ -1129,7 +1158,20 @@ namespace
     }
 
     Rgba8 inverted(const Rgba8& c) { return {c8(255 - c[0]), c8(255 - c[1]), c8(255 - c[2]), 255}; }
-    std::array<int, 2> cell_origin(int row, int col) { return {col * kCell, kWin - kCell - row * kCell}; }
+    /// Probes of a cell that shows a size_x x size_y texture: for each wanted texel the pixel near the middle of its
+    /// pixel span, with the expected color of the texel that pixel actually shows (the same integer mapping as the
+    /// shaders, so the expectation is exact at any cell size; under minification that may be a neighbouring texel).
+    template <class F>
+    std::vector<Probe> texel_probes(const CellRect& c, int size_x, int size_y, std::span<const std::array<int, 2>> texels, F&& expected)
+    {
+        std::vector<Probe> probes;
+        for (const auto& t : texels)
+        {
+            const int px = pixel_for(t[0], size_x, c.w), py = pixel_for(t[1], size_y, c.h);
+            probes.push_back({c.x0 + px, c.y0 + py, expected(texel_at(px, size_x, c.w), texel_at(py, size_y, c.h))});
+        }
+        return probes;
+    }
 
     void ImageLoadStore::check_display(demo::Check& check)
     {
@@ -1138,18 +1180,16 @@ namespace
         const std::vector<Rgba8> blur = blur_reference(img);
         const std::vector<Rgba8> sobel = sobel_reference(img);
         const std::array<std::array<int, 2>, 8> pts = {{{10, 10}, {32, 30}, {12, 48}, {50, 8}, {45, 30}, {31, 16}, {19, 45}, {60, 60}}};
+        auto cell = [&](int row, int col) { return cell_rect(win_w_, win_h_, row, col); };
 
-        // Row 0: one texel per pixel. The display tolerance covers the 8-bit output quantization (+-1); the blur and
+        // Row 0: 64 x 64 images. The display tolerance covers the 8-bit output quantization (+-1); the blur and
         // Sobel textures were themselves rounded to 8 bits by imageStore (+-1 against the CPU value).
         auto image_cell = [&](int col, const std::vector<Rgba8>& ref, bool invert, std::string_view what, int tol) {
-            const std::array<int, 2> o = cell_origin(0, col);
-            std::vector<Probe> probes;
-            for (const auto& p : pts)
-            {
-                const Rgba8& e = ref[static_cast<std::size_t>(p[1] * kImg + p[0])];
-                probes.push_back({o[0] + p[0], o[1] + p[1], invert ? inverted(e) : e});
-            }
-            probe_cell(check, what, probes, tol);
+            probe_cell(check, what, texel_probes(cell(0, col), kImg, kImg, pts, [&](int x, int y) {
+                           const Rgba8& e = ref[static_cast<std::size_t>(y * kImg + x)];
+                           return invert ? inverted(e) : e;
+                       }),
+                       tol);
         };
         image_cell(0, img, false, "cell (0,0): the uploaded source image, fetched by a sampler, matches the CPU image at 8 probes", 1);
         image_cell(1, blur, false, "cell (0,1): the blur output texture, fetched by a sampler, matches the CPU blur at 8 probes", 2);
@@ -1157,59 +1197,71 @@ namespace
         if (have_fragment_images_)
             image_cell(3, img, true, "cell (0,3): imageLoad in a fragment shader shows the inverted source at 8 probes", 1);
 
-        // Negative control: at (45,30) the disc edge, the blur is far from the unfiltered image, so the probe that passes
-        // against the blur must fail against the source.
+        // Negative control: at the edges (disc, square, checker) the blur is far from the unfiltered image, so a probe
+        // that passes against the blur must fail against the source. Of the texels the blur cell shows (one candidate
+        // pixel per texel row and column, see pixel_for), the one with the largest blur/source difference is probed. A
+        // search instead of a fixed texel: a minified cell does not show every texel, and may skip a given edge texel.
         {
-            const std::size_t k = static_cast<std::size_t>(30 * kImg + 45);
-            const std::array<int, 2> o = cell_origin(0, 1);
-            const Rgba8 got = demo::read_pixel(o[0] + 45, o[1] + 30);
-            check.expect(max_channel_diff(img[k], blur[k]) > 8, "negative control setup: at (45,30) the CPU blur differs from the CPU source by more than 8 levels",
-                         std::format("source {} blur {}", demo::format_rgba(img[k]), demo::format_rgba(blur[k])));
-            check.expect(max_channel_diff(got, img[k]) > 8, "negative control: the blur cell at (45,30) does NOT match the unfiltered source (the probe can fail)",
+            const CellRect c = cell(0, 1);
+            int best_px = 0, best_py = 0, best_diff = -1;
+            std::size_t k = 0;
+            for (int ty = 0; ty < kImg; ++ty)
+                for (int tx = 0; tx < kImg; ++tx)
+                {
+                    const int px = pixel_for(tx, kImg, c.w), py = pixel_for(ty, kImg, c.h);
+                    const auto kk = static_cast<std::size_t>(texel_at(py, kImg, c.h) * kImg + texel_at(px, kImg, c.w));
+                    if (const int d = max_channel_diff(img[kk], blur[kk]); d > best_diff)
+                    {
+                        best_diff = d;
+                        best_px = px;
+                        best_py = py;
+                        k = kk;
+                    }
+                }
+            const Rgba8 got = demo::read_pixel(c.x0 + best_px, c.y0 + best_py);
+            check.expect(max_channel_diff(img[k], blur[k]) > 8, "negative control setup: at the probed texel the CPU blur differs from the CPU source by more than 8 levels",
+                         std::format("texel ({},{}) source {} blur {}", k % kImg, k / kImg, demo::format_rgba(img[k]), demo::format_rgba(blur[k])));
+            check.expect(max_channel_diff(got, img[k]) > 8, "negative control: the blur cell at that texel does NOT match the unfiltered source (the probe can fail)",
                          std::format("pixel {} source {}", demo::format_rgba(got), demo::format_rgba(img[k])));
         }
 
-        // Rows 1 and 2: 8 x 8 textures at 8 pixels per texel; tagged_color() is the display function of display.frag.
+        // Rows 1 and 2: 8 x 8 textures; tagged_color() is the display function of display.frag.
         const std::array<std::array<int, 2>, 5> tex_pts = {{{1, 1}, {6, 2}, {3, 6}, {7, 7}, {0, 0}}};
         for (int l = 0; l < 4; ++l)
         {
             for (int row = 1; row <= 2; ++row)
             {
-                const std::array<int, 2> o = cell_origin(row, l);
-                std::vector<Probe> probes;
-                for (const auto& t : tex_pts)
-                {
-                    const bool single = overwritten(row == 2, l);
-                    const std::uint32_t v = single ? single_value(t[0], t[1]) : layered_value(row == 1 ? kArrBase : k3dBase, t[0], t[1], l);
-                    probes.push_back({o[0] + t[0] * 8 + 4, o[1] + t[1] * 8 + 4, tagged_color(v)});
-                }
+                const bool single = overwritten(row == 2, l);
+                const std::vector<Probe> probes = texel_probes(cell(row, l), 8, 8, tex_pts, [&](int x, int y) {
+                    return tagged_color(single ? single_value(x, y) : layered_value(row == 1 ? kArrBase : k3dBase, x, y, l));
+                });
                 probe_cell(check,
                            std::format("cell ({},{}): {} {} shows the values of {}", row, l, row == 1 ? "array layer" : "3D slice", l,
-                                       overwritten(row == 2, l) ? "the non-layered binding (layered = FALSE)" : "the layered binding (layered = TRUE)"),
+                                       single ? "the non-layered binding (layered = FALSE)" : "the layered binding (layered = TRUE)"),
                            probes, 1);
             }
         }
 
-        // Row 3.
+        // Row 3: levels 0 (16 x 16), 1 (8 x 8) and 2 (4 x 4) of texture B, then the 64 x 64 fragment-store texture.
         {
-            const std::array<int, 2> o0 = cell_origin(3, 0), o1 = cell_origin(3, 1), o2 = cell_origin(3, 2), o3 = cell_origin(3, 3);
+            const std::array<std::array<int, 2>, 3> flat_pts = {{{0, 0}, {7, 10}, {15, 2}}};
+            const std::array<std::array<int, 2>, 3> flat_pts2 = {{{0, 0}, {1, 2}, {3, 3}}};
             probe_cell(check, "cell (3,0): level 0 of texture B is untouched by the level-1 binding",
-                       {{o0[0] + 4, o0[1] + 4, level_b(0)}, {o0[0] + 30, o0[1] + 40, level_b(0)}, {o0[0] + 60, o0[1] + 10, level_b(0)}}, 1);
-            std::vector<Probe> inv;
-            for (const std::array<int, 2>& t : std::array<std::array<int, 2>, 4>{{{0, 0}, {3, 5}, {7, 7}, {5, 1}}})
-                inv.push_back({o1[0] + t[0] * 8 + 4, o1[1] + t[1] * 8 + 4, inverted(level_a(1, t[0], t[1]))});
-            probe_cell(check, "cell (3,1): level 1 of texture B holds the inverted level 1 of texture A (image bound with level = 1)", inv, 1);
+                       texel_probes(cell(3, 0), 16, 16, flat_pts, [](int, int) { return level_b(0); }), 1);
+            const std::array<std::array<int, 2>, 4> inv_pts = {{{0, 0}, {3, 5}, {7, 7}, {5, 1}}};
+            probe_cell(check, "cell (3,1): level 1 of texture B holds the inverted level 1 of texture A (image bound with level = 1)",
+                       texel_probes(cell(3, 1), 8, 8, inv_pts, [](int x, int y) { return inverted(level_a(1, x, y)); }), 1);
             probe_cell(check, "cell (3,2): level 2 of texture B is untouched by the level-1 binding",
-                       {{o2[0] + 8, o2[1] + 8, level_b(2)}, {o2[0] + 40, o2[1] + 24, level_b(2)}, {o2[0] + 56, o2[1] + 56, level_b(2)}}, 1);
+                       texel_probes(cell(3, 2), 4, 4, flat_pts2, [](int, int) { return level_b(2); }), 1);
             if (have_fragment_images_)
             {
-                std::vector<Probe> gray;
-                for (const auto& p : pts)
-                {
-                    const auto g = c8(static_cast<int>(std::lround(255.0 * static_cast<double>(frag_value(p[0], p[1])) / static_cast<double>(frag_value(kFragSize - 1, kFragSize - 1)))));
-                    gray.push_back({o3[0] + p[0], o3[1] + p[1], {g, g, g, 255}});
-                }
-                probe_cell(check, "cell (3,3): the texture written by imageStore in a fragment shader shows the ramp 3x + 5y + 1", gray, 1);
+                const double top = static_cast<double>(frag_value(kFragSize - 1, kFragSize - 1));
+                probe_cell(check, "cell (3,3): the texture written by imageStore in a fragment shader shows the ramp 3x + 5y + 1",
+                           texel_probes(cell(3, 3), kFragSize, kFragSize, pts, [&](int x, int y) {
+                               const auto g = c8(static_cast<int>(std::lround(255.0 * static_cast<double>(frag_value(x, y)) / top)));
+                               return Rgba8{g, g, g, 255};
+                           }),
+                           1);
             }
         }
     }

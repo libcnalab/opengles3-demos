@@ -1,7 +1,7 @@
 # es31-image-load-store
 
 **API introduced in:** OpenGL ES 3.1 · **Minimum context:** ES 3.1 · **Shaders:** GLSL ES 3.10 ·
-**Run:** `es31-image-load-store [--headless --validate]`
+**Run:** `es31-image-load-store [--headless --validate] [--width W --height H]` · **Minimum surface:** 64 x 64 pixels
 
 Spec numbering follows ES 3.2 (the same text is section 8.22 with Table 8.27 in ES 3.1).
 
@@ -18,7 +18,10 @@ single-layer), mip level selection, format reinterpretation, the memory qualifie
 
 ## What the image shows
 
-A 4 x 4 contact sheet in a 256 x 256 window. Each cell is 64 x 64 pixels; row 0 is the top row.
+A 4 x 4 contact sheet that fills the window at any size; row 0 is the top row. The cell boundaries are `k * width / 4` and
+`k * height / 4` (k = 0..4), so the cells tile the surface exactly and are rectangular when the window is (at the default 256 x 256 each cell is
+64 x 64). Each texture is stretched over its cell with `texelFetch` (no filtering): pixel `p` of a cell `n` pixels long shows texel `p * size / n`
+in integer arithmetic, so a small cell (a 200-pixel side gives 50-pixel cells for the 64 x 64 images) drops texels instead of blending them.
 
 | Row | Cells |
 |---|---|
@@ -95,6 +98,15 @@ restrict`). `layered_store.comp` / `single_store.comp` / `face_color.comp` show 
   the failed calls left unit 0 unchanged; indexed queries with an index of `MAX_IMAGE_UNITS` give `INVALID_VALUE` (section 20.1).
 - **Compile-time errors (6).** One control shader compiles; store to `readonly`, load from `writeonly`, `rgba8` without `readonly`/`writeonly`, no format qualifier, `rgba8` on a `uimage2D` do not.
 - **Display (18).** Probes of every cell of the capture against the CPU model (`texelFetch`, so the pixels are exact up to the 8-bit output), and a negative control (the blur cell does not match the unfiltered source).
+  The probes are derived from the cell rectangles of the current surface: for each chosen texel the pixel in the middle of its pixel span, and the expected color is that of the texel the shaders'
+  integer mapping (`p * size / n`) puts at that pixel. The expectation is therefore exact at every size, with no pixel on an ambiguous texel boundary. The negative control probes the texel the cell shows
+  with the largest blur/source difference (a fixed edge texel may be skipped by a minified cell).
+
+## Window size
+
+The grid is laid out relative to the surface, and the validation passes at any size from **64 x 64** upwards (tested at 64 x 64, 97 x 65, 256 x 256, 333 x 777, 640 x 480, 800 x 800, 1000 x 200,
+200 x 1000, 64 x 1000 and 1000 x 64). Below 64 pixels on either side `init()` throws `demo::Skip` (SKIP_UNSUPPORTED): the fragment-shader `imageStore` pass draws a 64 x 64 viewport of the
+default framebuffer and its check requires a write at all 4096 pixels, and pixels outside the surface produce no fragments. At the minimum each cell is 16 x 16 pixels, and the probes of a cell still land on different pixels.
 
 ## Spec ambiguities and how they were resolved
 

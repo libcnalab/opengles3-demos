@@ -17,7 +17,7 @@
 
 | Case | Rule | Observed |
 |---|---|---|
-| `shader-tests/glsl300/version-not-first-line.frag` | GLSL ES 3.00/3.10/3.20 §3.4: `#version` must be on the first line | a comment line before `#version` is accepted |
+| `shader-tests/glsl300/version-not-first-line.frag` | GLSL ES 3.00 §3.4, 3.10/3.20 §3.3: `#version` must be on the first line | a comment line before `#version` is accepted |
 | `shader-tests/glsl300/integer-output-not-flat.vert` | GLSL ES 3.00 §4.3.6 (3.10 §4.3.6): integer vertex outputs must be `flat` | accepted; only integer *fragment inputs* are enforced |
 
 | `diagnostics-capabilities` limits | ES 3.1 Table 20.x: `MAX_SAMPLES` ≥ 4, `MAX_FRAMEBUFFER_SAMPLES` ≥ 4 | softpipe reports 1 for both (no MSAA) while advertising ES 3.1 |

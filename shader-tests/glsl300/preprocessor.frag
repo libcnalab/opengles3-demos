@@ -1,6 +1,6 @@
 #version 300 es
 // @expect: compile-pass
-// @spec: GLSL ES 3.00 §3.4 Preprocessor - GL_ES, __VERSION__, conditionals, #line, macros with arguments
+// @spec: GLSL ES 3.00 §3.5 Preprocessor - GL_ES, __VERSION__, conditionals, #line, macros with arguments
 // @feature: GLSL300.PREPROCESSOR
 #if !defined(GL_ES) || GL_ES != 1 || __VERSION__ != 300
 #error "GL_ES must be 1 and __VERSION__ must be 300"

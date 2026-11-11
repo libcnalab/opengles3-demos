@@ -60,6 +60,8 @@
 | es32-geometry-shaders | 3.2 | es32 | Geometry shaders: amplification, adjacency, invocations | FULLY_VALIDATED | gpu:es-max=PASS llvmpipe:es-max=PASS softpipe:es-max=SKIP_UNSUPPORTED zink:es-max=PASS |
 | es32-layered-rendering | 3.2 | es32 | Layered rendering: gl_Layer, cube map in one pass | FULLY_VALIDATED | gpu:es-max=PASS llvmpipe:es-max=PASS softpipe:es-max=SKIP_UNSUPPORTED zink:es-max=PASS |
 | es32-debug-output | 3.2 | es32 | Debug output: messages, groups and labels | FULLY_VALIDATED | gpu:es-max=PASS llvmpipe:es-max=PASS softpipe:es-max=SKIP_UNSUPPORTED zink:es-max=PASS |
+| es32-tessellation-domains | 3.2 | es32 | Tessellation domains, spacings and winding | FULLY_VALIDATED | gpu:es-max=PASS llvmpipe:es-max=PASS softpipe:es-max=SKIP_UNSUPPORTED zink:es-max=PASS |
+| es32-tessellation-terrain | 3.2 | es32 | Tessellated terrain with dynamic LOD | FULLY_VALIDATED | gpu:es-max=PASS llvmpipe:es-max=PASS softpipe:es-max=SKIP_UNSUPPORTED zink:es-max=PASS |
 | es32-texture-buffer | 3.2 | es32 | Buffer textures | FULLY_VALIDATED | gpu:es-max=PASS llvmpipe:es-max=PASS softpipe:es-max=SKIP_UNSUPPORTED zink:es-max=PASS |
 | es32-cube-map-array | 3.2 | es32 | Cube map array textures | FULLY_VALIDATED | gpu:es-max=PASS llvmpipe:es-max=PASS softpipe:es-max=SKIP_UNSUPPORTED zink:es-max=PASS |
 | test-metagl-contracts | 3.0 | tests | meta-gl contracts | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |

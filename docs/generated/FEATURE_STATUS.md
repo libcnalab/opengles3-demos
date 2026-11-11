@@ -202,13 +202,13 @@
 | ES32.GEOMETRY.AMPLIFICATION | 3.2 | geometry | Primitive amplification + invocations | ES 3.2 §11.3.4 | FULLY_VALIDATED | es32-geometry-shaders |
 | ES32.GEOMETRY.ADJACENCY | 3.2 | geometry | Adjacency primitive types | ES 3.2 §10.1.8-11 | FULLY_VALIDATED | es32-geometry-shaders |
 | ES32.GEOMETRY.LAYERED | 3.2 | geometry | gl_Layer layered rendering + glFramebufferTexture | ES 3.2 §9.8 | FULLY_VALIDATED | es32-layered-rendering |
-| ES32.TESS.TRIANGLES | 3.2 | tessellation | Tessellation control/evaluation with triangle domain | ES 3.2 §11.2 | NOT_STARTED |  |
-| ES32.TESS.QUADS | 3.2 | tessellation | Quad domain | ES 3.2 §11.2.2 | NOT_STARTED |  |
-| ES32.TESS.ISOLINES | 3.2 | tessellation | Isoline domain | ES 3.2 §11.2.2 | NOT_STARTED |  |
-| ES32.TESS.SPACING_WINDING | 3.2 | tessellation | equal/fractional spacing + cw/ccw + point_mode | ES 3.2 §11.2.2 | NOT_STARTED |  |
-| ES32.TESS.PATCH_PARAM | 3.2 | tessellation | glPatchParameteri PATCH_VERTICES + PATCHES primitive | ES 3.2 §10.1.12 | NOT_STARTED |  |
-| ES32.TESS.LIMITS | 3.2 | tessellation | MAX_TESS_GEN_LEVEL / MAX_PATCH_VERTICES etc. | ES 3.2 §20 | FULLY_VALIDATED | diagnostics-capabilities |
-| ES32.PRIMITIVE_BOUNDING_BOX | 3.2 | tessellation | glPrimitiveBoundingBox + gl_BoundingBox | ES 3.2 §13.2 | NOT_STARTED |  |
+| ES32.TESS.TRIANGLES | 3.2 | tessellation | Tessellation control/evaluation with triangle domain | ES 3.2 §11.2 | FULLY_VALIDATED | es32-tessellation-domains |
+| ES32.TESS.QUADS | 3.2 | tessellation | Quad domain | ES 3.2 §11.2.2 | FULLY_VALIDATED | es32-tessellation-domains, es32-tessellation-terrain |
+| ES32.TESS.ISOLINES | 3.2 | tessellation | Isoline domain | ES 3.2 §11.2.2 | FULLY_VALIDATED | es32-tessellation-domains |
+| ES32.TESS.SPACING_WINDING | 3.2 | tessellation | equal/fractional spacing + cw/ccw + point_mode | ES 3.2 §11.2.2 | FULLY_VALIDATED | es32-tessellation-domains |
+| ES32.TESS.PATCH_PARAM | 3.2 | tessellation | glPatchParameteri PATCH_VERTICES + PATCHES primitive | ES 3.2 §10.1.12 | FULLY_VALIDATED | es32-tessellation-domains |
+| ES32.TESS.LIMITS | 3.2 | tessellation | MAX_TESS_GEN_LEVEL / MAX_PATCH_VERTICES etc. | ES 3.2 §20 | FULLY_VALIDATED | diagnostics-capabilities, es32-tessellation-terrain |
+| ES32.PRIMITIVE_BOUNDING_BOX | 3.2 | tessellation | glPrimitiveBoundingBox + gl_BoundingBox | ES 3.2 §13.2 | FULLY_VALIDATED | es32-tessellation-terrain |
 | ES32.TEXTURE.BUFFER | 3.2 | textures | Buffer textures glTexBuffer/glTexBufferRange + samplerBuffer | ES 3.2 §8.9 | FULLY_VALIDATED | es32-texture-buffer |
 | ES32.TEXTURE.CUBE_ARRAY | 3.2 | textures | Cube map array textures | ES 3.2 §8.5 | FULLY_VALIDATED | es32-cube-map-array |
 | ES32.TEXTURE.MS_ARRAY | 3.2 | textures | glTexStorage3DMultisample 2D multisample array | ES 3.2 §8.8 | NOT_STARTED |  |

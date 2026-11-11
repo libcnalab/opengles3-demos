@@ -6,17 +6,18 @@
 //    glDrawElementsInstancedBaseVertex add `basevertex` to every index before the vertex is fetched. Ten small
 //    meshes share ONE vertex buffer and ONE element array buffer that holds a single quad pattern
 //    {0,1,2, 0,2,3} (as UNSIGNED_BYTE, UNSIGNED_SHORT and UNSIGNED_INT) plus one triangle strip. Every draw
-//    picks its mesh only through basevertex. The scene is an 8 x 8 grid of 32-pixel cells:
-//      row 6  meshes 1-3 (glDrawElementsBaseVertex with ubyte / ushort / uint indices), mesh 4 (Range)
-//      row 5  mesh 5 drawn 4 times by glDrawElementsInstancedBaseVertex; an instanced attribute moves and
-//             tints each instance (instanced attributes are NOT shifted by basevertex)
-//      row 4  vertex-ID cells: the shader compares gl_VertexID with the vertex's own position in the buffer
-//             (green = equal). ES 3.2 defines the vertex ID as index + basevertex.
-//      row 3  primitive restart with basevertex: the restart comparison happens BEFORE basevertex is added
-//      row 2  robust buffer access: two draws whose basevertex points far behind the end of the buffer,
-//             confined by the scissor test, then a normal quad over the same cell
-//      row 7  cell (0,7) holds mesh 0 (basevertex 0). Nothing draws it, so it must stay the clear colour:
+//    picks its mesh only through basevertex. The scene is a 4 x 4 grid of cells that fills the viewport
+//    (all geometry is in NDC; probes and the scissor box are derived from env.width / env.height):
+//      row 3  (0,3) holds mesh 0 (basevertex 0). Nothing draws it, so it must stay the clear colour:
 //             if basevertex were ignored every draw would land there (built-in negative control).
+//             (1,3) and (2,3): primitive restart with basevertex - the restart comparison happens BEFORE
+//             basevertex is added. (3,3): robust buffer access - two draws whose basevertex points far
+//             behind the end of the buffer, confined by the scissor test, then a normal quad on top
+//      row 2  meshes 1-3 (glDrawElementsBaseVertex with ubyte / ushort / uint indices), mesh 4 (Range)
+//      row 1  mesh 5 drawn 4 times by glDrawElementsInstancedBaseVertex; an instanced attribute moves and
+//             tints each instance (instanced attributes are NOT shifted by basevertex)
+//      row 0  vertex-ID cells: the shader compares gl_VertexID with the vertex's own position in the buffer
+//             (green = equal). ES 3.2 defines the vertex ID as index + basevertex.
 //
 // 2. Robustness (ES 3.2 sections 2.3.2, 7.12, 16.1.2, 20.2): the context is created with robust buffer access
 //    and LOSE_CONTEXT_ON_RESET (demo::Info::robust_context -> EGL 1.5 EGL_CONTEXT_OPENGL_ROBUST_ACCESS and
@@ -28,7 +29,7 @@
 //     primitive restart before basevertex, instanced attributes fetched by instance number, and rasterizes
 //     the triangles at pixel centres (probes closer than 1.5 px to any edge are skipped)
 //   * a mutation of the CPU model (basevertex ignored) disagrees with the image in every drawn cell, and a GPU
-//     control: glDrawElements and glDrawElementsBaseVertex(basevertex 0) do draw mesh 0 into cell (0,7)
+//     control: glDrawElements and glDrawElementsBaseVertex(basevertex 0) do draw mesh 0 into cell (0,3)
 //   * INVALID_VALUE for end < start and negative count / instancecount, and the erroneous draws have no effect
 //   * glReadnPixels: exact bufSize succeeds and matches glReadPixels; bufSize one byte short, 0 and negative fail
 //     without touching the buffer; nothing is written past bufSize (canary bytes)
@@ -80,13 +81,14 @@ namespace
     };
 
     constexpr int kVertexCount = 260;
-    constexpr int kGrid = 8;
-    constexpr float kCell = 2.0f / kGrid;    // cell size in NDC (32 px at 256 x 256)
-    constexpr float kInset = kCell / 8.0f;   // quads leave a 4 px border inside their cell
+    constexpr int kGrid = 4;
+    constexpr float kCell = 2.0f / kGrid;    // cell size in NDC: the grid always fills the viewport
+    constexpr float kInset = kCell / 16.0f;  // quads leave a border of 1/16 cell inside their cell
+    constexpr int kMinSurface = 64;          // below this, cells are too small for edge-free probes
     constexpr std::array<float, 3> kClear = {0.08f, 0.08f, 0.12f};
 
-    constexpr int kStripA = 248;  // strip quad A: vertices 248..251, cell (0,3)
-    constexpr int kStripB = 252;  // strip quad B: vertices 252..255, cell (1,3)
+    constexpr int kStripA = 248;  // strip quad A: vertices 248..251, cell (1,3)
+    constexpr int kStripB = 252;  // strip quad B: vertices 252..255, cell (2,3)
 
     struct MeshDef
     {
@@ -96,27 +98,28 @@ namespace
 
     // Mesh k -> cell and colour. Colours are multiples of 0.25 so that products with the tints are exact.
     constexpr std::array<MeshDef, 10> kMeshes = {{
-        {0, 7, {1.00f, 0.00f, 0.00f}},  // 0: never drawn (negative control)
-        {0, 6, {0.00f, 0.50f, 1.00f}},  // 1: DrawElementsBaseVertex, ubyte
-        {1, 6, {1.00f, 0.50f, 0.00f}},  // 2: DrawElementsBaseVertex, ushort
-        {2, 6, {0.50f, 1.00f, 0.25f}},  // 3: DrawElementsBaseVertex, uint
-        {3, 6, {1.00f, 1.00f, 0.00f}},  // 4: DrawRangeElementsBaseVertex
-        {0, 5, {0.00f, 1.00f, 1.00f}},  // 5: DrawElementsInstancedBaseVertex, 4 instances
-        {0, 4, {0.50f, 0.50f, 0.50f}},  // 6: vertex-ID check, DrawElementsBaseVertex
-        {1, 4, {0.50f, 0.50f, 0.50f}},  // 7: vertex-ID check, DrawRangeElementsBaseVertex
-        {2, 4, {0.50f, 0.50f, 0.50f}},  // 8: vertex-ID check, DrawElementsInstancedBaseVertex (2 instances)
-        {0, 2, {0.75f, 0.25f, 1.00f}},  // 9: drawn over the robust-access cell
+        {0, 3, {1.00f, 0.00f, 0.00f}},  // 0: never drawn (negative control)
+        {0, 2, {0.00f, 0.50f, 1.00f}},  // 1: DrawElementsBaseVertex, ubyte
+        {1, 2, {1.00f, 0.50f, 0.00f}},  // 2: DrawElementsBaseVertex, ushort
+        {2, 2, {0.50f, 1.00f, 0.25f}},  // 3: DrawElementsBaseVertex, uint
+        {3, 2, {1.00f, 1.00f, 0.00f}},  // 4: DrawRangeElementsBaseVertex
+        {0, 1, {0.00f, 1.00f, 1.00f}},  // 5: DrawElementsInstancedBaseVertex, 4 instances (cells 0..3)
+        {0, 0, {0.50f, 0.50f, 0.50f}},  // 6: vertex-ID check, DrawElementsBaseVertex
+        {1, 0, {0.50f, 0.50f, 0.50f}},  // 7: vertex-ID check, DrawRangeElementsBaseVertex
+        {2, 0, {0.50f, 0.50f, 0.50f}},  // 8: vertex-ID check, DrawElementsInstancedBaseVertex (cells 2, 3)
+        {3, 3, {0.75f, 0.25f, 1.00f}},  // 9: drawn over the robust-access cell
     }};
     constexpr Color kStripColorA = {0.25f, 0.50f, 1.00f};
     constexpr Color kStripColorB = {1.00f, 0.25f, 0.50f};
-    constexpr int kRobustCol = 0, kRobustRow = 2;
+    constexpr int kRobustCol = 3, kRobustRow = 3;
 
-    // Instance 0 is the identity: non-instanced draws fetch instanced attributes for instance 0.
+    // Instance i moves its quad i cells to the right. Instance 0 is the identity: non-instanced draws fetch
+    // instanced attributes for instance 0.
     constexpr std::array<Instance, 4> kInstances = {{
-        {0.00f, 0.0f, 1.00f},
-        {0.25f, 0.0f, 0.75f},
-        {0.50f, 0.0f, 0.50f},
-        {0.75f, 0.0f, 0.25f},
+        {0.0f * kCell, 0.0f, 1.00f},
+        {1.0f * kCell, 0.0f, 0.75f},
+        {2.0f * kCell, 0.0f, 0.50f},
+        {3.0f * kCell, 0.0f, 0.25f},
     }};
 
     float cell_x(int col) { return -1.0f + static_cast<float>(col) * kCell; }
@@ -144,8 +147,8 @@ namespace
             v[static_cast<std::size_t>(i)] = {-2.0f, -2.0f, 1.0f, 0.0f, 1.0f, i};  // filler: outside the viewport
         for (std::size_t k = 0; k < kMeshes.size(); ++k)
             put_quad(v, static_cast<int>(4 * k), kMeshes[k].col, kMeshes[k].row, kMeshes[k].color, false);
-        put_quad(v, kStripA, 0, 3, kStripColorA, true);
-        put_quad(v, kStripB, 1, 3, kStripColorB, true);
+        put_quad(v, kStripA, 1, 3, kStripColorA, true);
+        put_quad(v, kStripB, 2, 3, kStripColorB, true);
         return v;
     }
 
@@ -375,14 +378,13 @@ namespace
 
     std::string cell_label(int col, int row)
     {
-        if (col == 0 && row == 7) return "mesh 0 (never drawn: must stay clear)";
-        if (row == 6 && col <= 3) return kDraws[static_cast<std::size_t>(col)].what;
-        if (row == 5 && col <= 3) return std::format("mesh 5 instance {} (offset + tint from the instanced attribute)", col);
-        if (row == 4 && col <= 3) return std::format("vertex-ID cell {} (green: gl_VertexID == index + basevertex)", col);
-        if (row == 3 && col == 0) return "strip quad A (before the restart)";
-        if (row == 3 && col == 1) return "strip quad B (after the restart; 254 + 1 = 255 must NOT restart)";
+        if (col == 0 && row == 3) return "mesh 0 (never drawn: must stay clear)";
+        if (col == 1 && row == 3) return "strip quad A (before the restart)";
+        if (col == 2 && row == 3) return "strip quad B (after the restart; 254 + 1 = 255 must NOT restart)";
         if (row == kRobustRow && col == kRobustCol) return "robust cell: out-of-bounds draws scissored here, mesh 9 on top";
-        return "empty cell keeps the clear colour";
+        if (row == 2) return kDraws[static_cast<std::size_t>(col)].what;
+        if (row == 1) return std::format("mesh 5 instance {} (offset + tint from the instanced attribute)", col);
+        return std::format("vertex-ID cell {} (green: gl_VertexID == index + basevertex)", col);
     }
 
     class BaseVertexAndRobustness final : public demo::Demo
@@ -390,6 +392,11 @@ namespace
     public:
         void init(demo::Env& env) override
         {
+            // The grid scales with the surface, but each cell must stay large enough for a 3 x 3 probe grid whose
+            // probes keep more than the 1.5 px edge margin from every quad edge (64 px -> 16 px cells).
+            if (env.width < kMinSurface || env.height < kMinSurface)
+                throw demo::Skip(std::format("surface {}x{} is smaller than {}x{}: grid cells too small to probe",
+                                             env.width, env.height, kMinSurface, kMinSurface));
             program_ = demo::build_program(env, "shaders/scene.vert", "shaders/scene.frag");
             u_mode_ = mgl::glGetUniformLocation(program_, "u_mode");
             if (u_mode_.value < 0) throw demo::Failure("u_mode is not an active uniform");
@@ -545,7 +552,7 @@ namespace
         }
 
         // INVALID_VALUE cases of section 10.5 (end < start) and the implicit sizei rule of section 2.3.1
-        // (negative count / instancecount). Each call would draw mesh 0 into cell (0,7) if it were executed;
+        // (negative count / instancecount). Each call would draw mesh 0 into cell (0,3) if it were executed;
         // check_scene() then proves the cell is still clear ("the command ... is ignored", section 2.3.1).
         void check_draw_errors(demo::Check& check)
         {
@@ -636,9 +643,9 @@ namespace
             check.expect(all[0] == 15 && all[1] == all[0],
                          "mutation: a model that ignores basevertex disagrees with the image in every drawn cell",
                          std::format("{} of {} drawn cells (15 expected) detected", all[1], all[0]));
-            const auto strip = mutation_hits(env, image, Mutation::RestartAfterBaseVertex, {1, 3});
+            const auto strip = mutation_hits(env, image, Mutation::RestartAfterBaseVertex, {2, 3});
             check.expect(strip[0] == 1 && strip[1] == 1,
-                         "mutation: a model that compares the restart index after adding basevertex disagrees with cell (1,3)",
+                         "mutation: a model that compares the restart index after adding basevertex disagrees with cell (2,3)",
                          std::format("drawn {} detected {}", strip[0], strip[1]));
         }
 
@@ -684,8 +691,8 @@ namespace
         // mesh 0, into the cell that check_scene() requires to be clear. So that requirement is not vacuous.
         void check_gpu_negative_control(const demo::Env& env, demo::Check& check)
         {
-            const auto probe0 = cell_probes(env, 0, 7)[4];
-            const auto probe2 = cell_probes(env, 1, 6)[4];
+            const auto probe0 = cell_probes(env, 0, 3)[4];
+            const auto probe2 = cell_probes(env, 1, 2)[4];
             const demo::Rgba8 red = {255, 0, 0, 255};
             mgl::glUseProgram(program_);
             mgl::glBindVertexArray(vao_);
@@ -693,8 +700,8 @@ namespace
 
             mgl::glClear(mgl::ClearBufferBit::Color);
             mgl::glDrawElements(PT::Triangles, 6, IT::UnsignedShort, demo::buffer_offset(kOffQuadU16));
-            check.expect_pixel(probe0[0], probe0[1], red, 1, "negative control: glDrawElements (no basevertex) draws mesh 0 into cell (0,7)");
-            check.expect_pixel(probe2[0], probe2[1], clear_rgba(), 1, "negative control: ... and nothing into mesh 2's cell (1,6)");
+            check.expect_pixel(probe0[0], probe0[1], red, 1, "negative control: glDrawElements (no basevertex) draws mesh 0 into cell (0,3)");
+            check.expect_pixel(probe2[0], probe2[1], clear_rgba(), 1, "negative control: ... and nothing into mesh 2's cell (1,2)");
 
             mgl::glClear(mgl::ClearBufferBit::Color);
             mgl::glDrawElementsBaseVertex(PT::Triangles, 6, IT::UnsignedShort, demo::buffer_offset(kOffQuadU16), 0);
@@ -704,8 +711,8 @@ namespace
             mgl::glDrawElementsBaseVertex(PT::Triangles, 6, IT::UnsignedShort, demo::buffer_offset(kOffQuadU16), 8);
             const Color c2 = kMeshes[2].color;
             check.expect_pixel(probe2[0], probe2[1], {to8(c2.r), to8(c2.g), to8(c2.b), 255}, 1,
-                               "the same call with basevertex 8 draws mesh 2 into cell (1,6)");
-            check.expect_pixel(probe0[0], probe0[1], clear_rgba(), 1, "... and cell (0,7) stays clear");
+                               "the same call with basevertex 8 draws mesh 2 into cell (1,2)");
+            check.expect_pixel(probe0[0], probe0[1], clear_rgba(), 1, "... and cell (0,3) stays clear");
         }
 
         // glReadnPixels (ES 3.2 section 16.1.2): "An INVALID_OPERATION error is generated by ReadnPixels if the

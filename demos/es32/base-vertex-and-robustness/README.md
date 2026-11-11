@@ -32,7 +32,7 @@ issues two draws whose `basevertex` points far past the end of the vertex buffer
 | Instanced | `glDrawElementsInstancedBaseVertex(…, instancecount 4, basevertex 20)` | Per-vertex attributes are fetched at index + 20. The instanced attribute is fetched at `instance` (+ baseinstance, always 0 in ES). `basevertex` does not apply to it. |
 | Vertex ID | the same three commands with `u_mode = 1` | The shader shows green when `gl_VertexID == a_index`. |
 | Restart | `glEnable(PRIMITIVE_RESTART_FIXED_INDEX)`, `glDrawElementsBaseVertex(TRIANGLE_STRIP, …, basevertex 1)` | Index 255 restarts the strip. The index 254 becomes vertex 255 after the shift and must **not** restart it. |
-| Robust access | `glScissor`, two `glDraw*BaseVertex` with `basevertex = 260` and `2^20` | Both are drawn only when `CONTEXT_FLAG_ROBUST_ACCESS_BIT` is set. The scissor test keeps their fragments in cell (0,2), and mesh 9 is drawn over that cell afterwards. |
+| Robust access | `glScissor`, two `glDraw*BaseVertex` with `basevertex = 260` and `2^20` | Both are drawn only when `CONTEXT_FLAG_ROBUST_ACCESS_BIT` is set. The scissor test keeps their fragments in cell (3,3), and mesh 9 is drawn over that cell afterwards. |
 | Queries | `glGetIntegerv(CONTEXT_FLAGS, RESET_NOTIFICATION_STRATEGY)`, `glGetGraphicsResetStatus`, `glReadnPixels`, `glGetnUniformfv/iv/uiv` | See validation. |
 
 ## Shader concepts
@@ -48,36 +48,42 @@ issues two draws whose `basevertex` points far past the end of the vertex buffer
 
 ## Expected result
 
-The capture shows an 8 x 8 grid of 32-pixel cells on a dark blue-grey background, with the top-left cell
+The capture shows a 4 x 4 grid of cells on a dark blue-grey background. All geometry is in NDC, so the grid
+fills the viewport at any surface size (non-square surfaces give non-square cells). The top-left cell is
 empty:
 
-- row 2 from the top: blue, orange, light green and yellow squares (meshes 1 to 4)
-- row 3: four cyan squares that get darker from left to right (one mesh, four instances, tints 1, ¾, ½, ¼)
-- row 4: four green squares (every `gl_VertexID` matched; red would mean a mismatch)
-- row 5: a light-blue and a pink square (the two strip quads on either side of the restart)
-- row 6: a purple square (mesh 9 over the cell that received the out-of-bounds draws)
+- top row: the empty cell, then a light-blue and a pink square (the two strip quads on either side of the
+  restart) and a purple square (mesh 9 over the cell that received the out-of-bounds draws)
+- second row: blue, orange, light green and yellow squares (meshes 1 to 4)
+- third row: four cyan squares that get darker from left to right (one mesh, four instances, tints 1, ¾, ½, ¼)
+- bottom row: four green squares (every `gl_VertexID` matched; red would mean a mismatch)
 
 The empty top-left cell is where mesh 0 would appear. Every draw would land there if `basevertex` were ignored.
 
 ## Validation (`--validate`)
 
-All 64 cells are compared with a **CPU model** that expands the same draw records the GPU received. The
+All 16 cells are compared with a **CPU model** that expands the same draw records the GPU received. The
 model reads the index bytes and splits strips at the restart index, comparing it with the raw index before
 `basevertex` is added (§10.3.4). It adds `basevertex` to get the vertex ID (§10.5), fetches instanced
 attributes by instance number, and evaluates `gl_VertexID == a_index` itself. It then rasterizes the
-triangles at pixel centres. Each cell is checked at a 3 x 3 grid of probes. Probes closer than 1.5 px to any
-triangle edge are skipped, because edge pixels are implementation-dependent. The tolerance is ±1 per
+triangles at pixel centres. Each cell is checked at a 3 x 3 grid of probes at ¼, ½ and ¾ of the cell
+(computed from the surface size). Probes closer than 1.5 px to any triangle edge are skipped, because edge
+pixels are implementation-dependent. The margin stays in pixels at every size, because the uncertainty is
+which pixel centres an edge includes, and that does not grow with the cell. A cell must keep at least 4 probes,
+otherwise its check fails. Quads leave 1/16 of the cell free, so a probe at ¼ of the cell is 3/16 of a cell
+from the nearest quad edge. Below 64 x 64 that would be less than the margin, so smaller surfaces report
+`SKIP_UNSUPPORTED`. The demo was run at 64x64, 65x301, 256x256, 333x777, 640x480 and 800x800. The tolerance is ±1 per
 channel: all colours are multiples of ¼, so the only error left is the 8-bit conversion.
 
 Negative controls and mutations:
 
-- Cell (0,7) must stay clear. On the GPU, `glDrawElements` and `glDrawElementsBaseVertex(basevertex 0)`
+- Cell (0,3) must stay clear. On the GPU, `glDrawElements` and `glDrawElementsBaseVertex(basevertex 0)`
   with the same arguments do draw mesh 0 there, and `basevertex 8` moves the same call to mesh 2's cell. So
   the "stays clear" check would catch an ignored `basevertex`.
 - A mutated CPU model that ignores `basevertex` disagrees with the image in all 15 drawn cells.
-- A mutated model that compares the restart index after adding `basevertex` disagrees with cell (1,3).
+- A mutated model that compares the restart index after adding `basevertex` disagrees with cell (2,3).
 
-Errors (each erroneous call would draw mesh 0 if it were executed, so the clear cell (0,7) also proves that
+Errors (each erroneous call would draw mesh 0 if it were executed, so the clear cell (0,3) also proves that
 the commands were ignored, §2.3.1):
 
 - `glDrawRangeElementsBaseVertex` with `end < start` gives `INVALID_VALUE` (§10.5).
@@ -150,6 +156,6 @@ Variables.
 - Robust access does not make out-of-bounds data meaningful. It only promises that the program survives.
   Do not rely on zeros without `KHR_robust_buffer_access_behavior`.
 - `bufSize` of `glGetnUniform*v` is in bytes, not in components.
-- The mesa softpipe driver cannot create a robust context at all (`EGL_BAD_MATCH` for ES 3.0, 3.1 and 3.2
-  with `EGL_CONTEXT_OPENGL_ROBUST_ACCESS`). On softpipe this demo therefore reports `BLOCKED_ENVIRONMENT`
-  rather than `SKIP_UNSUPPORTED`.
+- The Mesa softpipe driver cannot create a robust context at all (`EGL_BAD_MATCH` for ES 3.0, 3.1 and 3.2
+  with `EGL_CONTEXT_OPENGL_ROBUST_ACCESS`). The runtime therefore probes the real version without the robust
+  attribute and reports `SKIP_UNSUPPORTED` for this native ES 3.1 driver.

@@ -12,7 +12,7 @@ An educational and validation suite for the **OpenGL ES 3.0, 3.1 and 3.2** core 
 - **Specification-derived coverage.** The 358 core entry points come from the Khronos registry;
   features and GLSL language items are tracked separately (`docs/`).
 
-> **Status (2026-11-11):** 82 executables (77 demos, 5 test programs).
+> **Status (2026-11-11):** 82 executables: 75 demos, 6 tests and `glsl-compile-tests`.
 > - **API:** all 358 core entry points of ES 2.0/3.0/3.1/3.2 have passing, validated evidence.
 > - **Semantic features:** every ES 3.0-3.2 row is validated; one ES 2.0 row (feedback loops) has undefined
 >   results and is documented only.

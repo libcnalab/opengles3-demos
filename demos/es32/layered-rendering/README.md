@@ -8,14 +8,20 @@ the basis of single-pass cube map rendering (shadow cubes, environment maps) and
 **Minimum version:** OpenGL ES 3.2 and GLSL ES 3.20 (`#version 320 es`). `glFramebufferTexture` and `gl_Layer` do not exist
 in ES 3.1; softpipe reports `SKIP_UNSUPPORTED`.
 
-## What you see (256x256, a 2x2 grid of 128x128 cells)
+## What you see (a 2x2 grid of cells, each half the window: 128x128 at the default 256x256)
 
 | cell | content |
 |---|---|
 | top left | a **mirror ball** (a 96x48 UV sphere) inside a box-shaped room. The room's walls, window, door, lamp, carpet, stripe, poster and three boxes were rendered once into a cube map; the ball reflects it with `reflect()` and the background is a skybox, both read from that cube map. The camera orbits in windowed mode. |
-| top right | the **same cube map as a cube net**: six 32x32 tiles (-X +Z +X -Z in the middle row, +Y above, -Y below). Each tile pixel looks up a texel of a face through a *direction* vector. |
-| bottom left | a **2D array texture** 64x64x4 shown as four tiles. Layer n has its own background and body colour, a body rectangle that shrinks with n, and n+1 white squares (the layer index as a count). It was painted by four POINTS: the layer of point n is `gl_PrimitiveIDIn`. |
+| top right | the **same cube map as a cube net**: six square tiles (32 px at 256x256) in a 4x3 cross (-X +Z +X -Z in the middle row, +Y above, -Y below +Z). Each tile pixel looks up a texel of a face through a *direction* vector; the tiles are as large as the cell allows and centred. |
+| bottom left | a **2D array texture** 64x64x4 shown as four tiles (a 2x2 block as large as the cell allows, centred). Layer n has its own background and body colour, a body rectangle that shrinks with n, and n+1 white squares (the layer index as a count). It was painted by four POINTS: the layer of point n is `gl_PrimitiveIDIn`. |
 | bottom right | a **3D texture** 64x64x4 shown as four tiles. Slice k has a background that goes from blue to green, a block that walks along the diagonal and a bar that grows. It was painted by ONE point with `layout(invocations = 4)`: the slice is `gl_InvocationID`. |
+
+**The presentation scales with the window.** Every cell is half the window wide and high; the cube net, the four array layers and the
+four volume slices are drawn as textured quads (one triangle covering a viewport rectangle, `shaders/fullscreen.vert`) through a NEAREST
+sampler object, as large as the cell allows with the aspect ratio kept (the tiles are square, the rest of the cell keeps its dark
+clear colour). The mirror-ball cell uses the cell's own aspect ratio for its projection. `--width 900 --height 900` and `--width 640
+--height 480` are validated as well (see below).
 
 The cube map is rendered by `shaders/env.geom`: `layout(triangles, invocations = 6) in`, every input triangle is emitted
 six times, invocation k with the view-projection matrix of face k and `gl_Layer = gl_InvocationID`. The fragment shader reads
@@ -57,7 +63,8 @@ six times, invocation k with the view-projection matrix of face k and `gl_Layer 
 * `shaders/env.geom`, `shaders/env.frag` - single-pass cube map rendering with a `uniform mat4 u_viewproj[6]` and the
   fragment-shader input `gl_Layer`.
 * `shaders/sky.frag`, `shaders/sphere.frag` - `texture(samplerCube, direction)` and `reflect()`; the ball adds a small rim term.
-* `shaders/show_*.frag` - `texelFetch` from `sampler2DArray` / `sampler3D`; `layout(binding = 0)` on the samplers.
+* `shaders/show_*.frag` - `texture()` on `sampler2DArray`, `sampler3D` (with the slice centre `(k + 0.5) / textureSize(...).z`) and
+  `samplerCube`, through NEAREST sampler objects; `layout(binding = 0)` on the samplers.
 
 ## How it is validated (`--validate`)
 
@@ -66,15 +73,21 @@ six times, invocation k with the view-projection matrix of face k and `gl_Layer 
    (`cpu_model.hpp: array_layer`, `volume_slice`) with tolerance zero. The six cube faces are read back with
    `glFramebufferTexture2D` and compared texel by texel with a **ray caster** of the same room (the room is a list of
    axis-aligned quads that feeds both the vertex buffer and the ray caster; the direction of a texel comes from the face
-   table). This proves the view matrices, the face numbering and the orientation of Table 8.19 at once. 21 736 of 24 576
-   texels are compared; the 2 840 texels whose 3x3 neighbourhood (+-0.75 texel) crosses a colour edge are skipped because
-   rasterization decides there. The alpha tag proves that the fragment shader's `gl_Layer` equals the face written.
-2. **The displays.** The two bottom cells (all 128x128 pixels each) equal the layer images exactly. The 6 tiles of the cube
-   net equal the texels they sample. The mirror-ball cell is compared with a model that casts the view ray, intersects the
-   analytic sphere, applies `reflect()` and the rim term, and looks up the room: about 1 500 sky and 570 ball pixels
-   (the ball reflects 12 different environment colours), +-2/255 (8-bit rounding plus bilinear weights on equal texels; the
-   model uses the analytic sphere; the facet error of the tessellated ball is far below the 0.08 rad neighbourhood). Probes are dropped within 3 px of the ball's
-   outline and where the room's colour is not constant within 0.08 rad of the reflected direction. Measured: at most 1/255.
+   table). This proves the view matrices, the face numbering and the orientation of Table 8.19 at once. 249 829 of 259 584
+   texels (6 faces of 208 x 208) are compared; the 9 755 texels whose 3x3 neighbourhood (+-0.75 texel) crosses a colour edge are
+   skipped because rasterization decides there. The alpha tag proves that the fragment shader's `gl_Layer` equals the face written.
+2. **The displays, at any window size.** A NEAREST tile pixel p of an S-pixel tile over an N-texel image reads texel
+   `floor((p + 0.5) / S * N)`; the model computes that texel and skips only the pixels whose sample is within 0.02 texel of a texel
+   boundary (the GPU may round either way there; none at 256x256, about 8 percent at 900x900). The two bottom cells are compared
+   pixel for pixel with the layer images *including the margin around the tiles*, which must keep the clear colour. The 6 tiles of
+   the cube net are compared with the room colour of the texel they sample (direction -> face -> texel), the empty corners and
+   margins of the net with the clear colour. The mirror-ball cell is compared with a model that casts the view ray (with the cell's
+   aspect ratio), intersects the analytic sphere, applies `reflect()` and the rim term, and looks up the room: 1 471 sky and 572 ball
+   probes at 256x256 (the ball reflects 12 different environment colours), +-2/255 (8-bit rounding plus bilinear weights on equal
+   texels; the model uses the analytic sphere; the facet error of the tessellated ball is far below the 0.08 rad neighbourhood).
+   Probes are dropped within 3 px of the ball's outline and where the room's colour is not constant within 0.08 rad of the
+   reflected direction. Measured: at most 1/255 at every size. Sizes checked by hand (all PASS, 102 checks each): 256x256,
+   640x480 (80 px net tiles, 120 px layer tiles) and 900x900 (112 px and 225 px tiles).
 3. **Queries.** `LAYERED`, `OBJECT_TYPE`, `TEXTURE_LEVEL` and `TEXTURE_LAYER` for eight attachment kinds (layered 2D array, 3D,
    cube, plain 2D; single layer of array and 3D; cube face; plain 2D via `glFramebufferTexture2D`), and after detaching.
 4. **Completeness.** sixteen configurations: COMPLETE for each layered target alone, `INCOMPLETE_LAYER_TARGETS` for a layered
@@ -101,7 +114,7 @@ six times, invocation k with the view-projection matrix of face k and `gl_Layer 
 
 * `glFramebufferTexture` is the only way to attach a layered image; with a layered attachment *all* populated attachments
   (depth too) must be layered, so the environment framebuffer uses a cube map **depth texture**, not a renderbuffer.
-* Even `texelFetch` needs a complete texture, and the default minification filter is a mipmap filter, so the single-level
+* A texture must be complete to be sampled and the default minification filter is a mipmap filter, so the single-level
   textures get `NEAREST` filters; sampler objects then override the filters for the cube map (NEAREST for the net, LINEAR
   for the ball and the sky).
 * gl_Layer values outside the layer count are undefined; never write one deliberately.
@@ -111,6 +124,11 @@ six times, invocation k with the view-projection matrix of face k and `gl_Layer 
   `glFramebufferTexture2D` instead, which is equivalent.
 * All three Mesa drivers report `LAYER_PROVOKING_VERTEX` = `UNDEFINED_VERTEX`, which the specification allows. The branch
   that tests FIRST / LAST therefore runs on no machine of the matrix.
+* **Texel-boundary ties.** The cube faces are 208 x 208 (up from 64 x 64, so that the skybox and the ball show smoother edges). A net tile of T
+  pixels samples texel `floor((p + 0.5) / T * 208)`; if 208 / T is an even integer (T = 104, 52, 26, 13) every sample lies exactly on a
+  texel boundary, the model cannot tell which neighbour the GPU returns, and the net comparison would have nothing left to compare (it
+  then fails its non-vacuity requirement instead of passing silently). With the usual window sizes (T = 32, 80, 112, 120, 128, ...) the
+  ratio is not an even integer, which is why 208 was chosen over 128, 192 or 224.
 * The cube map face images are stored with t pointing "down" in world space for the side faces (t grows with -y); the cube
   net flips the rows for display.
 

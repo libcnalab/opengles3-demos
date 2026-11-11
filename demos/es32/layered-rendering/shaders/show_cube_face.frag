@@ -1,15 +1,15 @@
 #version 320 es
-// One face of the cube map in a 32x32 tile of the "cube net": every tile pixel looks up the centre of texel
-// (2x, 2 * (31 - y)) of the face (NEAREST sampler), through a DIRECTION vector built from the face table of
-// ES 3.2 Table 8.19 (the same table the hardware uses to map the direction back to a face and a texel).
-// The row is flipped so that the world "up" of the four side faces points up in the picture.
+// One face of the cube map on a tile of any size (the "cube net"): the position inside the tile, (s, t) = (u, 1 - v) with
+// (u, v) = v_ndc / 2 + 1 / 2, becomes a DIRECTION through the face table of ES 3.2 Table 8.19 (the same table the hardware uses
+// to map the direction back to a face and a texel); the sampler object is NEAREST. The row is flipped (t = 1 - v) so that the world "up"
+// of the four side faces points up in the picture.
 precision highp float;
 precision highp samplerCube;
 
 layout(binding = 0) uniform samplerCube u_cube;
-layout(location = 0) uniform ivec2 u_origin;
-layout(location = 1) uniform int u_face;
+layout(location = 0) uniform int u_face;
 
+in vec2 v_ndc;
 out vec4 frag_color;
 
 vec3 face_direction(int face, float s, float t)
@@ -26,8 +26,6 @@ vec3 face_direction(int face, float s, float t)
 
 void main()
 {
-    ivec2 p = ivec2(gl_FragCoord.xy) - u_origin;
-    float s = (float(2 * p.x) + 0.5) / 64.0;
-    float t = (float(2 * (31 - p.y)) + 0.5) / 64.0;
-    frag_color = vec4(texture(u_cube, face_direction(u_face, s, t)).rgb, 1.0);
+    vec2 uv = v_ndc * 0.5 + 0.5;
+    frag_color = vec4(texture(u_cube, face_direction(u_face, uv.x, 1.0 - uv.y)).rgb, 1.0);
 }

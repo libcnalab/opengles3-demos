@@ -58,25 +58,32 @@ namespace
     {
         int x, y, w, h;
     };
-    Rect cell_rect(int w, int h, int id)  // cell 0 is the top left, reading order
+    // Cell 0 is the top left, reading order. The cells partition the surface exactly (column i spans [i*w/4, (i+1)*w/4)),
+    // so at sizes that are not a multiple of 4 the cells differ by one pixel but every pixel belongs to exactly one cell.
+    Rect cell_rect(int w, int h, int id)
     {
-        const int cw = w / kGrid, ch = h / kGrid;
-        return {(id % kGrid) * cw, (kGrid - 1 - id / kGrid) * ch, cw, ch};
+        const int col = id % kGrid, row = kGrid - 1 - id / kGrid;
+        const int x0 = col * w / kGrid, x1 = (col + 1) * w / kGrid;
+        const int y0 = row * h / kGrid, y1 = (row + 1) * h / kGrid;
+        return {x0, y0, x1 - x0, y1 - y0};
     }
+    constexpr int kMinCell = 16;  // smallest cell (pixels) at which every update still covers a distinct, non-empty rectangle
 
-    // What update f draws (cell pixel coordinates, origin bottom left). The rectangle always fits a 64x64 cell:
-    // x0 + w <= 4 + 19 + 16 + 23 = 62.
+    // What update f draws in a cell of cell_w x cell_h pixels (cell pixel coordinates, origin bottom left). The rectangle is
+    // designed on a 64x64 grid (x0 + w <= 4 + 19 + 16 + 23 = 62 < 64) and scaled to the cell with integer division, so its
+    // edges stay on whole pixels and it keeps the same proportion of the cell at every surface size.
     struct CellSpec
     {
         int x0, y0, w, h;
         std::array<std::uint8_t, 3> rgb;
     };
-    CellSpec cell_spec(int f)
+    CellSpec cell_spec(int f, int cell_w, int cell_h)
     {
-        return {4 + (f * 7) % 20,
-                4 + (f * 5) % 20,
-                16 + (f * 3) % 24,
-                16 + (f * 11) % 24,
+        const int ux0 = 4 + (f * 7) % 20, uy0 = 4 + (f * 5) % 20;
+        const int ux1 = ux0 + 16 + (f * 3) % 24, uy1 = uy0 + 16 + (f * 11) % 24;
+        const int x0 = ux0 * cell_w / 64, x1 = ux1 * cell_w / 64;
+        const int y0 = uy0 * cell_h / 64, y1 = uy1 * cell_h / 64;
+        return {x0, y0, x1 - x0, y1 - y0,
                 {static_cast<std::uint8_t>(90 + (f * 53) % 150), static_cast<std::uint8_t>(90 + (f * 97) % 150), static_cast<std::uint8_t>(90 + (f * 29) % 150)}};
     }
 
@@ -112,7 +119,7 @@ namespace
     Compare compare_cell(const std::vector<std::uint8_t>& image, int image_w, const Rect& r, int f)
     {
         Compare c;
-        const CellSpec s = cell_spec(f);
+        const CellSpec s = cell_spec(f, r.w, r.h);
         for (int y = 0; y < r.h; ++y)
             for (int x = 0; x < r.w; ++x)
             {
@@ -198,6 +205,8 @@ namespace
     public:
         void init(demo::Env& env) override
         {
+            if (env.width < kGrid * kMinCell || env.height < kGrid * kMinCell)
+                throw demo::Skip(std::format("the 4x4 cell grid needs a surface of at least {0}x{0} pixels (got {1}x{2})", kGrid * kMinCell, env.width, env.height));
             prog_ring_ = demo::build_program(env, "shaders/ring.vert", "shaders/ring.frag");
             prog_heavy_ = demo::build_program(env, "shaders/heavy.vert", "shaders/heavy.frag");
             u_iterations_ = mgl::glGetUniformLocation(prog_heavy_, "u_iterations");
@@ -241,7 +250,7 @@ namespace
                     fence_[slot] = nullptr;
                 }
                 const Rect r = cell_rect(env.width, env.height, f);
-                const std::array<RingVertex, 4> vertices = make_vertices(cell_spec(f), r.w, r.h);
+                const std::array<RingVertex, 4> vertices = make_vertices(cell_spec(f, r.w, r.h), r.w, r.h);
                 mgl::glBindBuffer(mgl::BufferTarget::Array, ring_[slot]);
                 void* mapped = mgl::glMapBufferRange(mgl::BufferTarget::Array, 0, static_cast<GLsizeiptr>(sizeof(vertices)),
                                                      mgl::MapBufferAccessMask::Write | mgl::MapBufferAccessMask::Unsynchronized);
@@ -333,7 +342,12 @@ namespace
             }
             const long expected_covered = [&] {
                 long n = 0;
-                for (int f = 0; f < kCells; ++f) n += static_cast<long>(cell_spec(f).w) * cell_spec(f).h;
+                for (int f = 0; f < kCells; ++f)
+                {
+                    const Rect r = cell_rect(env.width, env.height, f);
+                    const CellSpec cs = cell_spec(f, r.w, r.h);
+                    n += static_cast<long>(cs.w) * cs.h;
+                }
                 return n;
             }();
             check.expect(bad == 0 && covered == expected_covered && background == static_cast<long>(env.width) * env.height - expected_covered,

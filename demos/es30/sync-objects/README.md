@@ -17,8 +17,10 @@ of every wait, `glFlush` versus `glFinish`, an asynchronous readback guarded by 
 
 ## What the image shows
 
-A 4 × 4 grid of 64 × 64 cells, reading order. Cell *f* is a rectangle whose position, size and color are a function of *f*
-alone (a different color for each of the 16 cells). The rectangles are drawn by 16 updates that alternate between two
+A 4 × 4 grid of cells that partitions the whole surface exactly (column *i* spans `[i·w/4, (i+1)·w/4)`, so at sizes that are
+not a multiple of 4 neighbouring cells differ by one pixel), reading order. Cell *f* is a rectangle whose position, size and color
+are a function of *f* alone; the rectangle is designed on a 64 × 64 grid and scaled to the cell with integer division, so its edges
+stay on whole pixels at every size (a different color for each of the 16 cells). The rectangles are drawn by 16 updates that alternate between two
 buffers; every cell was drawn from the buffer contents written for *that* update:
 
 ```
@@ -79,7 +81,8 @@ behind it are usually not signaled yet.
 
 ## How it is validated
 
-- **Image.** Every pixel of all 16 cells against the model (12088 covered, 53448 background pixels, exact up to the ±1 color
+- **Image.** Every pixel of all 16 cells against the model (at 256 × 256: 12088 covered, 53448 background pixels; at any size
+  covered + background is exactly width × height; exact up to the ±1 color
   conversion). **Negative control:** every cell is also compared with the model of update *f + 2*, the other generation of the *same
   ring slot*; all 16 must disagree, so a cell that showed stale slot data would be caught.
 - **Ring protocol.** 14 waits (updates 2..15) all end `ALREADY_SIGNALED` or `CONDITION_SATISFIED`, never `WAIT_FAILED`, and the fence
@@ -135,3 +138,5 @@ behind it are usually not signaled yet.
 - Delete fences you have waited on; the name becomes invalid at once, so do not reuse a stale `GLsync` value (the underlying memory may be
   recycled by a later `glFenceSync`).
 - Creating a fence is not free on every driver, and `glFinish` is a pipeline stall: prefer one fence per frame or per resource over `glFinish`.
+- Laying the cells out as `w / 4` × `h / 4` leaves a strip of up to three pixels uncovered at sizes that are not a multiple of 4; the
+  demo partitions the surface with `i·w/4 .. (i+1)·w/4` instead. Below 64 × 64 (cells under 16 pixels) it reports SKIP.

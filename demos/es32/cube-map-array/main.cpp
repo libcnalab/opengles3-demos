@@ -11,7 +11,7 @@
 // so a lookup that returns the wrong face, layer, texel or level shows up as a different colour, and the colour
 // tells which one it was.
 //
-// Image (256 x 256):
+// Image (256 x 256; other sizes: see Layout / layout_of()):
 //   * top 181 rows: five spheres drawn with ONE glDrawElementsInstanced call, a perspective camera and a depth buffer.
 //     Sphere k reflects layer k of the array (environment mapping: texture(reflect(view, normal), k)).
 //   * bottom 75 rows: 30 tiles, one per layer-face z = 6 layer + face in the order of Table 8.24. Each tile shows the
@@ -263,10 +263,18 @@ namespace
         std::string first;
     };
 
+    // The tile strip at the bottom: kTileRows rows of `tile` pixels (at most 3/10 of the height, at most a tenth of the
+    // width); its kTilesPerRow columns partition the whole width exactly (column c spans [c*w/10, (c+1)*w/10)). The scene
+    // viewport takes the rest of the surface. fovy is the scene camera's vertical field of view: 45 degrees, except on a
+    // portrait viewport, which keeps the 45 degree HORIZONTAL field of view so that all five spheres stay in view.
     struct Layout
     {
         int width = 0, height = 0, tile = 0, tile_h = 0, scene_h = 0;
+        double fovy = 0.0;
+        [[nodiscard]] int col_x(int col) const { return col * width / kTilesPerRow; }
     };
+    constexpr int kMinTile = 8;     // smallest tile row height (pixels)
+    constexpr int kMinScene = 64;   // smallest scene viewport height (pixels)
 
     class CubeMapArray final : public demo::Demo
     {
@@ -466,6 +474,11 @@ namespace
 
     void CubeMapArray::init(demo::Env& env)
     {
+        {
+            const Layout lay = layout_of(env);
+            if (lay.tile < kMinTile || lay.scene_h < kMinScene)
+                throw demo::Skip(std::format("{}x{} is too small: the tile strip needs rows of at least {} pixels and the scene at least {} rows", env.width, env.height, kMinTile, kMinScene));
+        }
         struct Variant
         {
             Kind kind;
@@ -553,9 +566,12 @@ namespace
         Layout l;
         l.width = env.width;
         l.height = env.height;
-        l.tile = env.width / kTilesPerRow;
+        l.tile = std::min(env.width / kTilesPerRow, env.height * 3 / 10 / kTileRows);
         l.tile_h = l.tile * kTileRows;
         l.scene_h = env.height - l.tile_h;
+        const double aspect = static_cast<double>(l.width) / std::max(l.scene_h, 1);
+        const double tan_half = std::tan(static_cast<double>(dm::radians(45.0f)) * 0.5);
+        l.fovy = 2.0 * std::atan(aspect < 1.0 ? tan_half / aspect : tan_half);
         return l;
     }
 
@@ -591,7 +607,7 @@ namespace
         for (int z = 0; z < kFaces * kLayers; ++z)
         {
             const int col = z % kTilesPerRow, row = z / kTilesPerRow;
-            mgl::glViewport(col * lay.tile, (kTileRows - 1 - row) * lay.tile, lay.tile, lay.tile);
+            mgl::glViewport(lay.col_x(col), (kTileRows - 1 - row) * lay.tile, lay.col_x(col + 1) - lay.col_x(col), lay.tile);
             mgl::glUniform1i(loc_tile_z_, z);
             mgl::glDrawArrays(mgl::PrimitiveType::TriangleStrip, 0, 4);
         }
@@ -600,7 +616,7 @@ namespace
         mgl::glViewport(0, lay.tile_h, lay.width, lay.scene_h);
         mgl::glEnable(mgl::Capability::DepthTest);
         mgl::glUseProgram(env_program_);
-        const dm::Mat4 proj = dm::perspective(dm::radians(45.0f), static_cast<float>(lay.width) / static_cast<float>(lay.scene_h), 0.5f, 60.0f);
+        const dm::Mat4 proj = dm::perspective(static_cast<float>(lay.fovy), static_cast<float>(lay.width) / static_cast<float>(lay.scene_h), 0.5f, 60.0f);
         const dm::Vec3 eye = eye_position();
         const dm::Mat4 vp = proj * dm::look_at(eye, {0, 0, 0}, {0, 1, 0});
         mgl::glUniformMatrix4fv(loc_view_proj_, 1, GL_FALSE, vp.data());
@@ -1514,18 +1530,19 @@ namespace
         };
 
         // ---- the 30 tiles ---------------------------------------------------------------------------------
-        int tile_bad = 0, tile_probes = 0;
+        int tile_bad = 0, tile_probes = 0, tile_area = 0;
         std::string first;
         std::array<int, 6> control_equal{};  // pixels where a wrong model happens to equal the picture
         const std::array<Sample (*)(Sample), 6> wrong = {wrong_flip_t, wrong_flip_s, wrong_transpose, wrong_face_layer_swap, wrong_layer_plus_one, wrong_level_zero};
         for (int z = 0; z < kFaces * kLayers; ++z)
         {
             const int layer = z / kFaces, face = z % kFaces, col = z % kTilesPerRow, row = z / kTilesPerRow;
-            const int x0 = col * lay.tile, y0 = lay.height - lay.tile_h + row * lay.tile;
+            const int x0 = lay.col_x(col), y0 = lay.height - lay.tile_h + row * lay.tile, tile_w = lay.col_x(col + 1) - x0;
+            tile_area += tile_w * lay.tile;
             for (int py = 0; py < lay.tile; ++py)
-                for (int pxx = 0; pxx < lay.tile; ++pxx)
+                for (int pxx = 0; pxx < tile_w; ++pxx)
                 {
-                    const double s = (pxx + 0.5) / lay.tile, t = (py + 0.5) / lay.tile;  // t grows downwards, like the rows of the upload
+                    const double s = (pxx + 0.5) / tile_w, t = (py + 0.5) / lay.tile;  // t grows downwards, like the rows of the upload
                     bool near_boundary = false;
                     for (int k = 1; k < kSize; ++k)
                         near_boundary = near_boundary || std::abs(s * kSize - k) < kTexelMargin || std::abs(t * kSize - k) < kTexelMargin;
@@ -1548,7 +1565,8 @@ namespace
                         if (got == sample_color(wrong[k](S))) ++control_equal[k];
                 }
         }
-        check.expect(tile_bad == 0 && tile_probes > 30 * 300,
+        // Texel boundaries take 2 x 3 x 0.05 = 30% of each axis at most: more than half of the tile pixels are compared.
+        check.expect(tile_bad == 0 && tile_probes > tile_area / 2,
                      std::format("30 layer-face tiles: {} pixels (texel boundaries excluded) show the upright, unmirrored 4 x 4 image of layer-face z = 6 layer + face, through the plain texture() function", tile_probes),
                      std::format("{} wrong; first: {}", tile_bad, first));
         // Negative control: wrong models (mirror, transpose, face/layer swap, layer + 1, level 1 data) must disagree with most of the tile pixels.
@@ -1572,9 +1590,9 @@ namespace
         const V3 right = normalize(cross(forward, V3{0, 1, 0}));
         const V3 up = cross(right, forward);
         const double aspect = static_cast<double>(lay.width) / lay.scene_h;
-        const double tan_half = std::tan(static_cast<double>(dm::radians(45.0f)) * 0.5);
+        const double tan_half = std::tan(lay.fovy * 0.5);
         int compared = 0, skipped = 0, bad = 0, layer_plus_one_equal = 0;
-        std::array<int, 5> per_sphere{};
+        std::array<int, 5> per_sphere{}, hits{};
         std::array<int, kFaces> per_face{};
         std::string sfirst;
         constexpr double kPerturb = 0.012;  // radians; the tessellated sphere's interpolated normals deviate from the analytic ones by far less
@@ -1585,6 +1603,7 @@ namespace
                 const V3 dir = normalize(forward + right * (nx * tan_half * aspect) + up * (ny * tan_half));
                 const SphereHit h = hit_spheres(centres, kRadius, eye, dir);
                 if (h.id < 0) continue;
+                ++hits[static_cast<std::size_t>(h.id)];
                 const V3 incident = normalize(h.point - eye);
                 if (-dot(incident, h.normal) < 0.25)
                 {
@@ -1624,11 +1643,15 @@ namespace
                 }
                 if (got == sample_color(wrong_layer_plus_one(S))) ++layer_plus_one_equal;
             }
-        const bool every_sphere = std::ranges::all_of(per_sphere, [](int c) { return c > 100; });
+        // Every sphere must be in the picture (the ray model hits it at >= 40 probe positions) and at least a quarter of its
+        // probes must survive the grazing / texel-boundary filter: a bound that scales with the sphere's size on screen.
+        bool every_sphere = true;
+        for (std::size_t k = 0; k < 5; ++k) every_sphere = every_sphere && hits[k] >= 40 && per_sphere[k] >= hits[k] / 4;
         int faces_seen = 0;
         for (int c : per_face) faces_seen += c > 20 ? 1 : 0;
-        std::cout << std::format("   [note] spheres: {} probes compared, {} skipped (grazing / near texel boundaries); per sphere {} {} {} {} {}; per face {} {} {} {} {} {}\n", compared, skipped, per_sphere[0], per_sphere[1], per_sphere[2],
-                                 per_sphere[3], per_sphere[4], per_face[0], per_face[1], per_face[2], per_face[3], per_face[4], per_face[5]);
+        std::cout << std::format("   [note] spheres: {} probes compared, {} skipped (grazing / near texel boundaries); per sphere {}/{} {}/{} {}/{} {}/{} {}/{} (compared/hit); per face {} {} {} {} {} {}\n", compared, skipped,
+                                 per_sphere[0], hits[0], per_sphere[1], hits[1], per_sphere[2], hits[2], per_sphere[3], hits[3], per_sphere[4], hits[4],
+                                 per_face[0], per_face[1], per_face[2], per_face[3], per_face[4], per_face[5]);
         check.expect(bad == 0 && every_sphere && faces_seen >= 4,
                      std::format("environment-mapped spheres: {} pixel probes equal texture(reflect(view, normal), k) of the model, sphere k showing layer k (all five spheres, {} different faces)", compared, faces_seen),
                      std::format("{} wrong of {}; first: {}", bad, compared, sfirst));

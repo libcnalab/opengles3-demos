@@ -21,7 +21,9 @@ spheres on a spiral that give depth cues. Two point lights, one warm and one coo
 small emissive bulb. A dim blue directional "moon" and a weak ambient term complete the lighting, which is per-fragment
 Blinn-Phong in **linear** light. The sky is a gradient computed from the elevation of each pixel's view ray, so the haze
 sits exactly on the horizon whatever the camera does. All meshes (sphere, torus, cube, floor) are generated in
-`main.cpp`; the camera orbits slowly (0.12 rad/s, time is `frame / 60` s) with a 45 degree vertical field of view.
+`main.cpp`; the camera orbits slowly (0.12 rad/s, time is `frame / 60` s) with a 45 degree vertical field of view on a square or landscape surface. A portrait surface keeps the square's
+horizontal field of view and widens the vertical one, so the whole scene, both lamps included, stays in view at any
+window size.
 
 ## Looks and controls
 
@@ -144,8 +146,9 @@ checks:
 
 - **Scene, analytically.** The CPU picks probe pixels from the camera and the scene: 16 sky pixels, 24 floor pixels (more
   than 0.2 units away from every square edge and from the footprint of the pixel, not covered by any object's bounding
-  sphere) and the CPU-projected centers of the two lamp bulbs (model-view-projection, perspective divide, viewport
-  transform). Sky = the smoothstep gradient of the ray elevation; floor = the same Blinn-Phong with the directional and
+  sphere) and, for each lamp bulb, the pixel nearest to its CPU-projected center (model-view-projection, perspective
+  divide, viewport transform; searched up to 4 pixels away) whose view ray hits the core of the bulb before any other
+  object. Sky = the smoothstep gradient of the ray elevation; floor = the same Blinn-Phong with the directional and
   both point lights, the filtered checker in the middle of a square and the fog; lamps = the emissive color. All are
   checked in the RGBA8 scene (the exact value) and in the `SRGB8_ALPHA8` scene (the stored bytes against the sRGB encoding
   of the exact value, equation 4.1). A second comparison checks the whole sRGB image against the encoding of the RGBA8

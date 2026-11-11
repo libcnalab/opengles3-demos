@@ -13,7 +13,8 @@
 //      draw buffer of one MRT framebuffer its own blend state; glGetIntegeri_v / glGetBooleani_v read it back, the
 //      non-indexed commands reset ALL buffers, and an index >= MAX_DRAW_BUFFERS raises INVALID_VALUE.
 //
-// Image (256 x 256 window, default framebuffer RGBA8):
+// Image (256 x 256 window, default framebuffer RGBA8; other sizes scale the three rows to the whole window, see
+// window_layout()):
 //   * top 160 rows: a small 3D scene (checkered floor, three boxes, two emissive spheres with additive glow halos,
 //     one directional and two point lights with intensities up to 6) rendered into an RGBA16F target with a depth
 //     buffer. Left half of the picture: what an 8-bit target would hold (min(hdr, 1): the lamps and highlights clip to
@@ -577,7 +578,9 @@ namespace
     // =============================================================================================
     // Part 3: HDR scene (CPU ray tracer used as reference)
     // =============================================================================================
-    constexpr int kSceneW = 256, kSceneH = 160, kSceneY = 96;  // scene region in the window: x 0..255, y 96..255
+    // The HDR scene target has the size of the scene region of the window (256 x 160 in a 256 x 256 window, y 96..255),
+    // so it is shown 1:1 at every window size. The design aspect ratio is 256 / 160.
+    constexpr double kDesignAspect = 256.0 / 160.0;
     constexpr double kExposure = 1.2;
 
     struct D3
@@ -625,24 +628,29 @@ namespace
     struct Camera
     {
         D3 eye, f, r, u;
-        double tan_half = 0, aspect = 1;
+        double tan_half = 0, aspect = 1;  // tan(fovy / 2) and the aspect ratio of the w x h target
+        int w = 256, h = 160;
     };
 
-    Camera make_camera()
+    // A 42 degree vertical field of view at the design aspect ratio 256 / 160 or wider; a narrower target keeps the design's
+    // horizontal field of view and widens the vertical one, so the boxes and both lamps stay in the picture.
+    Camera make_camera(int w, int h)
     {
         Camera c;
+        c.w = w;
+        c.h = h;
         c.eye = {0.0, 2.4, 6.2};
         c.f = normalize(D3{0.0, 0.8, 0.0} - c.eye);
         c.r = normalize(cross(c.f, D3{0, 1, 0}));
         c.u = cross(c.r, c.f);
-        c.tan_half = std::tan(static_cast<double>(dm::radians(42.0f)) * 0.5);
-        c.aspect = static_cast<double>(kSceneW) / kSceneH;
+        c.aspect = static_cast<double>(w) / h;
+        c.tan_half = std::tan(static_cast<double>(dm::radians(42.0f)) * 0.5) * std::max(1.0, kDesignAspect / c.aspect);
         return c;
     }
 
     D3 ray_dir(const Camera& c, double px, double py)
     {
-        const double nx = px / kSceneW * 2.0 - 1.0, ny = py / kSceneH * 2.0 - 1.0;
+        const double nx = px / c.w * 2.0 - 1.0, ny = py / c.h * 2.0 - 1.0;
         return normalize(c.f + c.r * (nx * c.tan_half * c.aspect) + c.u * (ny * c.tan_half));
     }
 
@@ -651,8 +659,8 @@ namespace
         const D3 v = p - c.eye;
         const double z = dot(v, c.f);
         if (z <= 0.0) return false;
-        px = (dot(v, c.r) / (z * c.tan_half * c.aspect) * 0.5 + 0.5) * kSceneW;
-        py = (dot(v, c.u) / (z * c.tan_half) * 0.5 + 0.5) * kSceneH;
+        px = (dot(v, c.r) / (z * c.tan_half * c.aspect) * 0.5 + 0.5) * c.w;
+        py = (dot(v, c.u) / (z * c.tan_half) * 0.5 + 0.5) * c.h;
         return true;
     }
 
@@ -799,12 +807,49 @@ namespace
         std::string label;
     };
 
+    // Where compose_window() puts each texture in a w x h window. The layout is the 256 x 256 design scaled to the
+    // window and partitioned exactly: the MRT row takes the bottom quarter, the swatch row the next eighth, the scene the
+    // top 5/8; the swatch columns are (2 + 36 i) * w / 256, the MRT columns b * w / 4. compose.frag maps a window pixel to
+    // the texel local * textureSize / regionSize (integer arithmetic), so every region shows its whole texture at any size.
+    struct Region
+    {
+        int x = 0, y = 0, w = 0, h = 0;
+    };
+    constexpr int kSwatchW = 36, kSwatchX0 = 2;  // swatch column width and left margin in the 256-pixel design
+    struct WindowLayout
+    {
+        Region scene;
+        std::array<Region, 7> swatch{};
+        std::array<Region, 4> mrt{};
+    };
+    WindowLayout window_layout(int w, int h)
+    {
+        WindowLayout l;
+        const int y_swatch = h / 4, y_scene = 3 * h / 8;
+        l.scene = {0, y_scene, w, h - y_scene};
+        for (int i = 0; i < 7; ++i)
+        {
+            const int x0 = (kSwatchX0 + i * kSwatchW) * w / 256, x1 = (kSwatchX0 + (i + 1) * kSwatchW) * w / 256;
+            l.swatch[static_cast<std::size_t>(i)] = {x0, y_swatch, x1 - x0, y_scene - y_swatch};
+        }
+        for (int b = 0; b < 4; ++b) l.mrt[static_cast<std::size_t>(b)] = {b * w / 4, 0, (b + 1) * w / 4 - b * w / 4, y_swatch};
+        return l;
+    }
+    // The window pixel (region-local) that shows texel `t` of a texture of `n` texels in a region of `size` pixels, or the
+    // nearest pixel to it when the region is smaller than the texture: the smallest local with local * n / size >= t.
+    int local_for_texel(int t, int n, int size) { return std::min((t * size + n - 1) / n, size - 1); }
+    int texel_for_local(int local, int n, int size) { return local * n / size; }
+
     class FloatTargetsAndIndexedBlend final : public demo::Demo
     {
     public:
         void init(demo::Env& env) override
         {
-            if (env.width < 256 || env.height < 256) throw demo::Skip("this demo composes a 256 x 256 picture; the surface is smaller");
+            if (env.width < 128 || env.height < 128) throw demo::Skip("the composed picture needs a surface of at least 128 x 128 pixels");
+            width_ = env.width;
+            height_ = env.height;
+            scene_w_ = window_layout(width_, height_).scene.w;
+            scene_h_ = window_layout(width_, height_).scene.h;
 
             // --- state of a fresh context, read before any command of this demo changes it ----------------------------
             max_draw_buffers_ = demo::get_integer(mgl::GetParameter::MaxDrawBuffers);
@@ -830,12 +875,14 @@ namespace
             create_mrt_target();
             scenarios_ = build_scenarios();
             check_scenario_design();
-            camera_ = make_camera();
+            camera_ = make_camera(scene_w_, scene_h_);
             choose_probes();
         }
 
-        void render(demo::Env& /*env*/, int /*frame*/) override
+        void render(demo::Env& env, int /*frame*/) override
         {
+            width_ = env.width;
+            height_ = env.height;
             // Dithering (initially enabled, 15.1.7) may add +-1 to 8-bit results; it is no part of this demo's subject.
             mgl::glDisable(mgl::Capability::Dither);
 
@@ -851,7 +898,7 @@ namespace
         {
             // The window holds the result of render(); read it before anything else.
             mgl::glBindFramebuffer(mgl::FramebufferTarget::ReadFramebuffer, mgl::FramebufferId{0});
-            window_ = demo::read_rgba8(0, 0, 256, 256);
+            window_ = demo::read_rgba8(0, 0, width_, height_);
 
             std::cout << std::format("     extensions: GL_EXT_float_blend={} GL_EXT_color_buffer_float={} GL_EXT_color_buffer_half_float={}\n",
                                      float_blend_, color_buffer_float_ext_, half_float_ext_);
@@ -939,10 +986,10 @@ namespace
 
         void create_hdr_target()
         {
-            hdr_tex_ = make_texture(mgl::SizedInternalFormat::Rgba16F, kSceneW, kSceneH);
+            hdr_tex_ = make_texture(mgl::SizedInternalFormat::Rgba16F, scene_w_, scene_h_);
             mgl::glGenRenderbuffers(1, &hdr_depth_);
             mgl::glBindRenderbuffer(mgl::RenderbufferTarget::Renderbuffer, hdr_depth_);
-            mgl::glRenderbufferStorage(mgl::RenderbufferTarget::Renderbuffer, mgl::InternalFormat::DepthComponent24, kSceneW, kSceneH);
+            mgl::glRenderbufferStorage(mgl::RenderbufferTarget::Renderbuffer, mgl::InternalFormat::DepthComponent24, scene_w_, scene_h_);
             mgl::glGenFramebuffers(1, &hdr_fbo_);
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, hdr_fbo_);
             attach_color(mgl::ColorAttachment::Color0, hdr_tex_);
@@ -1040,8 +1087,8 @@ namespace
         void choose_probes()
         {
             auto add = [&](int x, int y, std::string label) {
-                if (x < 0 || y < 0 || x >= kSceneW || y >= kSceneH) return;
-                if (std::abs(x - 127) <= 1 || std::abs(x - 128) <= 1) return;  // the split columns
+                if (x < 0 || y < 0 || x >= scene_w_ || y >= scene_h_) return;
+                if (std::abs(x - (scene_w_ / 2 - 1)) <= 1 || std::abs(x - scene_w_ / 2) <= 1) return;  // the split columns
                 if (!stable_probe(camera_, x, y)) return;
                 for (const Probe& p : probes_)
                     if (p.x == x && p.y == y) return;
@@ -1073,11 +1120,11 @@ namespace
             }
             const double floor_pts[][2] = {{-3.5, 3.5}, {2.5, 4.2}, {-0.5, 3.0}, {0.7, 1.3}, {-2.4, -0.8}, {3.2, -0.6}, {0.5, -3.0}, {-0.8, 2.3}};
             for (const auto& f : floor_pts) add_world({f[0], 0.0, f[1]}, std::format("floor ({:.1f}, {:.1f})", f[0], f[1]));
-            add(20, 150, "background");
-            add(235, 148, "background");
-            add(60, 130, "background");
-            for (int y = 8; y < kSceneH; y += 16)
-                for (int x = 8; x < kSceneW; x += 16) add(x, y, std::format("grid ({},{})", x, y));
+            // Three background pixels of the 256 x 160 design, scaled to the target.
+            for (const auto& [x, y] : {std::pair{20, 150}, std::pair{235, 148}, std::pair{60, 130}})
+                add(x * scene_w_ / 256, y * scene_h_ / 160, "background");
+            for (int y = 8; y < scene_h_; y += 16)
+                for (int x = 8; x < scene_w_; x += 16) add(x, y, std::format("grid ({},{})", x, y));
         }
 
         // =========================================================================================
@@ -1130,7 +1177,7 @@ namespace
         void draw_hdr_scene()
         {
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, hdr_fbo_);
-            mgl::glViewport(0, 0, kSceneW, kSceneH);
+            mgl::glViewport(0, 0, scene_w_, scene_h_);
             // The clear value (0.015, 0.02, 0.035) is not an 8-bit color: it only exists because the target is a float.
             mgl::glClearColor(static_cast<float>(kClear.x), static_cast<float>(kClear.y), static_cast<float>(kClear.z), 1.0f);
             mgl::glClearDepthf(1.0f);
@@ -1138,7 +1185,7 @@ namespace
             mgl::glEnable(mgl::Capability::DepthTest);
             mgl::glDepthFunc(mgl::CompareFunc::Less);
 
-            const dm::Mat4 proj = dm::perspective(dm::radians(42.0f), static_cast<float>(camera_.aspect), 0.1f, 60.0f);
+            const dm::Mat4 proj = dm::perspective(static_cast<float>(2.0 * std::atan(camera_.tan_half)), static_cast<float>(camera_.aspect), 0.1f, 60.0f);
             const dm::Mat4 view = dm::look_at({0.0f, 2.4f, 6.2f}, {0.0f, 0.8f, 0.0f}, {0.0f, 1.0f, 0.0f});
             const dm::Mat4 viewproj = proj * view;
 
@@ -1246,7 +1293,7 @@ namespace
         void compose_window()
         {
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
-            mgl::glViewport(0, 0, 256, 256);
+            mgl::glViewport(0, 0, width_, height_);
             mgl::glClearColor(0.12f, 0.12f, 0.14f, 1.0f);
             mgl::glClear(mgl::ClearBufferBit::Color);
             mgl::glUseProgram(compose_);
@@ -1254,19 +1301,18 @@ namespace
             mgl::glUniform1i(uniform(compose_, "u_tex"), 0);  // texture unit index
             mgl::glUniform1f(uniform(compose_, "u_exposure"), static_cast<float>(kExposure));
 
-            auto region = [&](mgl::TextureId tex, int mode, int x, int y, int w, int h) {
+            auto region = [&](mgl::TextureId tex, int mode, const Region& r) {
                 mgl::glBindTexture(mgl::TextureTarget::Texture2D, tex);
                 mgl::glUniform1i(uniform(compose_, "u_mode"), mode);
-                mgl::glUniform2i(uniform(compose_, "u_origin"), x, y);
-                mgl::glUniform2i(uniform(compose_, "u_size"), w, h);
-                mgl::glViewport(x, y, w, h);
+                mgl::glUniform2i(uniform(compose_, "u_origin"), r.x, r.y);
+                mgl::glUniform2i(uniform(compose_, "u_size"), r.w, r.h);
+                mgl::glViewport(r.x, r.y, r.w, r.h);
                 draw_quad();
             };
-            region(hdr_tex_, 0, 0, kSceneY, kSceneW, kSceneH);
-            for (std::size_t i = 0; i < kFormats.size(); ++i)
-                region(fmt_tex_[i], 1, kSwatchX0 + static_cast<int>(i) * kSwatchW, 64, kSwatchW, 32);
-            for (std::size_t b = 0; b < kBuffers; ++b)
-                region(mrt_tex_[b], b == 0 ? 2 : 1, static_cast<int>(b) * kMrtSize, 0, kMrtSize, kMrtSize);
+            const WindowLayout lay = window_layout(width_, height_);
+            region(hdr_tex_, 0, lay.scene);
+            for (std::size_t i = 0; i < kFormats.size(); ++i) region(fmt_tex_[i], 1, lay.swatch[i]);
+            for (std::size_t b = 0; b < kBuffers; ++b) region(mrt_tex_[b], b == 0 ? 2 : 1, lay.mrt[b]);
         }
 
         // =========================================================================================
@@ -1618,7 +1664,7 @@ namespace
         {
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, hdr_fbo_);
             mgl::glReadBuffer(mgl::to_read_buffer(mgl::ColorAttachment::Color0));
-            hdr_ = read_float(0, 0, kSceneW, kSceneH);
+            hdr_ = read_float(0, 0, scene_w_, scene_h_);
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
 
             std::size_t above_one = 0;
@@ -1643,7 +1689,7 @@ namespace
                 (std::max({want[0], want[1], want[2]}) > 1.0 ? over_one : under_one)++;
                 for (int c = 0; c < 3; ++c)
                 {
-                    const double got = hdr_[static_cast<std::size_t>((pr.y * kSceneW + pr.x) * 4 + c)];
+                    const double got = hdr_[static_cast<std::size_t>((pr.y * scene_w_ + pr.x) * 4 + c)];
                     const double err = std::fabs(got - want[c]);
                     if (err / (std::fabs(want[c]) + 0x1p-6) > worst)
                     {
@@ -1659,26 +1705,33 @@ namespace
                                   : std::format("{} channels differ, {}", bad, first));
             check.expect(over_one >= 4 && under_one >= 4, "the probes cover HDR (> 1) and LDR (<= 1) pixels", std::format("{} / {}", over_one, under_one));
 
-            // Window pixels: left half = min(hdr, 1), right half = Reinhard.
-            int bad_px = 0, saturated_left = 0, bright_right = 0;
+            // Window pixels: left half = min(hdr, 1), right half = Reinhard. The target has the size of the scene region, so
+            // compose.frag's integer mapping local * size / size is the identity; it is still applied here as the shader does.
+            const Region sc = window_layout(width_, height_).scene;
+            int bad_px = 0, saturated_left = 0, bright_right = 0, split_px = 0;
             std::string first_px;
             for (const Probe& pr : probes_)
             {
-                const int wx = pr.x, wy = pr.y + kSceneY;
+                const int lx = local_for_texel(pr.x, scene_w_, sc.w), ly = local_for_texel(pr.y, scene_h_, sc.h);
+                const int tx = texel_for_local(lx, scene_w_, sc.w), ty = texel_for_local(ly, scene_h_, sc.h);
+                const int wx = sc.x + lx, wy = sc.y + ly;
+                const bool split = lx == sc.w / 2 - 1 || lx == sc.w / 2, left = lx < sc.w / 2;
+                split_px += split ? 1 : 0;
                 for (int c = 0; c < 3; ++c)
                 {
-                    const double h = hdr_[static_cast<std::size_t>((pr.y * kSceneW + pr.x) * 4 + c)];
-                    const double v = pr.x < kSceneW / 2 ? std::min(h, 1.0) : (h * kExposure) / (1.0 + h * kExposure);
+                    const double h = hdr_[static_cast<std::size_t>((ty * scene_w_ + tx) * 4 + c)];
+                    const double v = split ? 0.85 : left ? std::min(h, 1.0) : (h * kExposure) / (1.0 + h * kExposure);
                     const int want = static_cast<int>(std::lround(255.0 * v));
-                    const int got = window_[static_cast<std::size_t>((wy * 256 + wx) * 4 + c)];
+                    const int got = window_[static_cast<std::size_t>((wy * width_ + wx) * 4 + c)];
                     if (std::abs(got - want) > 1 && bad_px++ == 0)
-                        first_px = std::format("{} at window ({},{}) channel {}: got {} expected {} (hdr {})", pr.label, wx, wy, c, got, want, h);
-                    if (pr.x < kSceneW / 2 && h > 1.0 && want == 255) ++saturated_left;
-                    if (pr.x >= kSceneW / 2 && h > 1.0) ++bright_right;
+                        first_px = std::format("{} at window ({},{}) channel {}: got {} expected {} (hdr {} of texel ({},{}))", pr.label, wx, wy, c, got, want, h, tx, ty);
+                    if (!split && left && h > 1.0 && want == 255) ++saturated_left;
+                    if (!split && !left && h > 1.0) ++bright_right;
                 }
             }
             check.expect(bad_px == 0, "window pixels of the scene: left half min(hdr, 1), right half Reinhard m / (1 + m) with m = 1.2 * hdr, each within 1/255",
-                         bad_px == 0 ? std::format("{} channels clipped to 255 on the left, {} HDR channels tone-mapped below 255 on the right", saturated_left, bright_right)
+                         bad_px == 0 ? std::format("{} channels clipped to 255 on the left, {} HDR channels tone-mapped below 255 on the right ({} probes on the grey split columns)",
+                                                   saturated_left, bright_right, split_px)
                                      : std::format("{} channels differ, {}", bad_px, first_px));
             check.expect(saturated_left >= 3 && bright_right >= 3, "the clipped half really saturates where the tone-mapped half keeps detail",
                          std::format("{} / {}", saturated_left, bright_right));
@@ -1689,17 +1742,20 @@ namespace
         void check_composite_panels(demo::Check& check)
         {
             // Float-format swatches: window pixel -> texel with the shader's integer arithmetic.
+            const WindowLayout lay = window_layout(width_, height_);
             int bad = 0, checked = 0;
             std::string first;
             for (std::size_t i = 0; i < kFormats.size(); ++i)
                 for (const auto& pxy : {std::pair{4, 4}, std::pair{12, 9}, std::pair{20, 17}, std::pair{27, 28}})
                 {
-                    const int lx = pxy.first, ly = pxy.second;
-                    const int tx = lx * kPatternSize / kSwatchW, ty = ly * kPatternSize / 32;
+                    // The four probe positions of the 36 x 32 design swatch, scaled to this window's swatch.
+                    const Region& r = lay.swatch[i];
+                    const int lx = pxy.first * r.w / kSwatchW, ly = pxy.second * r.h / 32;
+                    const int tx = texel_for_local(lx, kPatternSize, r.w), ty = texel_for_local(ly, kPatternSize, r.h);
                     for (int c = 0; c < 3; ++c)
                     {
                         const double want = signed_map(stored_component(kFormats[i], c, raw_pattern(kFormats[i], c, tx, ty)));
-                        const int got = window_[static_cast<std::size_t>(((64 + ly) * 256 + kSwatchX0 + static_cast<int>(i) * kSwatchW + lx) * 4 + c)];
+                        const int got = window_[static_cast<std::size_t>(((r.y + ly) * width_ + r.x + lx) * 4 + c)];
                         ++checked;
                         // The shader divides in fp32 and converts to 8 bits with rounding: +-1 (the 16-bit pattern value itself is exact).
                         if (std::abs(got - static_cast<int>(std::lround(255.0 * want))) > 1 && bad++ == 0)
@@ -1719,12 +1775,15 @@ namespace
                 {
                     bool exact = true;
                     const std::array<double, 4> want = model_draw(kBufKinds[b], states[b], scenarios_[0].constant, kQuads[q].src[b], kQuads[q].dst[b], exact);
-                    const int lx = kQuadOrigin[q].first + kQuadSize / 2, ly = kQuadOrigin[q].second + kQuadSize / 2;
+                    // The window pixel showing the centre texel of the quadrant (every texel of a quadrant has the same value).
+                    const Region& r = lay.mrt[b];
+                    const int lx = local_for_texel(kQuadOrigin[q].first + kQuadSize / 2, kMrtSize, r.w);
+                    const int ly = local_for_texel(kQuadOrigin[q].second + kQuadSize / 2, kMrtSize, r.h);
                     for (int c = 0; c < 3; ++c)
                     {
                         const double v = kBufKinds[b] == BufKind::Unorm8 ? want[static_cast<std::size_t>(c)] / 255.0 : signed_map(want[static_cast<std::size_t>(c)]);
                         const int expect8 = static_cast<int>(std::lround(255.0 * v));
-                        const int got = window_[static_cast<std::size_t>((ly * 256 + static_cast<int>(b) * kMrtSize + lx) * 4 + c)];
+                        const int got = window_[static_cast<std::size_t>(((r.y + ly) * width_ + r.x + lx) * 4 + c)];
                         ++checked_mrt;
                         // RGBA8 panel: the 8-bit texel is shown unchanged (exact up to 8-bit round trip +-1); float panels: curve in fp32, +-1.
                         if (std::abs(got - expect8) > 1 && bad_mrt++ == 0)
@@ -2017,8 +2076,8 @@ namespace
         // =========================================================================================
         // Members
         // =========================================================================================
-        static constexpr int kSwatchW = 36;
-        static constexpr int kSwatchX0 = 2;
+        int width_ = 256, height_ = 256;    // the window
+        int scene_w_ = 256, scene_h_ = 160;  // the HDR scene target = the scene region of the window
 
         int max_draw_buffers_ = 0;
         int max_color_attachments_ = 0;

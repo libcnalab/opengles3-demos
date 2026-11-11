@@ -26,6 +26,10 @@ A 256 × 256 frame (frame 19 of the animation, time = frame/60 s, camera orbitin
 - **Bottom 75 rows: 30 tiles in a 10 × 3 grid**, tile `n` = layer-face `z = n`, in reading order, i.e. layer 0's six faces, then layer 1's, and so on (the red channel therefore cycles 24, 60, 96, 132, 168, 204
   within every group of six). Each tile is the 4 × 4 image of its layer-face, upright and unmirrored, looked up with the plain `texture()` function through a direction on the plane of the face.
 
+On other surfaces the layout scales: the tile rows are `min(w/10, 3h/10/3)` pixels high, the ten tile columns partition the whole width (`[c·w/10, (c+1)·w/10)`,
+so the tiles may be wider than high), and the spheres take the rest. A portrait scene viewport keeps the 45° *horizontal* field of view (the vertical one widens), so all
+five spheres stay in view. Surfaces whose tile rows would be under 8 pixels or whose scene would be under 64 rows report SKIP.
+
 ## Central calls
 
 `glTexStorage3D(TEXTURE_CUBE_MAP_ARRAY, levels, RGBA8, 4, 4, 6 * layers)`, **`glTexSubImage3D(..., zoffset, w, h, depth, ...)`** (one layer-face, one cube or a whole level per call),
@@ -85,9 +89,10 @@ All references are computed on the CPU. 79 checks:
   `glTexImage3D` depth 7, 4 × 8, border 1; `glTexSubImage3D` with `z + d > 30`, `zoffset = 30`, `x + w > width`, `zoffset = -1`, `level = -1` (`INVALID_VALUE`); the failed calls left layer-face 29 unchanged.
 - **Compile rules (9).** A control shader with the four sampler types compiles; eight shaders do not: `texelFetch` on `samplerCubeArray` and on `samplerCube`, no precision, a 3-component coordinate, `texture(shadow, vec4)` without the
   compare argument, `textureLod` on the shadow sampler, `textureOffset` on a cube array, `samplerCubeArray` in `#version 310 es`.
-- **Picture (4).** *Tiles:* 14520 pixels of the 30 tiles (texel boundaries excluded) equal the CPU texel of the right layer-face; negative controls: the models with t mirrored, s mirrored, transposed, face and layer swapped, or layer + 1 reproduce fewer than half of the tile pixels (measured: none, none, 25 % because the texels on the diagonal are symmetric, 17 %, none).
-  *Spheres:* a ray-sphere intersection from the camera gives the point and normal, `reflect()` the direction, `model_lookup()` the colour; about 800 pixels are compared (every second pixel of the scene except grazing angles and
-  anything that changes when the normal is tilted by ±0.012 rad, which covers the difference between the tessellated and the analytic sphere), all five spheres and all six faces appear, and a negative control (sphere `k`
+- **Picture (4).** *Tiles:* 14520 pixels at 256 × 256 (more than half of the tile area at any size; texel boundaries excluded) of the 30 tiles equal the CPU texel of the right layer-face; negative controls: the models with t mirrored, s mirrored, transposed, face and layer swapped, or layer + 1 reproduce fewer than half of the tile pixels (measured: none, none, 25 % because the texels on the diagonal are symmetric, 17 %, none).
+  *Spheres:* a ray-sphere intersection from the camera gives the point and normal, `reflect()` the direction, `model_lookup()` the colour; about 800 pixels are compared at 256 × 256 (every second pixel of the scene except grazing angles and
+  anything that changes when the normal is tilted by ±0.012 rad, which covers the difference between the tessellated and the analytic sphere), all five spheres and all six faces appear (every sphere is
+  hit by at least 40 probe rays and at least a quarter of them survive the filters, a bound that follows the sphere's size on screen), and a negative control (sphere `k`
   reflecting layer `k + 1`) must reproduce fewer than a quarter of the pixels (measured: none). Tolerance 0 (the colours are exact bytes; the sampled value `c/255` converts back to `c`).
 
 ## Spec ambiguities and how they were resolved

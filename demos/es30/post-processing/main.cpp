@@ -54,7 +54,7 @@ namespace
     // Scene and effect parameters. The GPU gets these values as uniforms and the CPU reference uses the very
     // same numbers (as doubles), so the two cannot drift apart.
     // ---------------------------------------------------------------------------------------------
-    constexpr float kFovY = math::radians(45.0f);
+    constexpr float kFovY = math::radians(45.0f);  // vertical field of view of a landscape or square surface
     constexpr float kZNear = 0.5f;
     constexpr float kZFar = 80.0f;
     constexpr math::Vec3 kTarget{0.0f, 1.1f, 0.0f};  // the camera looks here
@@ -263,6 +263,7 @@ namespace
         double time = 0.0;
         Camera camera;
         float aspect = 1.0f;
+        float fovy = kFovY;
         math::Mat4 view_proj = math::Mat4::identity();
         std::array<Lamp, 2> lamps{};
         std::vector<Item> items;
@@ -355,7 +356,10 @@ namespace
         f.time = time;
         f.camera = make_camera(control, time);
         f.aspect = static_cast<float>(width) / static_cast<float>(height);
-        f.view_proj = math::perspective(kFovY, f.aspect, kZNear, kZFar) * math::look_at(f.camera.eye, f.camera.target, {0, 1, 0});
+        // A portrait surface keeps the horizontal field of view of the square one (tan(fovx / 2) = tan(22.5 degrees)) and
+        // widens the vertical one instead, so the scene, both lamps included, stays in view at every window size.
+        if (f.aspect < 1.0f) f.fovy = 2.0f * std::atan(std::tan(kFovY * 0.5f) / f.aspect);
+        f.view_proj = math::perspective(f.fovy, f.aspect, kZNear, kZFar) * math::look_at(f.camera.eye, f.camera.target, {0, 1, 0});
         f.lamps = make_lamps(time);
         f.items = make_items(time, f.lamps);
         f.dir_to_light = dir_to_light();
@@ -412,7 +416,7 @@ namespace
         b.forward = normalize(to_d(f.camera.target) - b.eye);
         const D3 side = normalize(cross(b.forward, {0, 1, 0}));
         const D3 up = cross(side, b.forward);
-        const double t = std::tan(static_cast<double>(kFovY) * 0.5);
+        const double t = std::tan(static_cast<double>(f.fovy) * 0.5);
         b.right = side * (t * static_cast<double>(f.aspect));
         b.up = up * t;
         return b;
@@ -1233,8 +1237,12 @@ namespace
         probes.floor = spread(floor_candidates, 24);
         probes.sky = spread(sky_candidates, 16);
 
-        // Lamp bulbs: the CPU-projected center of each lamp (model-view-projection, perspective divide, viewport transform).
+        // Lamp bulbs: the pixel nearest to the CPU-projected center of each lamp (model-view-projection, perspective divide,
+        // viewport transform) whose view ray hits the core of the bulb (70% of its radius, well inside the tessellated
+        // silhouette) before any other bounding sphere. Searching the neighbourhood instead of taking the center pixel only
+        // keeps the probe when, at some window size, the center pixel happens to be hidden or to fall just off the surface.
         const std::size_t first_lamp = frame_.items.size() - 2;
+        constexpr int kLampSearch = 4;  // pixels around the projected center
         for (std::size_t i = 0; i < 2; ++i)
         {
             const Lamp& lamp = frame_.lamps[i];
@@ -1242,14 +1250,21 @@ namespace
             if (clip.w <= 0.0f) continue;
             const double px = (static_cast<double>(clip.x / clip.w) * 0.5 + 0.5) * w;
             const double py = (static_cast<double>(clip.y / clip.w) * 0.5 + 0.5) * h;
-            const int x = static_cast<int>(std::floor(px)), y = static_cast<int>(std::floor(py));
-            if (x < 0 || y < 0 || x >= w || y >= h) continue;
-            // The center pixel's view ray must reach this lamp before any other bounding sphere.
-            const D3 d = ray_dir(basis, x, y, w, h);
-            double t_lamp = 0.0;
-            if (!ray_sphere(basis.eye, d, spheres[first_lamp + i], t_lamp)) continue;
-            if (occluded(d, t_lamp + 1.0e-6, static_cast<int>(first_lamp + i))) continue;
-            probes.lamp.push_back({x, y, static_cast<int>(i)});
+            const int cx = static_cast<int>(std::floor(px)), cy = static_cast<int>(std::floor(py));
+            const Sphere core{to_d(lamp.position), 0.7 * static_cast<double>(frame_.items[first_lamp + i].radius)};
+            bool found = false;
+            for (int r = 0; r <= kLampSearch && !found; ++r)  // rings of growing Chebyshev distance
+                for (int y = cy - r; y <= cy + r && !found; ++y)
+                    for (int x = cx - r; x <= cx + r && !found; ++x)
+                    {
+                        if (std::max(std::abs(x - cx), std::abs(y - cy)) != r || x < 0 || y < 0 || x >= w || y >= h) continue;
+                        const D3 d = ray_dir(basis, x, y, w, h);
+                        double t_core = 0.0, t_lamp = 0.0;
+                        if (!ray_sphere(basis.eye, d, core, t_core) || !ray_sphere(basis.eye, d, spheres[first_lamp + i], t_lamp)) continue;
+                        if (occluded(d, t_lamp + 1.0e-6, static_cast<int>(first_lamp + i))) continue;
+                        probes.lamp.push_back({x, y, static_cast<int>(i)});
+                        found = true;
+                    }
         }
         return probes;
     }
@@ -1320,7 +1335,9 @@ namespace
                     if (a.at(x, y, c) < 8) ++dark_pixels;
                 }
         report(check, "SRGB8_ALPHA8 scene = encode(RGBA8 scene) at every pixel within the quantization of the 8-bit linear image", cmp, 0.0);
-        check.expect(dark_pixels > static_cast<std::size_t>(a.w * a.h) / 4,
+        // At least 1 in 24 channel values (w*h/8 of the 3*w*h): about 13% of them are dark on a square or portrait surface,
+        // still about 6% on a 5:1 strip, where the wide view shows proportionally more of the bright sky and lit floor.
+        check.expect(dark_pixels > static_cast<std::size_t>(a.w * a.h) / 8,
                      "the scene has many dark channel values (< 8/255 linear) where the RGBA8 target is coarse",
                      std::format("{} of {} channel values", dark_pixels, a.w * a.h * 3));
     }

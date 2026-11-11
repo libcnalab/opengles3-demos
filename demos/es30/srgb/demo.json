@@ -1,0 +1,83 @@
+{
+  "name": "es30-srgb",
+  "title": "sRGB textures and sRGB render targets",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es30",
+  "order": 230,
+  "summary": "SRGB8 and SRGB8_ALPHA8 textures decode to linear on sampling (equation 3.26, alpha unchanged, filtering order allowed either way); SRGB8_ALPHA8 render targets encode on write (equation 4.1) and blend in linear space; clears and glBlitFramebuffer follow the same conversions; FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING reports SRGB or LINEAR (also for the default framebuffer); glCopyTexImage2D refuses to mix the encodings. A gamma-ramp picture of eight bands compares linear and sRGB handling; values are read back bit for bit through an RGBA32UI target and as stored bytes.",
+  "spec": [
+    "ES 3.0 §3.8.16 sRGB Texture Color Conversion (equation 3.26; alpha unchanged; conversion before or after filtering), Table 3.13 (SRGB8 texture-only, SRGB8_ALPHA8 renderable)",
+    "ES 3.0 §4.1.7.1 Blend Equation (destination linearized before blending when COLOR_ENCODING is SRGB), §4.1.8 sRGB Conversion (equation 4.1), §2.1.1 Floating-Point Computation",
+    "ES 3.0 §4.2.3 Clearing the Buffers (Clear and ClearBuffer apply sRGB conversion), §4.3.3 Copying Pixels (BlitFramebuffer decodes an SRGB read buffer and encodes into an SRGB draw buffer), §4.3.2 Reading Pixels (stored values are returned)",
+    "ES 3.0 §3.8.5 Alternate Texture Image Specification Commands (CopyTexImage2D: sRGB/linear mismatch is INVALID_OPERATION), §4.4.2.1 Renderbuffer Objects (ES 3.2 §9.2.4 states INVALID_ENUM for a non-renderable internalformat), §4.4.4.1 / §4.4.4.2 (attachment completeness needs a color-renderable format)",
+    "ES 3.0 §6.1.13 Framebuffer Object Queries (FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING: LINEAR or SRGB; default framebuffer implementation-defined; attachment BACK), §2.1.6 Fixed-Point Data Conversions (equations 2.1, 2.3), §4.1.9 Dithering",
+    "GLSL ES 3.00 §8.8 Texture Lookup Functions (texture, texelFetch), §8.3 floatBitsToUint"
+  ],
+  "api": {
+    "glGenTextures": "RGBA8, SRGB8_ALPHA8, SRGB8 ramps, the two-texel filtering texture, the stored-bytes view and the two 256 x 2 render-target textures",
+    "glBindTexture": "textures on unit 0 for the exact path and the bands",
+    "glActiveTexture": "unit 0 for every lookup",
+    "glTexImage2D": "SRGB8_ALPHA8 and SRGB8 uploads (RGBA and RGB with UNSIGNED_BYTE): sampled values are decoded (equation 3.26, alpha unchanged / 1) in an exact RGBA32UI readback and in the bands; RGBA8 control; SRGB8_ALPHA8 / RGBA8 render-target textures",
+    "glTexSubImage2D": "the stored bytes read back from the render targets are uploaded to an RGBA8 texture and shown raw in bands 3 to 5, and compared with the window",
+    "glTexParameteri": "NEAREST filters of the ramps, LINEAR filters and CLAMP_TO_EDGE of the two-texel texture (typed glTexParameter overloads): the filtered result is the average of the decoded texels",
+    "glGenRenderbuffers": "SRGB8_ALPHA8, RGBA8, RGBA32UI and DEPTH_COMPONENT16 renderbuffers",
+    "glBindRenderbuffer": "RENDERBUFFER target",
+    "glRenderbufferStorage": "SRGB8_ALPHA8 storage accepted and used as a render target (clears, blits, encoding queries); SRGB8 storage -> INVALID_ENUM (not color-renderable)",
+    "glGenFramebuffers": "framebuffers with sRGB / linear texture and renderbuffer targets, plus one for the incompleteness case",
+    "glBindFramebuffer": "FRAMEBUFFER, READ_FRAMEBUFFER and DRAW_FRAMEBUFFER targets for rendering, reading, blitting and querying",
+    "glFramebufferTexture2D": "SRGB8_ALPHA8 and RGBA8 textures as COLOR_ATTACHMENT0: complete; an SRGB8 texture -> FRAMEBUFFER_INCOMPLETE_ATTACHMENT",
+    "glFramebufferRenderbuffer": "SRGB8_ALPHA8, RGBA8, RGBA32UI color renderbuffers and a depth renderbuffer; encodings queried",
+    "glCheckFramebufferStatus": "FRAMEBUFFER_COMPLETE for the targets, FRAMEBUFFER_INCOMPLETE_ATTACHMENT for an SRGB8 texture attachment",
+    "glGetFramebufferAttachmentParameteriv": "FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING: SRGB for SRGB8_ALPHA8 texture and renderbuffer, LINEAR for RGBA8 texture and renderbuffer, RGBA32UI and a depth attachment, LINEAR or SRGB for the default framebuffer's BACK buffer (DefaultFramebufferQueryAttachment overload), which decides what a window write stores",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE stored bytes of the SRGB8_ALPHA8 and RGBA8 targets compared with equation 4.1 / the blend model; RGBA_INTEGER/UNSIGNED_INT words of the exact decode path; window bands and patch",
+    "glClear": "COLOR_BUFFER_BIT on an SRGB8_ALPHA8 renderbuffer stores the encoded clear color; on RGBA8 as is",
+    "glClearColor": "clear color (0.4, 0.2, 0.8, 0.6) read back encoded (sRGB target) or as is (RGBA8)",
+    "glClearBufferfv": "COLOR on an SRGB8_ALPHA8 renderbuffer stores the same encoded color",
+    "glBlitFramebuffer": "SRGB8_ALPHA8 -> RGBA8 arrives decoded, RGBA8 -> SRGB8_ALPHA8 arrives encoded, SRGB8_ALPHA8 -> SRGB8_ALPHA8 unchanged (all 256 x 4 bytes)",
+    "glCopyTexImage2D": "INVALID_OPERATION for a LINEAR read buffer into SRGB8_ALPHA8 and for an SRGB read buffer into RGBA8; the matching pairs are accepted",
+    "glEnable": "BLEND on the SRGB8_ALPHA8 and RGBA8 targets: the stored bytes follow the linear-space versus stored-value blend models",
+    "glDisable": "BLEND restored between draws (the next draws are not blended)",
+    "glBlendFunc": "SRC_ALPHA, ONE_MINUS_SRC_ALPHA with a (1, 1, 1, 0.5) overlay: result = 0.5 + 0.5 * (linearized) destination, in all 768 color bytes of both targets",
+    "glUseProgram": "ramp, overlay/patch color, exact-decode and band programs",
+    "glGetUniformLocation": "u_tex, u_mode, u_uv, u_row, u_channel, u_encode, u_color located",
+    "glUniform1i": "u_tex unit, u_mode, u_row, u_channel, u_encode: the bands show the intended rows and channels",
+    "glUniform2f": "u_uv = (0.5, 0.5): the lookup lands exactly between the two texels of the filtering texture",
+    "glUniform4f": "u_color: the (1, 1, 1, 0.5) overlay and the window patch are stored as predicted",
+    "glDrawArrays": "TRIANGLE_STRIP quads from gl_VertexID for ramps, overlay, bands and the exact path",
+    "glViewport": "256 x 2 / 256 x 1 target viewports (overlay in row 1 only) and the 32-pixel band viewports",
+    "glDeleteTextures": "cleanup",
+    "glDeleteRenderbuffers": "cleanup",
+    "glDeleteFramebuffers": "cleanup",
+    "glDeleteProgram": "cleanup"
+  },
+  "features": [
+    "ES30.TEXTURE.SRGB",
+    "ES30.FBO.SRGB"
+  ],
+  "glsl_features": [
+    "GLSL300.VERSION",
+    "GLSL300.UNIFORM",
+    "GLSL300.FRAG.OUTPUT",
+    "GLSL300.LAYOUT.LOCATION",
+    "GLSL300.FN.TEXTURE.BASIC",
+    "GLSL300.FN.TEXTURE.FETCH",
+    "GLSL300.BUILTIN_VARS.VS",
+    "GLSL300.BUILTIN_VARS.FS",
+    "GLSL300.PRECISION.DEFAULT"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "state-query",
+    "gl-error",
+    "negative"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet (subagent)",
+    "notes": "256x256 radeonsi es-max capture viewed at 3x (llvmpipe and zink captures differ by at most 1/255 per channel). Eight full-width gray bands, band 0 on top. Band 0 is the straight 0..255 ramp; band 1 the dark decoded curve (value 55 at the middle column); band 2 the straight ramp again (decode then shader encode); band 3 a bright curve that rises steeply over the first few columns (encode on write, 188 in the middle); band 4 starts near 0.8 gray and ends white (50% white blended in linear space, 225 in the middle); band 5 a straight line from mid gray to white (the same overlay blended in stored values, 191 in the middle); band 6 the straight alpha ramp; band 7 the same dark curve as band 1. The window's bottom-left corner is black again after the default-framebuffer test patch was drawn and restored."
+  }
+}

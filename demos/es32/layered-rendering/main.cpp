@@ -3,7 +3,7 @@
 // Layered rendering (OpenGL ES 3.2 sections 9.2.8, 9.4, 9.8 and 11.3.4.5): glFramebufferTexture attaches a WHOLE level
 // of a 2D array, 3D or cube map texture to a framebuffer (a "layered" attachment). A geometry shader then chooses the
 // layer of every primitive it emits by writing gl_Layer, so one draw call renders different content into every
-// layer. The 256x256 image is a 2x2 grid:
+// layer. The window (256x256 by default) is a 2x2 grid of cells, each half the window; the pictures scale with it:
 //
 //   top left      a mirror ball in a room. The room (walls, decals, boxes) was rendered ONCE into all six faces of a
 //                 cube map by a geometry shader with layout(invocations = 6) and gl_Layer = gl_InvocationID; the ball
@@ -49,7 +49,10 @@ namespace
 {
     constexpr int kLayerSize = lr::kLayerSize;  // 64
     constexpr int kLayers = 4;                  // array layers and 3D slices
-    constexpr int kCubeSize = 64;
+    // Cube face size. A net tile of T pixels samples (px + 0.5) / T * kCubeSize: when kCubeSize / T is an EVEN integer every sample lies exactly
+    // on a texel boundary and the model cannot say which texel the GPU returns. 208 = 13 x 16 avoids that for the usual windows: the net tile is
+    // 32 px at 256x256 (6.5 texels per pixel: the samples fall a quarter texel from a boundary), 80 px at 640x480 (2.6) and 112 px at 900x900 (1.86).
+    constexpr int kCubeSize = 208;
     constexpr float kEnvNear = 0.5f, kEnvFar = 20.0f;
     constexpr float kTime0 = 0.9f;
     constexpr float kPreviewFovDegrees = 62.0f;
@@ -200,7 +203,7 @@ namespace
             render_volume_slices();
             render_environment();
 
-            // ---- the display: four 128x128 cells ----------------------------------------------------------------
+            // ---- the display: four cells of half the window each ------------------------------------------------
             const int cw = env.width / 2, ch = env.height / 2;
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
             mgl::glViewport(0, 0, env.width, env.height);
@@ -209,19 +212,23 @@ namespace
             mgl::glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             mgl::glClear(mgl::ClearBufferBit::Color | mgl::ClearBufferBit::Depth);
 
-            // top left: the mirror ball
             cell_preview_ = {0, ch};
             cell_net_ = {cw, ch};
             cell_array_ = {0, 0};
             cell_volume_ = {cw, 0};
             cell_w_ = cw;
             cell_h_ = ch;
-            draw_preview(cell_preview_, cw, ch);
-            // top right: the cube net
-            draw_net(cell_net_);
-            // bottom left / right: array layers and volume slices, texel for texel
-            draw_tiles(cell_array_, prog_array_tiles(), tex_[kTexArray], mgl::TextureTarget::Texture2DArray);
-            draw_tiles(cell_volume_, prog_volume_tiles(), tex_[kTexVolume], mgl::TextureTarget::Texture3D);
+            // The cube net (4 x 3 tiles) and the 2 x 2 layer tiles are square, as large as the cell allows, and centred.
+            net_tile_ = std::max(1, std::min(cw / 4, ch / 3));
+            net_origin_ = {cell_net_.x + (cw - 4 * net_tile_) / 2, cell_net_.y + (ch - 3 * net_tile_) / 2};
+            layer_tile_ = std::max(1, std::min(cw / 2, ch / 2));
+            array_origin_ = {cell_array_.x + (cw - 2 * layer_tile_) / 2, cell_array_.y + (ch - 2 * layer_tile_) / 2};
+            volume_origin_ = {cell_volume_.x + (cw - 2 * layer_tile_) / 2, cell_volume_.y + (ch - 2 * layer_tile_) / 2};
+
+            draw_preview(cell_preview_, cw, ch);                  // top left: the mirror ball
+            draw_net();                                           // top right: the cube net
+            draw_tiles(cell_array_, array_origin_, prog_tile_array_, tex_[kTexArray], mgl::TextureTarget::Texture2DArray);     // bottom left
+            draw_tiles(cell_volume_, volume_origin_, prog_tile_volume_, tex_[kTexVolume], mgl::TextureTarget::Texture3D);      // bottom right
             mgl::glDisable(mgl::Capability::ScissorTest);
             mgl::glDisable(mgl::Capability::DepthTest);
             mgl::glBindSampler(0, mgl::SamplerId{0});
@@ -267,8 +274,6 @@ namespace
         enum Vao : std::size_t { kVaoEnv, kVaoSphere, kVaoEmpty, kVaoCount };
         enum Sampler : std::size_t { kSamplerNearest, kSamplerLinear, kSamplerCount };
 
-        mgl::ProgramId prog_array_tiles() const { return prog_tile_array_; }
-        mgl::ProgramId prog_volume_tiles() const { return prog_tile_volume_; }
 
         // --- helpers ---------------------------------------------------------------------------------------------
         static mgl::ProgramId make_program(std::initializer_list<std::pair<mgl::ShaderType, std::string>> sources, const char* label)
@@ -424,33 +429,38 @@ namespace
             mgl::glDisable(mgl::Capability::DepthTest);
         }
 
-        // Cube net: 4 x 3 tiles of 32x32 pixels, centred vertically in the cell.
-        // {face, column, row} (row 0 = bottom): -X +Z +X -Z in the middle row, +Y above and -Y below +Z.
+        // Cube net: 4 x 3 square tiles. {face, column, row} (row 0 = bottom): -X +Z +X -Z in the middle row, +Y above and -Y below +Z.
         static constexpr std::array<std::array<int, 3>, 6> kNet = {{{1, 0, 1}, {4, 1, 1}, {0, 2, 1}, {5, 3, 1}, {2, 1, 2}, {3, 1, 0}}};
+        static constexpr std::array<std::uint8_t, 4> kCellClear = {30, 30, 36, 255};
 
-        static CellRect net_tile(CellRect cell, const std::array<int, 3>& t) { return {cell.x + t[1] * 32, cell.y + 16 + t[2] * 32}; }
-
-        void draw_net(CellRect cell) const
+        void clear_cell(CellRect cell) const
         {
             mgl::glViewport(cell.x, cell.y, cell_w_, cell_h_);
             mgl::glScissor(cell.x, cell.y, cell_w_, cell_h_);
-            clear_color(30.0f / 255.0f, 30.0f / 255.0f, 36.0f / 255.0f, 1.0f);
+            clear_color(static_cast<float>(kCellClear[0]) / 255.0f, static_cast<float>(kCellClear[1]) / 255.0f, static_cast<float>(kCellClear[2]) / 255.0f, 1.0f);
+        }
+
+        // Every tile is one triangle that covers its viewport (a textured quad): the vertex shader derives (u, v) in [0,1]^2 from the corner,
+        // the fragment shader samples the texture through a NEAREST sampler object.
+        void draw_net() const
+        {
+            clear_cell(cell_net_);
             bind_cube_with(kSamplerNearest);
             mgl::glUseProgram(prog_tile_cube_);
             mgl::glBindVertexArray(vao_[kVaoEmpty]);
             for (const auto& t : kNet)
             {
-                const CellRect o = net_tile(cell, t);
-                mgl::glViewport(o.x, o.y, 32, 32);
-                mgl::glScissor(o.x, o.y, 32, 32);
-                mgl::glUniform2i(loc(0), o.x, o.y);
-                mgl::glUniform1i(loc(1), t[0]);
+                const int x = net_origin_.x + t[1] * net_tile_, y = net_origin_.y + t[2] * net_tile_;
+                mgl::glViewport(x, y, net_tile_, net_tile_);
+                mgl::glScissor(x, y, net_tile_, net_tile_);
+                mgl::glUniform1i(loc(0), t[0]);
                 mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 3);
             }
         }
 
-        void draw_tiles(CellRect cell, mgl::ProgramId program, mgl::TextureId texture, mgl::TextureTarget target) const
+        void draw_tiles(CellRect cell, CellRect origin, mgl::ProgramId program, mgl::TextureId texture, mgl::TextureTarget target) const
         {
+            clear_cell(cell);
             mgl::glActiveTexture(mgl::TextureUnit::Texture0);
             mgl::glBindTexture(target, texture);
             mgl::glBindSampler(0, samplers_[kSamplerNearest]);
@@ -458,11 +468,10 @@ namespace
             mgl::glBindVertexArray(vao_[kVaoEmpty]);
             for (int n = 0; n < kLayers; ++n)
             {
-                const CellRect o = {cell.x + (n % 2) * kLayerSize, cell.y + (n / 2) * kLayerSize};
-                mgl::glViewport(o.x, o.y, kLayerSize, kLayerSize);
-                mgl::glScissor(o.x, o.y, kLayerSize, kLayerSize);
-                mgl::glUniform2i(loc(0), o.x, o.y);
-                mgl::glUniform1i(loc(1), n);
+                const int x = origin.x + (n % 2) * layer_tile_, y = origin.y + (n / 2) * layer_tile_;
+                mgl::glViewport(x, y, layer_tile_, layer_tile_);
+                mgl::glScissor(x, y, layer_tile_, layer_tile_);
+                mgl::glUniform1i(loc(0), n);
                 mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 3);
             }
         }
@@ -705,6 +714,7 @@ namespace
                          "array layer 3 is not a copy of layer 0");
 
             // ---- cube map: all six faces, texel by texel -------------------------------------------------------------
+            build_uniform_table();
             std::size_t compared = 0, bad = 0, alpha_bad = 0, skipped = 0;
             std::string first_bad;
             std::size_t wrong_model_bad = 0;
@@ -714,31 +724,49 @@ namespace
                 for (int j = 0; j < kCubeSize; ++j)
                     for (int i = 0; i < kCubeSize; ++i)
                     {
-                        lr::Rgb8 want{};
-                        if (!lr::texel_is_uniform(quads_, face, i, j, kCubeSize, &want))
+                        const std::size_t texel = static_cast<std::size_t>(j) * kCubeSize + static_cast<std::size_t>(i);
+                        const std::int32_t entry = uniform_texels_[static_cast<std::size_t>(face)][texel];
+                        if (entry < 0)
                         {
                             ++skipped;
                             continue;
                         }
                         ++compared;
-                        const std::uint8_t* px = &got[(static_cast<std::size_t>(j) * kCubeSize + static_cast<std::size_t>(i)) * 4];
+                        const lr::Rgb8 want = {static_cast<std::uint8_t>(entry >> 16), static_cast<std::uint8_t>(entry >> 8), static_cast<std::uint8_t>(entry)};
+                        const std::uint8_t* px = &got[texel * 4];
                         if (px[0] != want[0] || px[1] != want[1] || px[2] != want[2])
                         {
                             if (bad == 0) first_bad = std::format("face {} texel ({},{}) is ({},{},{}), model ({},{},{})", lr::kFaceNames[static_cast<std::size_t>(face)], i, j, px[0], px[1], px[2], want[0], want[1], want[2]);
                             ++bad;
                         }
                         if (px[3] != 40 * face + 15) ++alpha_bad;
-                        // Negative control: the same texel against the model of the OPPOSITE face.
-                        lr::Rgb8 other{};
-                        if (lr::texel_is_uniform(quads_, face ^ 1, i, j, kCubeSize, &other) && (px[0] != other[0] || px[1] != other[1] || px[2] != other[2])) ++wrong_model_bad;
+                        // Negative control (every second texel in both directions): the same texel against the model of the OPPOSITE face.
+                        const std::int32_t other = uniform_texels_[static_cast<std::size_t>(face ^ 1)][texel];
+                        if (i % 2 == 0 && j % 2 == 0 && other >= 0 && (px[0] != (other >> 16 & 255) || px[1] != (other >> 8 & 255) || px[2] != (other & 255))) ++wrong_model_bad;
                     }
             }
-            std::printf("   cube map: %zu texels compared exactly, %zu skipped next to polygon edges\n", compared, skipped);
-            check.expect(bad == 0 && compared > 6 * 64 * 64 / 2, "cube map: every unambiguous texel of all six faces equals the ray-cast of the room (the face orientation of Table 8.19)",
+            std::printf("   cube map: %zu texels compared exactly (%d x %d x 6), %zu skipped next to polygon edges\n", compared, kCubeSize, kCubeSize, skipped);
+            check.expect(bad == 0 && compared > static_cast<std::size_t>(6 * kCubeSize * kCubeSize / 2), "cube map: every unambiguous texel of all six faces equals the ray-cast of the room (the face orientation of Table 8.19)",
                          bad == 0 ? std::string{} : std::format("{} texels differ, first: {}", bad, first_bad));
             check.expect(alpha_bad == 0, "cube map: the fragment shader's gl_Layer is the face written (alpha tag 40 * face + 15 in every texel)", std::format("{} texels differ", alpha_bad));
             check.expect(wrong_model_bad > 1000, "negative control (cube map): comparing a face with the model of the opposite face differs", std::format("{} texels", wrong_model_bad));
             check.expect_no_gl_error("layer readback: no GL error");
+        }
+
+        // For every texel of every face: the room colour when it is constant around the texel (+-0.75 texel), else -1.
+        void build_uniform_table()
+        {
+            for (std::size_t face = 0; face < 6; ++face)
+            {
+                uniform_texels_[face].assign(static_cast<std::size_t>(kCubeSize * kCubeSize), -1);
+                for (int j = 0; j < kCubeSize; ++j)
+                    for (int i = 0; i < kCubeSize; ++i)
+                    {
+                        lr::Rgb8 c{};
+                        if (lr::texel_is_uniform(quads_, static_cast<int>(face), i, j, kCubeSize, &c))
+                            uniform_texels_[face][static_cast<std::size_t>(j * kCubeSize + i)] = (c[0] << 16) | (c[1] << 8) | c[2];
+                    }
+            }
         }
 
         // glFramebufferTextureLayer accepts a cube map texture and translates the layer into a face (ES 3.2 section 9.2.8, Table 8.24).
@@ -769,68 +797,125 @@ namespace
         // =====================================================================================================
         // validate(): the displayed cells
         // =====================================================================================================
+        // NEAREST sampling of a texture of `n` texels over a tile of `tile` pixels: pixel p (centre p + 0.5) reads texel floor((p + 0.5) / tile * n).
+        // False when the sample point is within 0.02 texel of a texel boundary (the GPU may round either way there).
+        static bool nearest_texel(int p, int tile, int n, int* texel)
+        {
+            const float c = (static_cast<float>(p) + 0.5f) / static_cast<float>(tile) * static_cast<float>(n);
+            const float frac = c - std::floor(c);
+            if (frac < 0.02f || frac > 0.98f) return false;
+            *texel = static_cast<int>(std::floor(c));
+            return true;
+        }
+
+        struct TileStats
+        {
+            std::size_t compared = 0, tile_compared = 0, ambiguous = 0, bad = 0;
+            std::string first_bad;
+        };
+
         void check_display(demo::Env& env, demo::Check& check)
         {
             mgl::glBindFramebuffer(mgl::FramebufferTarget::ReadFramebuffer, mgl::FramebufferId{0});
             const int cw = cell_w_, ch = cell_h_;
             (void)env;
-
-            // ---- bottom cells: the layers, texel for texel -------------------------------------------------------------
-            auto tiles_match = [&](CellRect cell, lr::Image (*model)(int)) {
-                const auto got = demo::read_rgba8(cell.x, cell.y, cw, ch);
-                std::size_t bad = 0;
-                for (int n = 0; n < kLayers; ++n)
+            const lr::Rgba8 clear = kCellClear;
+            auto compare_pixel = [&](TileStats& st, const std::uint8_t* got, lr::Rgba8 want, bool in_tile, int x, int y, const char* what) {
+                ++st.compared;
+                if (in_tile) ++st.tile_compared;
+                if (got[0] != want[0] || got[1] != want[1] || got[2] != want[2] || got[3] != want[3])
                 {
-                    const lr::Image img = model(n);
-                    for (int y = 0; y < kLayerSize; ++y)
-                        for (int x = 0; x < kLayerSize; ++x)
-                            for (std::size_t k = 0; k < 4; ++k)
-                            {
-                                const int gx = (n % 2) * kLayerSize + x, gy = (n / 2) * kLayerSize + y;
-                                bad += got[(static_cast<std::size_t>(gy) * static_cast<std::size_t>(cw) + static_cast<std::size_t>(gx)) * 4 + k] !=
-                                       img[(static_cast<std::size_t>(y) * kLayerSize + static_cast<std::size_t>(x)) * 4 + k];
-                            }
+                    if (st.bad == 0) st.first_bad = std::format("{} pixel ({},{}) is ({},{},{},{}), model ({},{},{},{})", what, x, y, got[0], got[1], got[2], got[3], want[0], want[1], want[2], want[3]);
+                    ++st.bad;
                 }
-                return bad;
             };
-            check.expect_eq(tiles_match(cell_array_, &lr::array_layer), std::size_t{0},
-                            "bottom left: the 2x2 tiles (texelFetch from sampler2DArray) equal the four CPU layer images, all 128x128 pixels");
-            check.expect_eq(tiles_match(cell_volume_, &lr::volume_slice), std::size_t{0},
-                            "bottom right: the 2x2 tiles (texelFetch from sampler3D) equal the four CPU slice images, all 128x128 pixels");
 
-            // ---- top right: the cube net -------------------------------------------------------------------------------------
-            {
-                const auto got = demo::read_rgba8(cell_net_.x, cell_net_.y, cw, ch);
-                std::size_t compared = 0, bad = 0;
-                std::string first_bad;
-                for (const auto& tile : kNet)
-                {
-                    const CellRect o = net_tile({0, 0}, tile);
-                    for (int py = 0; py < 32; ++py)
-                        for (int px = 0; px < 32; ++px)
+            // ---- bottom cells: the layers as scaled NEAREST tiles ----------------------------------------------------------------
+            auto layers_match = [&](CellRect cell, CellRect origin, lr::Image (*model)(int)) {
+                const auto got = demo::read_rgba8(cell.x, cell.y, cw, ch);
+                std::array<lr::Image, kLayers> images;
+                for (int n = 0; n < kLayers; ++n) images[static_cast<std::size_t>(n)] = model(n);
+                const int S = layer_tile_;
+                TileStats st;
+                for (int y = 0; y < ch; ++y)
+                    for (int x = 0; x < cw; ++x)
+                    {
+                        const std::uint8_t* p = &got[(static_cast<std::size_t>(y) * static_cast<std::size_t>(cw) + static_cast<std::size_t>(x)) * 4];
+                        const int lx = x + cell.x - origin.x, ly = y + cell.y - origin.y;
+                        if (lx < 0 || ly < 0 || lx >= 2 * S || ly >= 2 * S)
                         {
-                            lr::Rgb8 want{};
-                            if (!lr::texel_is_uniform(quads_, tile[0], 2 * px, 2 * (31 - py), kCubeSize, &want)) continue;
-                            ++compared;
-                            const std::uint8_t* p = &got[(static_cast<std::size_t>(o.y + py) * static_cast<std::size_t>(cw) + static_cast<std::size_t>(o.x + px)) * 4];
-                            if (p[0] != want[0] || p[1] != want[1] || p[2] != want[2] || p[3] != 255)
-                            {
-                                if (bad == 0) first_bad = std::format("face {} tile pixel ({},{}) is ({},{},{}), model ({},{},{})", lr::kFaceNames[static_cast<std::size_t>(tile[0])], px, py, p[0], p[1], p[2], want[0], want[1], want[2]);
-                                ++bad;
-                            }
+                            compare_pixel(st, p, clear, false, x, y, "margin");  // outside the tiles the cell keeps its clear colour
+                            continue;
                         }
-                }
-                check.expect(bad == 0 && compared > 6 * 32 * 32 / 2, std::format("top right: {} pixels of the six cube-net tiles equal the model of the texel they sample (direction -> face -> texel)", compared),
-                             bad == 0 ? std::string{} : std::format("{} differ, first: {}", bad, first_bad));
-                // the empty corners of the net keep the cell clear colour
-                const std::uint8_t* corner = &got[(static_cast<std::size_t>(2) * static_cast<std::size_t>(cw) + 2) * 4];
-                check.expect(corner[0] == 30 && corner[1] == 30 && corner[2] == 36, "top right: the unused corner of the net keeps the cell clear colour (viewport/scissor per tile)");
+                        const int n = lx / S + 2 * (ly / S);
+                        int i = 0, j = 0;
+                        if (!nearest_texel(lx % S, S, kLayerSize, &i) || !nearest_texel(ly % S, S, kLayerSize, &j))
+                        {
+                            ++st.ambiguous;
+                            continue;
+                        }
+                        const std::uint8_t* t = &images[static_cast<std::size_t>(n)][(static_cast<std::size_t>(j) * kLayerSize + static_cast<std::size_t>(i)) * 4];
+                        compare_pixel(st, p, {t[0], t[1], t[2], t[3]}, true, x, y, "tile");
+                    }
+                return st;
+            };
+            auto report_tiles = [&](const char* what, const TileStats& st) {
+                std::printf("   %s: %zu pixels compared exactly (%d x %d pixel tiles of 64x64 texels), %zu skipped on a texel boundary\n", what, st.compared, layer_tile_, layer_tile_, st.ambiguous);
+                check.expect(st.bad == 0 && st.tile_compared > static_cast<std::size_t>(layer_tile_ * layer_tile_ * 4 * 8 / 10),
+                             std::format("{}: the four tiles (NEAREST samples of the texture) and the margin equal the CPU layer images exactly", what),
+                             st.bad == 0 ? std::format("{} tile pixels compared", st.tile_compared) : std::format("{} differ, first: {}", st.bad, st.first_bad));
+            };
+            report_tiles("bottom left (2D array)", layers_match(cell_array_, array_origin_, &lr::array_layer));
+            report_tiles("bottom right (3D texture)", layers_match(cell_volume_, volume_origin_, &lr::volume_slice));
+
+            // ---- top right: the cube net -------------------------------------------------------------------------------------------
+            {
+                if (uniform_texels_[0].empty()) build_uniform_table();
+                const auto got = demo::read_rgba8(cell_net_.x, cell_net_.y, cw, ch);
+                std::array<int, 12> face_at;
+                face_at.fill(-1);
+                for (const auto& t : kNet) face_at[static_cast<std::size_t>(t[2] * 4 + t[1])] = t[0];
+                const int T = net_tile_;
+                TileStats st;
+                for (int y = 0; y < ch; ++y)
+                    for (int x = 0; x < cw; ++x)
+                    {
+                        const std::uint8_t* p = &got[(static_cast<std::size_t>(y) * static_cast<std::size_t>(cw) + static_cast<std::size_t>(x)) * 4];
+                        const int lx = x + cell_net_.x - net_origin_.x, ly = y + cell_net_.y - net_origin_.y;
+                        const int face = (lx >= 0 && ly >= 0 && lx < 4 * T && ly < 3 * T) ? face_at[static_cast<std::size_t>((ly / T) * 4 + lx / T)] : -1;
+                        if (face < 0)
+                        {
+                            compare_pixel(st, p, clear, false, x, y, "net margin");  // the empty corners of the net and the margins keep the clear colour
+                            continue;
+                        }
+                        // The tile pixel (px, py) looks up s = (px + 0.5) / T and t = 1 - (py + 0.5) / T = (T - 1 - py + 0.5) / T.
+                        int i = 0, j = 0;
+                        if (!nearest_texel(lx % T, T, kCubeSize, &i) || !nearest_texel(T - 1 - ly % T, T, kCubeSize, &j))
+                        {
+                            ++st.ambiguous;
+                            continue;
+                        }
+                        const std::int32_t entry = uniform_texels_[static_cast<std::size_t>(face)][static_cast<std::size_t>(j * kCubeSize + i)];
+                        if (entry < 0)
+                        {
+                            ++st.ambiguous;  // a polygon edge of the room runs through this texel
+                            continue;
+                        }
+                        compare_pixel(st, p, {static_cast<std::uint8_t>(entry >> 16), static_cast<std::uint8_t>(entry >> 8), static_cast<std::uint8_t>(entry), 255}, true, x, y,
+                                      lr::kFaceNames[static_cast<std::size_t>(face)]);
+                    }
+                std::printf("   top right (cube net): %zu pixels compared exactly (%d x %d pixel tiles of %d x %d texels), %zu skipped (texel boundary or room edge)\n", st.compared, T, T, kCubeSize,
+                            kCubeSize, st.ambiguous);
+                check.expect(st.bad == 0 && st.tile_compared > static_cast<std::size_t>(6 * T * T * 4 / 10),
+                             "top right: the six cube-net tiles (direction -> face -> texel, NEAREST) equal the model of the texel they sample, and the empty corners and margins keep the cell clear colour",
+                             st.bad == 0 ? std::format("{} tile pixels compared", st.tile_compared) : std::format("{} differ, first: {}", st.bad, st.first_bad));
             }
 
             // ---- top left: sky and mirror ball ------------------------------------------------------------------------------
             {
                 const auto got = demo::read_rgba8(cell_preview_.x, cell_preview_.y, cw, ch);
-                const PreviewCamera cam = preview_camera(time_, static_cast<float>(cw) / static_cast<float>(ch));
+                const float aspect = static_cast<float>(cw) / static_cast<float>(ch);
+                const PreviewCamera cam = preview_camera(time_, aspect);
                 using demo::math::cross;
                 using demo::math::dot;
                 using demo::math::normalize;
@@ -849,7 +934,7 @@ namespace
                     {
                         const float nx = (static_cast<float>(x) + 0.5f) / static_cast<float>(cw) * 2.0f - 1.0f;
                         const float ny = (static_cast<float>(y) + 0.5f) / static_cast<float>(ch) * 2.0f - 1.0f;
-                        const Vec3 d = normalize(f + r * (nx * tan_half) + u * (ny * tan_half));
+                        const Vec3 d = normalize(f + r * (nx * tan_half * aspect) + u * (ny * tan_half));
                         const float b = dot(cam.eye, d);
                         const float c = dot(cam.eye, cam.eye) - 1.0f;
                         const float disc = b * b - c;
@@ -904,9 +989,11 @@ namespace
                             skipped, worst, distinct_count);
                 check.expect(bad == 0, "top left: sky and mirror-ball pixels equal the CPU model (view ray -> ray-cast of the room; reflect() -> the same, plus the rim term), +-2/255 (8-bit rounding, bilinear weights on equal texels)",
                              bad == 0 ? std::string{} : std::format("{} differ, first: {}", bad, first_bad));
-                check.expect(sky_probes > 500 && ball_probes > 300 && distinct_count >= 5,
+                // Roughly a twentieth of the cell's probe grid on each of sky and ball at least: scales with the cell size.
+                const std::size_t grid = static_cast<std::size_t>((cw / 2) * (ch / 2));
+                check.expect(sky_probes > grid / 20 && ball_probes > grid / 40 && distinct_count >= 5,
                              "top left: the comparison covers both the skybox and a mirror ball that reflects at least five different environment colours",
-                             std::format("{} sky, {} ball probes, {} reflected colours", sky_probes, ball_probes, distinct_count));
+                             std::format("{} sky, {} ball probes of {}, {} reflected colours", sky_probes, ball_probes, grid, distinct_count));
             }
             check.expect_no_gl_error("display comparison: no GL error");
         }
@@ -1099,6 +1186,9 @@ namespace
         float time_ = kTime0;
         int cell_w_ = 128, cell_h_ = 128;
         CellRect cell_preview_{}, cell_net_{}, cell_array_{}, cell_volume_{};
+        CellRect net_origin_{}, array_origin_{}, volume_origin_{};  // lower left corner of the tiles inside their cells
+        int net_tile_ = 32, layer_tile_ = 64;                       // tile edge in pixels
+        std::array<std::vector<std::int32_t>, 6> uniform_texels_;   // per face texel: 0xRRGGBB when the room colour is constant around it, else -1
     };
 }
 

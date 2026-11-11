@@ -7,14 +7,14 @@
   ],
   "category": "es32",
   "order": 4020,
-  "summary": "glFramebufferTexture attaches whole levels of a 2D array, a 3D and a cube map texture (layered attachments) and geometry shaders pick the layer with gl_Layer: four POINTS paint four array layers (layer = gl_PrimitiveIDIn), one point with layout(invocations = 4) paints four 3D slices (gl_InvocationID), and a room of walls, decals and boxes is rendered into all six cube map faces in ONE draw call (invocations = 6, per-face view-projection, gl_Layer = gl_InvocationID, the fragment shader reads gl_Layer back). The cube map is shown as a mirror ball in its own room (reflect() + skybox) and as a cube net. Every layer is read back through glFramebufferTextureLayer / glFramebufferTexture2D and compared byte for byte with a CPU model (a ray caster for the cube map, which also proves the face orientation of Table 8.19); FRAMEBUFFER_ATTACHMENT_LAYERED / TEXTURE_LAYER queries, the INCOMPLETE_LAYER_TARGETS rules, the errors of glFramebufferTexture*, and the gl_Layer rules the specification defines (default layer 0, clear touches all layers, ReadPixels reads layer 0, ignored by a non-layered framebuffer, EndPrimitive between layers, the provoking vertex) are checked.",
+  "summary": "glFramebufferTexture attaches whole levels of a 2D array, a 3D and a cube map texture (layered attachments) and geometry shaders pick the layer with gl_Layer: four POINTS paint four array layers (layer = gl_PrimitiveIDIn), one point with layout(invocations = 4) paints four 3D slices (gl_InvocationID), and a room of walls, decals and boxes is rendered into all six cube map faces in ONE draw call (invocations = 6, per-face view-projection, gl_Layer = gl_InvocationID, the fragment shader reads gl_Layer back). The cube map is shown as a mirror ball in its own room (reflect() + skybox) and as a cube net; the net and the layer tiles are NEAREST-sampled quads that scale with the window (validated at 256x256, 640x480 and 900x900). Every layer is read back through glFramebufferTextureLayer / glFramebufferTexture2D and compared byte for byte with a CPU model (a ray caster for the cube map, which also proves the face orientation of Table 8.19); FRAMEBUFFER_ATTACHMENT_LAYERED / TEXTURE_LAYER queries, the INCOMPLETE_LAYER_TARGETS rules, the errors of glFramebufferTexture*, and the gl_Layer rules the specification defines (default layer 0, clear touches all layers, ReadPixels reads layer 0, ignored by a non-layered framebuffer, EndPrimitive between layers, the provoking vertex) are checked.",
   "spec": [
-    "ES 3.2 §9.2.8 Attaching Texture Images to a Framebuffer (FramebufferTexture, FramebufferTexture2D, FramebufferTextureLayer, §9.2.8.1 Effects of Attaching a Texture Image), §9.2.2.1 Layered Images",
-    "ES 3.2 §9.2.3 Framebuffer Object Queries (FRAMEBUFFER_ATTACHMENT_LAYERED, TEXTURE_LAYER, OBJECT_NAME, TEXTURE_LEVEL), §9.2.1 (FRAMEBUFFER_DEFAULT_LAYERS)",
-    "ES 3.2 §9.4.1 Framebuffer Attachment Completeness, §9.4.2 Whole Framebuffer Completeness (FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS)",
-    "ES 3.2 §9.8 Layered Framebuffers (layer number, undefined out-of-range layers, Clear and ReadPixels, cube map layers 0..5), §11.3.4.5 Layer Selection (LAYER_PROVOKING_VERTEX), §11.3.4.2 Instanced Geometry Shaders",
-    "ES 3.2 §8.13 / Table 8.19 Cube Map Texture Selection and Table 8.24 (layer -> face), §8.14 Texture Completeness, Table 21.40 (MAX_FRAMEBUFFER_LAYERS, MAX_ARRAY_TEXTURE_LAYERS)",
-    "GLSL ES 3.20 §7.1.4 Geometry Shader Special Variables (gl_Layer), §7.1.5 Fragment Shader Special Variables (gl_Layer input), §4.4.1 / §4.4.2 Geometry Inputs and Outputs, §8.9 Texture Lookup Functions (texelFetch, texture on samplerCube)"
+    "ES 3.2 \u00a79.2.8 Attaching Texture Images to a Framebuffer (FramebufferTexture, FramebufferTexture2D, FramebufferTextureLayer, \u00a79.2.8.1 Effects of Attaching a Texture Image), \u00a79.2.2.1 Layered Images",
+    "ES 3.2 \u00a79.2.3 Framebuffer Object Queries (FRAMEBUFFER_ATTACHMENT_LAYERED, TEXTURE_LAYER, OBJECT_NAME, TEXTURE_LEVEL), \u00a79.2.1 (FRAMEBUFFER_DEFAULT_LAYERS)",
+    "ES 3.2 \u00a79.4.1 Framebuffer Attachment Completeness, \u00a79.4.2 Whole Framebuffer Completeness (FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS)",
+    "ES 3.2 \u00a79.8 Layered Framebuffers (layer number, undefined out-of-range layers, Clear and ReadPixels, cube map layers 0..5), \u00a711.3.4.5 Layer Selection (LAYER_PROVOKING_VERTEX), \u00a711.3.4.2 Instanced Geometry Shaders",
+    "ES 3.2 \u00a78.13 / Table 8.19 Cube Map Texture Selection and Table 8.24 (layer -> face), \u00a78.14 Texture Completeness, Table 21.40 (MAX_FRAMEBUFFER_LAYERS, MAX_ARRAY_TEXTURE_LAYERS)",
+    "GLSL ES 3.20 \u00a77.1.4 Geometry Shader Special Variables (gl_Layer), \u00a77.1.5 Fragment Shader Special Variables (gl_Layer input), \u00a74.4.1 / \u00a74.4.2 Geometry Inputs and Outputs, \u00a78.9 Texture Lookup Functions (texelFetch, texture on samplerCube)"
   ],
   "api": {
     "glFramebufferTexture": "attaches whole levels of a 2D array, a 3D and a cube map texture (and a cube depth texture): FRAMEBUFFER_ATTACHMENT_LAYERED is TRUE for all three, FALSE for a plain 2D texture; the attachments are rendered into by geometry shaders (every layer compared); completeness COMPLETE alone and with a layered depth, INCOMPLETE_LAYER_TARGETS beside a non-layered renderbuffer, a non-layered or a different-target colour attachment; errors: default framebuffer bound, name that is not a texture, level 1 of a 1-level texture and level -1 -> INVALID_VALUE (INVALID_OPERATION for the default framebuffer); texture 0 detaches",
@@ -26,17 +26,16 @@
     "glFramebufferParameteri": "FRAMEBUFFER_DEFAULT_LAYERS = 5 on an attachment-less framebuffer (read back, COMPLETE); > MAX_FRAMEBUFFER_LAYERS and negative -> INVALID_VALUE with the old value kept",
     "glGetFramebufferParameteriv": "FRAMEBUFFER_DEFAULT_LAYERS initial value 0 and after the call",
     "glTexStorage3D": "64x64x4 RGBA8 2D array and 3D textures and an 8x8x4 array: the layered render targets (immutable, one level)",
-    "glTexStorage2D": "RGBA8 and DEPTH_COMPONENT24 cube maps (6 layers each) and small 2D textures",
+    "glTexStorage2D": "RGBA8 and DEPTH_COMPONENT24 cube maps (6 layers of 208x208 each) and small 2D textures",
     "glTexParameteri": "NEAREST filters so the immutable textures are complete for texelFetch",
     "glGenSamplers": "NEAREST and LINEAR sampler objects",
-    "glSamplerParameteri": "filters/wraps: NEAREST for the cube net (exact texels), LINEAR for the mirror ball and skybox (equal texels blend to the same colour)",
+    "glSamplerParameteri": "filters/wraps: NEAREST for the cube net and the layer tiles (exact texels at any tile size), LINEAR for the mirror ball and skybox (equal texels blend to the same colour)",
     "glBindSampler": "unit 0 uses the sampler instead of the texture's own filter state; both looks compared with the CPU model",
     "glClearBufferfv": "clears colour (all layers) and depth of the layered environment framebuffer; after a clear all four layers of the semantic-test texture read back as the clear colour",
-    "glDrawArrays": "4 POINTS (layer = gl_PrimitiveIDIn), 1 POINT with four invocations, the environment triangle list with six invocations, full-screen triangles for the tiles, the sky, and the semantic tests",
+    "glDrawArrays": "4 POINTS (layer = gl_PrimitiveIDIn), 1 POINT with four invocations, the environment triangle list with six invocations, one triangle per scaled tile (textured quad), the sky, and the semantic tests",
     "glDrawElements": "the mirror ball (96 x 48 UV sphere); observed through reflection probes",
     "glUniformMatrix4fv": "six view-projection matrices (array of 6 in the geometry shader) for the six faces: every face texel equals the CPU ray-cast, so the matrices and the face numbering are right; preview matrices",
-    "glUniform2i": "tile origin in the tile shaders (every pixel of the array and volume tiles equals the layer image)",
-    "glUniform1i": "layer / slice / face selection of the tile shaders",
+    "glUniform1i": "layer / slice / face selection of the tile shaders; the tiles are verified at 256x256, 640x480 and 900x900",
     "glUniform3f": "eye position of the sky and the ball",
     "glUniform4f": "solid colour of the semantic-test fragment shader",
     "glReadPixels": "every layer of the three layered textures (64x64 each) and the default framebuffer; reads layer 0 of a layered framebuffer",
@@ -49,8 +48,8 @@
     "glActiveTexture": "unit 0 for all sampler bindings",
     "glGenRenderbuffers": "DEPTH_COMPONENT24 renderbuffer of the completeness test",
     "glRenderbufferStorage": "64x64 depth storage",
-    "glViewport": "per-layer-pass and per-tile viewports",
-    "glScissor": "per-cell and per-tile clipping (the unused corners of the cube net keep the clear colour)",
+    "glViewport": "per-layer-pass viewports and per-tile viewports that scale with the window (textured quads, aspect ratio kept)",
+    "glScissor": "per-cell and per-tile clipping; the margins around the scaled tiles and the empty corners of the cube net keep the clear colour (compared)",
     "glEnable": "DEPTH_TEST for the environment pass (hidden surfaces of the boxes) and the ball; SCISSOR_TEST",
     "glDisable": "DITHER, BLEND, CULL_FACE",
     "glGenBuffers": "environment vertex buffer (positions + colours), sphere vertices and indices",
@@ -79,7 +78,7 @@
     "GLSL320.GEOMETRY.BUILTINS",
     "GLSL320.INTERFACE_BLOCKS_IO",
     "GLSL300.TYPES.SAMPLERS",
-    "GLSL300.FN.TEXTURE.FETCH",
+    "GLSL300.FN.TEXTURE.BASIC",
     "GLSL300.FN.GEOMETRIC",
     "GLSL310.LAYOUT.BINDING"
   ],
@@ -93,6 +92,6 @@
   "visual_review": {
     "date": "2026-11-11",
     "by": "claude-sonnet-5.5",
-    "notes": "Viewed the gpu, llvmpipe and zink es-max captures (256x256, identical to the eye). Top left: a glass-like mirror ball inside a room corner (teal wall on the left, purple wall behind, an ochre box at the bottom) that reflects the whole room: orange wall, green wall with an orange stripe, a white lamp, a yellow window, red and blue boxes, with a bright rim at the edge. Top right: the cube net on a dark gray background: light-gray ceiling with a white lamp on top, then teal wall with a dark-blue door, green wall with an orange stripe, orange-red wall with a yellow window and a purple wall with a teal poster in the middle row, dark floor with a red carpet and the three boxes at the bottom; the four corners of the net are empty. Bottom left: four 64x64 tiles, dark red / dark green on the bottom row and dark blue / dark purple on the top row, each with a body square that shrinks (red, green, blue, orange) and one to four white squares along the bottom edge (layer 0 bottom left, layer 3 top right). Bottom right: four tiles with a background that goes from blue to green, a yellow block walking up the diagonal and an orange bar that grows from 16 to 64 pixels."
+    "notes": "Viewed the gpu, llvmpipe and zink es-max captures at 256x256 and the gpu captures at 900x900 and 640x480. 256x256 (identical on the three drivers): top left a mirror ball in a room corner (teal wall left, purple wall behind, an ochre box at the bottom) reflecting the room (orange wall, green wall with an orange stripe, a white lamp, a yellow window, red and blue boxes) with a bright rim; top right the cube net on a dark gray background (light-gray ceiling with a white lamp on top; teal wall with a dark-blue door, green wall with an orange stripe, orange-red wall with a yellow window and a purple wall with a teal poster in the middle row; dark floor with a red carpet and the boxes below; empty corners); bottom left four tiles (dark red / dark green bottom row, dark blue / dark purple top row, a red, green, blue and orange body square that shrinks, one to four white squares along the bottom, layer 0 bottom left); bottom right four tiles with a background going from blue to green, a yellow block walking up the diagonal and an orange bar growing from 16 to 64 px. 900x900: the same four pictures fill their 450x450 cells: the ball and its skybox are sharp, the cube net is a 448x336 cross centred in its cell with 112 px tiles, and the layer and slice tiles are 225 px squares filling the cells edge to edge, crisp NEAREST pixels without blur. 640x480: the cells are 320x240; the net is a 320x240 cross of 80 px tiles filling the cell, the layer and slice tiles are 120 px squares centred with dark margins left and right, and the ball cell has the wider 4:3 projection."
   }
 }

@@ -13,7 +13,7 @@
 //   * the indexed state queries, the limits and the defined errors, and glMemoryBarrier before every consumer of the
 //     compute shader's stores (fragment and vertex shader reads, buffer mapping).
 //
-// The 256x256 surface:
+// The surface (sizes for 256x256; the layout scales with the window: a row is height / 16, a cell width / 16):
 //
 //  TOP (64 px): the VERIFICATION GRID, 4 rows x 16 cells of 16 px, drawn by a FRAGMENT shader that reads the flag
 //  buffer written by the compute shader (cell m = member m of block Probe):
@@ -25,6 +25,7 @@
 //
 //  BELOW (3 bands of 48 px): bar charts drawn by a VERTEX shader that reads the runtime-sized array values[] written
 //  by the compute shader. The bands show buffer ranges of 32, 16 and 4 elements; the bar width is 2 / values.length().
+//  The rest (48 px) stays clear.
 
 #include <demo/gl_util.hpp>
 #include <demo/runtime.hpp>
@@ -475,10 +476,18 @@ namespace
     constexpr Rgba8 kBackground = {14, 16, 22, 255};
     constexpr Rgba8 kGreen = {0, 255, 0, 255}, kMagenta = {255, 0, 255, 255}, kRed = {255, 0, 0, 255};
 
-    // geometry (for the default 256x256 surface)
+    // geometry: the window is divided into 16 columns and 16 rows of (window / 16) pixels
     constexpr int kColumns = 16;  // cells per row of the verification grid
     constexpr int kRows = 4;      // rows of the verification grid
-    constexpr int kBands = 3;     // bar-chart bands below the grid
+    constexpr int kBands = 3;     // bar-chart bands below the grid, 3 rows high each
+    constexpr int kMinWindow = 128;  // 8-pixel grid cells (1-pixel border), bars of >= 4 px, a 1-unit bar >= 1.5 px high
+
+    struct Grid
+    {
+        int cell_w, row_h;  // grid cell width and row height (window / 16)
+        int band() const { return 3 * row_h; }
+        static Grid of(const demo::Env& env) { return {env.width / kColumns, env.height / 16}; }
+    };
 
     /// A bound range of a runtime-sized-array buffer.
     struct Slot
@@ -503,6 +512,8 @@ namespace
     public:
         void init(demo::Env& env) override
         {
+            if (env.width < kMinWindow || env.height < kMinWindow)
+                throw demo::Skip(std::format("needs a window of at least {0} x {0} pixels (grid cells of 8 x 8, bars of 4 pixels)", kMinWindow));
             alignment_ = demo::get_integer(mgl::GetParameter::ShaderStorageBufferOffsetAlignment);
             max_bindings_ = demo::get_integer(mgl::GetParameter::MaxShaderStorageBufferBindings);
             max_compute_blocks_ = demo::get_integer(mgl::GetParameter::MaxComputeShaderStorageBlocks);
@@ -549,6 +560,7 @@ namespace
             if (use_fragment_)
             {
                 u_cell_ = locate(grid_prog_, "u_cell");
+                u_row_y_ = locate(grid_prog_, "u_row_y");
                 u_mask_ = locate(grid_prog_, "u_expect_mask");
             }
             if (use_vertex_) u_scale_ = locate(bars_prog_, "u_height_scale");
@@ -672,12 +684,14 @@ namespace
 
         void draw_row(const demo::Env& env, int row, mgl::BufferId flags, std::uint32_t mask)
         {
-            const int cell = env.width / kColumns;
+            const Grid g = Grid::of(env);
+            const int y = env.height - (row + 1) * g.row_h;
             mgl::glUseProgram(grid_prog_);
-            mgl::glUniform1i(u_cell_, cell);
+            mgl::glUniform1i(u_cell_, g.cell_w);
+            mgl::glUniform1i(u_row_y_, y);
             mgl::glUniform1ui(u_mask_, mask);
             mgl::glBindBufferBase(kSsbo, 0, flags);  // layout(binding = 0) readonly buffer Flags
-            mgl::glViewport(0, env.height - (row + 1) * cell, env.width, cell);
+            mgl::glViewport(0, y, kColumns * g.cell_w, g.row_h);  // exactly the 16 cells: no 17th member at the right edge
             mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 3);
         }
 
@@ -722,15 +736,15 @@ namespace
 
             if (use_vertex_)
             {
-                const int cell = env.width / kColumns;
-                const int band = 3 * cell;
+                const Grid g = Grid::of(env);
+                const int band = g.band();
                 mgl::glUseProgram(bars_prog_);
                 mgl::glUniform1f(u_scale_, 1.0f / 16.0f);
                 for (int k = 0; k < kBands; ++k)
                 {
                     const Slot& s = sams_slots_[static_cast<std::size_t>(k)];
                     mgl::glBindBufferRange(kSsbo, 0, bufs_[kSamples], s.offset, s.size);
-                    mgl::glViewport(0, env.height - kRows * cell - (k + 1) * band, env.width, band);
+                    mgl::glViewport(0, env.height - kRows * g.row_h - (k + 1) * band, env.width, band);
                     mgl::glDrawArraysInstanced(mgl::PrimitiveType::TriangleStrip, 0, 4, s.exact_len);
                 }
             }
@@ -808,14 +822,14 @@ namespace
                 std::cout << "   [note] fragment-shader grid not drawn (no fragment shader storage blocks): its pixel checks are skipped\n";
                 return;
             }
-            const int cell = env.width / kColumns;
+            const Grid g = Grid::of(env);
             for (std::size_t row = 0; row < 4; ++row)
             {
                 std::string bad;
                 for (int m = 1; m <= 16; ++m)
                 {
-                    const int x = (m - 1) * cell + cell / 2;
-                    const int y = env.height - (static_cast<int>(row) + 1) * cell + cell / 2;
+                    const int x = (m - 1) * g.cell_w + g.cell_w / 2;
+                    const int y = env.height - (static_cast<int>(row) + 1) * g.row_h + g.row_h / 2;
                     const Rgba8 got = demo::read_pixel(x, y);
                     const bool expected_pass = ((rows_[row].expect_mask >> m) & 1u) != 0;
                     const Rgba8 want = expected_pass ? kGreen : kMagenta;
@@ -824,8 +838,11 @@ namespace
                 check.expect(bad.empty(),
                              std::format("fragment shader reading the flag buffer: row {} cells are green (member verified) / magenta (predicted mismatch), never red", row), bad);
             }
-            const Rgba8 gap = demo::read_pixel(env.width / 2, 8);
-            check.expect(near(gap, kBackground, 0), "the area below the bar charts keeps the clear colour (nothing leaked)", demo::format_rgba(demo::read_pixel(env.width / 2, 8)));
+            // The middle of the empty area below the bar charts.
+            const int gap_y = (env.height - (kRows + 3 * kBands) * g.row_h) / 2;
+            const Rgba8 gap = demo::read_pixel(env.width / 2, gap_y);
+            check.expect(near(gap, kBackground, 0), "the area below the bar charts keeps the clear colour (nothing leaked)",
+                         std::format("pixel ({},{}) = {}", env.width / 2, gap_y, demo::format_rgba(gap)));
         }
 
         void check_bar_pixels(const demo::Env& env, demo::Check& check)
@@ -835,19 +852,19 @@ namespace
                 std::cout << "   [note] vertex-shader bar charts not drawn (no vertex shader storage blocks): their pixel checks are skipped\n";
                 return;
             }
-            const int cell = env.width / kColumns;
-            const int band = 3 * cell;
+            const Grid g = Grid::of(env);
+            const int band = g.band();
             for (int k = 0; k < kBands; ++k)
             {
                 const int len = sams_slots_[static_cast<std::size_t>(k)].exact_len;
-                const int y0 = env.height - kRows * cell - (k + 1) * band;
-                const int bar_px = env.width / len;
+                const int y0 = env.height - kRows * g.row_h - (k + 1) * band;
+                const double bar_px = static_cast<double>(env.width) / len;  // bar i covers [i, i + 1) * width / len
                 std::string bad;
                 for (int i = 0; i < len; ++i)
                 {
                     const int v = static_cast<int>(sample_value(i));
                     const int height = v * band / 16;  // the vertex shader scales by 1/16 of the viewport height
-                    const int x = i * bar_px + bar_px / 2;
+                    const int x = static_cast<int>(std::floor((i + 0.5) * bar_px));  // >= 2 px from both bar edges
                     const Rgba8 inside = demo::read_pixel(x, y0 + height / 2);
                     const Rgba8 above = demo::read_pixel(x, y0 + height + 2);
                     const float fv = static_cast<float>(v);
@@ -856,7 +873,7 @@ namespace
                     if (!near(above, kBackground, 0)) bad += std::format("bar {} above {}; ", i, demo::format_rgba(above));
                 }
                 check.expect(bad.empty(),
-                             std::format("vertex shader reading values[]: band {} draws {} bars of {} px, each as high as its value (colour within 1 of the 8-bit quantisation)", k, len, bar_px), bad);
+                             std::format("vertex shader reading values[]: band {} draws {} bars of {:.2f} px, each as high as its value (colour within 1 of the 8-bit quantisation)", k, len, bar_px), bad);
             }
         }
 
@@ -1392,7 +1409,7 @@ namespace
         std::array<mgl::ProgramId, 2> layout_prog_{};
         std::array<mgl::UniformLocation, 2> u_write_{};
         mgl::ProgramId runtime_prog_{}, grid_prog_{}, bars_prog_{};
-        mgl::UniformLocation u_cell_{}, u_mask_{}, u_scale_{};
+        mgl::UniformLocation u_cell_{}, u_row_y_{}, u_mask_{}, u_scale_{};
         std::array<GLint, 2> gl_data_size_{};  ///< BUFFER_DATA_SIZE of Probe as the GL reports it
         std::array<GLint, 2> data_size_{};     ///< bytes of the Probe buffers
         std::array<mgl::BufferId, kBufferCount> bufs_{};

@@ -43,9 +43,11 @@ uniform location rules.
 
 ## Reading the image
 
-The 256 x 256 surface (the size of every test run; the pixel positions are written for it) has three parts.
+The picture is laid out in fractions of the surface, so it works at any size of at least 64 x 64 pixels (smaller surfaces
+are skipped: below that a quarter cell is less than 4 pixels and the probes would sit on cell edges). The sizes below are
+those of the default 256 x 256 surface. It has three parts.
 
-**Upper half: eight 64 x 64 cells,** one per resource group of the gfx program (cell 0 is bottom-left of the grid of
+**Upper half: eight cells (a quarter of the width by a quarter of the height; 64 x 64 at 256 x 256),** one per resource group of the gfx program (cell 0 is bottom-left of the grid of
 4 x 2). Each cell is coloured by a different mechanism, and each is compared with a CPU model:
 
 | Cell | Mechanism | Expected colour (8-bit) |
@@ -63,11 +65,11 @@ In none of these cells does the application call `glUniform1i` for a sampler or 
 `layout(binding)` qualifiers did it. The grid is drawn from a vertex buffer whose attributes sit at locations obtained from
 the query API (`a_cell` is an `ivec2` without an explicit location, so its location is the linker's choice).
 
-**Strip at y = 96..127: the explicit-location patch.** A program with `layout(location = MAX_UNIFORM_LOCATIONS - 1)
-uniform float u_edge` is drawn into the first 32 pixels, with `glUniform1f` at that location (here 81920 - 1 on radeonsi):
+**Strip from 3/8 to 1/2 of the height (y = 96..127 at 256 x 256): the explicit-location patch.** A program with `layout(location = MAX_UNIFORM_LOCATIONS - 1)
+uniform float u_edge` is drawn into the first eighth of the width, with `glUniform1f` at that location (here 81920 - 1 on radeonsi):
 magenta (191, 64, 191).
 
-**Lower 96 rows: the check matrix.** Every recorded check of `validate()` becomes one small cell, painted after all checks
+**Lower 3/8 (96 rows at 256 x 256): the check matrix.** Every recorded check of `validate()` becomes one small cell, painted after all checks
 have run: green = passed, red = failed. Groups start on a new row, in this order from the top: `picture` (15),
 `UNIFORM (gfx)` (45), `UNIFORM_BLOCK (gfx)` (14), `empty interfaces` (12), `PROGRAM_INPUT / PROGRAM_OUTPUT` (21),
 `TRANSFORM_FEEDBACK_VARYING` (11), `SHADER_STORAGE_BLOCK / BUFFER_VARIABLE` (30), `ATOMIC_COUNTER_BUFFER / UNIFORM (comp)` (12),

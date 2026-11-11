@@ -26,9 +26,13 @@ member lives in the buffer, the demo concentrates on the memory layout and on ho
 
 ## Reading the image
 
-The 256 × 256 surface has two parts.
+The layout follows the window: it is divided into rows of height / 16 and grid cells of width / 16 pixels (the sizes
+below are those of the default 256 × 256 surface). The smallest window is 128 × 128, where a grid cell is 8 × 8 with its
+1-pixel border, a bar of the 32-element band is 4 pixels wide (probed in its middle) and a bar of one unit is 1.5 pixels
+high; smaller windows are skipped. The bars are probed at the middle of their exact span `[i, i + 1) × width / n`, since
+the width is generally not a multiple of `n`. It has two parts.
 
-**Top, 64 px: the verification grid.** Four rows of 16 cells (cell *m* = member *m* of block `Probe`), drawn by a
+**Top, 4/16 of the height (64 px): the verification grid.** Four rows of 16 cells (cell *m* = member *m* of block `Probe`), drawn by a
 **fragment** shader that reads the flag buffer the compute shader wrote (`readonly buffer Flags`):
 
 | Row | Block declared | Buffer packed with | Expected |
@@ -42,10 +46,10 @@ Magenta means "the flag is 0 *as the calculator predicted*"; **red** anywhere wo
 prediction. Members 1-4 (`f`, `v3`, `after_v3`, `v2`) come before the first array, so both layouts put them at the
 same offsets; every member from `farr[3]` on moves.
 
-**Below, three 48 px bands: bar charts** drawn by a **vertex** shader that reads `values[]`, the runtime-sized array the
+**Below, three bands of 3/16 of the height (48 px): bar charts** drawn by a **vertex** shader that reads `values[]`, the runtime-sized array the
 compute shader filled. The bands show buffer ranges holding 32, 16 and 4 elements; the bar width is `2.0 /
 values.length()` computed in the vertex shader, so the bars tile the width only if `length()` is right. The bar for
-element *i* is `1 + (7 i) mod 13` units high, coloured by its value. The lower 48 px are intentionally empty.
+element *i* is `1 + (7 i) mod 13` units high, coloured by its value. The rest at the bottom (48 px) is intentionally empty and is probed in its middle.
 
 ## std430 versus std140
 

@@ -39,9 +39,13 @@ API does when something is wrong.
 
 ## Reading the image
 
-The 256 x 256 surface has two parts (rows are numbered from the **bottom**).
+The window is an 8 x 8 grid of cells, each a 1/8 of the width by 1/8 of the height (32 x 32 pixels at the default
+256 x 256; cells need not be square). It has two parts (rows are numbered from the **bottom**). The smallest window is
+64 x 64 (8-pixel cells, so that the quadrant probes at 1/4 and 3/4 of a cell stay 2 pixels away from the split at 1/2);
+smaller windows are skipped. The zoo shader finds its cell from `gl_FragCoord` with `u_cell_px`, an `ivec2` (width, height)
+set by `glProgramUniform2i`.
 
-**Rows 0-2 (bottom 96 pixels): the scene.** 8 columns of 32-pixel cells, cell number = row * 8 + column. Every cell is one
+**Rows 0-2 (bottom 3/8 of the window): the scene.** 8 columns of cells, cell number = row * 8 + column. Every cell is one
 triangle covering the cell, drawn with a pipeline. The vertex stage supplies a *tint* (`u_tint`, a uniform of the vertex
 program) and the coordinate `v_uv`; the fragment stage supplies a *background* (`u_bg`) and decides the split: the vertical
 fragment program shows the tint on the left half, the horizontal one on the bottom half. The "mirror" vertex program flips
@@ -73,7 +77,7 @@ fragment program shows the tint on the left half, the horizontal one on the bott
 
 The empty cells are the expected outcome of the draws that are *supposed* to fail; a coloured cell there would be a bug.
 
-**Rows 3-7: the uniform zoo.** 38 cells of 32 pixels in reading order from the lower-left, the rest dark. Each cell checks
+**Rows 3-7: the uniform zoo.** 38 cells in reading order from the lower-left, the rest dark. Each cell checks
 one uniform of the separable fragment program against the exact value that a `glProgramUniform*` call stored while the
 program was never current: green = equal. All 38 are green.
 

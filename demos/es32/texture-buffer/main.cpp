@@ -219,6 +219,9 @@ namespace
     constexpr int kGrid = 8;
     constexpr int kInstances = kGrid * kGrid;
     constexpr int kStripHeight = 32;
+    constexpr int kMinWidth = 2 * 64;                // 64 strip cells of at least 2 pixels
+    constexpr int kMinHeight = kStripHeight + 64;    // a scene area at least 64 pixels high
+    constexpr int kMinSceneProbes = 3000;            // compared pixels of the instanced scene (non-vacuity)
     constexpr double kSpacing = 1.15;
     constexpr std::array<double, 3> kLight = {0.4, 0.8, 0.5};  // normalized in light_dir()
     constexpr std::array<float, 4> kClear = {0.08f, 0.09f, 0.12f, 1.0f};
@@ -503,6 +506,8 @@ namespace
 
     void TextureBuffer::init(demo::Env& env)
     {
+        if (env.width < kMinWidth || env.height < kMinHeight)
+            throw demo::Skip(std::format("needs a window of at least {} x {} pixels (64 strip cells of 2 pixels, a scene area 64 pixels high)", kMinWidth, kMinHeight));
         // Initial state before this demo touches anything (ES 3.2 Table 21.9 / 21.40: both initially 0).
         initial_buffer_binding_ = demo::get_integer(mgl::GetParameter::TextureBufferBinding);
         initial_texture_binding_ = demo::get_integer(mgl::GetParameter::TextureBindingBuffer);
@@ -637,9 +642,18 @@ namespace
         return {d * std::cos(pitch) * std::sin(yaw), d * std::sin(pitch), d * std::cos(pitch) * std::cos(yaw)};
     }
 
+    /// tan(fovy / 2) of the scene camera. The 45-degree field of view spans the SHORTER side of the scene area, so a tall
+    /// window shows the whole grid of instances instead of cropping it at the sides (aspect = width / height).
+    double tan_half_fovy(double aspect)
+    {
+        const double t = std::tan(static_cast<double>(dm::radians(45.0f)) * 0.5);
+        return aspect >= 1.0 ? t : t / aspect;
+    }
+
     dm::Mat4 TextureBuffer::view_proj(double aspect) const
     {
-        const dm::Mat4 proj = dm::perspective(dm::radians(45.0f), static_cast<float>(aspect), 0.5f, 60.0f);
+        const float fovy = aspect >= 1.0 ? dm::radians(45.0f) : static_cast<float>(2.0 * std::atan(tan_half_fovy(aspect)));
+        const dm::Mat4 proj = dm::perspective(fovy, static_cast<float>(aspect), 0.5f, 60.0f);
         const dm::Mat4 view = dm::look_at(eye_position(), {0, 0, 0}, {0, 1, 0});
         return proj * view;
     }
@@ -1345,7 +1359,7 @@ namespace
         const V3 forward = normalize(V3{0, 0, 0} - eye);
         const V3 right = normalize(cross(forward, V3{0, 1, 0}));
         const V3 up = cross(right, forward);
-        const double tan_half = std::tan(static_cast<double>(dm::radians(45.0f)) * 0.5);
+        const double tan_half = tan_half_fovy(aspect);
 
         const Rgba8 clear8 = {static_cast<std::uint8_t>(std::lround(kClear[0] * 255.0f)), static_cast<std::uint8_t>(std::lround(kClear[1] * 255.0f)),
                               static_cast<std::uint8_t>(std::lround(kClear[2] * 255.0f)), 255};
@@ -1356,8 +1370,10 @@ namespace
         std::vector<std::array<int, 3>> probes_of_instance(kInstances, {-1, -1, -1});  // x, y, face for one clean probe per instance
         std::vector<std::array<int, 2>> top_probe(kInstances, {-1, -1});               // x, y of one clean probe on the top face
         constexpr double kGrow = 0.01;  // world units: about 0.2 pixel at the default camera distance
-        for (int y = kStripHeight + 1; y < h; y += 3)
-            for (int x = 1; x < w; x += 3)
+        // A probe every third pixel; a scene too small to give kMinSceneProbes that way is probed at EVERY pixel instead.
+        const int step = (w / 3) * (scene_h / 3) >= kMinSceneProbes * 6 / 5 ? 3 : 1;
+        for (int y = kStripHeight + 1; y < h; y += step)
+            for (int x = 1; x < w; x += step)
             {
                 const double nx = (x + 0.5) / w * 2.0 - 1.0, ny = ((y - kStripHeight) + 0.5) / scene_h * 2.0 - 1.0;
                 const V3 dir = normalize(forward + right * (nx * tan_half * aspect) + up * (ny * tan_half));
@@ -1398,8 +1414,8 @@ namespace
         for (int c : hits) visible += c > 0 ? 1 : 0;
         std::cout << std::format("   [note] scene: {} probes compared, {} skipped near edges, {} background, worst channel difference {}, {} of {} instances visible, faces: {} top / {} bottom / {} side\n", compared, skipped,
                                  background, worst, visible, kInstances, faces[0], faces[1], faces[2]);
-        check.expect(bad == 0 && compared >= 3000 && visible >= kInstances / 2,
-                     std::format("instanced scene: {} pixel probes (every 3rd pixel, edges excluded) equal the ray-cast colour of the instance the per-instance buffer texels describe (+-1)", compared),
+        check.expect(bad == 0 && compared >= kMinSceneProbes && visible >= kInstances / 2,
+                     std::format("instanced scene: {} pixel probes ({}, edges excluded) equal the ray-cast colour of the instance the per-instance buffer texels describe (+-1)", compared, step == 3 ? "every 3rd pixel" : "every pixel"),
                      std::format("{} wrong of {} compared, {} instances visible; first: {}", bad, compared, visible, first));
 
         // Negative control: the same picture against a model whose instance colours are taken one texel too far

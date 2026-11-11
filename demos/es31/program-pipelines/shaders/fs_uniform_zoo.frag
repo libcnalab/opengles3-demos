@@ -10,7 +10,7 @@
 precision highp float;
 precision highp int;
 
-uniform int u_cell_px;   // cell size in pixels
+uniform ivec2 u_cell_px; // cell size in pixels (width, height): the grid fills the window
 uniform ivec2 u_origin;  // window position of the grid's lower-left corner
 
 uniform float u_f;      uniform vec2 u_v2;      uniform vec3 u_v3;      uniform vec4 u_v4;

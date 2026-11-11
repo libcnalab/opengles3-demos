@@ -17,7 +17,8 @@
 //     raise INVALID_OPERATION;
 //   - glGetProgramPipelineiv / glGetProgramPipelineInfoLog and the defined errors.
 //
-// Picture (256x256, 8 columns of 32-pixel cells, rows numbered from the bottom; see README.md):
+// Picture (an 8 x 8 grid of cells that fills the window: width / 8 by height / 8 pixels each, 32 x 32 at
+// 256x256; rows numbered from the bottom; see README.md):
 //   rows 0-2   scene cells 0-23: each is drawn by a pipeline in a different configuration; the CPU
 //              model predicts the four quadrants of every cell
 //   rows 3-7   the uniform zoo: 38 cells, green = the fragment shader sees exactly the value that a
@@ -46,6 +47,10 @@ namespace
     constexpr int kSceneRows = 3;
     constexpr int kSceneCells = kColumns * kSceneRows;
     constexpr int kZooTests = 38;
+    constexpr int kMinCellPx = 8;  // smallest cell side: the quadrant probes stay 2 pixels away from the split at 0.5
+
+    /// Cell size in pixels: the 8 x 8 grid fills the window (cells need not be square).
+    struct CellSize { int w, h; };
 
     // Uniform locations, fixed by layout(location = N) in the shaders. Every program has its own
     // uniform name space (GLSL ES 3.10 section 9), so "location 0" names a different variable in each.
@@ -139,6 +144,9 @@ namespace
         // ---------------------------------------------------------------------------------------------
         void init(demo::Env& env) override
         {
+            if (env.width < kColumns * kMinCellPx || env.height < kColumns * kMinCellPx)
+                throw demo::Skip(std::format("needs a window of at least {0} x {0} pixels (an 8 x 8 grid of cells of at least {1} x {1})",
+                                             kColumns * kMinCellPx, kMinCellPx));
             src_vs_normal_ = env.load_text("shaders/vs_pair_normal.vert");
             src_fs_vertical_ = env.load_text("shaders/fs_vertical.frag");
             src_fs_horizontal_ = env.load_text("shaders/fs_horizontal.frag");
@@ -202,7 +210,7 @@ namespace
         // ---------------------------------------------------------------------------------------------
         void render(demo::Env& env, int /*frame*/) override
         {
-            const int cs = cell_px(env);
+            const CellSize cs = cell_px(env);
             mgl::glUseProgram(mgl::ProgramId{0});  // a current program would hide every pipeline
             mgl::glDisable(mgl::Capability::ScissorTest);
             mgl::glViewport(0, 0, env.width, env.height);
@@ -340,7 +348,7 @@ namespace
             }
 
             // ===== Rows 3-7: the uniform zoo, set with glProgramUniform* only ==============================
-            upload_zoo(cs, kSceneRows * cs);
+            upload_zoo(cs, kSceneRows * cs.h);
             draw_zoo(env);
 
             mgl::glDisable(mgl::Capability::ScissorTest);
@@ -383,7 +391,7 @@ namespace
         enum PipeIndex { kP1, kP2, kP3, kP4, kP5, kP6, kPZ, kPipeCount };
 
         mgl::ProgramPipelineId pipe(PipeIndex i) const { return pipelines_[static_cast<std::size_t>(i)]; }
-        static int cell_px(const demo::Env& env) { return env.width / kColumns; }
+        static CellSize cell_px(const demo::Env& env) { return {env.width / kColumns, env.height / kColumns}; }
 
         static CellModel split(bool mirror, bool horizontal, Rgb tint, Rgb bg)
         {
@@ -463,10 +471,10 @@ namespace
         // Draws one full-cell triangle with whatever pipeline/program is current and records the expectation.
         void draw_cell(const demo::Env& env, int index, const CellModel& model)
         {
-            const int cs = cell_px(env);
-            const int x = (index % kColumns) * cs, y = (index / kColumns) * cs;
-            mgl::glViewport(x, y, cs, cs);
-            mgl::glScissor(x, y, cs, cs);
+            const CellSize cs = cell_px(env);
+            const int x = (index % kColumns) * cs.w, y = (index / kColumns) * cs.h;
+            mgl::glViewport(x, y, cs.w, cs.h);
+            mgl::glScissor(x, y, cs.w, cs.h);
             mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 3);
             cells_[static_cast<std::size_t>(index)] = model;
         }
@@ -475,24 +483,24 @@ namespace
         // The zoo pipeline: a vertex program without outputs + the zoo fragment program, drawn over rows 3-7.
         void draw_zoo(const demo::Env& env)
         {
-            const int cs = cell_px(env);
+            const CellSize cs = cell_px(env);
             const mgl::ProgramPipelineId pz = pipe(kPZ);
             mgl::glUseProgram(mgl::ProgramId{0});
             mgl::glBindProgramPipeline(pz);
             mgl::glUseProgramStages(pz, mgl::ShaderStageMask::Vertex, vs_none_);
             mgl::glUseProgramStages(pz, mgl::ShaderStageMask::Fragment, fs_zoo_);
             mgl::glEnable(mgl::Capability::ScissorTest);
-            mgl::glViewport(0, kSceneRows * cs, kColumns * cs, (kColumns - kSceneRows) * cs);
-            mgl::glScissor(0, kSceneRows * cs, kColumns * cs, (kColumns - kSceneRows) * cs);
+            mgl::glViewport(0, kSceneRows * cs.h, kColumns * cs.w, (kColumns - kSceneRows) * cs.h);
+            mgl::glScissor(0, kSceneRows * cs.h, kColumns * cs.w, (kColumns - kSceneRows) * cs.h);
             mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 3);
         }
 
         // Every glProgramUniform* entry point of ES 3.1: float/int/uint x 1-4 components, scalar and array
         // ("v") forms, and the nine matrix shapes. The zoo program is never current.
-        void upload_zoo(int cell, int origin_y)
+        void upload_zoo(CellSize cell, int origin_y)
         {
             const mgl::ProgramId z = fs_zoo_;
-            mgl::glProgramUniform1i(z, zoo_loc("u_cell_px"), cell);
+            mgl::glProgramUniform2i(z, zoo_loc("u_cell_px"), cell.w, cell.h);
             mgl::glProgramUniform2i(z, zoo_loc("u_origin"), 0, origin_y);
 
             mgl::glProgramUniform1f(z, zoo_loc("u_f"), 0.5f);
@@ -556,15 +564,15 @@ namespace
         // ================================ validate(): pixels =============================================
         bool cell_matches(const demo::Env& env, int index, const CellModel& model, std::string& detail) const
         {
-            const int cs = cell_px(env);
-            const int x = (index % kColumns) * cs, y = (index / kColumns) * cs;
+            const CellSize cs = cell_px(env);
+            const int x = (index % kColumns) * cs.w, y = (index / kColumns) * cs.h;
             // The four quadrant centers: away from the cell edges and from the split lines at 0.5.
             constexpr float kProbe[4][2] = {{0.25f, 0.25f}, {0.75f, 0.25f}, {0.25f, 0.75f}, {0.75f, 0.75f}};
             bool ok = true;
             for (const auto& p : kProbe)
             {
-                const int px = x + static_cast<int>(p[0] * static_cast<float>(cs));
-                const int py = y + static_cast<int>(p[1] * static_cast<float>(cs));
+                const int px = x + static_cast<int>(p[0] * static_cast<float>(cs.w));
+                const int py = y + static_cast<int>(p[1] * static_cast<float>(cs.h));
                 const demo::Rgba8 got = demo::read_pixel(px, py);
                 const demo::Rgba8 want = expected_color(model, p[0], p[1]);
                 bool same = true;
@@ -608,13 +616,13 @@ namespace
 
         void check_zoo(const demo::Env& env, demo::Check& check)
         {
-            const int cs = cell_px(env);
-            const int y0 = kSceneRows * cs;
+            const CellSize cs = cell_px(env);
+            const int y0 = kSceneRows * cs.h;
             int green = 0;
             std::string red;
             for (int i = 0; i < kZooTests; ++i)
             {
-                const demo::Rgba8 p = demo::read_pixel((i % kColumns) * cs + cs / 2, y0 + (i / kColumns) * cs + cs / 2);
+                const demo::Rgba8 p = demo::read_pixel((i % kColumns) * cs.w + cs.w / 2, y0 + (i / kColumns) * cs.h + cs.h / 2);
                 if (p == demo::Rgba8{0, 255, 0, 255}) ++green;
                 else red += std::format("{} ", i);
             }
@@ -638,7 +646,7 @@ namespace
                 {"u_m42", 'f', {1, 2, 3, 4, 5, 6, 7, 8}}, {"u_m34", 'f', {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}},
                 {"u_m43", 'f', {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}}, {"u_marr[1]", 'f', {5, 6, 7, 8}},
                 {"u_bv2", 'i', {1, 0}}, {"u_s.a", 'f', {0.75}}, {"u_s.b", 'i', {4, -4}}, {"u_sa[1].c", 'f', {9, 8, 7}},
-                {"u_part[2]", 'f', {42}}, {"u_part[3]", 'f', {3}}, {"u_cell_px", 'i', {static_cast<double>(cs)}},
+                {"u_part[2]", 'f', {42}}, {"u_part[3]", 'f', {3}}, {"u_cell_px", 'i', {static_cast<double>(cs.w), static_cast<double>(cs.h)}},
                 {"u_origin", 'i', {0, static_cast<double>(y0)}},
             };
             int ok = 0;
@@ -699,17 +707,17 @@ namespace
 
             // The same control for the zoo: store a wrong ivec3 with glProgramUniform3i, redraw, and exactly cell 10
             // (u_iv3, expected (3, -4, 5)) must turn red while its neighbour stays green.
-            const int cs = cell_px(env);
-            const int y0 = kSceneRows * cs;
+            const CellSize cs = cell_px(env);
+            const int y0 = kSceneRows * cs.h;
             mgl::glProgramUniform3i(fs_zoo_, zoo_loc("u_iv3"), 3, -4, 6);
             draw_zoo(env);
-            check.expect_pixel(10 % kColumns * cs + cs / 2, y0 + 10 / kColumns * cs + cs / 2, {255, 0, 0, 255}, 0,
+            check.expect_pixel(10 % kColumns * cs.w + cs.w / 2, y0 + 10 / kColumns * cs.h + cs.h / 2, {255, 0, 0, 255}, 0,
                                "negative control: glProgramUniform3i(u_iv3 = 3,-4,6) turns zoo cell 10 red");
-            check.expect_pixel(11 % kColumns * cs + cs / 2, y0 + 11 / kColumns * cs + cs / 2, {0, 255, 0, 255}, 0,
+            check.expect_pixel(11 % kColumns * cs.w + cs.w / 2, y0 + 11 / kColumns * cs.h + cs.h / 2, {0, 255, 0, 255}, 0,
                                "negative control: the neighbouring zoo cell 11 stays green");
             mgl::glProgramUniform3i(fs_zoo_, zoo_loc("u_iv3"), 3, -4, 5);
             draw_zoo(env);
-            check.expect_pixel(10 % kColumns * cs + cs / 2, y0 + 10 / kColumns * cs + cs / 2, {0, 255, 0, 255}, 0,
+            check.expect_pixel(10 % kColumns * cs.w + cs.w / 2, y0 + 10 / kColumns * cs.h + cs.h / 2, {0, 255, 0, 255}, 0,
                                "negative control: restoring u_iv3 turns zoo cell 10 green again");
             mgl::glDisable(mgl::Capability::ScissorTest);
             mgl::glBindProgramPipeline(mgl::ProgramPipelineId{0});
@@ -930,12 +938,12 @@ namespace
 
             // "If validation failed, such errors (INVALID_OPERATION from commands that transfer vertices) are
             // generated under the current state" (ES 3.2 section 11.1.3.11); if it succeeded, they are not.
-            const int cs = cell_px(env);
-            const int x = (cell % kColumns) * cs, y = (cell / kColumns) * cs;
+            const CellSize cs = cell_px(env);
+            const int x = (cell % kColumns) * cs.w, y = (cell / kColumns) * cs.h;
             mgl::glUseProgram(mgl::ProgramId{0});
             mgl::glEnable(mgl::Capability::ScissorTest);
-            mgl::glViewport(x, y, cs, cs);
-            mgl::glScissor(x, y, cs, cs);
+            mgl::glViewport(x, y, cs.w, cs.h);
+            mgl::glScissor(x, y, cs.w, cs.h);
             mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 3);
             if (expect_valid)
             {

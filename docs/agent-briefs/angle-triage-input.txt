@@ -1,0 +1,88 @@
+== es20-clear-viewport-scissor FAIL 1 check(s) failed
+   FAIL glViewport wider/taller than GL_MAX_VIEWPORT_DIMS is clamped to it (ES 3.0 §2.13.1) | stored 17384x17384, max 16384x16384
+== es20-framebuffer-objects FAIL 1 check(s) failed
+   FAIL a new renderbuffer has zero component sizes (initial state) | 
+== es20-shader-compilation FAIL 1 check(s) failed
+   FAIL VALIDATE_STATUS = FALSE: sampler2D and samplerCube both on unit 0 | actual=1 expected=0
+== es30-depth-textures FAIL 2 check(s) failed
+   FAIL DEPTH_COMPONENT24 / UNSIGNED_INT: Dref outside [0, 1] is clamped before the comparison (§3.8.15.1), 72 lookups | 8 mismatches; LESS Dref -0.5 vs Dt 0: got 1 expected 0
+   FAIL DEPTH24_STENCIL8 / UNSIGNED_INT_24_8: Dref outside [0, 1] is clamped before the comparison (§3.8.15.1), 40 lookups | 8 mismatches; LESS Dref -0.5 vs Dt 0: got 1 expected 0
+== es30-etc2-eac FAIL 10 check(s) failed
+   FAIL glCompressedTexSubImage2D RGB8_ETC2 2x2 at (4, 4) of the 6x6 texture -> no error | GL_INVALID_OPERATION
+   FAIL magnified picture: all 564 texels of the 31 cells (NEAREST) match the CPU decoder (exact codes exact, computed values within 1/255) | 4 wrong; first: cell 30 (RGB8_ETC2 (padded)), texel (4, 4) at pixel (30, 30): got (138, 138, 138, 255) want (163.0, 27.0, 0.0, 255)
+   FAIL R11_EAC 12x4: all 48 texels match the Appendix C decoder (the exact 11-bit value (never truncated below 11 bits, C.1.5 / C.1.7); largest deviation 0.9 | 18 texels wrong; first: layer 0 texel (3, 0): got (0.47462, 0.00000, 0.00000, 1.00000) want (0.47484, 0.00000, 0.00000, 1.00000)
+   FAIL SIGNED_R11_EAC 12x4: all 48 texels match the Appendix C decoder (the exact 11-bit value (never truncated below 11 bits, C.1.5 / C.1.7); largest deviat | 48 texels wrong; first: layer 0 texel (0, 0): got (0.45705, 0.00000, 0.00000, 1.00000) want (0.45357, 0.00000, 0.00000, 1.00000)
+   FAIL RG11_EAC 4x4: all 16 texels match the Appendix C decoder (the exact 11-bit value (never truncated below 11 bits, C.1.5 / C.1.7); largest deviation 0.9 | 12 texels wrong; first: layer 0 texel (2, 0): got (0.00000, 0.52930, 0.00000, 1.00000) want (0.00000, 0.52956, 0.00000, 1.00000)
+   FAIL SIGNED_RG11_EAC 4x4: all 16 texels match the Appendix C decoder (the exact 11-bit value (never truncated below 11 bits, C.1.5 / C.1.7); largest deviat | 16 texels wrong; first: layer 0 texel (0, 0): got (-0.34767, -0.13672, 0.00000, 1.00000) want (-0.35191, -0.14076, 0.00000, 1.00000)
+   FAIL RGB8_ETC2 (padded) 6x6: all 36 texels match the Appendix C decoder (exactly the 8-bit code / 255; largest deviation 138.000 units) | 4 texels wrong; first: layer 0 texel (4, 4): got (0.54118, 0.54118, 0.54118, 1.00000) want (0.63922, 0.10588, 0.00000, 1.00000)
+   FAIL C.1.7 example: signed R11 60 x 8 - 160 = 320 (of 1023) | actual=324 expected=320
+   FAIL C.1.7 example: multiplier 0: 480 - 10 = 470 | actual=474 expected=470
+   FAIL C.1.5 example: base 255 reaches exactly 1.0 with a positive modifier; modifier -3 gives 2020/2047 = 0.987 | 0.999527 / 2019
+== es30-flat-centroid FAIL 4 check(s) failed
+   FAIL single-sample FBO: SAMPLE_COVERAGE value 0 has no effect - every pixel is written | 1152 of 1152 pixels differ
+   FAIL single-sample FBO: SAMPLE_COVERAGE value 1 inverted has no effect - every pixel is written | 1152 of 1152 pixels differ
+   FAIL single-sample FBO: SAMPLE_ALPHA_TO_COVERAGE alpha 0 has no effect - every pixel is written | 1152 of 1152 pixels differ
+   FAIL single-sample FBO: SAMPLE_COVERAGE 0.5 has no effect - every pixel's stencil incremented exactly once | 
+== es30-framebuffer-blit-msaa FAIL 1 check(s) failed
+   FAIL ...and resolves exactly that rectangle | 5826 of 16384 pixels differ, first at (100,30): got (242,140,25,255) expected (0,0,0,255) (tolerance 0)
+== es30-framebuffer-invalidate FAIL 5 check(s) failed
+   FAIL all 16 cells of the window equal their CPU patterns after the end-of-frame invalidation of the default framebuffer's depth and stencil | 3 bad cells, cell 11: first at (0,0): got (36,72,91,255) expected (72,72,27,255)
+   FAIL nothing at DEPTH and STENCIL: DEPTH_STENCIL_ATTACHMENT has OBJECT_TYPE = NONE | value -12345 expected 0, glGetError() = GL_INVALID_OPERATION
+   FAIL framebuffer object: attachment GL_BACK (a default framebuffer name) -> INVALID_ENUM | glGetError() = GL_INVALID_OPERATION, expected GL_INVALID_ENUM
+   FAIL framebuffer object: COLOR_ATTACHMENT8 (= MAX_COLOR_ATTACHMENTS) -> INVALID_OPERATION | glGetError() = GL_INVALID_ENUM, expected GL_INVALID_OPERATION
+   FAIL all 16 cells of the window equal their CPU patterns after re-rendering every image (rendering after invalidation) | 3 bad cells, cell 11: first at (0,0): got (36,72,91,255) expected (72,72,27,255)
+== es30-integer-float-textures FAIL 2 check(s) failed
+   FAIL RGB9_E5 (FLOAT data): texture() returns all 64 texels as the exact 32-bit words (256 words compared) | first at texel (0,0): got (0x3e0b0000, 0x3de60000, 0x3dc00000, 0x3f800000) expected (0x3e0b0000, 0x3de50000, 0x3dc00000, 0x3f800000)
+   FAIL RGB9_E5 (FLOAT data): texelFetch() returns the same exact words | first at texel (0,0): got (0x3e0b0000, 0x3de60000, 0x3dc00000, 0x3f800000) expected (0x3e0b0000, 0x3de50000, 0x3dc00000, 0x3f800000)
+== es30-multiple-render-targets FAIL 2 check(s) failed
+   FAIL mapping {NONE, C1, NONE, C3}: attachments 0 and 2 keep their sentinel | 16384 pixels differ, first at (0,0) channel 0: got 1 expected 1016384 pixels differ, first at (0,0) channel 0: got 0 expected 11
+   FAIL mapping {NONE, C1, NONE, C3}: attachments 1 and 3 receive outputs 1 and 3 | 16384 pixels differ, first at (0,0) channel 0: got 50 expected 254.0039062516384 pixels differ, first at (0,0) channel 0: got -11 expected -1
+== es30-occlusion-queries FAIL 1 check(s) failed
+   FAIL an ANY_SAMPLES_PASSED query object can be reused with ANY_SAMPLES_PASSED_CONSERVATIVE | glBeginQuery -> GL_INVALID_OPERATION, CURRENT_QUERY = 0
+== es30-pixel-buffer-objects FAIL 1 check(s) failed
+   FAIL glReadPixels(RGBA_INTEGER, UNSIGNED_INT) into a pack buffer at byte offset 2 (not a multiple of 4) -> INVALID_OPERATION (4.3.2.4) | glGetError() = GL_NO_ERROR, expected GL_INVALID_OPERATION
+== es30-transform-feedback FAIL 3 check(s) failed
+   FAIL glResumeTransformFeedback while another program is current -> INVALID_OPERATION | glGetError() = GL_NO_ERROR, expected GL_INVALID_OPERATION
+   FAIL ... and the capture is still paused | 
+   FAIL with the original program current again, glResumeTransformFeedback succeeds | glGetError() = GL_INVALID_OPERATION
+== es31-atomics FAIL 1 check(s) failed
+   FAIL atomic counters declared without any layout qualifier compile and link: they are bound to binding 0 at consecutive offsets (GLSL ES 3.10 sections 4.4. | compile failed: ERROR: 0:3: 'atomic counter' : no binding specified
+ERROR: 0:4: 'atomic counter' : no binding specified
+
+== es31-framebuffer-no-attachments FAIL 2 check(s) failed
+   FAIL a framebuffer without attachments and FRAMEBUFFER_DEFAULT_SAMPLES = 4 reports SAMPLE_BUFFERS = 1 and SAMPLES >= 4 (ES 3.2 9.2.1) | SAMPLE_BUFFERS 0, SAMPLES 0
+   FAIL layout(early_fragment_tests) with a static write to gl_FragDepth fails to compile (GLSL ES 3.10 section 4.4.1) | the shader compiled
+== es31-indirect-draw FAIL 2 check(s) failed
+   FAIL D2 compute arrays, 3 visible: 301 covered + 1260 background pixels match the CPU model (max deviation 220/255, 487 edge pixels skipped) | 396 mismatches; first mismatch at region pixel (40,5): got (240,200,50,255) want (20,30,50,255)
+   FAIL D3 compute elements, 3 visible: 168 covered + 1534 background pixels match the CPU model (max deviation 220/255, 346 edge pixels skipped) | 198 mismatches; first mismatch at region pixel (6,7): got (20,30,50,255) want (230,60,60,255)
+== es31-multisample-textures FAIL 2 check(s) failed
+   FAIL glGenerateMipmap(TEXTURE_2D_MULTISAMPLE) -> INVALID_ENUM (section 8.14.4) | glGetError() = GL_NO_ERROR, expected GL_INVALID_ENUM
+   FAIL glGetTexLevelParameteriv(TEXTURE_2D_MULTISAMPLE, level 1) -> INVALID_VALUE (a multisample texture has no mipmaps) | glGetError() = GL_NO_ERROR, expected GL_INVALID_VALUE
+== es31-program-interface-query FAIL 1 check(s) failed
+   FAIL PROGRAM_OUTPUT: "o_id[1]" is not a list entry | actual=1 expected=4294967295
+== es31-program-pipelines FAIL 4 check(s) failed
+   FAIL mutation: replacing the offending vertex program with a matching one makes the same pipeline valid again | actual=0 expected=1
+   FAIL mutation: replacing the mediump fragment program makes it valid again | actual=0 expected=1
+   FAIL PROGRAM_SEPARABLE set AFTER the link has no effect until the next link: glUseProgramStages -> INVALID_OPERATION ("was linked without the PROGRAM_SEPAR | no error: the flag set after the link was honoured immediately
+   FAIL glUseProgramStages with the name of a shader object -> INVALID_OPERATION | glGetError() = GL_INVALID_VALUE, expected GL_INVALID_OPERATION
+== es31-separate-vertex-format FAIL 2 check(s) failed
+   FAIL glBindVertexBuffer with offset 2^33 + 8: VERTEX_BINDING_OFFSET is a 64-bit state value, GetInteger64i_v returns it exactly (Table 21.3) | returned 8
+   FAIL VERTEX_BINDING_OFFSET 2^33 + 8 queried with GetIntegeri_v is clamped to INT_MAX (section 2.2.2) | returned 8
+== es31-ssbo-std430 FAIL 2 check(s) failed
+   FAIL block Samples { uint, uint, float values[] }: length() of the runtime-sized array equals (bound size - offset of the array) / stride for the ranges wh | slot 3: length() = 8 exceeds floor 7; 
+   FAIL a block of 4294967299 bytes (MAX_SHADER_STORAGE_BLOCK_SIZE + 4) fails to link | it linked
+== es31-stencil-texturing-and-level-queries FAIL 2 check(s) failed
+   FAIL COMPRESSED_RGB8_ETC2 8 x 8, levels 0 and 1: WIDTH, HEIGHT, INTERNAL_FORMAT as specified, COMPRESSED = TRUE, color types UNSIGNED_NORMALIZED | level 0 component 0 type NONE; level 0 component 1 type NONE; level 0 component 2 type NONE; level 1 component 0 type NONE; level 1 component 1 type NONE; level 1 component 2 type NONE; 
+   FAIL TEXTURE_2D_MULTISAMPLE level 1 -> INVALID_VALUE (the maximum level is zero) | glGetError() = GL_NO_ERROR, expected GL_INVALID_VALUE
+== glsl-compile-tests FAIL 4 check(s) failed
+   FAIL glsl300/const-derivative-is-zero: compile-pass | GLSL ES 3.00 §4.3.3 "The built-in functions dFdx, dFdy, and fwidth must return 0 when evaluated inside an initializer with an argument that is a constant expression" | log: [const-derivative-is-zero.f
+   FAIL glsl300/double-underscore-identifier: compile-pass | GLSL ES 3.00 §3.8 "identifiers containing two consecutive underscores (__) are reserved ... Defining such a name in a shader does not itself result in an error"; §3.5 same for macro names | log: [doub
+   FAIL glsl300/invariant-after-use: compile-fail | GLSL ES 3.00 §4.6.1 "All uses of invariant must be at the global scope, and before any use of the variables being declared as invariant"
+   FAIL glsl300/invariant-forms: compile-pass | GLSL ES 3.00 §4.6.1 invariant on a previously declared output, on gl_Position, as part of a declaration, and with a comma-separated list | log: [invariant-forms.vert] ERROR: 0:8: ',' : syntax error | 
+== test-glsl-language FAIL 2 check(s) failed
+   FAIL [vertex] comments are one space; // comment continued by backslash-newline; token spliced by line continuation: builds | vertex shader: ERROR: 0:30: 'my__value' : identifiers containing two consecutive underscores (__) are reserved as possible future keywords
+ERROR: 0:32: 'my__value' : undeclared identifier
+ERROR: 0:32:
+   FAIL [fragment] comments are one space; // comment continued by backslash-newline; token spliced by line continuation: builds | fragment shader: ERROR: 0:30: 'my__value' : identifiers containing two consecutive underscores (__) are reserved as possible future keywords
+ERROR: 0:32: 'my__value' : undeclared identifier
+ERROR: 0:3

@@ -3,7 +3,7 @@
 
 Result directories: build/debug/test-results
 
-Source revision: 5aa8046 (with uncommitted changes)
+Source revision: b863697 (with uncommitted changes)
 
 Only results from the current executables count. A result is ignored when its executable was
 rebuilt after the run, or when the demo's sources, `common/` or the CMake glue are newer than the

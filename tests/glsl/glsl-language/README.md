@@ -89,20 +89,24 @@ positive controls that must link.
 
 ### Built-in constants (GLSL300.BUILTIN_CONSTANTS, GLSL310.BUILTIN_CONSTANTS)
 
-All 11 constants of GLSL ES 3.00 §7.3 are written by both languages and compared with the API
-limits: `MAX_VERTEX_ATTRIBS`, `MAX_VERTEX_UNIFORM_VECTORS`, `MAX_VERTEX_OUTPUT_COMPONENTS/4`,
-`MAX_FRAGMENT_INPUT_COMPONENTS/4`, `MAX_VERTEX_TEXTURE_IMAGE_UNITS`,
-`MAX_COMBINED_TEXTURE_IMAGE_UNITS`, `MAX_TEXTURE_IMAGE_UNITS`, `MAX_FRAGMENT_UNIFORM_VECTORS`,
-`MAX_DRAW_BUFFERS`, `MIN/MAX_PROGRAM_TEXEL_OFFSET`. On ES ≥ 3.1 the 20 new constants (24 values) of GLSL
-ES 3.10 §7.2 (image, compute incl. the `ivec3` work-group count/size via `glGetIntegeri_v`, and
-atomic-counter limits) are checked in a `#version 310 es` vertex and fragment shader. The values
-must also respect the minimums in those tables.
+GLSL ES 3.00 §7.3 and 3.10 §7.2 say only: "The actual values used are implementation dependent,
+but must be at least the value shown." The test therefore asserts:
 
-*Spec note.* §7.3 says only that the values are "implementation dependent, but must be at least
-the value shown". The equality with the API query is the evident meaning of the names, and
-GLSL ES 3.00 §1.5 states it explicitly for one of them ("The number of uniforms specified by
-gl_MaxVertexUniformVectors and returned by the corresponding API query is the same"). The test
-asserts equality for every constant. The minimums are asserted separately.
+- **Minimums, in both languages.** All 11 constants of GLSL ES 3.00 §7.3 are written by a vertex
+  shader (transform feedback) and a fragment shader (RGBA32UI) and must be at least the value in
+  the table (`gl_MinProgramTexelOffset` at most -8). On ES ≥ 3.1 the same is done in `#version 310 es`
+  shaders for the 20 new constants (24 values, counting the `ivec3` work-group count and size) of
+  GLSL ES 3.10 §7.2: image, compute and atomic-counter limits.
+- **Equality with the API only where the spec ties them.** GLSL ES 3.00 §1.5: "The number of
+  uniforms specified by gl_MaxVertexUniformVectors and returned by the corresponding API query is
+  the same for GLSL ES versions 1.00 and 3.00 when used as part of OpenGL ES 3.0." So
+  `gl_MaxVertexUniformVectors` must equal `MAX_VERTEX_UNIFORM_VECTORS` in the 3.00 vertex and
+  fragment shaders and in a `#version 100` vertex shader (captured as a float, which is exact for
+  these values). The 1.00 value must also be at least 128 (GLSL ES 1.00 §7.4).
+- **Everything else is only reported.** For every other constant the output says whether it equals
+  the API limit of the same name (for example `MAX_VERTEX_OUTPUT_COMPONENTS/4` for
+  `gl_MaxVertexOutputVectors`, or `glGetIntegeri_v(MAX_COMPUTE_WORK_GROUP_COUNT, i)`). Nothing is
+  asserted about it. On Mesa 25.0 every constant equals its API limit.
 
 ### gl_DepthRange (GLSL300.BUILTIN_UNIFORMS)
 

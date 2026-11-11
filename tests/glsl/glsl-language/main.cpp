@@ -11,7 +11,9 @@
 //      are evaluated in BOTH shader languages: in a vertex shader captured with transform feedback,
 //      and in a fragment shader writing four RGBA32UI colour attachments. Both paths deliver exact
 //      32-bit values (floats as bit patterns), compared with CPU references.
-//   4. gl_Max* built-in constants equal the API limits (GLSL ES 3.00 §7.3; 3.10 §7.2 on >= 3.1).
+//   4. gl_Max* built-in constants are at least the specified minimums (GLSL ES 3.00 §7.3; 3.10 §7.2 on
+//      >= 3.1); gl_MaxVertexUniformVectors equals the API limit in GLSL ES 1.00 and 3.00 (§1.5). Equality
+//      of the other constants with the API limits is printed, not asserted.
 //   5. gl_DepthRange equals the clamped glDepthRangef values (GLSL ES 3.00 §7.4).
 //   6. invariant / #pragma STDGL invariant(all): the same invariant output computed by two different
 //      programs is bit-identical (GLSL ES 3.00 §4.6.1); a constant expression evaluates identically in
@@ -1050,7 +1052,8 @@ namespace
                 int minimum;
                 bool at_most;  // gl_MinProgramTexelOffset: the limit is an upper bound
             };
-            // GLSL ES 3.00 §7.3 (names, minimums); the API value is the corresponding ES 3.0 state (Table 6.33-6.36).
+            // GLSL ES 3.00 §7.3 (names, minimums). The API value of the same name is only reported, except for
+            // gl_MaxVertexUniformVectors (§1.5).
             const std::vector<Constant> c300 = {
                 {"gl_MaxVertexAttribs", q(P::MaxVertexAttribs), 16, false},
                 {"gl_MaxVertexUniformVectors", q(P::MaxVertexUniformVectors), 256, false},
@@ -1065,6 +1068,7 @@ namespace
                 {"gl_MaxProgramTexelOffset", q(P::MaxProgramTexelOffset), 7, false},
             };
             run_constants(c300, "300 es", "GLSL ES 3.00 §7.3", check);
+            validate_vertex_uniform_vectors_100(check);
             if (!es31_)
             {
                 std::cout << "     note: context < ES 3.1 - the GLSL ES 3.10 §7.2 constants are skipped\n";
@@ -1110,23 +1114,61 @@ namespace
         template <typename Constant>
         void run_constants(const std::vector<Constant>& list, std::string_view version, std::string_view section, demo::Check& check)
         {
+            // §7.3 / 3.10 §7.2: "The actual values used are implementation dependent, but must be at least the
+            // value shown." Only the minimums are normative for every constant; the API limit is printed.
             Case c;
-            c.name = std::format("built-in constants equal the API limits ({}, {} constants)", section, list.size());
+            c.name = std::format("built-in constants ({}, {} constants)", section, list.size());
             for (std::size_t k = 0; k < list.size(); ++k)
-            {
                 c.body += std::format("r[{}].{} = ib({});\n", k / 4, "xyzw"[k % 4], list[k].glsl);
-                c.expected.push_back(I(list[k].api));
-            }
-            run_case(c, version, check);
-            // The values must also respect the minimums of the language specification (normative).
-            int bad = 0;
-            std::string first;
-            for (const auto& k : list)
+            for (const bool fragment : {false, true})
             {
-                const bool ok = k.at_most ? k.api <= k.minimum : k.api >= k.minimum;
-                if (!ok && bad++ == 0) first = std::format("{} = {} (limit {})", k.glsl, k.api, k.minimum);
+                const char* lang = fragment ? "fragment" : "vertex";
+                Slots got{};
+                if (!run_stage(c, version, fragment, got, check)) continue;
+                int bad = 0;
+                std::string first, equal, differ;
+                for (std::size_t k = 0; k < list.size(); ++k)
+                {
+                    const int v = static_cast<std::int32_t>(got[k]);
+                    const bool ok = list[k].at_most ? v <= list[k].minimum : v >= list[k].minimum;
+                    if (!ok && bad++ == 0) first = std::format("{} = {} (spec minimum {})", list[k].glsl, v, list[k].minimum);
+                    (v == list[k].api ? equal : differ) += std::format(" {}={}", list[k].glsl, v);
+                    if (v != list[k].api) differ += std::format("(API {})", list[k].api);
+                }
+                check.expect(bad == 0, std::format("[{}] {}: every constant is at least the specified minimum", lang, section), first);
+                std::cout << std::format("     note: [{}] {} constants equal to the API limit (not asserted):{}\n", lang, section,
+                                         equal.empty() ? " none" : equal);
+                if (!differ.empty())
+                    std::cout << std::format("     note: [{}] {} constants different from the API limit (not asserted):{}\n", lang, section, differ);
+                // GLSL ES 3.00 §1.5: "The number of uniforms specified by gl_MaxVertexUniformVectors and returned by the
+                // corresponding API query is the same for GLSL ES versions 1.00 and 3.00" - the one normative tie to the API.
+                for (std::size_t k = 0; k < list.size(); ++k)
+                    if (std::string_view(list[k].glsl) == "gl_MaxVertexUniformVectors")
+                        check.expect_eq(static_cast<std::int32_t>(got[k]), list[k].api,
+                                        std::format("[{}] gl_MaxVertexUniformVectors equals MAX_VERTEX_UNIFORM_VECTORS (GLSL ES 3.00 §1.5)", lang));
             }
-            check.expect(bad == 0, std::format("{} minimum values respected", section), first);
+        }
+
+        /// GLSL ES 3.00 §1.5: gl_MaxVertexUniformVectors is the same number in a GLSL ES 1.00 shader.
+        void validate_vertex_uniform_vectors_100(demo::Check& check)
+        {
+            static constexpr std::array<const GLchar*, 1> kOut = {"v_n"};
+            const Built b = build("#version 100\nvarying highp float v_n;\n"
+                                  "void main() { v_n = float(gl_MaxVertexUniformVectors); gl_Position = vec4(0.0, 0.0, 0.0, 1.0); }\n",
+                                  "#version 100\nprecision mediump float;\nvoid main() { gl_FragColor = vec4(0.0); }\n", kOut);
+            if (b.program.value == 0)
+            {
+                check.expect(false, "#version 100 program reading gl_MaxVertexUniformVectors builds", b.log);
+                return;
+            }
+            const auto v = capture(b.program, 1, 1, empty_vao_);
+            mgl::glDeleteProgram(b.program);
+            const float got = std::bit_cast<float>(v[0]);  // small integers are exact in float
+            const int api = demo::get_integer(mgl::GetParameter::MaxVertexUniformVectors);
+            check.expect(got == static_cast<float>(api),
+                         "#version 100 gl_MaxVertexUniformVectors equals MAX_VERTEX_UNIFORM_VECTORS and the 3.00 value (GLSL ES 3.00 §1.5)",
+                         std::format("GLSL ES 1.00 value {} API {}", got, api));
+            check.expect(got >= 128.0f, "#version 100 gl_MaxVertexUniformVectors is at least 128 (GLSL ES 1.00 §7.4)", std::format("{}", got));
         }
 
         // ---- 5. gl_DepthRange ------------------------------------------------------------------------
@@ -1251,7 +1293,7 @@ int main(int argc, char** argv)
         .min_es = {3, 0},
         .summary = "GLSL ES 1.00 shaders rendered on ES 3.x and compared with a CPU reference; version mixing; operators, "
                    "parameter passing, constant folding and scoping evaluated in the vertex and the fragment language; "
-                   "gl_Max* constants vs API limits; gl_DepthRange; invariance.",
+                   "gl_Max* constants vs the specified minimums; gl_DepthRange; invariance.",
         .source_dir = DEMO_SOURCE_DIR,
     };
     return demo::run<GlslLanguage>(argc, argv, info);

@@ -9,7 +9,7 @@
   ],
   "category": "tests",
   "order": 12,
-  "summary": "GLSL ES 1.00 shaders (attribute/varying/gl_FragColor/gl_FragData, a shader without #version, texture2D/texture2DProj/textureCube, texture2DLod/texture2DProjLod/textureCubeLod in the vertex shader, the fragment-only bias) rendered on an ES 3.x context and compared with a CPU reference; linking across language versions fails; operators, parameter passing (copy-in/copy-out, aliasing, evaluation order), constant folding and scoping evaluated in both the vertex language (transform feedback) and the fragment language (four RGBA32UI attachments) and compared bit-exactly or under the §4.5.1 precision rules; gl_Max* constants equal the API limits (3.00 §7.3, 3.10 §7.2 on ES >= 3.1); gl_DepthRange equals the clamped glDepthRangef values; invariant gl_Position and #pragma STDGL invariant(all) outputs are bit-identical across programs; a constant expression is bit-identical in both languages.",
+  "summary": "GLSL ES 1.00 shaders (attribute/varying/gl_FragColor/gl_FragData, a shader without #version, texture2D/texture2DProj/textureCube, texture2DLod/texture2DProjLod/textureCubeLod in the vertex shader, the fragment-only bias) rendered on an ES 3.x context and compared with a CPU reference; linking across language versions fails; operators, parameter passing (copy-in/copy-out, aliasing, evaluation order), constant folding and scoping evaluated in both the vertex language (transform feedback) and the fragment language (four RGBA32UI attachments) and compared bit-exactly or under the §4.5.1 precision rules; gl_Max* constants are at least the specified minimums in both languages (3.00 §7.3, 3.10 §7.2 on ES >= 3.1) and gl_MaxVertexUniformVectors equals MAX_VERTEX_UNIFORM_VECTORS in GLSL ES 1.00 and 3.00 (§1.5); equality of the other constants with the API limits is reported, not asserted; gl_DepthRange equals the clamped glDepthRangef values; invariant gl_Position and #pragma STDGL invariant(all) outputs are bit-identical across programs; a constant expression is bit-identical in both languages.",
   "spec": [
     "GLSL ES 1.00 §3.4 (#version), §4.3.3 Attribute, §4.3.5 Varying, §7.2 Fragment Shader Special Variables, §8.7 Texture Lookup Functions",
     "GLSL ES 3.00 §1.5 Compatibility, §3.1 Logical Phases of Compilation, §3.4 Version Declaration, §3.6 Comments, §3.8 Keywords",
@@ -17,8 +17,8 @@
     "GLSL ES 3.00 §4.6 Variance and the Invariant Qualifier (§4.6.1, §4.6.3)",
     "GLSL ES 3.00 §5.1 Operators, §5.7 Structure and Array Operations, §5.8 Assignments, §5.9 Expressions, §5.10 Vector and Matrix Operations",
     "GLSL ES 3.00 §6.1 Function Definitions, §6.1.1 Function Calling Conventions",
-    "GLSL ES 3.00 §7.3 Built-In Constants, §7.4 Built-In Uniform State",
-    "GLSL ES 3.10 §3.3 Version Declaration, §7.2 Built-In Constants",
+    "GLSL ES 3.00 §1.5 Compatibility (gl_MaxVertexUniformVectors), §7.3 Built-In Constants (minimums), §7.4 Built-In Uniform State",
+    "GLSL ES 3.10 §3.3 Version Declaration, §7.2 Built-In Constants (minimums); GLSL ES 1.00 §7.4 Built-In Constants",
     "ES 3.0 §2.12.3 Program Objects (link), §2.13.1 Controlling the Viewport (DepthRangef clamping), §2.15 Transform Feedback, §3.8.10 Texture Minification (lambda, bias, mipmap level), §4.2.1 Selecting Buffers for Writing, §4.3.1 Reading Pixels"
   ],
   "api": {
@@ -34,8 +34,8 @@
     "glReadPixels": "RGBA_INTEGER / UNSIGNED_INT readback of the fragment results; RGBA / UNSIGNED_BYTE probes of the GLSL ES 1.00 picture",
     "glDepthRangef": "values clamped to [0, 1] seen as gl_DepthRange.near/far/diff in both languages",
     "glGetFloatv": "DEPTH_RANGE equals the clamped glDepthRangef arguments",
-    "glGetIntegerv": "API limits compared with the gl_Max* built-in constants",
-    "glGetIntegeri_v": "MAX_COMPUTE_WORK_GROUP_COUNT/SIZE (indices 0..2) compared with gl_MaxComputeWorkGroupCount/Size (ES >= 3.1)"
+    "glGetIntegerv": "MAX_VERTEX_UNIFORM_VECTORS asserted equal to gl_MaxVertexUniformVectors (GLSL ES 3.00 §1.5, in 1.00 and 3.00 shaders); the other limits are only printed next to their gl_Max* constants",
+    "glGetIntegeri_v": "MAX_COMPUTE_WORK_GROUP_COUNT/SIZE (indices 0..2) printed next to gl_MaxComputeWorkGroupCount/Size (ES >= 3.1); not asserted"
   },
   "features": [
     "ES30.TF.BASIC",

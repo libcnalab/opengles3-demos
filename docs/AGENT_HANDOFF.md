@@ -55,14 +55,15 @@ cmake --build --preset debug --target coverage
 5. Stage 3–4 (textures, framebuffers, ES 3.0 data paths), then `glsl300-builtins` via transform feedback.
 6. `diagnostics-capabilities`.
 
-## In flight (2026-11-11 ~14:30)
+## In flight (2026-11-11 14:35)
 
-Claude subagents in `.claude/worktrees/agent-*` (branches `worktree-agent-*`), one per pair of demos:
-clear-viewport-scissor + primitive-topology; vertex-attributes + indexed-drawing; depth-test +
-stencil-test; mipmaps + cube-map; framebuffer-objects + copy-and-read-pixels; vertex-array-objects +
-instancing; multiple-render-targets + sampler-objects. Integration procedure: merge the branch, re-run
-`ctest -R <names>` on the full matrix (zink was added after the first batch branched), view the
-captures, fix or report issues, regenerate coverage, remove the worktree.
+Batch 1+2 (16 demos) merged; full suite 148/148 PASS, 197/358 entry points with evidence.
+Batch 3 (Claude subagents, worktrees `.claude/worktrees/agent-*`): backlog items 1,2,3,4,5,7,8,9,11,12,13,15
+(see `docs/agent-briefs/BACKLOG.md`). Integration procedure per branch: merge; `cmake --preset debug`;
+`ctest -R <names>`; view captures; check driver-deviation claims against the spec yourself (two of the
+agent claims so far were wrong: one accept-either check, one extension-dependent rule); record real
+deviations in KNOWN_LIMITATIONS.md via `Check::expect_or_known_deviation`; regenerate coverage; remove
+the worktree.
 
 ## Parallel work / Codex
 

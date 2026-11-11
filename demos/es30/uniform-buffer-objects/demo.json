@@ -1,0 +1,90 @@
+{
+  "name": "es30-uniform-buffer-objects",
+  "title": "Uniform buffer objects",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es30",
+  "order": 370,
+  "summary": "Uniform blocks: std140 offsets/strides of scalars, vec3 packing, arrays, matrices, row_major, structs and arrays of structs compared with a CPU layout calculator and with glGetActiveUniformsiv, data packed by that calculator and verified by the shader (green/red cells), a deliberate layout mistake, a packed block laid out from queried offsets, block introspection, glUniformBlockBinding, glBindBufferBase/Range with the offset alignment, one buffer shared by two programs, updates between draws, an array of blocks, limits and errors.",
+  "spec": [
+    "ES 3.0 §2.12.6 Uniform Variables (§2.12.6.2 Uniform Blocks, §2.12.6.3 Uniform Buffer Object Storage, §2.12.6.4 Standard Uniform Block Layout, §2.12.6.5 Uniform Buffer Object Bindings)",
+    "ES 3.0 §2.12.3 Program Objects (names of active uniforms and blocks)",
+    "ES 3.0 §2.10.1.1 Binding Buffer Objects to Indexed Targets",
+    "ES 3.0 §6.1.1 Simple Queries (indexed state), §6.1.9 Buffer Object Queries, Tables 6.21, 6.25, 6.31-6.33",
+    "GLSL ES 3.00 §4.3.7 Interface Blocks, §4.3.8.3 Uniform Block Layout Qualifiers"
+  ],
+  "api": {
+    "glGetUniformBlockIndex": "block names resolve to indices (also \"Tint[0]\"/\"Tint[1]\"); the instance name and an unknown name give INVALID_INDEX without an error",
+    "glGetActiveUniformBlockiv": "UNIFORM_BLOCK_DATA_SIZE equals the CPU std140 size (736, 48, 64), BINDING (0 after link, set value after glUniformBlockBinding), ACTIVE_UNIFORMS, ACTIVE_UNIFORM_INDICES equals the indices of the 30 member names, REFERENCED_BY_VERTEX/FRAGMENT_SHADER per program, NAME_LENGTH; invalid index -> INVALID_VALUE and nothing written",
+    "glGetActiveUniformBlockName": "block name (not the instance name), length, truncation with bufSize 4, \"Tint[0]\"; invalid index -> INVALID_VALUE and nothing written",
+    "glGetUniformIndices": "30 member names of Probe (arrays as name[0], struct-array elements separately), \"Tint.color\"; an unknown name gives INVALID_INDEX",
+    "glGetActiveUniformsiv": "UNIFORM_TYPE, SIZE, BLOCK_INDEX, OFFSET, ARRAY_STRIDE, MATRIX_STRIDE, IS_ROW_MAJOR of 30 members equal the CPU std140 calculator; packed block queried and used for packing; index >= ACTIVE_UNIFORMS -> INVALID_VALUE",
+    "glUniformBlockBinding": "moves blocks to binding points 3, 4, 6, 8-13; read back with UNIFORM_BLOCK_BINDING and observed through the data the draws use; inactive block / binding >= MAX -> INVALID_VALUE",
+    "glBindBufferBase": "whole-buffer binding: draws read the buffer start; UNIFORM_BUFFER_START/SIZE read 0 afterwards; index >= MAX_UNIFORM_BUFFER_BINDINGS -> INVALID_VALUE",
+    "glBindBufferRange": "four aligned slots of one buffer drawn; START/SIZE read back; misaligned offset, size 0, index >= MAX -> INVALID_VALUE and the binding is unchanged; a negative offset is checked (XFAIL on Mesa)",
+    "glGetIntegeri_v": "UNIFORM_BUFFER_BINDING / START / SIZE of the bound points; index >= MAX_UNIFORM_BUFFER_BINDINGS -> INVALID_VALUE",
+    "glGetInteger64i_v": "UNIFORM_BUFFER_START / SIZE of the bound points; out-of-range index -> INVALID_VALUE",
+    "glGetInteger64v": "MAX_UNIFORM_BLOCK_SIZE >= 16384, MAX_COMBINED_*_UNIFORM_COMPONENTS >= the footnote formula",
+    "glGetIntegerv": "MAX_*_UNIFORM_BLOCKS, MAX_COMBINED_UNIFORM_BLOCKS, MAX_UNIFORM_BUFFER_BINDINGS, UNIFORM_BUFFER_OFFSET_ALIGNMENT",
+    "glGetProgramiv": "ACTIVE_UNIFORM_BLOCKS (3, 2), ACTIVE_UNIFORM_BLOCK_MAX_NAME_LENGTH, ACTIVE_UNIFORMS; link status of the limit programs",
+    "glLinkProgram": "a fragment shader with MAX_FRAGMENT_UNIFORM_BLOCKS blocks links, one with MAX+1 fails",
+    "glGetUniformLocation": "block members have no location (-1); u_cell / u_height located",
+    "glUniform1i": "u_cell, u_height: the verification grid cells land where the shader and the probes expect them",
+    "glGenBuffers": "twelve uniform buffers",
+    "glBindBuffer": "UNIFORM_BUFFER general binding for updates",
+    "glBufferData": "initial block data (observed through the shader's green cells and the scene pixels)",
+    "glBufferSubData": "updates between draws change the next draw (palette and ring slots); a corrupted member turns its cell red",
+    "glMapBufferRange": "partial update of a bound uniform buffer (offset, gain, pick) changes the next draw",
+    "glUnmapBuffer": "returns TRUE",
+    "glDeleteBuffers": "cleanup",
+    "glUseProgram": "four programs: verification, palette (both stages), palette inverse (fragment only), block array",
+    "glDeleteProgram": "cleanup",
+    "glDrawArrays": "TRIANGLES (fullscreen triangle) and TRIANGLE_STRIP (4-vertex squares); every cell probed",
+    "glViewport": "verification band and per-cell scene viewports",
+    "glScissor": "restricts the two wrong-layout panels to their own cells; per-cell clears",
+    "glEnable": "SCISSOR_TEST",
+    "glDisable": "DITHER for exact colors; SCISSOR_TEST",
+    "glClearColor": "background pixels equal the clear colors",
+    "glClear": "COLOR_BUFFER_BIT, also per cell through the scissor",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE readback of every probed pixel",
+    "glCopyBufferSubData": "C5: a slot of the ring buffer is copied over the whole palette block; the next draw shows the slot's data"
+  },
+  "features": [
+    "ES30.UBO.BASIC",
+    "ES30.UBO.RANGE",
+    "ES30.UBO.STD140",
+    "ES30.UBO.ROW_MAJOR",
+    "ES30.UBO.INTROSPECTION",
+    "ES30.UBO.SHARED",
+    "ES30.UBO.LIMITS",
+    "ES20.BUFFER.SUBDATA",
+    "ES20.ERRORS.INVALID_VALUE"
+  ],
+  "glsl_features": [
+    "GLSL300.INTERFACE_BLOCK",
+    "GLSL300.LAYOUT.BLOCK",
+    "GLSL300.TYPES.SCALAR_VECTOR",
+    "GLSL300.TYPES.MATRIX",
+    "GLSL300.TYPES.STRUCT",
+    "GLSL300.TYPES.ARRAY",
+    "GLSL300.CONTROL_FLOW",
+    "GLSL300.BUILTIN_VARS.VS",
+    "GLSL300.BUILTIN_VARS.FS",
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.FRAG.OUTPUT"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "gl-error",
+    "negative",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5",
+    "notes": "Viewed gpu es-max and zink es-max captures (256x256, identical): top 64 px verification grid - rows 0 and 1 are all green (30 Probe cells, last two cells of row 1 dark); row 2 has five green cells, a dark gap, three green and two magenta (C-struct packing); row 3 has one green and four magenta (padded vec3), a dark gap and six green (packed block). Below, three rows of 32-px scene cells: small colored squares at different offsets (red, magenta, green, orange, dark blue, lime, teal, purple, yellow, pink), big inverse-colored squares for program 2 (pink, blue, beige with a small dark-blue square on top, purple), and two split cells (orange|blue, green|yellow) for the block array. Lower ~100 px intentionally empty (dark)."
+  }
+}

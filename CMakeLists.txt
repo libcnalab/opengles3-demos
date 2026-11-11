@@ -21,10 +21,14 @@ option(OGLES3_USE_INSTALLED_METAGL "Use find_package(meta-gl) instead of a sourc
 
 # Test matrix. Each demo is executed headlessly once per driver and per version mode:
 #   gpu      - the default EGL driver of the machine (hardware when available)
-#   llvmpipe - Mesa software rasterizer (LIBGL_ALWAYS_SOFTWARE=1)
+#   llvmpipe - Mesa LLVM software rasterizer (ES 3.2)
+#   softpipe - Mesa reference software rasterizer; natively ES 3.1 / GLSL ES 3.10, so ES 3.2 demos
+#              must report SKIP_UNSUPPORTED and 3.20 shaders must be rejected
+#   zink     - Mesa GL-on-Vulkan (on lavapipe): an independent backend translating to SPIR-V
 #   es-max   - the highest ES version the driver offers
-#   es-min   - the demo's declared minimum version, forced with MESA_GLES_VERSION_OVERRIDE
-set(OGLES3_TEST_DRIVERS "gpu;llvmpipe" CACHE STRING "Driver variants for CTest runs (gpu;llvmpipe)")
+#   es-min   - the demo's minimum version via MESA_GLES_VERSION_OVERRIDE (API version only, see
+#              docs/VALIDATION.md)
+set(OGLES3_TEST_DRIVERS "gpu;llvmpipe;softpipe;zink" CACHE STRING "Driver variants for CTest runs (gpu;llvmpipe;softpipe;zink)")
 option(OGLES3_TEST_MIN_VERSION "Also run every demo on a context limited to its minimum ES version (Mesa only)" ON)
 
 # --- meta-gl -------------------------------------------------------------------------------

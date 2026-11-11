@@ -13,9 +13,11 @@ depth/stencil/MSAA, so demos are written exactly as for a window, and default-fr
 go through meta-gl. EGL's `eglGetProcAddress` (EGL_KHR_get_all_proc_addresses) or
 `SDL_GL_GetProcAddress` supplies core entry points.
 
-**Minimum-version runs via `MESA_GLES_VERSION_OVERRIDE`.** Mesa always creates its highest ES
-version, so requesting 3.0 proves nothing. The override exposes a context whose reported version,
-GLSL version, and entry-point set match the requested version.
+**Minimum-version runs via `MESA_GLES_VERSION_OVERRIDE` + a native ES 3.1 driver.** Mesa always
+creates its highest ES version, so requesting 3.0 proves nothing. The override lowers the reported
+API/GLSL version but (as measured on 2026-11-11) not the compiler's accepted `#version`s. Therefore
+softpipe, which natively implements ES 3.1, is part of the matrix to provide genuine version-rejection
+evidence. Amended the same day after the shader tests exposed the override's limits.
 
 **Shaders are files loaded at runtime from the demo source directory** (`Info::source_dir`), so
 readers can edit and rerun without rebuilding. Shaders for negative tests live in `shader-tests/`.

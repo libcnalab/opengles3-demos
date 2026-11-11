@@ -5,11 +5,22 @@
 - Reference machine: AMD Radeon 780M (radeonsi) and llvmpipe, Mesa 25.0.7, Linux 6.12, EGL 1.5.
   No non-Mesa OpenGL ES driver (ANGLE, Mali, Adreno, PowerVR, NVIDIA ES) has been tested.
   Results therefore say little about vendor-specific behavior.
-- Minimum-version runs use `MESA_GLES_VERSION_OVERRIDE`; on non-Mesa drivers only `es-max`
-  runs are meaningful (set `-DOGLES3_TEST_MIN_VERSION=OFF`).
+- Minimum-version runs use `MESA_GLES_VERSION_OVERRIDE`, which lowers only the reported API version.
+  No native ES 3.0-only driver is available, so "3.10 shaders are rejected by ES 3.0" is not
+  verified anywhere. softpipe (native ES 3.1) verifies the 3.1-vs-3.2 boundary. On non-Mesa drivers
+  set `-DOGLES3_TEST_MIN_VERSION=OFF` and `OGLES3_TEST_DRIVERS=gpu`.
 - Windowed mode (SDL3) is tested under Xvfb; headless EGL pbuffers are the primary test path.
 - Program binaries: `NUM_PROGRAM_BINARY_FORMATS` may be 0 on some drivers; such checks report
   the implementation's choice rather than failing.
+
+## Driver deviations observed (Mesa 25.0.7, all Gallium drivers)
+
+| Case | Rule | Observed |
+|---|---|---|
+| `shader-tests/glsl300/version-not-first-line.frag` | GLSL ES 3.00/3.10/3.20 §3.4: `#version` must be on the first line | a comment line before `#version` is accepted |
+| `shader-tests/glsl300/integer-output-not-flat.vert` | GLSL ES 3.00 §4.3.6 (3.10 §4.3.6): integer vertex outputs must be `flat` | accepted; only integer *fragment inputs* are enforced |
+
+These are reported as XFAIL on drivers whose `GL_VERSION` contains "Mesa".
 
 ## Scope
 

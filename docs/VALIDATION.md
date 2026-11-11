@@ -34,18 +34,36 @@ CTest maps 77 to "skipped" (`SKIP_RETURN_CODE`); the precise outcome is in the J
 
 Every executable is registered as `<name>:<driver>:<mode>`:
 
-| driver | environment |
-|---|---|
-| `gpu` | default EGL vendor (radeonsi on the reference machine) |
-| `llvmpipe` | `LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe` |
+| driver | environment | what it adds |
+|---|---|---|
+| `gpu` | default EGL vendor (radeonsi on the reference machine) | real hardware path |
+| `llvmpipe` | `LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe` | deterministic software ES 3.2 |
+| `softpipe` | `... GALLIUM_DRIVER=softpipe` | a **native ES 3.1 / GLSL ES 3.10** implementation: ES 3.2 demos must report `SKIP_UNSUPPORTED`, 3.20 shaders must be rejected |
+| `zink` | `... GALLIUM_DRIVER=zink` (on lavapipe) | GL-on-Vulkan: a different backend (NIR→SPIR-V), so agreement is less correlated |
 
 | mode | environment |
 |---|---|
 | `es-max` | the driver's highest ES version |
-| `es-min` | `MESA_GLES_VERSION_OVERRIDE=<min_es>` — a context that genuinely reports the minimum version and GLSL version; catches hidden reliance on newer features (skipped for `min_es` 3.2) |
+| `es-min` | `MESA_GLES_VERSION_OVERRIDE=<min_es>` (skipped for `min_es` 3.2) |
+
+**What `es-min` proves, and what it does not.** The override changes `GL_VERSION`,
+`GL_MAJOR/MINOR_VERSION` and `GL_SHADING_LANGUAGE_VERSION`. So it exercises meta-gl's version
+detection, the runtime's version gating, and demo code that branches on the version. It does
+**not** emulate a real lower-version implementation. On radeonsi and llvmpipe the GLSL compiler
+still accepts `#version 310 es`/`320 es` under an ES 3.0 override, and entry points stay loadable.
+Version-rejection assertions (e.g. "a 3.20 shader fails on an ES 3.1 context") are therefore made
+only on **native** lower-version drivers (softpipe = ES 3.1). Under the override they are printed
+as notes. There is currently no native ES 3.0-only driver in the matrix (KNOWN_LIMITATIONS.md).
 
 All runs use `EGL_PLATFORM=surfaceless`, a fixed 256×256 surface, fixed `--seed 1`, and
 deterministic animation time (`frame / 60 s`).
+
+## Known driver deviations (XFAIL)
+
+When a driver demonstrably violates a normative rule, the test keeps the strict expectation and
+names the driver (`// @xfail: Mesa | reason` in shader cases). On a matching driver the result is
+reported as XFAIL with the spec citation. Everywhere else the strict check applies. Each deviation
+is listed in `docs/KNOWN_LIMITATIONS.md`. Checks are never loosened to make a driver pass.
 
 ## Pixel comparison policy
 
@@ -64,7 +82,7 @@ See `tools/coverage/generate_coverage.py` (single source of truth):
 `NOT_STARTED`, `IMPLEMENTED_UNVERIFIED`, `BUILD_PASSED`, `FAILED`, `BLOCKED_BY_PLATFORM`,
 `BLOCKED_BY_META_GL`, `UNSUPPORTED_BY_CONTEXT`, `RUNTIME_PASSED` (≥1 validated PASS),
 `VISUALLY_VERIFIED` (+ the capture was actually inspected and recorded in `demo.json`),
-`FULLY_VALIDATED` (validated PASS on every matrix run: gpu+llvmpipe, es-min+es-max).
+`FULLY_VALIDATED` (every matrix run is a validated PASS or a justified SKIP_UNSUPPORTED; gpu and llvmpipe pass in es-min and es-max).
 
 A function's status is the best status among the executables whose `demo.json` `api` map
 claims it **with a description of how it is verified**. Use of a function without
@@ -76,5 +94,5 @@ verification of its effect must not be listed in `api`.
   front end and much of the state tracker; agreement between them is weaker evidence than
   agreement between independent vendors.
 - CPU sanitizers (`sanitize` preset) check our C++ only, not GPU memory safety.
-- `es-min` relies on Mesa's version override, which hides entry points and GLSL features of
-  newer versions but is not a separate driver implementation.
+- `es-min` relies on Mesa's version override, which changes only the reported API version (see above).
+- All four drivers are Mesa: they share the GLSL front end (which is why the two XFAILs appear on all of them).

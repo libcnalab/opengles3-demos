@@ -26,8 +26,9 @@ Status rules (see docs/VALIDATION.md):
   UNSUPPORTED_BY_CONTEXT every run reported SKIP_UNSUPPORTED
   RUNTIME_PASSED         >=1 validated PASS
   VISUALLY_VERIFIED      RUNTIME_PASSED + manifest records a human/agent review of the capture
-  FULLY_VALIDATED        validated PASS on every registered matrix run (all drivers, es-min and es-max),
-                         and the manifest declares at least one non-trivial validation method
+  FULLY_VALIDATED        every registered matrix run is a validated PASS or a SKIP_UNSUPPORTED, gpu and
+                         llvmpipe pass in every version mode, and the manifest declares at least one
+                         non-trivial validation method
 """
 import argparse
 import csv
@@ -56,6 +57,17 @@ def load_manifests(repo):
             with open(path) as f:
                 m = json.load(f)
             m["_dir"] = os.path.relpath(os.path.dirname(path), repo)
+            # Data-driven test executables: feature IDs come from "// @feature:" annotations.
+            for case_dir in m.get("case_dirs", []):
+                for case in sorted(glob.glob(os.path.join(os.path.dirname(path), case_dir, "*"))):
+                    with open(case, errors="replace") as cf:
+                        for line in cf:
+                            mt = re.match(r"\s*//\s*@feature:\s*(\S+)", line)
+                            if not mt:
+                                continue
+                            key = "glsl_features" if mt.group(1).startswith("GLSL") else "features"
+                            if mt.group(1) not in m.setdefault(key, []):
+                                m[key].append(mt.group(1))
             manifests.append(m)
     return manifests
 
@@ -95,7 +107,12 @@ def demo_status(m, results, bin_dirs):
     drivers = {i.split(":")[1] for i in ids if i.count(":") == 2}
     modes = {i.split(":")[2] for i in ids if i.count(":") == 2}
     expected_modes = {"es-max"} if m.get("min_es") == "3.2" else {"es-max", "es-min"}
-    full = (len(passed) == len(runs) and methods and {"gpu", "llvmpipe"} <= drivers and expected_modes <= modes)
+    # Every run is a validated PASS or a SKIP_UNSUPPORTED (context below min_es, e.g. softpipe for
+    # ES 3.2 demos); gpu and llvmpipe must both pass in every version mode.
+    ok_runs = all((r["outcome"] == "PASS" and r.get("validated")) or r["outcome"] == "SKIP_UNSUPPORTED" for r in runs)
+    pass_ids = {r.get("test_id", "") for r in passed}
+    need = {f"{m['name']}:{d}:{md}" for d in ("gpu", "llvmpipe") for md in expected_modes}
+    full = ok_runs and bool(methods) and need <= pass_ids
     if full:
         return "FULLY_VALIDATED", runs
     if m.get("visual_review"):

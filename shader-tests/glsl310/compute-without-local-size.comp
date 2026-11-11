@@ -1,0 +1,6 @@
+#version 310 es
+// @expect: build-fail
+// @spec: GLSL ES 3.10 §4.4.1.1 - a compute shader must declare its local size
+// @feature: GLSL310.COMPUTE.LAYOUT
+layout(std430, binding = 0) buffer Data { uint values[]; };
+void main() { values[gl_GlobalInvocationID.x] = 1u; }

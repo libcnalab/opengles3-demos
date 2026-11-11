@@ -63,7 +63,8 @@ docs/              coverage, validation, gaps, handoff (docs/generated/ is gener
 2. `validate()` must check observable results: pixels against a CPU reference, buffer/texture
    readback, state queries, or expected GL errors. Calling a function is not coverage.
 3. Build and run: `cmake --build --preset debug && ctest --preset debug -R <name>`.
-   All matrix runs (gpu/llvmpipe × es-max/es-min) must PASS (or SKIP for a documented reason).
+   All matrix runs (gpu/llvmpipe/softpipe/zink × es-max/es-min) must PASS, or SKIP_UNSUPPORTED
+   where the driver is below `min_es` (softpipe is natively ES 3.1).
 4. Look at the capture (`build/debug/test-results/<test>.png`). Only after actually viewing it
    add `"visual_review": {"date": "YYYY-MM-DD", "by": "<agent>", "notes": "..."}` to demo.json.
 5. `cmake --build --preset debug --target coverage` and commit the regenerated docs.

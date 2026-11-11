@@ -1,1 +1,2 @@
-# GLSL ES compile/link test runner is added in a later step.
+# Data-driven GLSL ES compile/link tests (one executable, many cases; see main.cpp).
+ogles_add_demo()

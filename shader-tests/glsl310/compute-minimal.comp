@@ -1,0 +1,10 @@
+#version 310 es
+// @expect: link-pass
+// @spec: GLSL ES 3.10 §4.4.1.1 Compute Shader Inputs (local_size), §4.3.7 buffer blocks, §7.1.3 compute built-ins
+// @feature: GLSL310.VERSION
+// @feature: GLSL310.COMPUTE.LAYOUT
+// @feature: GLSL310.COMPUTE.BUILTINS
+// @feature: GLSL310.SSBO
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) buffer Data { uint values[]; };
+void main() { values[gl_GlobalInvocationID.x] = gl_LocalInvocationIndex + gl_WorkGroupID.x * gl_WorkGroupSize.x; }

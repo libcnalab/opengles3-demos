@@ -14,7 +14,11 @@ _Keep this file current. It is the first thing any agent reads._
 - Phase 1: CMake + presets, meta-gl via `add_subdirectory`, `common/` runtime (EGL pbuffer +
   SDL3 window, CLI, checks, PNG capture), CTest matrix (gpu/llvmpipe × es-max/es-min), result
   JSON, coverage generator, docs.
-- Demos: `es30-hello-triangle` (FULLY_VALIDATED: 4/4 matrix runs, capture viewed).
+- Demos: `es30-hello-triangle`, `es20-shader-compilation` (FULLY_VALIDATED, captures viewed).
+- `shader-tests/` (`glsl-compile-tests`): 37 data-driven GLSL ES 1.00-3.20 compile/link cases with
+  `@expect/@min-es/@spec/@feature/@xfail` annotations; two Mesa deviations recorded as XFAIL.
+- Test matrix extended to 4 drivers (gpu, llvmpipe, softpipe = native ES 3.1, zink). Finding: the
+  `MESA_GLES_VERSION_OVERRIDE` es-min runs lower only the API version; docs corrected accordingly.
 
 ## Environment (reference machine)
 
@@ -33,13 +37,15 @@ cmake --build --preset debug --target coverage
 
 ## Next tasks (in order)
 
-1. `shader-tests/` runner (positive + negative GLSL compile/link cases, separate processes).
-2. Stage 1–2 demos from `docs/DEMO_CATALOG.md` (es20-clear-viewport-scissor,
+1. Merge the parallel foundation-demo branches (clear/scissor, topology, vertex attributes, indexed
+   drawing, depth, stencil, blending, culling) after review + full 4-driver matrix.
+2. More shader-test cases (3.10 image/atomic/memory-qualifier rules, 3.20 geometry/tess negatives).
+3. Stage 1–2 demos from `docs/DEMO_CATALOG.md` (es20-clear-viewport-scissor,
    es20-shader-compilation, es20-vertex-attributes, es20-indexed-drawing, es20-primitive-topology,
    es20-uniforms, es20-culling-front-face, es20-depth-test, es20-stencil-test, es20-blending).
-3. `tests/negative/` death tests for meta-gl contract violations (`std::terminate`).
-4. Stage 3–4 (textures, framebuffers, ES 3.0 data paths), then `glsl300-builtins` via transform feedback.
-5. `diagnostics-capabilities`.
+4. `tests/negative/` death tests for meta-gl contract violations (`std::terminate`).
+5. Stage 3–4 (textures, framebuffers, ES 3.0 data paths), then `glsl300-builtins` via transform feedback.
+6. `diagnostics-capabilities`.
 
 ## Parallel work / Codex
 

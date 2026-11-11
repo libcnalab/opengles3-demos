@@ -1,6 +1,6 @@
 #version 310 es
 // @expect: link-pass
-// @spec: GLSL ES 3.10 §4.4.7, §4.9 Memory Access Qualifiers, §8.14 Image Functions
+// @spec: GLSL ES 3.10 §4.4.7, §4.9 Memory Access Qualifiers, §8.12 Image Functions
 // @feature: GLSL310.IMAGES
 // @feature: GLSL310.FN.IMAGE
 // @feature: GLSL310.MEMORY_QUALIFIERS

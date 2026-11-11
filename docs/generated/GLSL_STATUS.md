@@ -59,14 +59,14 @@
 | GLSL300.FN.DERIVATIVES | 300 | builtins | dFdx dFdy fwidth | GLSL ES 3.00 §8.9 | render | NOT_STARTED |  |
 | GLSL300.UNDEFINED_BEHAVIOR | 300 | semantics | Documented undefined / implementation-dependent results (division by zero, out-of-range shifts, NaN propagation) | GLSL ES 3.00 §4.5 §5.9 | doc | NOT_STARTED |  |
 | GLSL310.VERSION | 310 | structure | #version 310 es; rejected on ES 3.0 contexts | GLSL ES 3.10 §3.4 | compile+negative | NOT_STARTED |  |
-| GLSL310.COMPUTE.LAYOUT | 310 | compute | layout(local_size_x/y/z) in; gl_WorkGroupSize | GLSL ES 3.10 §4.4.1.1 | compute-check | NOT_STARTED |  |
-| GLSL310.COMPUTE.BUILTINS | 310 | compute | gl_NumWorkGroups gl_WorkGroupID gl_LocalInvocationID gl_GlobalInvocationID gl_LocalInvocationIndex | GLSL ES 3.10 §7.1.3 | compute-check | NOT_STARTED |  |
-| GLSL310.SHARED | 310 | compute | shared variables | GLSL ES 3.10 §4.3.8 | compute-check | NOT_STARTED |  |
-| GLSL310.BARRIERS | 310 | compute | barrier memoryBarrier memoryBarrierAtomicCounter memoryBarrierBuffer memoryBarrierImage memoryBarrierShared groupMemoryBarrier | GLSL ES 3.10 §8.15-8.16 | compute-check | NOT_STARTED |  |
+| GLSL310.COMPUTE.LAYOUT | 310 | compute | layout(local_size_x/y/z) in; gl_WorkGroupSize | GLSL ES 3.10 §4.4.1.1 | compute-check | FULLY_VALIDATED | es31-compute-basics |
+| GLSL310.COMPUTE.BUILTINS | 310 | compute | gl_NumWorkGroups gl_WorkGroupID gl_LocalInvocationID gl_GlobalInvocationID gl_LocalInvocationIndex | GLSL ES 3.10 §7.1.3 | compute-check | FULLY_VALIDATED | es31-compute-basics |
+| GLSL310.SHARED | 310 | compute | shared variables | GLSL ES 3.10 §4.3.8 | compute-check | FULLY_VALIDATED | es31-compute-shared-memory |
+| GLSL310.BARRIERS | 310 | compute | barrier memoryBarrier memoryBarrierAtomicCounter memoryBarrierBuffer memoryBarrierImage memoryBarrierShared groupMemoryBarrier | GLSL ES 3.10 §8.14-8.15 | compute-check | FULLY_VALIDATED | es31-compute-shared-memory |
 | GLSL310.SSBO | 310 | storage | buffer blocks; std430; runtime-sized last member; .length() | GLSL ES 3.10 §4.3.7 §4.4.5 | compute-check | NOT_STARTED |  |
 | GLSL310.MEMORY_QUALIFIERS | 310 | storage | coherent volatile restrict readonly writeonly | GLSL ES 3.10 §4.10 | compile+negative | NOT_STARTED |  |
 | GLSL310.IMAGES | 310 | images | image2D/3D/Cube/2DArray (+i/u) with format layout qualifiers | GLSL ES 3.10 §4.1.7.2 §4.4.7 | compute-check | NOT_STARTED |  |
-| GLSL310.FN.IMAGE | 310 | images | imageLoad imageStore imageSize | GLSL ES 3.10 §8.14 | compute-check | NOT_STARTED |  |
+| GLSL310.FN.IMAGE | 310 | images | imageLoad imageStore imageSize | GLSL ES 3.10 §8.12 | compute-check | NOT_STARTED |  |
 | GLSL310.ATOMIC_COUNTERS | 310 | atomics | atomic_uint + binding/offset; atomicCounter/Increment/Decrement | GLSL ES 3.10 §4.4.6 §8.10 | compute-check | NOT_STARTED |  |
 | GLSL310.FN.ATOMIC_MEMORY | 310 | atomics | atomicAdd Min Max And Or Xor Exchange CompSwap | GLSL ES 3.10 §8.11 | compute-check | NOT_STARTED |  |
 | GLSL310.LAYOUT.BINDING | 310 | interface | layout(binding) for samplers, images, blocks, atomic counters | GLSL ES 3.10 §4.4.4-4.4.6 | render | NOT_STARTED |  |

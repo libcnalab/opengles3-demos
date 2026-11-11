@@ -7,8 +7,8 @@
 | ES20.CONTEXT.STRINGS | 2.0 | context | GL_VENDOR/RENDERER/VERSION/SHADING_LANGUAGE_VERSION strings and version parsing | ES 3.0 §6.1.6 | FULLY_VALIDATED | diagnostics-capabilities |
 | ES20.ERRORS.GETERROR | 2.0 | errors | glGetError semantics: sticky flags; command ignored on error | ES 3.0 §2.5 | NOT_STARTED |  |
 | ES20.ERRORS.INVALID_ENUM | 2.0 | errors | GL_INVALID_ENUM generation (only reachable via raw casts through typed wrappers) | ES 3.0 §2.5 Table 2.3 | FULLY_VALIDATED | es30-framebuffer-invalidate, es30-instancing, es30-transform-feedback, es30-vertex-array-objects |
-| ES20.ERRORS.INVALID_VALUE | 2.0 | errors | GL_INVALID_VALUE generation (negative sizes/out-of-range indices) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-copy-and-read-pixels, es20-culling-front-face, es30-buffer-mapping, es30-framebuffer-blit-msaa, es30-framebuffer-invalidate, es30-instancing, es30-sync-objects, es30-transform-feedback, es30-uniform-buffer-objects, es30-vertex-array-objects |
-| ES20.ERRORS.INVALID_OPERATION | 2.0 | errors | GL_INVALID_OPERATION generation (state-dependent misuse) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-copy-and-read-pixels, es30-buffer-mapping, es30-framebuffer-blit-msaa, es30-framebuffer-invalidate, es30-transform-feedback, es30-vertex-array-objects |
+| ES20.ERRORS.INVALID_VALUE | 2.0 | errors | GL_INVALID_VALUE generation (negative sizes/out-of-range indices) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-copy-and-read-pixels, es20-culling-front-face, es30-buffer-mapping, es30-framebuffer-blit-msaa, es30-framebuffer-invalidate, es30-instancing, es30-sync-objects, es30-transform-feedback, es30-uniform-buffer-objects, es30-vertex-array-objects, es31-compute-basics |
+| ES20.ERRORS.INVALID_OPERATION | 2.0 | errors | GL_INVALID_OPERATION generation (state-dependent misuse) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-copy-and-read-pixels, es30-buffer-mapping, es30-framebuffer-blit-msaa, es30-framebuffer-invalidate, es30-transform-feedback, es30-vertex-array-objects, es31-compute-basics |
 | ES20.ERRORS.INVALID_FB_OP | 2.0 | errors | GL_INVALID_FRAMEBUFFER_OPERATION on incomplete framebuffer | ES 3.0 §4.4.4 | FULLY_VALIDATED | es20-framebuffer-objects, es30-framebuffer-blit-msaa |
 | ES20.VIEWPORT | 2.0 | transform | glViewport mapping NDC->window; MAX_VIEWPORT_DIMS | ES 3.0 §2.13.1 | FULLY_VALIDATED | es20-clear-viewport-scissor |
 | ES20.DEPTH_RANGE | 2.0 | transform | glDepthRangef mapping of NDC z to window z | ES 3.0 §2.13.1 | FULLY_VALIDATED | es20-clear-viewport-scissor, es20-depth-test |
@@ -167,10 +167,10 @@
 | ES30.STATE.INDEXED | 3.0 | state | glGetIntegeri_v / glGetInteger64i_v / glGetInteger64v / glGetStringi(EXTENSIONS) | ES 3.0 §6.1.1 | FULLY_VALIDATED | diagnostics-capabilities |
 | ES30.MULTISAMPLE.DEFAULT | 3.0 | multisample | Multisampled default framebuffer; SAMPLES / SAMPLE_BUFFERS | ES 3.0 §3.3 | NOT_STARTED |  |
 | ES30.EXTENSIONS.REPORT | 3.0 | diagnostics | Extension enumeration via glGetStringi + capability/limit report | ES 3.0 §6.1.6 | FULLY_VALIDATED | diagnostics-capabilities |
-| ES31.COMPUTE.DISPATCH | 3.1 | compute | Compute shaders + glDispatchCompute + work group built-ins | ES 3.2 §17; GLSL 3.10 §7.1 | NOT_STARTED |  |
+| ES31.COMPUTE.DISPATCH | 3.1 | compute | Compute shaders + glDispatchCompute + work group built-ins | ES 3.2 §17; GLSL 3.10 §7.1 | FULLY_VALIDATED | es31-compute-basics |
 | ES31.COMPUTE.INDIRECT | 3.1 | compute | glDispatchComputeIndirect from DISPATCH_INDIRECT_BUFFER | ES 3.2 §17 | NOT_STARTED |  |
-| ES31.COMPUTE.SHARED | 3.1 | compute | shared variables + barrier() within a work group | GLSL 3.10 §4.3.8 | NOT_STARTED |  |
-| ES31.COMPUTE.LIMITS | 3.1 | compute | MAX_COMPUTE_WORK_GROUP_COUNT/SIZE/INVOCATIONS / SHARED_MEMORY_SIZE | ES 3.2 §20 | FULLY_VALIDATED | diagnostics-capabilities |
+| ES31.COMPUTE.SHARED | 3.1 | compute | shared variables + barrier() within a work group | GLSL 3.10 §4.3.8 | FULLY_VALIDATED | es31-compute-shared-memory |
+| ES31.COMPUTE.LIMITS | 3.1 | compute | MAX_COMPUTE_WORK_GROUP_COUNT/SIZE/INVOCATIONS / SHARED_MEMORY_SIZE | ES 3.2 §20 | FULLY_VALIDATED | diagnostics-capabilities, es31-compute-basics, es31-compute-shared-memory |
 | ES31.COMPUTE.TO_RENDER | 3.1 | compute | Compute-generated vertex/indirect data consumed by rendering | ES 3.2 §17 §7.11 | NOT_STARTED |  |
 | ES31.SSBO.BASIC | 3.1 | storage | Shader storage blocks + SHADER_STORAGE_BUFFER bindings | ES 3.2 §7.8 | NOT_STARTED |  |
 | ES31.SSBO.STD430 | 3.1 | storage | std430 layout + runtime-sized arrays (.length()) | GLSL 3.10 §4.4.4 | NOT_STARTED |  |
@@ -180,7 +180,7 @@
 | ES31.IMAGE.QUERY | 3.1 | images | IMAGE_BINDING_* indexed queries + IMAGE_FORMAT_COMPATIBILITY_TYPE | ES 3.2 §8.23.1 | NOT_STARTED |  |
 | ES31.ATOMIC.COUNTERS | 3.1 | atomics | Atomic counter buffers + atomicCounterIncrement/Decrement | ES 3.2 §7.7 | NOT_STARTED |  |
 | ES31.ATOMIC.MEMORY | 3.1 | atomics | atomicAdd/Min/Max/And/Or/Xor/Exchange/CompSwap on SSBO + shared | GLSL 3.10 §8.11 | NOT_STARTED |  |
-| ES31.BARRIER.MEMORY | 3.1 | sync | glMemoryBarrier bits + memoryBarrier*() in shaders | ES 3.2 §7.11.2 | NOT_STARTED |  |
+| ES31.BARRIER.MEMORY | 3.1 | sync | glMemoryBarrier bits + memoryBarrier*() in shaders | ES 3.2 §7.11.2 | FULLY_VALIDATED | es31-compute-shared-memory |
 | ES31.BARRIER.BY_REGION | 3.1 | sync | glMemoryBarrierByRegion | ES 3.2 §7.11.2 | NOT_STARTED |  |
 | ES31.DRAW.INDIRECT | 3.1 | drawing | glDrawArraysIndirect / glDrawElementsIndirect command layouts | ES 3.2 §10.3.9 §10.5 | NOT_STARTED |  |
 | ES31.VERTEX.SEPARATE_FORMAT | 3.1 | vertex-input | glVertexAttribFormat/IFormat/Binding + glBindVertexBuffer + glVertexBindingDivisor | ES 3.2 §10.3.1 | NOT_STARTED |  |

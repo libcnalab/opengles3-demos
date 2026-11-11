@@ -1,6 +1,6 @@
 #version 310 es
 // @expect: link-pass
-// @spec: GLSL ES 3.10 §4.4.6 Atomic Counter Layout Qualifiers, §4.3.8 Shared Variables, §8.10-§8.11, §8.15-§8.16
+// @spec: GLSL ES 3.10 §4.4.6 Atomic Counter Layout Qualifiers, §4.3.8 Shared Variables, §8.10-§8.11, §8.14-§8.15
 // @feature: GLSL310.ATOMIC_COUNTERS
 // @feature: GLSL310.FN.ATOMIC_MEMORY
 // @feature: GLSL310.SHARED

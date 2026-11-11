@@ -32,7 +32,7 @@ and fog, compute particles, tessellated terrain, and geometry shaders.
 
 - Linux, CMake ≥ 3.23, Ninja, a C++23 compiler (GCC 14 / Clang 19 tested)
 - EGL + an OpenGL ES 3.x driver (Mesa radeonsi/llvmpipe tested)
-- meta-gl source checkout at `../../libcna/meta-gl`, **on the local branch `opengles3-demos/enum-gaps`**
+- meta-gl source checkout at `../../libcna/meta-gl`, **on the branch `opengles3-demos/enum-gaps`** (pushed to meta-gl's origin)
   (public `develop` lacks enumerators that 17 executables need; see
   [docs/METAGL_DEPENDENCY.md](docs/METAGL_DEPENDENCY.md)). Override the path with `-DOGLES3_METAGL_SOURCE_DIR=...`.
 - Optional: SDL3 for windowed mode; Python 3 for the coverage tools

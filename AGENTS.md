@@ -14,14 +14,15 @@ library (`../../libcna/meta-gl`). Every claim of coverage must be backed by a va
 1. **meta-gl only.** Demos call `metagl::gl*`. Never call native `gl*` (the build links only
    libEGL and compiles with `GL_GLES_PROTOTYPES=0`, so direct calls fail to build). Never load
    GL function pointers yourself.
-2. **No changes inside meta-gl.** meta-gl's own `AGENTS.md` (AI Contribution Policy v2) forbids AI-authored
-   changes. The owner granted edits on 2026-11-11 and suspended that grant the same evening until the two policies
-   are reconciled. Until the owner says otherwise, meta-gl is **read-only**. You may analyse it and record
-   findings in `docs/META_GL_GAPS.md`.
-   - **The local meta-gl branch** `opengles3-demos/enum-gaps` (fixes G1-G8, never pushed) is preserved. The
-     suite currently needs it (see `docs/METAGL_DEPENDENCY.md`). Do not extend it or discard it.
-   - **A missing meta-gl capability** is recorded as a gap; the affected check is skipped or reported
-     `BLOCKED_META_GL`. Never work around it with raw casts or native calls.
+2. **meta-gl changes are authorized by the owner** (2026-11-11; re-confirmed that evening, together with permission
+   to push the work branch).
+   - Work only on the branch `opengles3-demos/enum-gaps` and push only that branch. Never push or merge into
+     `develop`/`main`.
+   - Prefer additive, backward-compatible changes; break the API only when the correct ES semantics require it.
+   - Commit only the files you changed; never stage unrelated working-tree changes.
+   - Run meta-gl's tests (`-DMETAGL_BUILD_TESTS=ON -DMETAGL_BUILD_GPU_TESTS=ON`) and check dependents (easy-gl,
+     cna-engine, ...).
+   - Record every gap and fix in `docs/META_GL_GAPS.md` and the required revision in `docs/METAGL_DEPENDENCY.md`.
 3. **Do not modify easy-gl, CNA, cna-engine** or other projects. Never add an easy-gl dependency.
 4. **OpenGL ES, not desktop GL.** No fixed function, no desktop-only calls/enums, no desktop
    GLSL. A `#version 310 es` feature must not appear in a `#version 300 es` shader, etc.

@@ -82,7 +82,7 @@ namespace
     constexpr float kF0 = 0.04f;         // ((1 - 1.5) / (1 + 1.5))^2
 
     constexpr float kFovyDeg = 50.0f;  // vertical field of view for aspect >= 1 (horizontal for aspect < 1)
-    constexpr float kNear = 0.25f, kFar = 2000.0f;
+    constexpr float kNear = 0.25f, kFar = 2000.0f;  // kNear is reduced for extreme aspect ratios (finish_camera)
     constexpr m::Vec3 kTarget{0.0f, 1.0f, -1.0f};
     constexpr float kDefaultElevation = 10.0f;
     constexpr float kDefaultDistance = 10.0f;
@@ -340,7 +340,13 @@ namespace
     {
         f.fovy = fovy_for(f.aspect);
         f.view = m::look_at(f.eye, f.center, f.up_hint);
-        f.proj = m::perspective(f.fovy, f.aspect, kNear, kFar);
+        // The sky cube (half-size 0.5 around the eye) must lie entirely beyond the near plane, otherwise the
+        // depth-trick-off negative control would clip it near the corners of a wide field of view and show the
+        // scene there. The cube is at least 0.5 / |d| away along the view direction d = (tan_x, tan_y, 1) of a
+        // frustum corner, so the near plane is pulled in (only) for extreme aspect ratios.
+        const float ty = std::tan(0.5f * f.fovy), tx = ty * f.aspect;
+        const float near_plane = std::min(kNear, 0.9f * 0.5f / std::sqrt(1.0f + tx * tx + ty * ty));
+        f.proj = m::perspective(f.fovy, f.aspect, near_plane, kFar);
     }
 
     Frame make_frame(const Params& p, float aspect)
@@ -358,6 +364,20 @@ namespace
         f.face_coded = p.face_coded;
         f.nearest = p.nearest;
         f.depth_trick = p.depth_trick;
+        return f;
+    }
+
+    // The validation close-up of the glass sphere: the default camera direction, but aimed at the glass sphere from
+    // 3.7 units, so that the sphere's radius is about 60 % of half the shorter side of the surface at ANY aspect ratio
+    // (in the full scene it is only ~11 % of the shorter side; on a 200-pixel side the thin ring where the Fresnel
+    // term exceeds 0.1 is then about one pixel wide and holds just a couple of stable pixels).
+    Frame glass_closeup_frame(const Params& p, float aspect)
+    {
+        Frame f = make_frame(p, aspect);
+        const m::Vec3 to_eye = m::normalize(f.eye - kGlassPos);
+        f.center = kGlassPos;
+        f.eye = kGlassPos + to_eye * 3.7f;
+        finish_camera(f);
         return f;
     }
 
@@ -1387,15 +1407,26 @@ namespace
             const Model md = model_of(f);
             const Img img = snapshot(f);
             run_sweep("face-coded environment", ref, img, md, all_objects);
-            Model no_fresnel = md, no_reflect = md;
-            no_fresnel.fresnel = false;
+            Model no_reflect = md;
             no_reflect.reflect = false;
-            // F only exceeds ~0.1 in the thin ring n.v in [0.3, 0.45] (closer to the rim the polygon error is too large), so
-            // this scan visits every pixel instead of every step-th one.
-            const Discrimination df = discriminate(ref, img, Obj::Glass, md, no_fresnel, 1);
-            check.expect(df.discriminating >= 8 && df.rejected == df.discriminating,
-                         "face-coded environment: glass without the Fresnel-Schlick reflection term (refraction only) is rejected",
-                         std::format("{} of {} discriminating pixels (of {}) reject it", df.rejected, df.discriminating, df.candidates));
+            // F only exceeds ~0.1 in the thin ring n.v in [0.3, 0.45] (closer to the rim the polygon error is too large). In the
+            // full scene that ring is a pixel or two wide, so the Fresnel term is judged on a close-up of the glass sphere
+            // (same environment, same model, sphere radius ~30 % of the shorter side) whose every pixel is scanned. The
+            // close-up must itself match the right model before the wrong one can be rejected on it.
+            {
+                const Frame fc = glass_closeup_frame(p, asp);
+                const Reference ref_c(fc, W, H);
+                const Model md_c = model_of(fc);
+                const Img img_c = snapshot(fc);
+                run_sweep("face-coded environment, glass close-up", ref_c, img_c, md_c, {Obj::Glass});
+                Model no_fresnel_c = md_c;
+                no_fresnel_c.fresnel = false;
+                const Discrimination df = discriminate(ref_c, img_c, Obj::Glass, md_c, no_fresnel_c, 1);
+                check.expect(df.discriminating >= 8 && df.rejected == df.discriminating && df.accepted_right == df.discriminating,
+                             "face-coded environment, glass close-up: glass without the Fresnel-Schlick reflection term (refraction only) is rejected",
+                             std::format("{} of {} discriminating pixels (of {}) reject it, {} match the right model", df.rejected, df.discriminating,
+                                         df.candidates, df.accepted_right));
+            }
             const Discrimination db = discriminate(ref, img, Obj::Box, md, no_reflect, step);
             check.expect(db.discriminating >= 8 && db.rejected == db.discriminating,
                          "face-coded environment: the gold box sampled along I instead of reflect(I, N) is rejected",

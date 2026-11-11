@@ -24,9 +24,13 @@ application and the shader must agree on **where every member lives inside the b
 
 ## Reading the image
 
-The 256 x 256 surface has two parts.
+The surface has two parts. At the default 256 x 256 a grid cell is 16 pixels; at any other size the cell is the
+largest that fits both `width / 16` and `height / 10` (the grid is 16 cells wide, the grid plus the three scene rows of
+double-size cells are 10 cells tall), so the layout stays whole in portrait and landscape and simply leaves the rest of
+the surface dark. **Minimum surface: 192 x 120** (12-pixel cells); smaller surfaces report SKIP, because the
+program-1 square and its probes would no longer be separable.
 
-**Top, 64 pixels - the verification grid.** 16 columns x 4 rows of 16-pixel cells in reading order. The fragment
+**Top, 4 cells tall - the verification grid.** 16 columns x 4 rows of cells in reading order. The fragment
 shader reads one member of a block per cell and compares it with the value the application packed:
 **green** = equal, **red** = different, **magenta** = different in a panel that deliberately uses a wrong layout.
 Dark cells test nothing. Magenta is the expected outcome in those panels; red anywhere would be a failure.

@@ -138,7 +138,9 @@ and a brick sphere (right); the faces of the crate that point away from the ligh
 All references are computed on the CPU in double precision from the same equations. 33 checks (the exact count is printed
 by the run); the interesting ones:
 
-- **Probes with known surface data.** The camera is a plain pinhole (`eye`, `target`, `fov`). For a pixel centre the
+- **Probes with known surface data.** The camera is a plain pinhole (`eye`, `target`, `fov`); the orbit camera's 38 degree
+  field of view spans the shorter side of the surface (horizontal in portrait), so the scene stays in view at any aspect
+  ratio, while the trilinear view below keeps its exact pixels-per-unit scale. For a pixel centre the
   CPU intersects the ray `eye + t·dir` with the plane of a face (the faces are stored as origin + two edge vectors +
   normal, i.e. `P(s, t)`, UV = `(s·tile_u, t·tile_v)`). That gives the world position, the UV, the texel and the
   tangent frame `T = normalize(eu)`, `B = N × T · w`, `N` **analytically**, independent of the tangents that

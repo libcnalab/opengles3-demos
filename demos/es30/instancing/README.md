@@ -17,7 +17,11 @@ machinery that sits in the same section of the specification: `glDrawRangeElemen
 ## What the image shows
 
 256 × 256 default framebuffer, a 4 × 4 grid of 64 × 64 cells; row 3 is the top row, cells are numbered in
-reading order.
+reading order. Every cell is laid out in NDC, so it stretches with the surface; to keep cells close to square the
+same 16 cells form an 8 × 2 grid on a wide surface (e.g. 1000 × 200) and a 2 × 8 grid on a tall one (e.g. 200 × 1000),
+still numbered in reading order. **Minimum cell: 60 × 60 pixels** (so at least 240 × 240 for the 4 × 4 grid): below
+that the smallest instance square (0.2 NDC) is too few pixels for a probe that stays clear of its edges, and the demo
+reports SKIP.
 
 | Cell | What is drawn | What it demonstrates |
 |---|---|---|

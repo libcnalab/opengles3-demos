@@ -5,7 +5,8 @@
 // drawing features of the same section: glDrawRangeElements, PRIMITIVE_RESTART_FIXED_INDEX and
 // MAX_ELEMENT_INDEX.
 //
-// The 256x256 surface is a 4x4 grid of 64x64 cells (row 3 is the top row, reading order is id order):
+// The 256x256 surface is a 4x4 grid of 64x64 cells (row 3 is the top row, reading order is id order); on a
+// strongly landscape or portrait surface the same 16 cells form an 8x2 or 2x8 grid in the same reading order:
 //
 //   row 3:  [0] div 1 / div 1      [1] elements, color div 2    [2] color div 3        [3] gl_InstanceID only
 //   row 2:  [4] offset div 0       [5] glDrawArrays (1 inst.)   [6] instanceCount 5    [7] points, gl_PointSize
@@ -39,7 +40,26 @@ using demo::Rgba8;
 
 namespace
 {
-    constexpr int kGrid = 4;
+    // The 16 cells are arranged 4x4, 8x2 or 2x8, whichever keeps a cell closest to square on this surface: every
+    // probe below is placed in NDC, and in a 5:1 cell the narrow direction would squeeze the instance squares
+    // (0.2 NDC) and the ribbon quads (0.25 NDC) to a few pixels.
+    constexpr int kMinCellPx = 60;  // smallest instance square (0.2 NDC) is then >= 6 px, its probe >= 1.5 px off its edges
+    struct Grid
+    {
+        int cols, rows;
+    };
+    Grid grid_for(int w, int h)
+    {
+        Grid best{4, 4};
+        double best_skew = 1e30;
+        for (const Grid g : {Grid{4, 4}, Grid{8, 2}, Grid{2, 8}})
+        {
+            const double cw = double(w / g.cols), ch = double(h / g.rows);
+            const double skew = cw > 0 && ch > 0 ? std::abs(std::log(cw / ch)) : 1e30;
+            if (skew < best_skew - 1e-9) { best = g; best_skew = skew; }
+        }
+        return best;
+    }
     constexpr std::array<std::uint8_t, 4> kClear8 = {20, 30, 50, 255};
 
     // -----------------------------------------------------------------------------------------
@@ -77,8 +97,9 @@ namespace
     };
     Rect cell_rect(int w, int h, int id)
     {
-        const int cw = w / kGrid, ch = h / kGrid;
-        return {(id % kGrid) * cw, (3 - id / kGrid) * ch, cw, ch};
+        const Grid g = grid_for(w, h);
+        const int cw = w / g.cols, ch = h / g.rows;
+        return {(id % g.cols) * cw, (g.rows - 1 - id / g.cols) * ch, cw, ch};  // reading order from the top-left
     }
 
     // -----------------------------------------------------------------------------------------
@@ -353,8 +374,9 @@ namespace
         std::array<double, 4> size{};
         std::array<Rgba, 4> color{};
         double range_max = 1;
-        double center_x(int i, int cw) const { return cw * (0.125 + 0.25 * i) + 0.5; }
-        double center_y(int ch) const { return ch * 0.5 + 0.5; }
+        // Snapped to pixel centers exactly like points.vert (floor + 0.5), whatever the cell size.
+        double center_x(int i, int cw) const { return std::floor(cw * (0.125 + 0.25 * i)) + 0.5; }
+        double center_y(int ch) const { return std::floor(ch * 0.5) + 0.5; }
     };
     PointModel make_point_model(double range_max)
     {
@@ -431,6 +453,9 @@ namespace
     public:
         void init(demo::Env& env) override
         {
+            if (const Rect r = cell_rect(env.width, env.height, 0); std::min(r.w, r.h) < kMinCellPx)
+                throw demo::Skip(std::format("surface {}x{} is too small: a cell is {}x{} pixels, the probes need at least {} in both directions",
+                                             env.width, env.height, r.w, r.h, kMinCellPx));
             prog_instanced_ = demo::build_program(env, "shaders/instanced.vert", "shaders/color.frag");
             prog_id_ = demo::build_program(env, "shaders/instance_id.vert", "shaders/color.frag");
             prog_points_ = demo::build_program(env, "shaders/points.vert", "shaders/color.frag");

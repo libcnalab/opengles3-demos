@@ -120,15 +120,17 @@ ray-cylinder, sphere-traced torus) built from the same object list, and a CPU ev
    with `f(L) = (1 - exp(-1.15 L))^(1/2.2)`, which is steepest in the dark, so the budget follows each pixel's radiance (about 2 steps in bright areas, a few tens in the darkest).
    The measured worst case is 0.6 to 0.7 of the budget (radeonsi: at most 6 steps, mean 0.24; llvmpipe/zink: at most 12 steps, mean 0.77, because they truncate when converting back,
    which the spec allows).
-5. **Negative controls** (each must fail in the intended way):
+5. **Negative controls** (each must fail in the intended way). Shares in (b)-(d) are of the *scene pixels*, those whose view ray hits an object or the floor in the
+   CPU model: the empty background cannot change with the lighting, and on a wide surface such as 1000 x 200 the scene fills only its middle third, so a share of the
+   whole surface would measure the aspect ratio rather than the control (at 1000 x 200 control (c) changes 3.4 % of the surface, 23 % of the scene):
    - (a) The CPU picks the (pixel, light) pair where removing one light changes the display colour most (about 110 of 255 steps) and that light's colour is zeroed in the uniform
      block: that pixel then equals the CPU model *without* the light (within the budget) and misses the forward image by more than twice the budget;
-   - (b) `glEnable(BLEND)` left off in the volume pass: at least 5 % of the pixels must leave the budget (measured: about 60 %);
+   - (b) `glEnable(BLEND)` left off in the volume pass: at least 5 % of the scene pixels must leave the budget (measured: about 94 %);
    - (c) `glClearBufferfv(COLOR, 1, ...)` replaces the normal plane by "up": the plane reads `(128, 255, 128)` at every probe, the albedo plane is untouched, and at least 5 % of the
-     pixels leave the budget (measured: about 16 %);
-   - (d) `glCullFace(FRONT)` left off in the volume pass: every light is added twice and at least 5 % of the pixels leave the budget (measured: about 40 %).
+     scene pixels leave the budget (measured: 23 to 27 %);
+   - (d) `glCullFace(FRONT)` left off in the volume pass: every light is added twice and at least 5 % of the scene pixels leave the budget (measured: 58 to 65 %).
 6. **Animation:** light 0 moves 0.7 units in one second; one second later the deferred image still matches the forward image everywhere, and with the camera held the image
-   changes on more than 10 % of the pixels (measured: 46 to 49 %).
+   changes on more than 10 % of the scene pixels (measured: 67 to 72 % at all tested sizes; at 1000 x 200 that is only 10 % of the whole surface).
 7. At the end the default framebuffer is redrawn so the runtime captures the normal frame; the runtime also checks `glGetError` after `init`, after the last frame and after `shutdown`.
 
 ## Pitfalls

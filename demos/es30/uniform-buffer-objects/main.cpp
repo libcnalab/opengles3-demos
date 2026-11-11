@@ -385,9 +385,19 @@ namespace
     // verification grid geometry (cells of 16 px, 16 per row, 4 rows at the top)
     constexpr int kVerifyColumns = 16;
     constexpr int kVerifyRows = 4;
-    // scene geometry (cells of 32 px, 8 per row, below the grid)
+    // scene geometry (cells twice the grid cell, 8 per row, 3 rows below the grid)
     constexpr int kSceneColumns = 8;
     constexpr int kSceneCells = 23;
+    constexpr int kSceneRows = (kSceneCells + kSceneColumns - 1) / kSceneColumns;
+    // The whole layout is kVerifyColumns cells wide and kVerifyRows + 2 * kSceneRows cells tall. The cell size is
+    // the largest that fits both dimensions, so the layout never leaves the surface whatever its aspect ratio.
+    constexpr int kLayoutRows = kVerifyRows + 2 * kSceneRows;
+    // Below 12-pixel grid cells (24-pixel scene cells) the program-1 square (half side 0.35 of a cell's half) is
+    // too small for its three interior probes and the corner probes to stay clear of each other's edges.
+    constexpr int kMinCell = 12;
+
+    /// Grid cell size in pixels for this surface (scene cells are twice as large).
+    int cell_px(const demo::Env& env) { return std::min(env.width / kVerifyColumns, env.height / kLayoutRows); }
 
     constexpr const char* kSceneLabels[kSceneCells] = {
         "A0 default binding 0", "A1 glUniformBlockBinding", "A2 other buffer, same point", "A3 second program",
@@ -430,6 +440,9 @@ namespace
     public:
         void init(demo::Env& env) override
         {
+            if (cell_px(env) < kMinCell)
+                throw demo::Skip(std::format("surface {}x{} is too small: the layout needs at least {}x{} pixels ({}-pixel grid cells)", env.width,
+                                             env.height, kVerifyColumns * kMinCell, kLayoutRows * kMinCell, kMinCell));
             verify_ = demo::build_program(env, "shaders/verify.vert", "shaders/verify.frag");
             scene1_ = demo::build_program(env, "shaders/scene.vert", "shaders/scene.frag");
             scene2_ = demo::build_program(env, "shaders/scene_flat.vert", "shaders/scene_inverse.frag");
@@ -657,11 +670,12 @@ namespace
         // ----------------------------------------------------------------------------------
         void draw_verification_grid(const demo::Env& env)
         {
-            const int vc = env.width / kVerifyColumns;
+            const int vc = cell_px(env);
             mgl::glUseProgram(verify_);
             mgl::glUniform1i(u_cell_, vc);
             mgl::glUniform1i(u_height_, env.height);
-            mgl::glViewport(0, env.height - kVerifyRows * vc, env.width, kVerifyRows * vc);
+            // Exactly 16 cells wide: a wider viewport would let column 16 alias the next row's cell 0.
+            mgl::glViewport(0, env.height - kVerifyRows * vc, kVerifyColumns * vc, kVerifyRows * vc);
 
             // Bind each block to its own binding point (glUniformBlockBinding) and a buffer to each point.
             mgl::glUniformBlockBinding(verify_, probe_index_, kPointProbe);
@@ -698,7 +712,7 @@ namespace
 
         static std::pair<int, int> verify_cell_center(const demo::Env& env, int cell)
         {
-            const int vc = env.width / kVerifyColumns;
+            const int vc = cell_px(env);
             return {(cell % kVerifyColumns) * vc + vc / 2, env.height - (cell / kVerifyColumns + 1) * vc + vc / 2};
         }
 
@@ -752,8 +766,8 @@ namespace
         // ----------------------------------------------------------------------------------
         // scene helpers
         // ----------------------------------------------------------------------------------
-        static int scene_top(const demo::Env& env) { return env.height - kVerifyRows * (env.width / kVerifyColumns); }
-        static int scene_px(const demo::Env& env) { return env.width / kSceneColumns; }
+        static int scene_top(const demo::Env& env) { return env.height - kVerifyRows * cell_px(env); }
+        static int scene_px(const demo::Env& env) { return 2 * cell_px(env); }
 
         struct CellRect
         {

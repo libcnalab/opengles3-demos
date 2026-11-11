@@ -67,7 +67,14 @@ namespace
     constexpr float kPointMarkerRadius = 0.15f;
     constexpr m::Vec3 kSpotMarkerScale{0.30f, 0.50f, 0.30f};  // cone: radius 1, height 1 in object space
 
-    constexpr float kFovyDegrees = 40.0f;
+    constexpr float kFovyDegrees = 40.0f;  // the field of view across the SHORTER side of the surface
+
+    /// tan(fovy / 2) for this aspect ratio. On a landscape surface the vertical field of view is kFovyDegrees; on a
+    /// portrait surface the horizontal one is, so that the three object pairs (laid out along x) stay in view.
+    [[nodiscard]] inline double tan_half_fovy(double aspect)
+    {
+        return std::tan(0.5 * static_cast<double>(kFovyDegrees) * std::numbers::pi / 180.0) / std::min(aspect, 1.0);
+    }
     constexpr float kNear = 0.5f, kFar = 80.0f;
     constexpr m::Vec3 kCameraTarget{0.0f, 0.4f, 0.0f};
     constexpr float kDefaultElevation = 31.0f;  // degrees above the horizon
@@ -156,7 +163,7 @@ namespace
         f.center = kCameraTarget;
         f.eye = f.center + m::Vec3{std::sin(yaw) * std::cos(el), std::sin(el), std::cos(yaw) * std::cos(el)} * p.distance;
         f.view = m::look_at(f.eye, f.center, {0.0f, 1.0f, 0.0f});
-        f.proj = m::perspective(m::radians(kFovyDegrees), aspect, kNear, kFar);
+        f.proj = m::perspective(static_cast<float>(2.0 * std::atan(tan_half_fovy(aspect))), aspect, kNear, kFar);
 
         Lights& l = f.lights;
         l.ambient = kAmbient;
@@ -510,8 +517,8 @@ namespace
             fwd_ = normalize(d3(f.center) - eye_);
             right_ = normalize(cross(fwd_, D3{0.0, 1.0, 0.0}));
             up_ = cross(right_, fwd_);
-            tan_half_ = std::tan(0.5 * dbl(m::radians(kFovyDegrees)));
             aspect_ = static_cast<double>(width) / static_cast<double>(height);
+            tan_half_ = tan_half_fovy(aspect_);
         }
 
         [[nodiscard]] const Frame& frame() const { return f_; }

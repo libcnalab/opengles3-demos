@@ -1004,25 +1004,42 @@ namespace
 
         if (pr.mat.tex != Tex::None)
         {
-            // Footprint of one pixel in texels, from the texture coordinates of the neighbouring pixels (forward and
-            // backward differences, the larger one: implementations may difference over a 2x2 quad).
+            // Footprint of one pixel in texels, from the texture coordinates of the 3x3 pixel neighbourhood. An
+            // implementation may difference over the 2x2 quad that holds the pixel, forward or backward, and with coarse
+            // derivatives on the quad's OTHER row or column (GLSL ES 3.00 8.9 leaves this open), so dFdx is bounded by
+            // the horizontal differences of rows y-1, y, y+1 and dFdy by the vertical differences of columns x-1, x, x+1.
+            // On grazing ground far away the footprint grows by ~10 % per row at 800 pixels, more than the 1.1 margin.
             const std::array<double, 2> uv = surface_uv(ref, h.id, pr.p, h.ln);
-            double d[2][2] = {};  // [u|v][x|y]
-            for (int axis = 0; axis < 2; ++axis)
-                for (const int sgn : {-1, 1})
+            std::array<std::array<std::array<double, 2>, 3>, 3> nuv{};  // [dy + 1][dx + 1]
+            for (int dy = -1; dy <= 1; ++dy)
+                for (int dx = -1; dx <= 1; ++dx)
                 {
-                    const int qx = x + (axis == 0 ? sgn : 0), qy = y + (axis == 1 ? sgn : 0);
-                    const V3 qd = ray_dir(v, qx + 0.5, qy + 0.5);
+                    if (dx == 0 && dy == 0)
+                    {
+                        nuv[1][1] = uv;
+                        continue;
+                    }
+                    const V3 qd = ray_dir(v, x + dx + 0.5, y + dy + 0.5);
                     const Hit q = trace(ref.shapes, v.eye, qd);
                     if (q.id != h.id) return std::nullopt;
-                    const std::array<double, 2> quv = surface_uv(ref, h.id, v.eye + qd * q.t, q.ln);
-                    for (int c = 0; c < 2; ++c)
-                    {
-                        double diff = std::abs(quv[static_cast<std::size_t>(c)] - uv[static_cast<std::size_t>(c)]);
-                        if (diff > 0.5) diff = 1.0 - diff;  // across the sphere's u seam
-                        d[c][axis] = std::max(d[c][axis], diff);
-                    }
+                    nuv[static_cast<std::size_t>(dy + 1)][static_cast<std::size_t>(dx + 1)] = surface_uv(ref, h.id, v.eye + qd * q.t, q.ln);
                 }
+            // Only the sphere's u wraps (its seam at u = 0 = 1). The ground's and the boxes' coordinates are unbounded: on
+            // far, grazing ground two neighbouring rows differ by several texture repeats, which a wrap would fold back
+            // to a small footprint (and a far too narrow level range).
+            const bool wraps = h.id >= 0 && ref.shapes[static_cast<std::size_t>(h.id)].kind != Kind::Box;
+            auto uv_diff = [wraps](const std::array<double, 2>& a, const std::array<double, 2>& b, std::size_t c) {
+                const double diff = std::abs(a[c] - b[c]);
+                return wraps && c == 0 && diff > 0.5 ? 1.0 - diff : diff;  // across the sphere's u seam
+            };
+            double d[2][2] = {};  // [u|v][x|y]
+            for (std::size_t c = 0; c < 2; ++c)
+                for (std::size_t r = 0; r < 3; ++r)
+                    for (const std::size_t o : {std::size_t{0}, std::size_t{2}})
+                    {
+                        d[c][0] = std::max(d[c][0], uv_diff(nuv[r][o], nuv[r][1], c));  // horizontal, row r
+                        d[c][1] = std::max(d[c][1], uv_diff(nuv[o][r], nuv[1][r], c));  // vertical, column r
+                    }
             const double F = 1.1 * kTexSize * (d[0][0] + d[0][1] + d[1][0] + d[1][1]);
             V3 lo, hi;
             texel_range((*ref.albedo)[static_cast<std::size_t>(pr.mat.tex)], uv[0], uv[1], F, lo, hi);
@@ -1072,8 +1089,14 @@ namespace
 
     std::vector<Probe> build_probes(const Reference& ref, const View& v)
     {
-        // About 4500 sample pixels at any window size.
-        const int step = std::max(2, static_cast<int>(std::lround(std::sqrt(static_cast<double>(v.w) * v.h / 4500.0))));
+        // About 8000 sample pixels (at most every second pixel) in the central square of the shorter side, at any
+        // window size. The field of view spans that shorter side (make_view), so the scene's objects cover the same
+        // share of that square in landscape, portrait and square windows; the extra width or height only adds
+        // periphery (more sky and ground probes). Spreading a fixed count over the whole window instead would leave a
+        // 5:1 window a fifth of the object probes, and fewer than ~8000 leaves a 200-pixel side under 20 stable
+        // object pixels (most textured object pixels are rejected as filter-ambiguous at that size).
+        const double side = static_cast<double>(std::min(v.w, v.h));
+        const int step = std::max(2, static_cast<int>(std::lround(side / std::sqrt(8000.0))));
         std::vector<Probe> out;
         for (int y = 3; y < v.h - 3; y += step)
             for (int x = 3; x < v.w - 3; x += step)
@@ -1349,7 +1372,10 @@ namespace
 
     void InteractiveScene::init(demo::Env& env)
     {
-        if (std::min(env.width, env.height) < 96) throw demo::Skip("the scene needs a surface of at least 96x96 pixels");
+        // Below a 180-pixel shorter side the textured objects of the start pose are so small that fewer than 20 of their
+        // pixels have a predictable (unambiguous) filtered colour even when every second pixel is sampled.
+        if (std::min(env.width, env.height) < 180)
+            throw demo::Skip("the scene needs a shorter side of at least 180 pixels (too few predictable object pixels below)");
         light_ = make_light();
 
         // ---- programs ---------------------------------------------------------------------------------------
@@ -1693,6 +1719,10 @@ namespace
     const Pose kColonnadePose = look_from({14.5, 2.2, -4.0}, {7.5, 1.6, -4.0}, 80.0);
     const Pose kSkyPose{{0.0, 1.8, 6.0}, std::atan2(sun_dir().x, -sun_dir().z), radians(22.0), 65.0};  // facing the sun
     const Pose kFogPose{{0.0, 1.6, 22.0}, radians(180.0), radians(-6.0), 60.0};
+    // Key 4 is judged from high above the scene, looking steeply down: the 8-unit ground cells then appear >= 50 px wide
+    // even on a 200-pixel side, so plenty of their edges are >= 12 px clear of the triangles' other edges. (From the
+    // low shadow pose most visible cells are far away and small, and a 200-pixel side leaves too few clear edges.)
+    const Pose kWirePose = look_from({6.0, 18.0, 12.0}, {0.4, 0.0, -3.0}, 60.0);
 
     struct Counts
     {
@@ -2010,6 +2040,8 @@ namespace
     /// change at all.
     void InteractiveScene::check_wire(demo::Env& env, demo::Check& check, const Reference& ref)
     {
+        const Pose saved = pose_;
+        pose_ = kWirePose;
         const View v = make_view(pose_, env.width, env.height);
         const Image plain = render_image(env);
         on_key(env, '4');
@@ -2044,19 +2076,24 @@ namespace
                 pts.push_back({s.center + rot_y(mul(ln, s.half), s.yaw), {{c0, c1}, {c1, c2}, {c2, c3}, {c3, c0}}, id, ln});
             }
         }
+        // Ground edges: three points along every cell border (a quarter, half and three quarters of the way). The two
+        // triangles that share a border are the same along all of it, and the >= 12 px clearance below discards the
+        // points that lie too close to a triangle's other edges. More than the midpoint alone is needed on a 200-pixel
+        // side, where only a handful of midpoints are clear of every other edge.
         const double cell = 2.0 * kGroundHalf / kGroundCells;
         for (int k = -4; k <= 4; ++k)
             for (int m = -4; m <= 4; ++m)
+                for (const double f : {0.25, 0.5, 0.75})
             {
                 const double a = k * cell, b = m * cell;
                 // Edge x = a between z = b and b + cell; its cells are split along (x0, z0) - (x1, z1).
-                pts.push_back({{a, 0, b + cell / 2},
+                pts.push_back({{a, 0, b + cell * f},
                                {{V3{a - cell, 0, b}, V3{a, 0, b + cell}}, {V3{a, 0, b}, V3{a + cell, 0, b + cell}}, {V3{a - cell, 0, b}, V3{a + cell, 0, b}},
                                 {V3{a - cell, 0, b + cell}, V3{a + cell, 0, b + cell}}},
                                kIdGround,
                                {0, 1, 0}});
                 // Edge z = a between x = b and b + cell.
-                pts.push_back({{b + cell / 2, 0, a},
+                pts.push_back({{b + cell * f, 0, a},
                                {{V3{b, 0, a - cell}, V3{b + cell, 0, a}}, {V3{b, 0, a}, V3{b + cell, 0, a + cell}}, {V3{b, 0, a - cell}, V3{b, 0, a + cell}},
                                 {V3{b + cell, 0, a - cell}, V3{b + cell, 0, a + cell}}},
                                kIdGround,
@@ -2105,11 +2142,14 @@ namespace
                      std::format("{} of {}", edges_plain_not_wire, edges));
 
         // Interior pixels: at least 4 px from every edge of their ground triangle, so the overlay weight is exactly 0.
+        // Both triangles of every cell (split along (x0, z0) - (x1, z1)) are tried.
         int interior = 0, interior_fail = 0;
         for (int k = -4; k < 4; ++k)
             for (int m = -4; m < 4; ++m)
+                for (const bool upper : {false, true})
             {
-                const V3 c00{k * cell, 0, m * cell}, c10{(k + 1) * cell, 0, m * cell}, c11{(k + 1) * cell, 0, (m + 1) * cell};
+                const V3 c00{k * cell, 0, m * cell}, c11{(k + 1) * cell, 0, (m + 1) * cell};
+                const V3 c10 = upper ? V3{k * cell, 0, (m + 1) * cell} : V3{(k + 1) * cell, 0, m * cell};  // the third corner
                 const V3 centroid = (c00 + c10 + c11) * (1.0 / 3.0);
                 double p[4][2];
                 if (!project(v, c00, p[0][0], p[0][1]) || !project(v, c10, p[1][0], p[1][1]) || !project(v, c11, p[2][0], p[2][1]) ||
@@ -2136,6 +2176,7 @@ namespace
             }
         check.expect(interior >= 4 && interior_fail == 0, std::format("key 4: {} triangle-interior pixels are unchanged by the overlay", interior),
                      std::format("{} interior pixels, {} changed", interior, interior_fail));
+        pose_ = saved;
     }
 
     /// Key 5: the inset shows the shadow map; its grey level is the stored depth of the CPU-predicted surface.

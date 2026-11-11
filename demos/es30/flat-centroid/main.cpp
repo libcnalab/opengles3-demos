@@ -38,9 +38,11 @@
 //     followed by (v, TRUE) writes every sample exactly once (stencil INCR, then a query for stencil != 1);
 //     drawing (0.5, FALSE) twice is the negative control. Alpha-to-coverage endpoints and its AND with
 //     SAMPLE_COVERAGE. State queries (initial values, clamping, invert, enables). With SAMPLE_BUFFERS = 0
-//     none of it has any effect. The resolved band image has exact endpoint bands, and every panel is
-//     probed against the resolved texels it magnifies. Defined errors: blitting into a multisample FBO
-//     and ReadPixels from a multisample FBO generate INVALID_OPERATION.
+//     none of it has any effect. Every panel is probed against the read-back resolved texels it magnifies.
+//     The resolved values themselves (endpoint bands, coverage curves) are only printed: ES 3.0 4.3.3
+//     makes the resolve of normalized formats implementation-dependent, even for pixels whose samples
+//     are all equal. Defined errors: blitting into a multisample FBO and ReadPixels from a multisample
+//     FBO generate INVALID_OPERATION.
 
 #include <demo/gl_util.hpp>
 #include <demo/runtime.hpp>
@@ -893,10 +895,16 @@ namespace
             const Layout lay = layout_for(env.width, env.height);
             const std::vector<std::uint8_t> img = demo::read_rgba8(0, 0, env.width, env.height);
             auto px = [&](int x, int y) { return &img[static_cast<std::size_t>((y * env.width + x) * 4)]; };
+            // Every window probe below needs a single-sample window: there a pixel is the fragment color at its centre, while a
+            // multisampled window would put its own implementation-dependent resolve (ES 3.0 4.1.10) in between. The runtime
+            // asks for a config without samples.
+            const bool single_sample_window = demo::get_integer(mgl::GetParameter::SampleBuffers) == 0;
+            if (!single_sample_window) std::cout << "   note: the default framebuffer is multisampled here; the window probes are not made\n";
 
             // --- flat panel: every probed facet shows palette[provoking] * shade[provoking] ---------
             for (const Topology& t : topologies_)
             {
+                if (!single_sample_window) break;
                 int probes = 0, bad = 0;
                 std::string first_bad;
                 for (const Tri& tri : triangles_of(t))
@@ -922,8 +930,11 @@ namespace
                              std::format("{} probes, {} wrong {}", probes, bad, first_bad));
             }
 
-            // --- the resolved band image: endpoint bands are exact ------------------------------------
-            // Every sample of these pixels holds the same value, so the resolve has nothing to combine.
+            // --- the resolved band image: observed, not asserted ---------------------------------------
+            // ES 3.0 4.3.3: "If the source formats are floating-point or normalized types, the sample values for each pixel are
+            // resolved in an implementation-dependent manner." The specification does not even say that a pixel whose samples
+            // all hold one value resolves to that value, so the endpoint bands are only printed. What the endpoint bands show is
+            // asserted per sample, without any resolve, in validate_ms_coverage() (occlusion queries and stencil INCR counts).
             mgl::glBindFramebuffer(mgl::FramebufferTarget::ReadFramebuffer, bands_fbo_);
             const std::vector<std::uint8_t> bands = demo::read_rgba8(0, 0, kBandW, kBandH);
             auto bpx = [&](int x, int y) { return &bands[static_cast<std::size_t>((y * kBandW + x) * 4)]; };
@@ -940,22 +951,21 @@ namespace
                     {3, 0, kSlot, "SAMPLE_ALPHA_TO_COVERAGE alpha 0 writes no sample"},
                     {3, kBands - 1, kColC, "SAMPLE_ALPHA_TO_COVERAGE alpha 1 writes every sample"},
                 };
+                int exact_bands = 0;
+                std::string off;
                 for (const Band& b : list)
                 {
                     const Rect r = band_rect(b.row, b.col);
                     const auto e = rgb8(b.color);
-                    int n = 0, bad = 0;
-                    std::string first_bad;
+                    int bad = 0;
                     for (int y = r.y; y < r.y + r.h; ++y)
-                        for (int x = r.x; x < r.x + r.w; ++x)
-                        {
-                            ++n;
-                            if (!near_rgb(bpx(x, y), e, 1) && bad++ == 0)
-                                first_bad = std::format("({},{}) = {},{},{}", x, y, bpx(x, y)[0], bpx(x, y)[1], bpx(x, y)[2]);
-                        }
-                    check.expect(n > 0 && bad == 0, std::format("resolved band: {}", b.what),
-                                 std::format("{} pixels, {} wrong {} expected {},{},{}", n, bad, first_bad, e[0], e[1], e[2]));
+                        for (int x = r.x; x < r.x + r.w; ++x) bad += near_rgb(bpx(x, y), e, 1) ? 0 : 1;
+                    exact_bands += bad == 0 ? 1 : 0;
+                    if (bad != 0) off += std::format("; '{}': {} of {} pixels off", b.what, bad, r.w * r.h);
                 }
+                std::cout << std::format("   note: observed resolve of the endpoint bands (implementation-dependent, not asserted): {} of {} bands show the "
+                                         "color their samples were given (+-1){}\n",
+                                         exact_bands, std::size(list), off);
                 // Intermediate bands: the resolve is implementation-dependent (ES 3.0 4.3.3), so only print.
                 std::string row0;
                 for (int col = 0; col < kBands; ++col)
@@ -971,9 +981,11 @@ namespace
             }
 
             // --- the panels show the resolved images, magnified with NEAREST --------------------------
+            // These compare window pixels with the *read-back* resolved texels, so they hold whatever the resolve produced.
             mgl::glBindFramebuffer(mgl::FramebufferTarget::ReadFramebuffer, view_fbo_);
             const std::vector<std::uint8_t> view = demo::read_rgba8(0, 0, kOffW, kOffH);
             mgl::glBindFramebuffer(mgl::FramebufferTarget::ReadFramebuffer, mgl::FramebufferId{0});
+            if (!single_sample_window) return;
             check_magnified(check, img, env.width, coverage_view_rect(lay.coverage), bands, kBandW, 0, kBandW, kBandH,
                             "coverage panel shows the resolved band image (NEAREST magnification)");
             check_magnified(check, img, env.width, zoom_rect(lay.plain), view, kOffW, 0, kView, kView,

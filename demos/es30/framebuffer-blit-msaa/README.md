@@ -37,8 +37,8 @@ was copied 2x by one blit and then painted over by four draws that each pass onl
 on the *copied* buffers: white where the copied depth is greater than 0.5, cyan where the copied stencil is 2,
 gray where the depth is greater than 0.8, black where the stencil is 3. What remains of the original red is the
 region whose copied depth (0.25) failed every depth test, so the picture is a direct view of the copied depth and
-stencil values. In the bottom-right panel the triangle's edges are not stair-stepped: pixels on the edge are blends of
-the two colors.
+stencil values. In the bottom-right panel the triangle's edges are not stair-stepped: on all three Mesa drivers the pixels
+on the edge are blends of the two colors (what a resolve makes of the samples is up to the implementation, see below).
 
 ## Central calls
 
@@ -50,6 +50,7 @@ the two colors.
 | `glRenderbufferStorageMultisample(RENDERBUFFER, samples, format, w, h)` | a multisample image | §4.4.2.1 |
 | `glGetInternalformativ(RENDERBUFFER, format, NUM_SAMPLE_COUNTS / SAMPLES, ...)` | which sample counts a format supports | §6.1.15 |
 | `glGetRenderbufferParameteriv(SAMPLES)`, `glGetIntegerv(SAMPLES / SAMPLE_BUFFERS)` | what was actually allocated | §4.4.2.1, §4.4.4.2 |
+| `glTexStorage2DMultisample(TEXTURE_2D_MULTISAMPLE, n, RGBA8UI, ...)` + `texelFetch(usampler2DMS, p, s)` | ES 3.1+ contexts only: an integer multisample image whose samples can be read one by one | ES 3.2 §8.8, §11.1.3.3 |
 
 ## Key ideas
 
@@ -82,18 +83,34 @@ the two colors.
   gets at least the requested count and at most the next larger supported one, so asking for the largest gets exactly
   the largest. (ES 3.0 gives integer formats no multisample support at all: count 0 and `INVALID_OPERATION`. ES 3.1
   allows them; the demo asserts the rule of the context's version.)
-- **The resolve of a normalized color is implementation-dependent** (§4.3.3). The demo therefore does not assert a sample
-  pattern; it asserts what every resolve must satisfy (see Validation).
+- **What a resolve guarantees, and what it does not.** §4.3.3 (ES 3.2 §16.2.1) defines the resolve by format:
+  > If the source formats are integer types or stencil values, a single sample's value is selected for each pixel. If the
+  > source formats are floating-point or normalized types, the sample values for each pixel are resolved in an
+  > implementation-dependent manner. If the source formats are depth values, sample values are resolved in an
+  > implementation-dependent manner where the result will be between the minimum and maximum depth values in the pixel.
+
+  So an integer pixel is one of its samples, a stencil pixel likewise, a depth pixel lies between its smallest and largest
+  sample. An RGBA8 pixel can be *anything*: the specification does not say it lies between the sample colors, that it is
+  their average, or even that a pixel whose samples all hold one color resolves to that color. (The text for the window,
+  §4.1.10, is the same: "The method of combination is not specified"; an average is only *recommended*.) The demo asserts
+  the first three rules and only prints what it measures for the RGBA8 resolve.
 
 ## Shader concepts
 
 `chart.frag` writes three outputs with `layout(location = N)` (three attachments in one pass) from `gl_FragCoord` and
 integer shifts and masks; `quad.vert` builds a rectangle from `gl_VertexID` and uniforms; `tri.vert` indexes a
 uniform array `u_tri[3]` with `gl_VertexID`. All fragment shaders declare `precision highp float`.
+`flat_uint.frag` writes a `uvec4` output into the RGBA8UI multisample texture; integer outputs are stored without
+conversion. `fetch_ms.vert` / `fetch_ms.frag` are `#version 310 es` and are compiled only in ES 3.1+ contexts: they read
+one sample of that texture per pass with `texelFetch(usampler2DMS, ivec2(gl_FragCoord.xy), u_sample)` (GLSL ES 3.10
+§8.9.2). Multisample samplers have no default precision, hence `highp usampler2DMS` (GLSL ES 3.10 §4.7.4). Both shaders
+of that program are 3.10: "It is an error to link a vertex shader and a fragment shader if they are written in different
+versions of the language" (GLSL ES 3.10 §1.1).
 
 ## Validation (`--validate`)
 
-215 checks, all against CPU models or defined errors; each blit check compares the *whole* destination, so pixels
+215 checks in an ES 3.1+ context, 209 in an ES 3.0 context (the integer resolve needs ES 3.1), all against CPU models,
+per-sample readback or defined errors; each blit check compares the *whole* destination, so pixels
 that must not change are checked as well. All images read back with `glReadPixels` as `RGBA/UNSIGNED_BYTE`.
 
 - **Color blits** (14 cases): the generic model of the blit rule is applied to the destination's previous contents.
@@ -121,18 +138,37 @@ that must not change are checked as well. All images read back with `glReadPixel
   positive, largest `>= MAX_SAMPLES`; `bufSize` 0, 1 and larger write exactly what they should; negative `bufSize` is
   `INVALID_VALUE`, `RGB9_E5` is `INVALID_ENUM`. Every reported count of RGBA8 is allocated and `RENDERBUFFER_SAMPLES` lies
   between the request and the next larger count; the largest count of five formats gives exactly that many samples.
-- **Multisample resolve:** `SAMPLES` / `SAMPLE_BUFFERS` of the draw framebuffer. A triangle with corners at fractional
-  pixel positions is rendered with the largest count (8 on radeonsi, 4 on llvmpipe and zink) and resolved. Every pixel is
-  classified geometrically (square inside, square outside, or crossing an edge). Interior pixels equal the triangle
-  color and exterior pixels the background (tolerance 1, equation 2.3). Every edge pixel lies in the closed range between
-  the two colors in all channels. Edge pixels whose centre is within 0.1 pixel of an edge line and 3 pixels from
-  a corner (70 of them) are *strictly* between: an edge splits such a pixel into two nearly equal parts, so any
-  sample pattern spread around the pixel centre has samples on both sides (the spec does not promise this, which is why
-  only these pixels are asserted). The interior count plus the sum of the resolved coverage of the edge pixels equals the
-  triangle's area within 0.5% (observed 0.01%; the per-pixel errors cancel). `LINEAR` resolves identically to `NEAREST`; a
-  sub-rectangle with identical bounds resolves just that rectangle. A multisample depth+stencil+color scene resolves
-  to the scene. **Negative control:** the same triangle in a single-sample framebuffer has exact interior and exterior pixels
-  and *no* blended pixel, so the strictly-between check rejects it.
+- **Multisample resolve, what is asserted.** `SAMPLES` / `SAMPLE_BUFFERS` of the draw framebuffer and `RENDERBUFFER_SAMPLES`.
+  Rules that hold for *any* resolve:
+  - `LINEAR` resolves identically to `NEAREST` ("The filter parameter is ignored"; Appendix A.1 repeatability makes the
+    same command on the same samples give the same result);
+  - a sub-rectangle with identical bounds writes exactly that rectangle, with the same values as the whole-image resolve
+    ("the samples corresponding to each pixel location in the source are converted to a single sample": a resolved pixel is
+    a function of that pixel's samples), and leaves every other pixel untouched;
+  - **depth and stencil**: the four-region scene is written into the multisample depth/stencil buffer by *scissored clears*.
+    The scissor test selects whole pixels and "masking and scissoring affect clearing the multisample buffer in the same way
+    as they affect clearing the corresponding color, depth, and stencil buffers" (§4.2.3.1), so all samples of a pixel hold
+    one value whatever the sample locations are. Stencil ("a single sample's value is selected") and depth ("between the
+    minimum and maximum depth values in the pixel") must then resolve to exactly that value; probed with tested draws.
+    Negative control: the resolved buffer differs from a cleared one in over 1500 probed pixels;
+  - **integer color (ES 3.1+ contexts)**: the triangle is drawn into an RGBA8UI multisample *texture* (`glTexStorage2DMultisample`,
+    the largest count `glGetInternalformativ(TEXTURE_2D_MULTISAMPLE, RGBA8UI, SAMPLES)` reports). Every stored sample is read
+    back, one pass per sample index, with `texelFetch(usampler2DMS, ...)`; no resolve is involved. Every sample must be exactly
+    the cleared background or the triangle value, and both must occur. The blit resolve into an RGBA8UI texture must give,
+    in **every pixel, the value of one of that pixel's own samples**. Negative control: the resolved values shifted by one are
+    rejected in every pixel. (A per-channel average would also be rejected in each pixel whose samples differ: 301 of 301 on
+    radeonsi with 8 samples, 244 of 244 on llvmpipe and zink with 4; printed, since how many such pixels exist depends on
+    the sample locations.) In an ES 3.0 context this part is skipped with a note: ES 3.0 has no multisample integer images
+    (`RenderbufferStorageMultisample` with an integer format is `INVALID_OPERATION`, §4.4.2.1).
+  - The single-sample render of the triangle is fully specified (point sampling at pixel centres, §3.6.1): interior pixels
+    equal the triangle color, exterior pixels the background (tolerance 1, equation 2.3), and no pixel is a blend.
+- **Multisample resolve, what is only observed.** The RGBA8 resolve of the triangle (largest count: 8 on radeonsi, 4 on llvmpipe
+  and zink) is printed as a `note:` line and never asserted: interior pixels equal to the triangle color (all of them on the
+  three drivers), exterior pixels equal to the background (all), edge pixels inside the range of the two colors (all), edge
+  pixels strictly between them (301 / 244, including all 70 pixels centred on an edge), and the summed coverage against the
+  triangle's area (-0.015 % on radeonsi, +0.002 % on llvmpipe and zink). Likewise the resolved RGBA8 color of the uniformly
+  cleared depth/stencil scene (exact on all three drivers), and which sample index the integer resolve picks (always sample 0
+  on all three).
 - **Errors:** resolve with scaling, with translation and with mirroring; multisample to RGB565 and to SRGB8_ALPHA8;
   multisample to multisample; single-sample to multisample; read and draw the same framebuffer; incomplete draw and read
   framebuffers (`INVALID_FRAMEBUFFER_OPERATION`); `glReadPixels` from a multisample framebuffer. Rejected resolves are
@@ -151,8 +187,10 @@ that must not change are checked as well. All images read back with `glReadPixel
   report the ES 3.0 integer-format sample counts (0) there, so the ES 3.0 branch of the integer checks is exercised.
 - Not reachable through meta-gl's typed enums, hence not checked: `INVALID_VALUE` for mask bits other than the three buffer
   bits and `INVALID_ENUM` for a filter other than `LINEAR` / `NEAREST` (a raw cast would be needed).
-- A multisample *resolve* result is implementation-dependent by the spec; the checks describe properties of any averaging resolve and
-  are not a proof for a driver that resolves some other way (for example by picking one sample).
+- The RGBA8 resolve is implementation-dependent (§4.3.3), so no RGBA8 resolved value is asserted, not even for pixels whose samples
+  all hold one color. A conformant driver that resolves normalized colors by some other rule passes. What the demo does assert
+  about resolves (filter ignored, identical-bounds sub-rectangle, uniform depth/stencil, integer resolve = one of the samples)
+  follows from the quoted text alone, with one reading made explicit: a resolved pixel depends only on that pixel's samples.
 
 ## Pitfalls
 
@@ -160,7 +198,10 @@ that must not change are checked as well. All images read back with `glReadPixel
 - Blit coordinates are pixel *borders*: a 64-pixel rectangle is `(0, 0, 64, 64)`, not `(0, 0, 63, 63)`.
 - `READ_BUFFER` and `DRAW_BUFFERi` are per-framebuffer state; select them for the framebuffer that is bound to the
   corresponding target.
-- A multisample renderbuffer cannot be sampled or read directly. Resolve it first, with identical bounds and format.
+- A multisample renderbuffer cannot be sampled or read directly. Resolve it first, with identical bounds and format. To see the
+  individual samples, render into a multisample *texture* (ES 3.1) and `texelFetch` it.
+- Do not build exact expectations on a resolved RGBA8 image, not even where all samples agree: the specification leaves the
+  combination to the implementation. Integer formats are the exception (one of the samples is selected).
 - A resolve needs *identical* formats on both sides (§4.3.3), which includes the default framebuffer's; resolving into an
   intermediate texture of the same format (as here) and blitting that to the window avoids the question.
 - Depth and stencil buffers cannot be read back in ES: test them by drawing against them.

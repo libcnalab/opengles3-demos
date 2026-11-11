@@ -7,23 +7,28 @@
 // so the antialiasing appears to be automatic at the application level" (3.3).
 //
 // The picture is a rotating cube with six flat-colored faces on a dark background, drawn with back-face
-// culling. Every face color has the same channel sum (R + G + B = 450), so a resolved pixel's channel sum says
-// how much of it the cube covers, whichever faces those are.
+// culling. Every face color has the same channel sum (R + G + B = 450), so if the resolve averages the samples, a
+// resolved pixel's channel sum says how much of it the cube covers, whichever faces those are.
 //
-// Validation, all against a CPU projection of the same cube:
+// ES 3.0 does not say how the samples are combined: "The method of combination is not specified" (4.1.10), and a
+// resolve blit of normalized colors is "implementation-dependent" (4.3.3). No resolved color is asserted, not even
+// for pixels whose samples are all equal. Validation, against a CPU projection of the same cube:
 //   * SAMPLE_BUFFERS = 1 and SAMPLES >= 1 for the default framebuffer, 0 / 0 while a single-sample framebuffer
 //     object is the draw framebuffer; the back buffer is RGBA8 (attachment queries); with an ES 3.1+ context,
 //     glGetMultisamplefv returns SAMPLES positions in [0, 1] and INVALID_VALUE for index = SAMPLES;
 //   * glReadPixels from the multisampled default framebuffer raises no error (the INVALID_OPERATION rule of
-//     4.3.2 is for framebuffer *objects*) and returns resolved pixels: exterior pixels equal the background,
-//     pixels inside one face equal that face, pixels on the seams between faces have channel sum 450 (each
-//     sample is covered by exactly one face: 3.6.1 shared edges), silhouette pixels lie between the colors they
-//     touch, pixels centred on the silhouette are strictly between background and cube, and the summed coverage
-//     equals the silhouette area;
-//   * negative control: the same cube drawn into a single-sample framebuffer object has no blended pixel;
+//     4.3.2 is for framebuffer *objects*);
+//   * per sample, on the window, without any resolve: the cube is drawn with stencil INCR and ANY_SAMPLES_PASSED
+//     queries with stencil-tested polygons show that no sample is covered twice (3.6.1 shared edges), that no
+//     sample inside the silhouette is missed, and that none outside it is covered; positive controls show that
+//     each query can return TRUE;
+//   * the same cube in a single-sample framebuffer object (fully specified): exact background and face pixels,
+//     every seam pixel exactly one face, every silhouette pixel the background or one face;
 //   * glBlitFramebuffer from the default framebuffer into an RGBA8 framebuffer object with identical rectangles
-//     resolves it (same checks, determined pixels equal to glReadPixels); a sub-rectangle resolves only that
-//     rectangle; source and destination both mirrored are accepted and do not mirror;
+//     raises no error; an identical-bounds sub-rectangle writes only that rectangle, with the values of the
+//     whole resolve; source and destination both mirrored give the whole resolve, not its mirror image;
+//   * printed only: the window and blit images classified against the projection (bounds, seam sums of 450,
+//     blended silhouette pixels, coverage against the silhouette area), and how the two resolves compare;
 //   * INVALID_OPERATION (and nothing copied) for a resolve with a translated, scaled or mirrored destination
 //     rectangle, into RGB565 (formats not identical), and for a blit *into* the multisampled default
 //     framebuffer; glReadPixels from a multisample framebuffer object is INVALID_OPERATION, from the default
@@ -214,6 +219,32 @@ namespace
         return hull;
     }
 
+    /// The convex counter-clockwise polygon `p` with every edge moved by `d` pixels along its inward normal (d < 0 grows it):
+    /// each new corner is the intersection of two neighbouring moved edge lines.
+    Poly offset_polygon(const Poly& p, double d)
+    {
+        const std::size_t n = p.size();
+        std::vector<P2> base(n), dir(n);
+        for (std::size_t i = 0; i < n; ++i)
+        {
+            const P2 a = p[i], b = p[(i + 1) % n];
+            const double len = std::hypot(b.x - a.x, b.y - a.y);
+            const P2 u{(b.x - a.x) / len, (b.y - a.y) / len};
+            dir[i] = u;
+            base[i] = {a.x - u.y * d, a.y + u.x * d};  // the inward normal of a CCW edge is (-u.y, u.x)
+        }
+        Poly out(n);
+        for (std::size_t i = 0; i < n; ++i)
+        {
+            const std::size_t j = (i + n - 1) % n;  // the edge ending at corner i
+            // base[j] + s * dir[j] = base[i] + t * dir[i]
+            const double den = dir[j].x * dir[i].y - dir[j].y * dir[i].x;
+            const double s = ((base[i].x - base[j].x) * dir[i].y - (base[i].y - base[j].y) * dir[i].x) / den;
+            out[i] = {base[j].x + s * dir[j].x, base[j].y + s * dir[j].y};
+        }
+        return out;
+    }
+
     double distance_to_segment(P2 p, P2 a, P2 b)
     {
         const double dx = b.x - a.x, dy = b.y - a.y;
@@ -272,6 +303,8 @@ namespace
         Kind kind = Kind::Exterior;
         Rgba8 lo{}, hi{};       // per-channel bounds of the colors that can reach the pixel
         bool centred = false;   // the pixel centre is within 0.1 pixel of the silhouette, far from corners
+        std::uint8_t faces = 0; // bit f: face f touches the (grown) pixel square
+        bool near_corner = false;  // the pixel centre is within 1 pixel of a projected cube corner
     };
 
     /// The sample points of a pixel may lie outside its unit square (3.3), and vertex positions are snapped to the
@@ -298,8 +331,10 @@ namespace
                 {
                     if (box_disjoint(g.faces[i], b)) continue;
                     touching.push_back(g.ids[i]);
+                    e.faces = static_cast<std::uint8_t>(e.faces | (1u << g.ids[i]));
                     if (box_inside(g.faces[i], b)) inside_face = static_cast<int>(g.ids[i]);
                 }
+                for (const P2& v : g.corners) e.near_corner = e.near_corner || std::hypot(v.x - (x + 0.5), v.y - (y + 0.5)) < 1.0;
                 const bool in_hull = box_inside(g.hull, b);
                 e.kind = inside_face >= 0 ? Kind::Face : in_hull ? Kind::Seam : Kind::Silhouette;
                 e.lo = {255, 255, 255, 255};
@@ -427,18 +462,57 @@ namespace
         return s;
     }
 
-    /// Every check that a correctly resolved image of the multisampled cube must pass inside `r`.
-    void expect_resolved(demo::Check& check, std::string_view label, const Stats& s)
+    /// Prints what a weighted-average resolve would satisfy, measured on a resolved image. ES 3.0 says only that the samples
+    /// are "combined" (4.1.10) or "resolved in an implementation-dependent manner" (4.3.3), so none of this is asserted.
+    void print_resolved(std::string_view label, const Stats& s, double area)
     {
-        check.expect(s.exterior.bad == 0, std::format("{}: pixels the cube cannot reach equal the background (+-1)", label), s.exterior.detail());
-        check.expect(s.face.bad == 0, std::format("{}: pixels inside one face equal that face's color (+-1)", label), s.face.detail());
-        check.expect(s.seam_sum.bad == 0, std::format("{}: seam pixels inside the silhouette have R+G+B = 450 (+-3): no sample is missed or covered twice", label),
-                     s.seam_sum.detail());
-        check.expect(s.seam_range.bad == 0, std::format("{}: seam pixels lie between the colors of the faces they touch (+-1)", label), s.seam_range.detail());
-        check.expect(s.silhouette_range.bad == 0, std::format("{}: silhouette pixels lie between the background and the faces they touch (+-1)", label),
-                     s.silhouette_range.detail());
-        check.expect(s.centred.total >= 8 && s.centred.bad == 0,
-                     std::format("{}: pixels centred on the silhouette are strictly between background and cube (resolved blends)", label), s.centred.detail());
+        std::cout << std::format("   note: observed {} (implementation-dependent resolve, not asserted): exterior pixels off the background: {} of {}; "
+                                 "single-face pixels off their face color: {} of {}; seam pixels with R+G+B != 450 (+-3): {} of {}; seam pixels outside "
+                                 "the range of their faces: {} of {}; silhouette pixels outside the range of background and faces: {} of {}; pixels "
+                                 "centred on the silhouette not strictly blended: {} of {}; summed coverage {:.1f} px for an area of {:.1f} px ({:+.3f}%)\n",
+                                 label, s.exterior.bad, s.exterior.total, s.face.bad, s.face.total, s.seam_sum.bad, s.seam_sum.total, s.seam_range.bad,
+                                 s.seam_range.total, s.silhouette_range.bad, s.silhouette_range.total, s.centred.bad, s.centred.total, s.covered, area,
+                                 100.0 * (s.covered - area) / area);
+    }
+
+    bool near(const Rgba8& a, const Rgba8& b) { return within(a, b, b, 1); }
+
+    /// Single-sample rasterization is fully specified (ES 3.0 3.6.1): a pixel is produced when its centre lies inside a
+    /// polygon, and a centre on an edge shared by two polygons is produced by exactly one of them. With flat, opaque colors a
+    /// pixel is therefore exactly the background or exactly one face, never a blend. The shared-edge rule says nothing about a
+    /// centre that lies exactly on a corner where several faces meet, so pixels within 1 pixel of a projected corner are left
+    /// out of the seam and silhouette counts.
+    struct SingleStats
+    {
+        Counter exterior, face, seam, silhouette;
+        int corner_skipped = 0;
+    };
+
+    SingleStats analyze_single(const Image& img, const std::vector<Expect>& ex)
+    {
+        SingleStats s;
+        for (int y = 0; y < img.h; ++y)
+            for (int x = 0; x < img.w; ++x)
+            {
+                const Rgba8& got = img.at(x, y);
+                const Expect& e = ex[static_cast<std::size_t>(y * img.w + x)];
+                bool one_face = false;
+                for (std::size_t f = 0; f < kFace.size(); ++f) one_face = one_face || (((e.faces >> f) & 1u) != 0 && near(got, kFace[f]));
+                switch (e.kind)
+                {
+                case Kind::Exterior: s.exterior.add(near(got, kBackground), x, y, got, demo::format_rgba(kBackground)); break;
+                case Kind::Face: s.face.add(near(got, e.lo), x, y, got, demo::format_rgba(e.lo)); break;
+                case Kind::Seam:
+                    if (e.near_corner) ++s.corner_skipped;
+                    else s.seam.add(one_face, x, y, got, "exactly one of the faces it touches");
+                    break;
+                case Kind::Silhouette:
+                    if (e.near_corner) ++s.corner_skipped;
+                    else s.silhouette.add(one_face || near(got, kBackground), x, y, got, "the background or exactly one of the faces it touches");
+                    break;
+                }
+            }
+        return s;
     }
 
     template <typename F>
@@ -503,7 +577,20 @@ namespace
             mgl::glVertexAttribPointer(mgl::AttribLocation{1u}, 4, mgl::DataType::Float, GL_FALSE, sizeof(Vertex),
                                        demo::buffer_offset(offsetof(Vertex, r)));
             mgl::glBindVertexArray(mgl::VertexArrayId{0});
+
+            // The probing polygons of the per-sample checks: same vertex layout, contents uploaded per draw.
+            mgl::glGenBuffers(1, &poly_vbo_);
+            mgl::glBindBuffer(mgl::BufferTarget::Array, poly_vbo_);
+            mgl::glGenVertexArrays(1, &poly_vao_);
+            mgl::glBindVertexArray(poly_vao_);
+            mgl::glEnableVertexAttribArray(mgl::AttribLocation{0u});
+            mgl::glVertexAttribPointer(mgl::AttribLocation{0u}, 3, mgl::DataType::Float, GL_FALSE, sizeof(Vertex), demo::buffer_offset(0));
+            mgl::glEnableVertexAttribArray(mgl::AttribLocation{1u});
+            mgl::glVertexAttribPointer(mgl::AttribLocation{1u}, 4, mgl::DataType::Float, GL_FALSE, sizeof(Vertex),
+                                       demo::buffer_offset(offsetof(Vertex, r)));
+            mgl::glBindVertexArray(mgl::VertexArrayId{0});
             mgl::glBindBuffer(mgl::BufferTarget::Array, mgl::BufferId{0});
+            mgl::glGenQueries(1, &query_);
 
             // Framebuffer objects for the checks; their storage is sized in validate() to the current surface.
             std::array<mgl::FramebufferId, 3> f{};
@@ -549,34 +636,37 @@ namespace
             (void)demo::drain_gl_errors();
             const Image rp = read_image(w, h);
             check.expect_no_gl_error("glReadPixels from the multisampled default framebuffer raises no error (READ_FRAMEBUFFER_BINDING is zero)");
+            check.expect(geo.area > 100.0 && count_kind(ex, Kind::Exterior) > 0 && count_kind(ex, Kind::Face) > 0 && count_kind(ex, Kind::Seam) > 0 &&
+                             count_kind(ex, Kind::Silhouette) > 0,
+                         "the projection yields exterior, single-face, seam and silhouette pixels (no check below is vacuous)");
+            // The window holds resolved pixels. ES 3.0 4.1.10: "the sample values for each color in the multisample buffer are
+            // combined to produce a single color value [...] The method of combination is not specified." Not even a pixel whose
+            // samples are all equal is guaranteed to come back unchanged, so everything measured on the image is printed only.
             const Stats s_rp = analyze(rp, ex, all);
             std::cout << std::format("   note: {}x{}, SAMPLES {}; silhouette area {:.1f} px, perimeter {:.1f} px; {} exterior, {} face, {} seam, {} silhouette pixels "
-                                     "({} centred); resolved coverage {:.1f} px ({:+.2f}%), {} blended pixels\n",
+                                     "({} centred), {} blended pixels in glReadPixels\n",
                                      w, h, samples, geo.area, geo.perimeter, s_rp.exterior.total, s_rp.face.total, s_rp.seam_sum.total,
-                                     s_rp.silhouette_range.total, s_rp.centred.total, s_rp.covered, 100.0 * (s_rp.covered - geo.area) / geo.area, s_rp.mixed);
-            check.expect(s_rp.exterior.total > 0 && s_rp.face.total > 0 && s_rp.seam_sum.total > 0 && s_rp.silhouette_range.total > 0,
-                         "the projection yields exterior, single-face, seam and silhouette pixels (no check below is vacuous)");
-            expect_resolved(check, "glReadPixels", s_rp);
-            // Each silhouette pixel's resolved coverage is a multiple of 1/SAMPLES and can err by a fraction of a pixel,
-            // but along straight edges at generic angles the errors cancel (radeonsi, 4 samples: at most 0.006 px per
-            // pixel of perimeter over many poses and sizes). The bound, 0.05 px per pixel of perimeter, is a sanity
-            // tolerance, not a spec requirement; the measured value is printed above.
-            check.expect_near(s_rp.covered, geo.area, 0.05 * geo.perimeter,
-                              "summed resolved coverage (face and seam pixels 1, silhouette pixels (R+G+B-84)/366) equals the silhouette area");
+                                     s_rp.silhouette_range.total, s_rp.centred.total, s_rp.mixed);
+            print_resolved("glReadPixels of the window", s_rp, geo.area);
 
-            // ---- negative control: the same cube without multisampling -------------------------------------------
+            // ---- the same cube in a single-sample framebuffer object: fully specified ------------------------------
             bind_both(single_);
             check.expect(demo::get_integer(mgl::GetParameter::SampleBuffers) == 0, "control framebuffer object: SAMPLE_BUFFERS = 0 (single-sample rasterization)");
             draw_cube(w, h, frame_);
             const Image control = read_image(w, h);
-            const Stats s_ss = analyze(control, ex, all);
-            check.expect(s_ss.exterior.bad == 0 && s_ss.face.bad == 0,
-                         "control: the single-sample image has the same exact exterior and face pixels", s_ss.exterior.detail() + "; " + s_ss.face.detail());
-            check.expect(s_ss.mixed == 0 && s_rp.mixed >= 10,
-                         "negative control: the single-sample image has no blended silhouette pixel, the multisampled default framebuffer has many",
-                         std::format("single-sample {}, multisample {}", s_ss.mixed, s_rp.mixed));
-            check.expect(s_ss.centred.total > 0 && s_ss.centred.bad == s_ss.centred.total,
-                         "negative control: the centred-pixel check rejects every centred pixel of the single-sample image", s_ss.centred.detail());
+            const SingleStats s_ss = analyze_single(control, ex);
+            check.expect(s_ss.exterior.bad == 0 && s_ss.face.bad == 0, "single-sample control: exterior pixels equal the background, single-face pixels their face (+-1)",
+                         s_ss.exterior.detail() + "; " + s_ss.face.detail());
+            check.expect(s_ss.seam.total > 0 && s_ss.seam.bad == 0,
+                         "single-sample control: every seam pixel is exactly one of the faces it touches (shared edges: no crack, no blend)", s_ss.seam.detail());
+            check.expect(s_ss.silhouette.total > 0 && s_ss.silhouette.bad == 0,
+                         "single-sample control: every silhouette pixel is the background or exactly one face (no blend)", s_ss.silhouette.detail());
+            std::cout << std::format("   note: single-sample control: {} pixels within 1 px of a projected corner left out; {} blended silhouette pixels "
+                                     "(multisampled window: {})\n",
+                                     s_ss.corner_skipped, analyze(control, ex, all).mixed, s_rp.mixed);
+
+            // ---- per-sample checks on the window itself, with the stencil buffer and occlusion queries -------------------
+            check_samples_with_stencil(check, geo, w, h);
 
             // ---- glBlitFramebuffer resolve of the default framebuffer (4.3.3) --------------------------------------
             prepare_single();
@@ -586,12 +676,19 @@ namespace
             blit(all, all);
             check.expect_no_gl_error("glBlitFramebuffer from the multisampled default framebuffer into an RGBA8 framebuffer object, identical rectangles: no error");
             const Image full = read_single(w, h);
-            expect_resolved(check, "blit resolve", analyze(full, ex, all));
+            print_resolved("blit resolve", analyze(full, ex, all), geo.area);
             int max_diff = 0;
             const int differ = count_differences(full, rp, max_diff);
-            std::cout << std::format("   note: the blit resolve differs from glReadPixels in {} pixels (max {} per channel)\n", differ, max_diff);
-            check.expect(same_where_determined(full, rp, ex, all), "blit resolve equals glReadPixels in every exterior and single-face pixel");
+            std::cout << std::format("   note: observed: the blit resolve differs from glReadPixels in {} pixels (max {} per channel); both resolves are "
+                                     "implementation-dependent and need not agree\n",
+                                     differ, max_diff);
 
+            // The resolves below are compared with `full`, the resolve of the same samples by the same command with the whole
+            // rectangle. 4.3.3: "the samples corresponding to each pixel location in the source are converted to a single sample
+            // before being written to the destination": a resolved pixel is a function of that pixel's samples, and Appendix
+            // A.1 (repeatability) makes it the same function each time. So a pixel resolves to the same value however large
+            // the identical-bounds rectangle is, whatever that value is.
+            //
             // Sub-rectangle with identical bounds: only pixels whose centres lie in the rectangle are written.
             const Region part{w / 5, h / 4, w - w / 3, h - h / 5};
             prepare_single();
@@ -602,10 +699,7 @@ namespace
             check.expect_no_gl_error("resolve of a sub-rectangle with identical bounds raises no error");
             const Image sub = read_single(w, h);
             check.expect(outside_is_sentinel(sub, part), "sub-rectangle resolve: pixels outside the rectangle keep the sentinel");
-            check.expect(same_where_determined(sub, rp, ex, part), "sub-rectangle resolve: exterior and single-face pixels inside it equal glReadPixels");
-            const Stats s_sub = analyze(sub, ex, part);
-            check.expect(s_sub.seam_sum.bad == 0 && s_sub.silhouette_range.bad == 0, "sub-rectangle resolve: seam and silhouette pixels inside it are valid resolves",
-                         s_sub.seam_sum.detail() + "; " + s_sub.silhouette_range.detail());
+            check.expect(same_inside(sub, full, part), "sub-rectangle resolve: every pixel inside it equals the whole-surface resolve");
 
             // Both rectangles mirrored in x the same way: the bounds are identical (allowed), and "if both the source and
             // destination rectangles specify a negative width or height for the same direction, no reversal is performed".
@@ -616,7 +710,12 @@ namespace
             blit({w, 0, 0, h}, {w, 0, 0, h});
             check.expect_no_gl_error("resolve with source and destination both mirrored in x (identical bounds) raises no error");
             const Image both = read_single(w, h);
-            check.expect(same_where_determined(both, rp, ex, all), "...and it does not mirror: exterior and single-face pixels equal glReadPixels");
+            check.expect(same_inside(both, full, all), "...and it does not mirror: every pixel equals the whole-surface resolve");
+            // The comparison can fail: the single-sample image of the (asymmetric) cube differs from its own mirror image.
+            check.expect(count_differences(control, mirrored_x(control), max_diff) > 100,
+                         "negative control: the cube's single-sample image differs from its mirror image in more than 100 pixels (a mirrored copy is detectable)");
+            std::cout << std::format("   note: observed: the whole-surface resolve differs from its mirror image in {} pixels\n",
+                                     count_differences(full, mirrored_x(full), max_diff));
 
             check_errors(check, w, h, rp);
 
@@ -637,6 +736,9 @@ namespace
             mgl::glDeleteRenderbuffers(r);
             mgl::glDeleteVertexArrays(1, &vao_);
             mgl::glDeleteBuffers(1, &vbo_);
+            mgl::glDeleteVertexArrays(1, &poly_vao_);
+            mgl::glDeleteBuffers(1, &poly_vbo_);
+            mgl::glDeleteQueries(1, &query_);
             mgl::glDeleteProgram(program_);
             mgl::glDisable(mgl::Capability::CullFace);
             mgl::glEnable(mgl::Capability::Dither);
@@ -707,16 +809,141 @@ namespace
             return true;
         }
 
-        /// Exterior and single-face pixels have one value in all of their samples, so every resolve gives that value.
-        static bool same_where_determined(const Image& a, const Image& b, const std::vector<Expect>& ex, const Region& r)
+        static bool same_inside(const Image& a, const Image& b, const Region& r)
         {
             for (int y = r.y0; y < r.y1; ++y)
                 for (int x = r.x0; x < r.x1; ++x)
-                {
-                    const Kind k = ex[static_cast<std::size_t>(y * a.w + x)].kind;
-                    if ((k == Kind::Exterior || k == Kind::Face) && a.at(x, y) != b.at(x, y)) return false;
-                }
+                    if (a.at(x, y) != b.at(x, y)) return false;
             return true;
+        }
+
+        static Image mirrored_x(const Image& a)
+        {
+            Image m = a;
+            for (int y = 0; y < a.h; ++y)
+                for (int x = 0; x < a.w; ++x) m.px[static_cast<std::size_t>(y * a.w + x)] = a.at(a.w - 1 - x, y);
+            return m;
+        }
+
+        static int count_kind(const std::vector<Expect>& ex, Kind k)
+        {
+            return static_cast<int>(std::ranges::count_if(ex, [k](const Expect& e) { return e.kind == k; }));
+        }
+
+        // ------------------------------------------------------------------------------------------
+        // Per-sample checks on the multisampled window, without any resolve. The stencil buffer of the window lives in its
+        // multisample buffer (3.3), the stencil test and stencil operations run per sample (4.1.10), and an ANY_SAMPLES_PASSED
+        // query is TRUE "if any fragment or sample passes the depth test" (4.1.6). So "does any sample satisfy the stencil
+        // condition C?" is answered exactly by drawing a polygon with the stencil test C inside a query. Every comparison
+        // below uses the same sample points for the cube and for the probing polygon, whatever and wherever they are (3.3:
+        // they "may be located inside or outside of the unit square"; ES 3.2 13.4: they "cannot be queried").
+        void draw_cube_only(int w, int h) const
+        {
+            mgl::glViewport(0, 0, w, h);
+            const dm::Mat4 mvp = cube_mvp(w, h, frame_);
+            mgl::glUseProgram(program_);
+            mgl::glUniformMatrix4fv(u_mvp_, 1, GL_FALSE, mvp.data());
+            mgl::glBindVertexArray(vao_);
+            mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, vertex_count_);
+            mgl::glBindVertexArray(mgl::VertexArrayId{0});
+        }
+
+        /// A convex counter-clockwise polygon given in window coordinates (front-facing, so culling keeps it).
+        void draw_polygon(const Poly& p, int w, int h) const
+        {
+            std::vector<Vertex> v;
+            for (const P2& q : p)
+                v.push_back({static_cast<float>(q.x / w * 2.0 - 1.0), static_cast<float>(q.y / h * 2.0 - 1.0), 0.0f, 1.0f, 1.0f, 1.0f, 1.0f});
+            mgl::glViewport(0, 0, w, h);
+            mgl::glUseProgram(program_);
+            const dm::Mat4 identity = dm::Mat4::identity();
+            mgl::glUniformMatrix4fv(u_mvp_, 1, GL_FALSE, identity.data());
+            mgl::glBindVertexArray(poly_vao_);
+            mgl::glBindBuffer(mgl::BufferTarget::Array, poly_vbo_);
+            mgl::glBufferData(mgl::BufferTarget::Array, std::span<const Vertex>(v), mgl::BufferUsage::StreamDraw);
+            mgl::glDrawArrays(mgl::PrimitiveType::TriangleFan, 0, static_cast<GLsizei>(v.size()));
+            mgl::glBindBuffer(mgl::BufferTarget::Array, mgl::BufferId{0});
+            mgl::glBindVertexArray(mgl::VertexArrayId{0});
+        }
+
+        /// TRUE if any sample of polygon `p` passes the stencil test `func`(ref, stored).
+        bool any_sample(const Poly& p, int w, int h, mgl::CompareFunc func, int ref) const
+        {
+            mgl::glStencilFunc(func, ref, 0xFFu);
+            mgl::glStencilOp(mgl::StencilOp::Keep, mgl::StencilOp::Keep, mgl::StencilOp::Keep);
+            mgl::glBeginQuery(mgl::QueryTarget::AnySamplesPassed, query_);
+            draw_polygon(p, w, h);
+            mgl::glEndQuery(mgl::QueryTarget::AnySamplesPassed);
+            GLuint result = 0;
+            mgl::glGetQueryObjectuiv(query_, mgl::QueryObjectParameter::Result, &result);
+            return result != 0;
+        }
+
+        /// Clears the window's stencil samples to 0 and adds 1 to every sample the cube covers, `times` times.
+        void count_cube_coverage(int w, int h, int times) const
+        {
+            mgl::glClearStencil(0);
+            mgl::glClear(mgl::ClearBufferBit::Stencil);
+            mgl::glStencilFunc(mgl::CompareFunc::Always, 0, 0xFFu);
+            mgl::glStencilOp(mgl::StencilOp::Keep, mgl::StencilOp::Keep, mgl::StencilOp::Incr);
+            for (int i = 0; i < times; ++i) draw_cube_only(w, h);
+        }
+
+        void check_samples_with_stencil(demo::Check& check, const Geometry& geo, int w, int h) const
+        {
+            bind_both(kDefaultFbo);
+            GLint stencil_bits = 0;
+            mgl::glGetFramebufferAttachmentParameteriv(mgl::FramebufferTarget::DrawFramebuffer, mgl::DefaultFramebufferQueryAttachment::Stencil,
+                                                       mgl::FramebufferAttachmentParameter::StencilSize, &stencil_bits);
+            if (stencil_bits < 2)
+            {
+                std::cout << std::format("   note: the window has {} stencil bits; the per-sample stencil checks need 2 and are not made\n", stencil_bits);
+                return;
+            }
+            // Margins against vertex snapping (SUBPIXEL_BITS >= 4: a vertex moves by at most 1/32 pixel) and CPU/GPU rounding of
+            // the projection: the probing polygons stay 0.75 pixel inside or outside the silhouette.
+            const Poly inset = offset_polygon(geo.hull, 0.75), grown = offset_polygon(geo.hull, -0.75);
+            const Poly screen = {{0.0, 0.0}, {static_cast<double>(w), 0.0}, {static_cast<double>(w), static_cast<double>(h)}, {0.0, static_cast<double>(h)}};
+            // Color writes off (the picture stays), depth test on with ALWAYS and no depth writes: every sample "passes the depth
+            // test", which both the query (4.1.6) and the stencil dppass operation (4.1.5) refer to.
+            mgl::glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+            mgl::glEnable(mgl::Capability::DepthTest);
+            mgl::glDepthFunc(mgl::CompareFunc::Always);
+            mgl::glDepthMask(GL_FALSE);
+            mgl::glEnable(mgl::Capability::StencilTest);
+            mgl::glStencilMask(0xFFu);
+            (void)demo::drain_gl_errors();
+
+            count_cube_coverage(w, h, 0);
+            const bool control_uncovered = any_sample(inset, w, h, mgl::CompareFunc::Equal, 0);
+            count_cube_coverage(w, h, 1);
+            const bool twice = any_sample(screen, w, h, mgl::CompareFunc::Less, 1);       // 1 < stored: covered more than once
+            const bool crack = any_sample(inset, w, h, mgl::CompareFunc::Equal, 0);       // inside the silhouette, never covered
+            const bool covered = any_sample(screen, w, h, mgl::CompareFunc::Notequal, 0); // positive control
+            // Zero every sample inside the grown silhouette; a sample the cube covered outside it would keep its 1.
+            mgl::glStencilFunc(mgl::CompareFunc::Always, 0, 0xFFu);
+            mgl::glStencilOp(mgl::StencilOp::Keep, mgl::StencilOp::Keep, mgl::StencilOp::Zero);
+            draw_polygon(grown, w, h);
+            const bool outside = any_sample(screen, w, h, mgl::CompareFunc::Notequal, 0);
+            count_cube_coverage(w, h, 2);
+            const bool control_twice = any_sample(screen, w, h, mgl::CompareFunc::Less, 1);
+
+            mgl::glClear(mgl::ClearBufferBit::Stencil);
+            mgl::glDisable(mgl::Capability::StencilTest);
+            mgl::glDisable(mgl::Capability::DepthTest);
+            mgl::glDepthFunc(mgl::CompareFunc::Less);
+            mgl::glDepthMask(GL_TRUE);
+            mgl::glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+            std::cout << std::format("   note: window stencil bits {}\n", stencil_bits);
+            check.expect_no_gl_error("the stencil counting passes and occlusion queries on the window raise no error");
+            check.expect(!twice, "per sample (stencil INCR + ANY_SAMPLES_PASSED): no sample of the window is covered by two front faces (shared edges, 3.6.1/3.6.3)");
+            check.expect(!crack, "per sample: every sample 0.75 px or more inside the silhouette is covered by a front face (no crack along the seams)");
+            check.expect(!outside, "per sample: the cube covers no sample 0.75 px or more outside its silhouette");
+            check.expect(covered && control_uncovered && control_twice,
+                         "positive controls: the queries return TRUE for covered samples, for the inset silhouette before the cube is drawn, and for "
+                         "samples covered twice when the cube is drawn twice",
+                         std::format("covered {}, uncovered before drawing {}, drawn twice {}", covered, control_uncovered, control_twice));
         }
 
         // ------------------------------------------------------------------------------------------
@@ -830,6 +1057,9 @@ namespace
         mgl::UniformLocation u_mvp_{};
         mgl::BufferId vbo_{};
         mgl::VertexArrayId vao_{};
+        mgl::BufferId poly_vbo_{};
+        mgl::VertexArrayId poly_vao_{};
+        mgl::QueryId query_{};
         GLsizei vertex_count_ = 0;
         mgl::FramebufferId single_{}, rgb565_{}, ms_fbo_{};
         mgl::RenderbufferId single_rb_{}, rgb565_rb_{}, ms_rb_{};

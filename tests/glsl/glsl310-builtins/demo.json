@@ -1,0 +1,56 @@
+{
+  "name": "test-glsl310-builtins",
+  "title": "GLSL ES 3.10 built-in functions and arrays of arrays",
+  "min_es": "3.1",
+  "glsl": [
+    "310 es",
+    "300 es"
+  ],
+  "category": "tests",
+  "order": 11,
+  "summary": "The GLSL ES 3.10 integer functions (uaddCarry, usubBorrow, umulExtended, imulExtended, bitfieldExtract/Insert/Reverse, bitCount, findLSB/MSB, at run time and constant-folded), frexp/ldexp and packUnorm4x8/packSnorm4x8/unpackUnorm4x8/unpackSnorm4x8 evaluated in compute shaders over edge cases plus a seeded random set, read back from an SSBO and compared bit-exactly with CPU references; arrays of arrays (all declaration forms, length() per dimension, initializers, functions, SSBO members incl. a run-time sized outer dimension) verified by computed values; negative controls with deliberately wrong CPU models and compile errors for arrays of arrays where the language forbids them.",
+  "spec": [
+    "GLSL ES 3.10 §8.8 Integer Functions",
+    "GLSL ES 3.10 §8.3 Common Functions (frexp, ldexp, round)",
+    "GLSL ES 3.10 §8.4 Floating-Point Pack and Unpack Functions",
+    "GLSL ES 3.10 §4.1.9 Arrays, §4.3.3 Constant Expressions, §4.3.6 Output Variables, §5.4.1 Conversion and Scalar Constructors, §5.7 Structure and Array Operations",
+    "GLSL ES 3.10 §4.7.1 Range and Precision (exact integer arithmetic, +0/-0 interchangeable, mediump relative 2^-10)",
+    "GLSL ES 3.00 §4.1.9 Arrays (arrays of arrays are an error)",
+    "ES 3.2 §17 Compute Shaders, §7.8 Shader Buffer Variables and Shader Storage Blocks, §7.11.2 Shader Memory Access Synchronization, §6.3 Mapping and Unmapping Buffer Data"
+  ],
+  "api": {
+    "glDispatchCompute": "one invocation per input row; every output word compared with a CPU reference",
+    "glBindBufferBase": "SHADER_STORAGE_BUFFER bindings 0-2 match layout(binding) of the input, output and array-of-arrays blocks (the read-back values come from the bound stores)",
+    "glBufferData": "input rows and sentinel-filled output stores; the 140-byte store gives uint rt[][3] a run-time length() of 5",
+    "glMemoryBarrier": "BUFFER_UPDATE_BARRIER_BIT before mapping the shader-written stores",
+    "glMapBufferRange": "MAP_READ_BIT readback of every shader-written buffer",
+    "glUnmapBuffer": "after each readback",
+    "glCompileShader": "COMPILE_STATUS false for float a[2][3] in #version 300 es and for array-of-array fragment and vertex outputs in #version 310 es; true for the one-dimensional controls and all compute shaders"
+  },
+  "features": [
+    "ES31.COMPUTE.DISPATCH",
+    "ES31.SSBO.BASIC",
+    "ES31.SSBO.STD430"
+  ],
+  "glsl_features": [
+    "GLSL310.FN.INTEGER",
+    "GLSL310.FN.FLOAT_EXT",
+    "GLSL310.FN.PACKING_8",
+    "GLSL310.ARRAYS_OF_ARRAYS",
+    "GLSL310.SSBO"
+  ],
+  "validation": [
+    "readback",
+    "compute-check",
+    "negative",
+    "negative-control"
+  ],
+  "extra_drivers": [
+    "softpipe"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-opus",
+    "notes": "gpu es-max capture viewed: uniform black clear, as intended; the test draws nothing, all 77 checks are numeric readbacks and compile statuses."
+  }
+}

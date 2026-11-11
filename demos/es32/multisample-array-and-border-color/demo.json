@@ -1,0 +1,85 @@
+{
+  "name": "es32-multisample-array-and-border-color",
+  "title": "Multisample array textures and the border color",
+  "min_es": "3.2",
+  "glsl": [
+    "320 es"
+  ],
+  "category": "es32",
+  "order": 4560,
+  "summary": "TEXTURE_2D_MULTISAMPLE_ARRAY from glTexStorage3DMultisample (RGBA8, RGBA8I, RGBA8UI; 8x8, 4 layers), filled with one layered draw (glFramebufferTexture + geometry shader gl_Layer) or one glFramebufferTextureLayer draw per layer, every sample given its own value through gl_SampleID, and every sample of every layer read back exactly with texelFetch(gsampler2DMSArray, ivec3, sample); textureSize, level queries, the sample-count rounding rule, layered clears and the errors of section 8.8. CLAMP_TO_BORDER with TEXTURE_BORDER_COLOR set by glTexParameterfv / iv / Iiv / Iuiv and glSamplerParameterfv / Iiv / Iuiv and read back with the matching queries, looked up outside [0, 1] on RGBA8, RG8, RGBA32F, RGBA8I, RGBA16UI, RGBA32UI and DEPTH_COMPONENT16 (with and without comparison) textures: per-format clamping, the RG -> (R, G, 0, 1) rule, the depth interpretation, sampler objects overriding the texture's border, LINEAR filtering across the border, and the INVALID_ENUM / INVALID_OPERATION cases.",
+  "spec": [
+    "ES 3.2 §8.8 Multisample Textures (TexStorage3DMultisample: depth = layers, TEXTURE_SAMPLES >= samples and <= the next supported count, fixedsamplelocations, texel fetch by sample number, errors)",
+    "ES 3.2 §8.10 Texture Parameters (TEXTURE_BORDER_COLOR conversions for TexParameterfv / iv / Iiv / Iuiv, Table 8.19, INVALID_ENUM for the scalar forms and for sampler state on multisample targets, INVALID_OPERATION for TEXTURE_BASE_LEVEL != 0), §8.11.2 Texture Parameter Queries (GetTexParameterI{i,ui}v), §8.11.3 Texture Level Parameter Queries, §8.19 Texture State (initial border (0, 0, 0, 0))",
+    "ES 3.2 §8.2 Sampler Objects (SamplerParameter{fv,Iiv,Iuiv}, a bound sampler replaces the texture's sampler state, errors), §8.3 Sampler Object Queries (GetSamplerParameter{fv,Iiv,Iuiv})",
+    "ES 3.2 §8.14.2 Coordinate Wrapping and Texel Selection (Table 8.21 CLAMP_TO_BORDER = clamp(coord, -1, size), border texels, interpretation per internal format, clamping to [0, 1] for unsigned normalized and to the representable range for float and integer formats, first component = depth; LINEAR footprint), Table 8.8, Table 14.1, §8.20.1 Depth Texture Comparison Mode (Table 8.22, fixed-point Dt clamped to [0, 1])",
+    "ES 3.2 §2.3.5.1 equation 2.2 (signed normalized integer -> float for TexParameteriv)",
+    "ES 3.2 §9.2.3 Framebuffer Object Queries (FRAMEBUFFER_ATTACHMENT_LAYERED), §9.2.3.1 Multisample Queries (SAMPLES), §9.2.8 Attaching Texture Images to a Framebuffer (FramebufferTexture: layered attachment; FramebufferTextureLayer: level 0 only for multisample arrays, layer limit), §9.8 Layered Framebuffers (gl_Layer selects the layer; Clear / ClearBuffer clear all layers)",
+    "ES 3.2 §14.2.2 Shader Inputs (gl_SampleID: the shader runs per sample), §20.3 Internal Format Queries (NUM_SAMPLE_COUNTS / SAMPLES for TEXTURE_2D_MULTISAMPLE_ARRAY, descending order, guaranteed maximum)",
+    "GLSL ES 3.20 §4.1.7 Opaque Types (sampler2DMSArray, isampler2DMSArray, usampler2DMSArray), §8.9.1 Texture Query Functions (textureSize(gsampler2DMSArray) = ivec3(w, h, layers)), §8.9.2 Texel Lookup Functions (texelFetch(gsampler2DMSArray, ivec3, int sample), textureLod on sampler2D / isampler2D / usampler2D / sampler2DShadow), §7.1 Built-In Variables (gl_Layer, gl_SampleID)"
+  ],
+  "api": {
+    "glTexStorage3DMultisample": "TEXTURE_2D_MULTISAMPLE_ARRAY RGBA8 / RGBA8I / RGBA8UI 8x8x4 (fixedsamplelocations TRUE), RGBA8 4x4x2 (FALSE), RGBA8UI 4x4x3; every request 1..max for RGBA8 allocates a count in [request, next supported count]; every sample of every layer read back; INVALID_ENUM for targets TEXTURE_2D_MULTISAMPLE and TEXTURE_2D_ARRAY and for RGB8_SNORM, INVALID_VALUE for depth 0, width 0, samples 0, depth MAX_ARRAY_TEXTURE_LAYERS + 1 and width MAX_TEXTURE_SIZE + 1, INVALID_OPERATION for samples = max + 1 (three formats), for texture 0 and for re-specification; failed calls allocate nothing",
+    "glGetTexLevelParameteriv": "TEXTURE_WIDTH / HEIGHT / DEPTH (layers) / INTERNAL_FORMAT / SAMPLES / FIXED_SAMPLE_LOCATIONS of the multisample arrays",
+    "glGetTexParameteriv": "TEXTURE_IMMUTABLE_FORMAT (TRUE after TexStorage3DMultisample, FALSE after the failed calls), TEXTURE_WRAP_S / T = CLAMP_TO_BORDER",
+    "glGetInternalformativ": "NUM_SAMPLE_COUNTS / SAMPLES on TEXTURE_2D_MULTISAMPLE_ARRAY for RGBA8, RGBA8I, RGBA8UI: positive, descending, maximum at least the section 20.3.1 guarantee; the counts drive the allocation and error checks",
+    "glFramebufferTexture": "whole multisample array attached (FRAMEBUFFER_ATTACHMENT_LAYERED TRUE, complete); the layered draw writes each layer, the layered ClearBufferuiv clears all three layers of a test array",
+    "glFramebufferTextureLayer": "one layer of RGBA8I / RGBA8UI arrays per draw (each layer then holds its own pattern), a single-layer clear touches only that layer; LAYERED FALSE; INVALID_VALUE for level 1 and for layer = MAX_ARRAY_TEXTURE_LAYERS",
+    "glGetFramebufferAttachmentParameteriv": "FRAMEBUFFER_ATTACHMENT_LAYERED TRUE for the glFramebufferTexture attachment, FALSE for glFramebufferTextureLayer",
+    "glCheckFramebufferStatus": "FRAMEBUFFER_COMPLETE for layered and single-layer multisample array attachments",
+    "glClearBufferuiv": "on the layered attachment clears every sample of every layer, on a layer-1 attachment only layer 1 (read back with texelFetch)",
+    "glGetIntegerv": "SAMPLES of each multisample array framebuffer = TEXTURE_SAMPLES; TEXTURE_BINDING_2D_MULTISAMPLE_ARRAY after bind and unbind; MAX_SAMPLES / MAX_COLOR_TEXTURE_SAMPLES / MAX_INTEGER_SAMPLES / MAX_ARRAY_TEXTURE_LAYERS / MAX_TEXTURE_SIZE used by the checks",
+    "glTexParameterfv": "TEXTURE_BORDER_COLOR on RGBA8 (clamped to [0, 1] when used), RG8 ((R, G, 0, 1)), RGBA32F (returned bit-exactly), DEPTH_COMPONENT16 (first component = depth, clamped); INVALID_ENUM on TEXTURE_2D_MULTISAMPLE_ARRAY",
+    "glTexParameteriv": "TEXTURE_BORDER_COLOR (INT_MAX, -INT_MAX, 0, INT_MAX) stored as (1, -1, 0, 1) by equation 2.2 (component 0: known Mesa deviation) and looked up as (1, 0, 0, 1)",
+    "glTexParameterIiv": "TEXTURE_BORDER_COLOR (300, 40, -200, 5) on RGBA8I: read back unmodified, looked up clamped to (127, 40, -128, 5); INVALID_ENUM on TEXTURE_2D_MULTISAMPLE_ARRAY",
+    "glTexParameterIuiv": "TEXTURE_BORDER_COLOR on RGBA16UI (looked up clamped to 65535) and RGBA32UI (unchanged)",
+    "glGetTexParameterfv": "initial border (0, 0, 0, 0); the fv border unclamped; the iv border converted; unchanged after the rejected scalar calls",
+    "glGetTexParameterIiv": "the Iiv border unmodified (300, 40, -200, 5)",
+    "glGetTexParameterIuiv": "the Iuiv border unmodified (70000, 3, 0xFFFFFFFF, 65535)",
+    "glTexParameteri": "TEXTURE_BORDER_COLOR -> INVALID_ENUM; on TEXTURE_2D_MULTISAMPLE_ARRAY: WRAP_S and MIN_FILTER -> INVALID_ENUM, BASE_LEVEL 1 -> INVALID_OPERATION, BASE_LEVEL 0 accepted; MIN/MAG_FILTER, WRAP_S/T, COMPARE_MODE/FUNC of the 2D textures (results follow them)",
+    "glTexParameterf": "TEXTURE_BORDER_COLOR -> INVALID_ENUM",
+    "glGenSamplers": "border, CLAMP_TO_EDGE and LINEAR sampler objects",
+    "glSamplerParameteri": "MIN/MAG_FILTER and WRAP_S/T of the samplers (lookups follow them); TEXTURE_BORDER_COLOR -> INVALID_ENUM",
+    "glSamplerParameterf": "TEXTURE_BORDER_COLOR -> INVALID_ENUM",
+    "glSamplerParameterfv": "border (0, 1, 0.4, 1) replaces the texture's border on RGBA8 (lookups and picture); LINEAR sampler border",
+    "glSamplerParameterIiv": "border (-1, 2, -300, 4) replaces the RGBA8I texture's border, clamped to (-1, 2, -128, 4); INVALID_OPERATION on a deleted sampler name",
+    "glSamplerParameterIuiv": "border (1, 2, 3, 70000) replaces the RGBA16UI texture's border, clamped to (1, 2, 3, 65535)",
+    "glGetSamplerParameterfv": "initial border (0, 0, 0, 0), the fv border, unchanged after the rejected scalar calls",
+    "glGetSamplerParameteriv": "TEXTURE_WRAP_S = CLAMP_TO_BORDER",
+    "glGetSamplerParameterIiv": "the Iiv border unmodified",
+    "glGetSamplerParameterIuiv": "the Iuiv border unmodified",
+    "glBindSampler": "a bound sampler overrides the texture's wrap mode and border; after BindSampler(0, 0) the texture's border is used again",
+    "glDispatchCompute": "texelFetch read-back of every sample of every layer and textureSize; 30-90 border probes per texture/sampler combination",
+    "glDrawArrays": "full-viewport triangle into the multisample layers (layered via the geometry shader, or per layer); the picture's grid and quads (all grid pixels and 256 quad cell centres compared with the CPU model)",
+    "glReadPixels": "RGBA8 read-back of the whole default framebuffer for the picture check",
+    "glMapBufferRange": "reads the compute results",
+    "glDeleteTextures": "cleanup; final glGetError == NO_ERROR",
+    "glDeleteSamplers": "cleanup"
+  },
+  "features": [
+    "ES32.TEXTURE.MS_ARRAY",
+    "ES32.TEXTURE.BORDER_COLOR",
+    "ES32.GEOMETRY.LAYERED",
+    "ES30.SAMPLER.OBJECTS",
+    "ES30.FBO.LAYER",
+    "ES30.INTERNALFORMAT.QUERY"
+  ],
+  "glsl_features": [
+    "GLSL320.TYPES.NEW_SAMPLERS",
+    "GLSL300.TYPES.SAMPLERS",
+    "GLSL300.FN.TEXTURE.SHADOW"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "state-query",
+    "gl-error",
+    "negative",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-opus-5.5 (subagent)",
+    "notes": "radeonsi es-max capture viewed at 3x. Top half: a 4 x 4 grid of tiles (columns = samples 0..3, rows = layers 0..3 from the top), each tile an 8 x 8 block of differently coloured texels with a 2-pixel dark gap on its right and bottom; every tile is a different colour ramp (the pattern depends on layer and sample, with visible wrap-around jumps where a channel passes 255), none is empty or repeated. Bottom half on the dark background: four 60-pixel squares, each with the 4 x 4 texture in the middle (a quarter of the area) and a solid frame: red (255, 0, 51) for RGBA8 with the texture's clamped border, bright green (0, 255, 102) for the same texture with the sampler's border, orange (255, 168, 0) for RGBA8I with the clamped integer border (texture shown bluish-grey), and white for the depth quad, whose inner texture is white in the upper half and black in the lower half (Dref 0.5 against depths increasing upward). The RGBA8 texture is upright (bluish rows at the bottom, greener rows at the top). The llvmpipe capture differs from radeonsi in 174 pixels, all on the two rows and two columns of each quad's texture area where a texel boundary falls exactly on a pixel centre (not probed)."
+  }
+}

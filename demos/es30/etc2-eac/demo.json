@@ -1,0 +1,67 @@
+{
+  "name": "es30-etc2-eac",
+  "title": "ETC2 / EAC compressed textures",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es30",
+  "order": 235,
+  "summary": "All ten mandatory ETC2/EAC formats from hand-encoded blocks: RGB8_ETC2 individual, differential, T, H (both orderings) and planar modes, punchthrough alpha (opaque and transparent blocks), RGBA8 EAC alpha, unsigned and signed R11/RG11 EAC, and the sRGB variants. Uploaded with glCompressedTexImage2D/3D and glCompressedTexSubImage2D/3D (block-aligned, partial edge block of a 6 x 6 texture, two layers of a 2D array, the whole level of an immutable texture), drawn 1:1 with NEAREST into an RGBA32UI target and compared texel by texel with an Appendix C decoder, plus the numbers worked out in the Appendix C text. Ten decoder mutations must disagree. Format queries and 25 compressed-upload errors, after which the texels are unchanged.",
+  "spec": [
+    "ES 3.0 §3.8.6 Compressed Texture Images (Table 3.19; imageSize -> INVALID_VALUE; format mismatch, ETC2/EAC only with TEXTURE_2D_ARRAY, 4 x 4 block alignment of sub-images and its relaxation at the level edge -> INVALID_OPERATION; blocks outside the region are preserved)",
+    "ES 3.0 Appendix C.1 ETC Compressed Texture Image Formats (C.1.1-C.1.10: block layout Table C.1/C.2, bit layouts Tables C.3/C.9/C.11, modifier tables C.6/C.10/C.12, index mappings C.7/C.13, distances C.8, equations C.1-C.9)",
+    "ES 3.0 §3.8.3 Texture Image Specification (border != 0 -> INVALID_VALUE), §3.8.5 Alternate Texture Image Specification Commands (sub-image bounds -> INVALID_VALUE), §3.8.4 Immutable-Format Texture Images (TexStorage* with compressed formats; CompressedTexImage* on an immutable texture -> INVALID_OPERATION)",
+    "ES 3.0 §3.8.16 sRGB Texture Color Conversion (equation 3.26), Table 3.24 (RED/RG sample as (r, 0, 0, 1) / (r, g, 0, 1)), §2.1.6.1 Conversion from Normalized Fixed-Point to Floating-Point",
+    "ES 3.0 §6.1.3 Enumerated Queries, Table 6.29 (NUM_COMPRESSED_TEXTURE_FORMATS >= 10, COMPRESSED_TEXTURE_FORMATS), §6.1.15 (GetInternalformativ is defined only for renderable formats)",
+    "ES 3.2 §8.7 Compressed Texture Images (Table 8.17; explicit Errors lists incl. INVALID_ENUM for a non-2D target of CompressedTex[Sub]Image2D and for negative imageSize -> INVALID_VALUE), §8.11.3 Texture Level Parameter Queries (TEXTURE_COMPRESSED, ES 3.1+)",
+    "ES 3.0 §4.4.2 / Table 3.13 (RGBA32UI is color-renderable), §4.3.1 Reading Pixels (RGBA_INTEGER / UNSIGNED_INT)",
+    "GLSL ES 3.00 §8.8 Texture Lookup Functions (texture on sampler2D / sampler2DArray), §8.3 Common Functions (floatBitsToUint), §7.1/§7.2 gl_VertexID, gl_FragCoord"
+  ],
+  "api": {
+    "glCompressedTexImage2D": "RGB8_ETC2 12x8 and 6x6 (padded to whole blocks), the punchthrough, RGBA8/SRGB8_ALPHA8 EAC, R11/RG11 (signed and unsigned) textures: every texel matches the Appendix C decoder in the exact RGBA32UI readback; imageSize too small / too large / not padded, border 1 -> INVALID_VALUE; TEXTURE_2D_ARRAY target -> INVALID_ENUM; on an immutable texture -> INVALID_OPERATION",
+    "glCompressedTexSubImage2D": "4x4 block at (8, 4) of the RGB8 texture, the whole 8x4 level of the immutable SRGB8 texture, and the 2x2 edge region at (4, 4) of the 6x6 texture (width not a multiple of 4 but reaching the level edge): updated and preserved texels verified exactly; x/y offset 2, width/height 2 not reaching the edge, SRGB8/RGBA8 format into an RGB8 image -> INVALID_OPERATION; region past the level, imageSize 7/16/-8 -> INVALID_VALUE; TEXTURE_3D target -> INVALID_ENUM; rejected calls leave the texels unchanged",
+    "glCompressedTexImage3D": "TEXTURE_2D_ARRAY RGB8_ETC2 8x4x3: all three layers verified texel by texel; TEXTURE_3D with RGB8_ETC2 or R11_EAC -> INVALID_OPERATION",
+    "glCompressedTexSubImage3D": "xoffset 4, zoffset 1, 4x4x2 region of the array: the right block of layers 1 and 2 replaced, everything else preserved (exact readback); imageSize 8 for two blocks, zoffset + depth past the last layer -> INVALID_VALUE; R11_EAC format into the RGB8 array, xoffset 2, TEXTURE_3D target -> INVALID_OPERATION",
+    "glTexStorage2D": "immutable SRGB8_ETC2 8x4 (compressed overload), filled by glCompressedTexSubImage2D and verified; TEXTURE_IMMUTABLE_FORMAT TRUE",
+    "glGetIntegerv": "NUM_COMPRESSED_TEXTURE_FORMATS >= 10; COMPRESSED_TEXTURE_FORMATS writes exactly that many values and contains all ten Table 3.19 formats",
+    "glGetTexParameteriv": "TEXTURE_IMMUTABLE_FORMAT TRUE after glTexStorage2D, FALSE after glCompressedTexImage2D",
+    "glGetTexLevelParameteriv": "ES 3.1+ contexts: TEXTURE_COMPRESSED TRUE, TEXTURE_INTERNAL_FORMAT, WIDTH/HEIGHT/DEPTH for all 12 compressed images (6x6 and the 3-layer array included); COMPRESSED FALSE for an RGBA8 3D texture; width 0 for the name every compressed upload was rejected on",
+    "glTexImage3D": "RGBA8 3D texture whose COMPRESSED level query is FALSE and that rejects ETC2 sub-images",
+    "glTexParameteri": "NEAREST min/mag filters (typed glTexParameter overloads): the textures are complete and sample single texels",
+    "glReadPixels": "RGBA_INTEGER / UNSIGNED_INT readback of the floatBitsToUint target; RGBA / UNSIGNED_BYTE of the picture (every magnified texel compared)",
+    "glDrawArrays": "TRIANGLE_STRIP quads from gl_VertexID: one per cell, one per texture level/layer in the exact pass",
+    "glRenderbufferStorage": "RGBA32UI 12x8 exact-readback target (complete)"
+  },
+  "features": [
+    "ES30.TEXTURE.ETC2_EAC",
+    "ES30.TEXTURE.COMPRESSED_QUERY",
+    "ES30.TEXTURE.2D_ARRAY",
+    "ES30.TEXTURE.SRGB",
+    "ES30.TEXTURE.IMMUTABLE",
+    "ES20.ERRORS.GETERROR",
+    "ES20.ERRORS.INVALID_ENUM",
+    "ES20.ERRORS.INVALID_VALUE",
+    "ES20.ERRORS.INVALID_OPERATION"
+  ],
+  "glsl_features": [
+    "GLSL300.TYPES.SAMPLERS",
+    "GLSL300.FN.TEXTURE.BASIC",
+    "GLSL300.FN.COMMON",
+    "GLSL300.BUILTIN_VARS.VS",
+    "GLSL300.BUILTIN_VARS.FS",
+    "GLSL300.FRAG.OUTPUT"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "state-query",
+    "gl-error",
+    "negative"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-opus-5.5 (subagent)",
+    "notes": "Captures viewed at 256x256 (6x6 grid), 640x480 (7x5), 800x800 (6x6) and 333x777 (4x8), radeonsi; zink 640x480 identical in layout. 31 square-ish cells on a dark background with even gaps, each a 4x4 block of sharp NEAREST texels: RGB8 individual (pink/cyan halves), differential (red flip-1 halves), T, H, planar (smooth pink-to-olive ramp), the sub-image H block; two sRGB blocks; punchthrough cells with the grey checkerboard visible exactly in the transparent texels; EAC alpha cells showing the checker through partially transparent colour; the R11 spec-example blocks nearly uniform purple, the 'reaches 1.0' block solid red, signed R11 tan / blue-grey, RG11 and signed RG11 red/blue stripes; the three 8x4 array layers and the 6x6 texture last. No empty or black cells, no half texels."
+  }
+}

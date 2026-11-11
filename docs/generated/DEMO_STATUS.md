@@ -31,6 +31,7 @@
 | es30-immutable-storage | 3.0 | es30 | Immutable texture storage and sized formats | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-pixel-buffer-objects | 3.0 | es30 | Pixel buffer objects: texture uploads and read-backs through buffer objects | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-srgb | 3.0 | es30 | sRGB textures and sRGB render targets | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| es30-etc2-eac | 3.0 | es30 | ETC2 / EAC compressed textures | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-framebuffer-blit-msaa | 3.0 | es30 | Framebuffer blits and multisample resolve | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-framebuffer-invalidate | 3.0 | es30 | Framebuffer invalidation and attachment queries | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-buffer-mapping | 3.0 | es30 | Buffer mapping and copying | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |

@@ -101,6 +101,12 @@ fails, and *every* wrapper then terminates because meta-gl is uninitialized, wha
 partial-matrix case, but the harness still needs a working mock context to prove contracts.
 `test-metagl-contracts` in this repository checks them with a real context.
 
+### O9 — `glGetInternalformativ` cannot name compressed formats
+`glGetInternalformativ` takes `InternalFormat`, which has no compressed values, and there is no
+`CompressedInternalFormat` overload. ES 3.0 §6.1.15 makes INVALID_ENUM the defined result for a non-renderable
+(e.g. compressed) internalformat, and that error cannot be tested without a raw cast. Same class as O1. Found by
+es30-etc2-eac (the case is left untested). Possible additive fix: a `CompressedInternalFormat` overload.
+
 ### Note — arbitrary sample masks
 `SampleMaskValue` (for `glSampleMaski`) has only `None` and `All`. Since it is a registered 32-bit bitfield
 (`all_bits = 0xFFFFFFFF`), a chosen mask is formed with `static_cast<SampleMaskValue>(bits)`. Every value is

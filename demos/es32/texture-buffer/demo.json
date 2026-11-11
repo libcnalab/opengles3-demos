@@ -1,0 +1,75 @@
+{
+  "name": "es32-texture-buffer",
+  "title": "Buffer textures",
+  "min_es": "3.2",
+  "glsl": [
+    "320 es"
+  ],
+  "category": "es32",
+  "order": 4540,
+  "summary": "Buffer textures: glTexBuffer / glTexBufferRange over all 30 sized internal formats of ES 3.2 Table 8.18 (every component of 64 texels, constant 0/0/1 components, half floats, sign extension, normalization), samplerBuffer / isamplerBuffer / usamplerBuffer texelFetch and textureSize, imageBuffer imageLoad / imageStore / imageSize for the 12 formats shared with Table 8.26, TEXTURE_BUFFER_OFFSET_ALIGNMENT offsets and sizes (texel count = floor(size / texel size)), every glTexBufferRange error, TEXTURE_BUFFER_BINDING and TEXTURE_BINDING_BUFFER, glBufferSubData through the TEXTURE_BUFFER target, the guaranteed 65536-texel size, GLSL ES 3.20 compile-time rules. The picture is a 64-cube instanced scene whose transforms (RGBA32F, rewritten every frame), colours (RGBA8) and materials (R16UI) are three ranges of one buffer object, checked with a ray caster; a strip below reads the colour and material texels in a fragment shader.",
+  "spec": [
+    "ES 3.2 §8.9 Buffer Textures: TexBufferRange / TexBuffer (offset, size, buffer 0 detaches and ignores offset/size, errors), the texel count floor(size / (components x sizeof(base type))) clamped to MAX_TEXTURE_BUFFER_SIZE, undefined fetches outside the texel range, Table 8.18 (30 internal formats: base type, components, normalization, component mapping), the TEXTURE_BUFFER binding point that has no effect on rendering",
+    "ES 3.2 §6 / Table 6.1 (TEXTURE_BUFFER buffer target), Table 21.9 (TEXTURE_BINDING_BUFFER), Table 21.10 (TEXTURE_BUFFER_BINDING), Table 21.40 (MAX_TEXTURE_BUFFER_SIZE minimum 65536, TEXTURE_BUFFER_OFFSET_ALIGNMENT maximum 256)",
+    "ES 3.2 §8.11.3 Texture Level Parameter Queries (TEXTURE_BUFFER is a valid target, only level 0, INVALID_VALUE otherwise; the buffer-specific pnames of Table 21.11 are a meta-gl gap)",
+    "ES 3.2 §8.23 Texture Image Loads and Stores: BindImageTexture of a buffer texture, Table 8.25 (i = x), Table 8.26 (13 image formats), §8.23.1 / Table 21.33 (IMAGE_BINDING_*), §2.3.5.1-2.3.5.2 (equations 2.1 and 2.3: unorm conversion in both directions), §7.11 (MemoryBarrier)",
+    "ES 3.2 §11.1.3.2 Texel Fetches, §11.1.3.4 Texture Queries, §10.5 (DrawElementsInstanced), §2.3.1 (an erroring command has no effect)",
+    "GLSL ES 3.20 §4.1.7 Opaque Types (samplerBuffer, isamplerBuffer, usamplerBuffer, imageBuffer), §4.7.3 Default Precision Qualifiers (no default for the buffer samplers), §8.9.1 / §8.9.2 textureSize and texelFetch for gsamplerBuffer, §8.12 imageLoad / imageStore / imageSize"
+  ],
+  "api": {
+    "glTexBuffer": "whole-store attach (BUFFER_SIZE 800 -> textureSize 100 RGBA16UI texels, every texel compared); errors: target TEXTURE_2D, RGB8 / RGB16F / unsized RGBA -> INVALID_ENUM; buffer 0 detaches without error",
+    "glTexBufferRange": "attaches a byte range with a format, offset and size: all 30 formats of Table 8.18 (30 x 64 texels, 4 components each, bit exact or equation 2.1), offsets that are multiples of the alignment, sizes that are not multiples of the texel size (textureSize == floor(size / texel size)), the three ranges of the instanced scene; INVALID_VALUE for misaligned / negative offset, size 0, negative size, offset+size > BUFFER_SIZE, INVALID_OPERATION for a non-buffer name, INVALID_ENUM for a wrong target; a failed call leaves the previous attachment unchanged; buffer 0 ignores offset and size",
+    "glBindBuffer": "TEXTURE_BUFFER target: TEXTURE_BUFFER_BINDING read back after bind, rebind and unbind; independent of ARRAY_BUFFER and SHADER_STORAGE_BUFFER bindings; a decoy buffer bound there does not change what the attached texture reads",
+    "glBufferData": "fills the data stores through the TEXTURE_BUFFER target; the fetched texels equal the uploaded bytes decoded by the Table 8.18 model",
+    "glBufferSubData": "through the TEXTURE_BUFFER target: rewriting one texel, one component, and the per-frame transform texels of the scene; the next texelFetch / the next frame shows the change and an update of one colour texel changes exactly that instance's pixels (and writing the old value back restores them)",
+    "glGetBufferParameteriv": "BUFFER_SIZE of the buffer bound to TEXTURE_BUFFER (800) as used by glTexBuffer",
+    "glMapBufferRange": "reads the buffer an imageStore shader wrote (12 formats, 100 texels, compared with the mirrored and component-reversed model) and the SSBOs that receive the fetched words",
+    "glUnmapBuffer": "returns TRUE after every read mapping",
+    "glGetIntegerv": "TEXTURE_BUFFER_BINDING, TEXTURE_BINDING_BUFFER (per unit, three units), MAX_TEXTURE_BUFFER_SIZE >= 65536, TEXTURE_BUFFER_OFFSET_ALIGNMENT in [1, 256] and used as the unit of every offset, ARRAY_BUFFER_BINDING, SHADER_STORAGE_BUFFER_BINDING",
+    "glGetTexLevelParameteriv": "TEXTURE_BUFFER level 0 is a valid query and levels 1 and -1 raise INVALID_VALUE (8.11.3); the values of TEXTURE_WIDTH / TEXTURE_INTERNAL_FORMAT are printed but not asserted (the spec does not define them for buffer textures)",
+    "glBindTexture": "TEXTURE_BUFFER binding on units 0..2 selects the textures the shaders fetch from; TEXTURE_BINDING_BUFFER is per unit and unaffected by TEXTURE_2D",
+    "glBindImageTexture": "buffer textures bound as ReadOnly / WriteOnly images in 12 formats (rgba8, rgba16f, rgba32f, r32f, rgba8i ... rgba32ui); IMAGE_BINDING_NAME / FORMAT / ACCESS read back; every stored texel verified",
+    "glGetIntegeri_v": "IMAGE_BINDING_NAME, IMAGE_BINDING_FORMAT, IMAGE_BINDING_ACCESS of the image unit holding a buffer texture",
+    "glDispatchCompute": "fetch shaders that dump texelFetch / textureSize words (30 formats, ranges, 65536 texels) and image copy shaders (12 formats, 100 texels = 2 work groups); results compared with the CPU models",
+    "glMemoryBarrier": "BUFFER_UPDATE before mapping, TEXTURE_FETCH before sampling an image-written buffer texture: the data seen equals the model",
+    "glBindBufferBase": "binds the shader storage buffers that receive the fetched words and image sizes",
+    "glCompileShader": "control shader with samplerBuffer / isamplerBuffer / usamplerBuffer / imageBuffer compiles; six shaders that must not compile (no precision, texelFetch with lod, ivec2 coordinate, textureSize with lod, texture(samplerBuffer), samplerBuffer in #version 310 es) are rejected",
+    "glDrawElementsInstanced": "64 cubes from one mesh with gl_InstanceID selecting every transform, colour and material texel; 6100 pixel probes compared with a ray caster",
+    "glDrawArrays": "full-screen triangle for the strip: fragment-shader texelFetch of the 64 colour and 64 material texels, every cell compared",
+    "glUniformMatrix4fv": "view-projection matrix of the scene; the CPU ray caster uses the same camera",
+    "glUniform3f": "light direction used by the diffuse and banded materials",
+    "glUniform1i": "sampler units of the scene, strip and fetch programs; compute count",
+    "glUniform4i": "strip rectangle in window coordinates",
+    "glReadPixels": "RGBA8 readback of the default framebuffer for the scene and strip probes and the update experiment",
+    "glViewport": "scene viewport above the strip viewport; pixel positions verified",
+    "glClear": "background colour and depth for the scene",
+    "glEnable": "DEPTH_TEST for the cubes (the ray caster takes the nearest hit)",
+    "glGenBuffers": "scene buffer, cube mesh, shader storage buffer, data and image buffers; cleaned up in shutdown",
+    "glGenTextures": "three scene buffer textures, the sweep texture, the image textures",
+    "glActiveTexture": "units 0..2 hold the three scene buffer textures",
+    "glDeleteBuffers": "cleanup; final glGetError == NO_ERROR",
+    "glDeleteTextures": "cleanup"
+  },
+  "features": [
+    "ES32.TEXTURE.BUFFER",
+    "ES30.DRAW.INSTANCED",
+    "ES31.IMAGE.LOAD_STORE"
+  ],
+  "glsl_features": [
+    "GLSL320.TEXTURE_BUFFER_FETCH",
+    "GLSL320.TYPES.NEW_SAMPLERS"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "state-query",
+    "gl-error",
+    "negative",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet (subagent)",
+    "notes": "radeonsi es-max capture viewed at 3x and the llvmpipe capture at 1x (llvmpipe and zink differ from radeonsi in at most 3 pixels by more than 2/255): a dark blue-grey background with an 8x8 grid of 64 cubes seen from above at 38 degrees pitch with perspective, every cube its own hue, tops bright and side faces dimmer, the cubes bobbing at different heights, rotated about the vertical axis and slightly different in size; the whole grid is inside the frame. Below the scene a 32-row strip: the upper half is a smooth rainbow of 64 four-pixel cells (red, yellow, green, cyan, blue, magenta, red: the colour texels, same order as the cube hues), the lower half a grey pattern of three levels (the material texels) that repeats along the diagonals of the grid."
+  }
+}

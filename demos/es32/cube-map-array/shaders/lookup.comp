@@ -1,0 +1,45 @@
+#version 320 es
+// Cube map array lookups in bulk. Each probe is (direction.xyz, layer q) plus an explicit level of detail and a
+// depth reference; the raw 32-bit words of the result are written back so the CPU can compare them with its own
+// model of ES 3.2 8.13 / 8.14 / 8.20 and GLSL ES 3.20 8.9.2.
+//
+// main.cpp injects the three macros below right after the #version line, one set per sampler type. The defaults
+// make the file compile on its own.
+//   SAMPLER    samplerCubeArray / isamplerCubeArray / usamplerCubeArray / samplerCubeArrayShadow
+//   LOOKUP     the lookup expression for probe pr
+//   TO_WORDS   how the result becomes uvec4 without changing a bit
+#ifndef SAMPLER
+#define SAMPLER samplerCubeArray
+#define LOOKUP(t, pr) textureLod(t, pr.p, pr.extra.x)
+#define TO_WORDS(v) floatBitsToUint(v)
+#endif
+
+layout(local_size_x = 64) in;
+
+// GLSL ES 3.20 4.7.3: no default precision exists for the cube map array samplers, so every declaration names one.
+uniform highp SAMPLER u_tex;
+uniform int u_count;
+
+struct Probe
+{
+    vec4 p;      // xyz: direction (not normalized), w: the layer coordinate q
+    vec4 extra;  // x: level of detail, y: depth reference (shadow lookups)
+};
+
+layout(std430, binding = 0) readonly buffer Probes
+{
+    Probe probes[];
+};
+
+layout(std430, binding = 1) writeonly buffer Results
+{
+    uvec4 results[];
+};
+
+void main()
+{
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= uint(u_count)) return;
+    Probe pr = probes[i];
+    results[i] = TO_WORDS(LOOKUP(u_tex, pr));
+}

@@ -1,0 +1,43 @@
+#version 320 es
+// imageBuffer round trip (ES 3.2 8.23, Tables 8.26 / 8.25): every texel of a readonly image is loaded, its
+// components are reversed (4-component formats; the one-component formats are copied) and stored to a
+// writeonly image at the mirrored position n - 1 - i. imageSize() supplies n and is also reported.
+//
+// main.cpp injects the macros below right after the #version line, one set per image format. The defaults make
+// the file compile on its own.
+#ifndef FORMAT
+#define FORMAT rgba8
+#define IMAGE imageBuffer
+#define VEC vec4
+#define COMPONENTS 4
+#endif
+
+layout(local_size_x = 64) in;
+
+// GLSL ES 3.20 4.4.7: every image names its format; 4.9: only r32f / r32i / r32ui may be neither readonly nor writeonly.
+layout(FORMAT, binding = 0) uniform readonly highp IMAGE u_src;
+layout(FORMAT, binding = 1) uniform writeonly highp IMAGE u_dst;
+
+layout(std430, binding = 0) buffer Sizes
+{
+    uint src_size;  // imageSize(u_src) in texels
+    uint dst_size;
+};
+
+void main()
+{
+    int i = int(gl_GlobalInvocationID.x);
+    int n = imageSize(u_src);
+    if (i == 0)
+    {
+        src_size = uint(n);
+        dst_size = uint(imageSize(u_dst));
+    }
+    if (i >= n) return;
+    VEC v = imageLoad(u_src, i);
+#if COMPONENTS == 4
+    imageStore(u_dst, n - 1 - i, v.abgr);
+#else
+    imageStore(u_dst, n - 1 - i, v);
+#endif
+}

@@ -1,0 +1,37 @@
+#version 320 es
+// Reads texels of a buffer texture with texelFetch and writes the raw 32-bit words to a shader storage
+// buffer, so the CPU can compare every component bit for bit (ES 3.2 8.9, Table 8.18).
+//
+// main.cpp injects the two macros below right after the #version line, one set per sampler family. The
+// defaults make the file compile on its own.
+//   SAMPLER    samplerBuffer / isamplerBuffer / usamplerBuffer
+//   TO_WORDS   how a fetched vector becomes uvec4 without changing a bit
+#ifndef SAMPLER
+#define SAMPLER samplerBuffer
+#define TO_WORDS(v) floatBitsToUint(v)
+#endif
+
+layout(local_size_x = 64) in;
+
+// GLSL ES 3.20 4.7.3: only int, float, sampler2D, samplerCube and atomic_uint have a default precision, so a
+// samplerBuffer declaration without a precision qualifier does not compile (checked by the demo).
+uniform highp SAMPLER u_tex;
+uniform int u_count;  // number of texels to fetch; may exceed textureSize() in the "out of range" note
+
+layout(std430, binding = 0) buffer Result
+{
+    uint texture_size;  // textureSize(u_tex): GLSL ES 3.20 8.9.1, the texel count of the (clamped) image
+    uint words[];       // four words per fetched texel
+};
+
+void main()
+{
+    uint i = gl_GlobalInvocationID.x;
+    if (i == 0u) texture_size = uint(textureSize(u_tex));
+    if (i >= uint(u_count)) return;
+    uvec4 w = TO_WORDS(texelFetch(u_tex, int(i)));  // texelFetch(gsamplerBuffer, int): no lod argument
+    words[4u * i + 0u] = w.x;
+    words[4u * i + 1u] = w.y;
+    words[4u * i + 2u] = w.z;
+    words[4u * i + 3u] = w.w;
+}

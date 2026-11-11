@@ -1,0 +1,78 @@
+{
+  "name": "es32-cube-map-array",
+  "title": "Cube map array textures",
+  "min_es": "3.2",
+  "glsl": [
+    "320 es"
+  ],
+  "category": "es32",
+  "order": 4550,
+  "summary": "TEXTURE_CUBE_MAP_ARRAY allocated with glTexStorage3D (depth = 6 x layers) and filled with glTexSubImage3D per layer-face (Table 8.24: layer-face z = 6 layer + face): every texel of 3 mip levels x 5 cubes x 6 faces has its own colour and is read back through framebuffer layers, imageLoad (layered and single layer-face bindings), 630 texel-centre lookups and 2400 random lookups (layer coordinate rounding and clamping, fractional levels of detail) against a CPU model of Tables 8.20 / 8.24 and equation 8.11; isamplerCubeArray, usamplerCubeArray and samplerCubeArrayShadow (all 8 comparison functions); textureSize / imageSize (number of cubes); completeness, glGenerateMipmap per layer, errors of glTexStorage3D / glTexImage3D / glTexSubImage3D; GLSL ES 3.20 rules (no texelFetch for cube maps). The picture: five environment-mapped spheres, each reflecting its own layer, above 30 layer-face tiles.",
+  "spec": [
+    "ES 3.2 §8.1 Texture Objects, §8.5 Texture Image Specification (TexImage3D for TEXTURE_CUBE_MAP_ARRAY: depth = 6N layer-faces, layer = k / 6, face = k mod 6, errors), §8.6 (TexSubImage3D: zoffset is the first layer-face)",
+    "ES 3.2 §8.13 Cube Map Texture Selection, Table 8.20 (major axis -> face, sc, tc, ma), §8.14.2-8.14.3 (NEAREST texel selection, nearest(lambda) of equation 8.11), §8.14.4 Manual Mipmap Generation (each layer filtered independently, INVALID_OPERATION for non-filterable formats)",
+    "ES 3.2 §8.17 Texture Completeness (cube array complete), §8.18 Immutable-Format Texture Images (TexStorage3D for CUBE_MAP_ARRAY, errors), §8.19 / §8.11.3 / Table 21.11 (level state, depth does not shrink with the level)",
+    "ES 3.2 §8.20.1 Depth Texture Comparison Mode, Table 8.22; §11.1.3.2 Texel Fetches (cube map textures cannot be fetched), §11.1.3.4 Texture Queries, §11.1.3.5 Texture Access (non-fragment shaders use the base level or the explicit level, incomplete textures return (0,0,0,1))",
+    "ES 3.2 §8.23 Texture Image Loads and Stores, Table 8.24 (layer numbers of cube map faces; layer = floor(n / 6), face = n - 6 layer for cube map arrays), Table 8.25 (image coordinates), §9.2.8 FramebufferTextureLayer (cube map array layer = layer-face)",
+    "GLSL ES 3.20 §4.1.7 Opaque Types (samplerCubeArray, isamplerCubeArray, usamplerCubeArray, samplerCubeArrayShadow, imageCubeArray), §4.7.3 Default Precision Qualifiers, §8.9.1 textureSize (last component = number of cubes), §8.9.2 Texel Lookup Functions (array layer = max(0, min(d - 1, floor(layer + 0.5))), the shadow compare argument, no texelFetch / offsets for cube maps), §8.12 imageSize / imageLoad"
+  ],
+  "api": {
+    "glTexStorage3D": "TEXTURE_CUBE_MAP_ARRAY with depth = 6 x layers (30 layer-faces of 4x4 with 3 levels, RGBA8; 18 layer-faces of 2x2 as RGBA8UI, RGBA16I and DEPTH_COMPONENT32F); TEXTURE_IMMUTABLE_FORMAT / LEVELS and level depth 30 read back; INVALID_VALUE for depth 7, 4x8 and depth 0, INVALID_OPERATION for 4 levels of a 4x4 texture, for texture 0 and for re-specification of an immutable texture",
+    "glTexSubImage3D": "uploads level 0 one layer-face per call (zoffset = z), level 1 one cube (6 layer-faces) per call and level 2 in one call, plus the integer and depth arrays; all 630 texels read back through framebuffer layers, imageLoad and lookups; INVALID_VALUE for z + depth > 30, zoffset 30 / -1, x + width > size and level -1, and the failed calls change nothing",
+    "glTexImage3D": "mutable cube map array with depth 12 (depth, TEXTURE_IMMUTABLE_FORMAT FALSE, completeness, glGenerateMipmap); INVALID_VALUE for depth 7, 4x8 faces and border 1; INVALID_OPERATION on an immutable texture",
+    "glGenerateMipmap": "TEXTURE_CUBE_MAP_ARRAY: creates levels 1 and 2 with all layer-faces, and every generated texel keeps the face code and layer code of its own layer-face (independent filtering); INVALID_OPERATION for the non-filterable RGBA8UI",
+    "glTexParameteri": "typed overloads: MIN_FILTER NEAREST_MIPMAP_NEAREST / NEAREST (the default NEAREST_MIPMAP_LINEAR makes a one-level texture incomplete -> (0,0,0,1)), MAG_FILTER NEAREST, COMPARE_MODE COMPARE_REF_TO_TEXTURE / NONE, COMPARE_FUNC (all 8 functions): every setting changes the lookups exactly as the model predicts",
+    "glBindTexture": "TEXTURE_CUBE_MAP_ARRAY on unit 0; TEXTURE_BINDING_CUBE_MAP_ARRAY equals the bound name and 0 after unbinding",
+    "glGetIntegerv": "TEXTURE_BINDING_CUBE_MAP_ARRAY after bind and unbind",
+    "glGetTexParameteriv": "TEXTURE_IMMUTABLE_FORMAT (TRUE / FALSE) and TEXTURE_IMMUTABLE_LEVELS (3)",
+    "glGetTexLevelParameteriv": "TEXTURE_WIDTH / HEIGHT / DEPTH / INTERNAL_FORMAT of every level of the immutable array (4,2,1 wide, depth 30 on every level) and of the glTexImage3D and glGenerateMipmap levels",
+    "glFramebufferTextureLayer": "attaches layer-face z of levels 0..2 (90 attachments); glReadPixels returns the texels uploaded at zoffset z; the framebuffer is complete every time",
+    "glCheckFramebufferStatus": "FRAMEBUFFER_COMPLETE for each of the 90 layer-face attachments",
+    "glBindImageTexture": "level 0..2 layered (imageCubeArray, imageLoad(ivec3(x, y, z)) returns the texel of layer-face z, imageSize is (size, size, 5)) and layered = FALSE with layer = 0..29 (image2D of exactly that layer-face)",
+    "glDispatchCompute": "bulk lookup shaders for four sampler types (630 + 14 + 12 + 2400 float lookups, 337 + 337 integer lookups, 8 x 216 shadow lookups), textureSize shaders and imageLoad dumps; results compared with the CPU models",
+    "glMemoryBarrier": "BUFFER_UPDATE before mapping the result buffers: the words read back equal the model",
+    "glMapBufferRange": "reads the result words of every compute pass",
+    "glCompileShader": "control shader with the four cube array sampler types compiles; eight shaders that must not compile (texelFetch on samplerCubeArray and samplerCube, no precision, vec3 coordinate, shadow texture without compare, textureLod on the shadow sampler, textureOffset, samplerCubeArray in #version 310 es) are rejected",
+    "glDrawElementsInstanced": "five spheres in one call, gl_InstanceID = the layer each sphere reflects; about 800 pixels compared with a ray-sphere / reflection / cube array lookup model",
+    "glDrawArrays": "the 30 layer-face tiles (a 4-vertex strip each); 14520 pixels compared with the texel of the right layer-face",
+    "glUniform4fv": "the five sphere centres and radii",
+    "glUniformMatrix4fv": "view-projection matrix; the CPU ray caster uses the same camera",
+    "glUniform1i": "sampler unit, layer-face number of a tile, level count and probe count of the compute passes",
+    "glUniform3i": "extent of the image dump",
+    "glUniform3f": "eye position used by the reflection",
+    "glReadPixels": "RGBA8 readback of the framebuffer layers and of the default framebuffer for tile and sphere probes",
+    "glViewport": "tile and scene viewports; pixel positions verified",
+    "glEnable": "DEPTH_TEST for the spheres",
+    "glClear": "background and depth",
+    "glGenTextures": "main array, integer and depth arrays, a mutable array, error-case textures",
+    "glActiveTexture": "unit 0 for every cube map array lookup",
+    "glGenBuffers": "probe and result shader storage buffers, sphere mesh",
+    "glBufferData": "uploads the lookup probes and sentinel-fills the result buffers",
+    "glBindBufferBase": "binds the probe (0) and result (1) storage buffers",
+    "glDeleteTextures": "cleanup; final glGetError == NO_ERROR",
+    "glDeleteBuffers": "cleanup"
+  },
+  "features": [
+    "ES32.TEXTURE.CUBE_ARRAY",
+    "ES30.TEXTURE.IMMUTABLE",
+    "ES30.FBO.LAYER",
+    "ES30.DRAW.INSTANCED",
+    "ES20.TEXTURE.COMPLETENESS"
+  ],
+  "glsl_features": [
+    "GLSL320.TYPES.NEW_SAMPLERS"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "state-query",
+    "gl-error",
+    "negative",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet (subagent)",
+    "notes": "radeonsi es-max capture viewed at 3x: five spheres in a row on a dark background, each showing a blocky patchwork reflection (a square patch in the middle, rings of patches around it, up to six faces visible) in its own tone, from dark magenta/blue on the left (layer 0) over teal and olive green to bright yellow-green on the right (layer 4), the green channel encoding the layer. Below, a 10x3 grid of 25-pixel tiles (the 30 layer-faces in the order of Table 8.24): each tile shows a 4x4 patchwork, darker blue at the top rows and brighter blue at the bottom rows (the blue channel encodes the texel index, row 0 at the top, so the upload is upright and not mirrored), the red component stepping through six values within every group of six tiles (+X ... -Z) and the overall tone shifting from layer to layer; six unused pixels at the right of the tile area keep the clear colour. llvmpipe and zink captures differ only on texel boundaries and sphere rims."
+  }
+}

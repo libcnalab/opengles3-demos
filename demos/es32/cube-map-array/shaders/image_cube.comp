@@ -1,0 +1,41 @@
+#version 320 es
+// imageLoad on a cube map array image (ES 3.2 8.23). Two ways to bind the same texture level:
+//   LAYERED 1  glBindImageTexture(layered = TRUE):  imageCubeArray, coordinate (x, y, z) with z = the layer-face
+//              number 6 * layer + face (Table 8.25: the coordinate component z selects "face / layer")
+//   LAYERED 0  glBindImageTexture(layered = FALSE, layer = n): a single layer-face, which "is treated as a
+//              two-dimensional texture" (8.23, Table 8.24 and the layer = floor(n / 6), face = n - 6 layer mapping),
+//              so the shader declares an image2D with a 2D coordinate.
+// Every texel of the level is loaded and its words are written to the shader storage buffer; imageSize is reported
+// in the first sizes slot.
+#ifndef LAYERED
+#define LAYERED 1
+#endif
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+#if LAYERED
+layout(rgba8, binding = 0) uniform readonly highp imageCubeArray u_img;
+#else
+layout(rgba8, binding = 0) uniform readonly highp image2D u_img;
+#endif
+uniform ivec3 u_extent;  // width, height, number of layer-faces to dump (1 when not layered)
+
+layout(std430, binding = 0) writeonly buffer Out
+{
+    ivec4 image_size;  // imageSize(u_img), z = 0
+    uvec4 words[];     // one per texel, index (z * height + y) * width + x
+};
+
+void main()
+{
+    ivec2 xy = ivec2(gl_GlobalInvocationID.xy);
+    if (xy.x >= u_extent.x || xy.y >= u_extent.y) return;
+#if LAYERED
+    if (xy == ivec2(0)) image_size = ivec4(imageSize(u_img), 0);
+    for (int z = 0; z < u_extent.z; ++z)
+        words[(z * u_extent.y + xy.y) * u_extent.x + xy.x] = floatBitsToUint(imageLoad(u_img, ivec3(xy, z)));
+#else
+    if (xy == ivec2(0)) image_size = ivec4(imageSize(u_img), 0, 0);
+    words[xy.y * u_extent.x + xy.x] = floatBitsToUint(imageLoad(u_img, xy));
+#endif
+}

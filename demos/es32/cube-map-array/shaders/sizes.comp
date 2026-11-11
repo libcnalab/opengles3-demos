@@ -1,0 +1,24 @@
+#version 320 es
+// textureSize() of every level of a cube map array sampler (GLSL ES 3.20 8.9.1): the first two components are the
+// width and height of one face, the LAST is the number of cubes in the array (not the number of layer-faces).
+//
+// main.cpp injects SAMPLER right after the #version line.
+#ifndef SAMPLER
+#define SAMPLER samplerCubeArray
+#endif
+
+layout(local_size_x = 1) in;
+
+uniform highp SAMPLER u_tex;
+uniform int u_levels;
+
+layout(std430, binding = 0) writeonly buffer Sizes
+{
+    ivec4 sizes[8];
+};
+
+void main()
+{
+    for (int level = 0; level < u_levels; ++level)
+        sizes[level] = ivec4(textureSize(u_tex, level), 0);
+}

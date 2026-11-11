@@ -36,6 +36,7 @@
 | es30-uniform-buffer-objects | 3.0 | es30 | Uniform buffer objects | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-transform-feedback | 3.0 | es30 | Transform feedback: capture, objects, pause/resume, queries | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-sync-objects | 3.0 | es30 | Sync objects: fences, client and server waits, flush and finish | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| es30-normal-mapping | 3.0 | es30 | Normal mapping: tangent space, specular map, mip chains | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es31-compute-basics | 3.1 | es31 | Compute shaders: dispatch, built-ins, limits | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es31-compute-shared-memory | 3.1 | es31 | Compute shaders: shared memory and barriers | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es31-ssbo-std430 | 3.1 | es31 | Shader storage buffers and std430 | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |

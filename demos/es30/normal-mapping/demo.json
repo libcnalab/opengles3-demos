@@ -67,7 +67,8 @@
     "ES20.BUFFER.VBO",
     "ES20.BUFFER.IBO",
     "ES20.DRAW.ELEMENTS",
-    "ES30.VAO.BASIC"
+    "ES30.VAO.BASIC",
+    "ES20.LIGHTING.NORMAL_MAP"
   ],
   "glsl_features": [
     "GLSL300.TYPES.SAMPLERS",

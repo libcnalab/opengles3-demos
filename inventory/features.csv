@@ -84,6 +84,7 @@ ES20.STATE.QUERIES,2.0,state,glGetBooleanv/Integerv/Floatv/glIsEnabled; data con
 ES20.HINT,2.0,state,glHint GENERATE_MIPMAP_HINT (FRAGMENT_SHADER_DERIVATIVE_HINT: ES 3.0),ES 3.0 §5.3,state
 ES20.FLUSH_FINISH,2.0,sync,glFlush / glFinish,ES 3.0 §5.1,state
 ES20.LIGHTING.SHADER,2.0,shading,Shader-based lighting (directional/point/spot; Phong/Blinn-Phong) with normal matrix,n/a (composition),pixel
+ES20.LIGHTING.NORMAL_MAP,2.0,shading,Tangent-space normal mapping + specular maps (per-vertex tangents and handedness),n/a (composition),pixel
 ES20.CAMERA.MVP,2.0,shading,Model/view/projection matrices; perspective vs orthographic; camera movement,n/a (composition),pixel
 ES30.VAO.BASIC,3.0,vertex-input,Vertex array objects: gen/bind/delete/isVertexArray; per-VAO attribute state,ES 3.0 §2.11,pixel
 ES30.VAO.SWITCHING,3.0,vertex-input,Multiple VAOs with different configurations; ELEMENT_ARRAY_BUFFER is VAO state,ES 3.0 §2.11,pixel

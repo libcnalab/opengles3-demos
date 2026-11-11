@@ -1,0 +1,84 @@
+{
+  "name": "es30-buffer-mapping",
+  "title": "Buffer mapping and copying",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es30",
+  "order": 360,
+  "summary": "glMapBufferRange with all six access flags (every one of the 64 combinations checked against the spec's rule table), glFlushMappedBufferRange with relative sub-ranges, glUnmapBuffer, mapped-state queries in 32 and 64 bits, glGetBufferPointerv and glCopyBufferSubData, with every defined error; buffer contents verified byte for byte through MAP_READ_BIT mappings (only bytes the spec defines) and by drawing from the buffers.",
+  "spec": [
+    "ES 3.0 §2.10.1 Creating and Binding Buffer Objects (zero-bound targets, deletion)",
+    "ES 3.0 §2.10.2 Creating Buffer Object Data Stores (BufferData unmaps, BufferSubData on a mapped range), Table 2.8",
+    "ES 3.0 §2.10.3 Mapping and Unmapping Buffer Data (access flags, FlushMappedBufferRange, §2.10.3.1 UnmapBuffer, §2.10.3.2), Table 2.9",
+    "ES 3.0 §2.10.5 Copying Between Buffers",
+    "ES 3.0 §6.1.9 Buffer Object Queries (GetBufferParameteri[64]v, GetBufferPointerv), Table 2.7",
+    "ES 3.0 §2.5 GL Errors, §2.9.3 Drawing Commands, §3.6.1 Basic Polygon Rasterization",
+    "ES 3.2 §6.3 / §6.5 (same rules, cross-checked)"
+  ],
+  "api": {
+    "glMapBufferRange": "pointer returned and written/read: bytes compared with a CPU copy; all 64 flag combinations vs the spec's INVALID_OPERATION table; length 0 / negative / out-of-range / already mapped / zero-bound -> NULL + the defined error",
+    "glUnmapBuffer": "returns TRUE after every valid mapping; on an unmapped or zero-bound buffer INVALID_OPERATION (return value FALSE checked, XFAIL on radeonsi glthread)",
+    "glFlushMappedBufferRange": "flushed sub-ranges (relative to the mapping start) arrive byte for byte; unflushed ranges are never asserted; negative / out-of-mapping / unmapped / non-FLUSH_EXPLICIT / zero-bound -> the defined errors",
+    "glCopyBufferSubData": "COPY_READ -> COPY_WRITE and within one buffer (adjacent ranges): exact bytes and pixels; overlap, out of range, negative, mapped, zero-bound -> INVALID_VALUE / INVALID_OPERATION and the destination is unchanged",
+    "glGetBufferParameteriv": "BUFFER_MAPPED, BUFFER_ACCESS_FLAGS, BUFFER_MAP_OFFSET, BUFFER_MAP_LENGTH, BUFFER_SIZE after every valid flag combination and after unmapping (Table 2.8 values); zero-bound target -> INVALID_OPERATION",
+    "glGetBufferParameteri64v": "BUFFER_SIZE, BUFFER_MAP_OFFSET, BUFFER_MAP_LENGTH equal the 32-bit values for all 19 valid flag combinations",
+    "glGetBufferPointerv": "BUFFER_MAP_POINTER equals the pointer glMapBufferRange returned, NULL when unmapped and after BufferData; same through a second binding of the buffer",
+    "glBufferData": "initial data observed by mapping and by drawing; NULL data allowed; re-specification of a mapped buffer unmaps it (state back to Table 2.8)",
+    "glBufferSubData": "INVALID_OPERATION over a mapped range and nothing written; works again after unmapping (bytes compared)",
+    "glGenBuffers": "buffers feeding the validated draws",
+    "glBindBuffer": "ARRAY_BUFFER / COPY_READ_BUFFER / COPY_WRITE_BUFFER bindings: mapping through any target, state seen through the others",
+    "glDeleteBuffers": "deleting a mapped buffer is not an error, resets the binding to 0",
+    "glIsBuffer": "FALSE after deleting a mapped buffer",
+    "glGetIntegerv": "ARRAY_BUFFER_BINDING untouched by copies; COPY_READ/WRITE_BUFFER_BINDING name the copy buffers",
+    "glVertexAttribPointer": "position (float x2) and color (normalized unsigned byte x4) read from the mapped-and-written buffers; observed through pixels",
+    "glEnableVertexAttribArray": "both attributes sourced from the buffers",
+    "glGenVertexArrays": "VAO used for the validated draws",
+    "glBindVertexArray": "VAO bound while drawing",
+    "glDeleteVertexArrays": "cleanup, final glGetError == NO_ERROR",
+    "glDrawArrays": "TRIANGLES from sub-ranges (first/count) of the buffers: every quad's color probed in 16 cells",
+    "glUniform2f": "u_shift moves a draw of buffer data; the shifted copies appear at the expected cell positions",
+    "glGetUniformLocation": "u_shift located",
+    "glUseProgram": "program used for the validated draws",
+    "glViewport": "per-cell viewports map NDC to the probed pixels",
+    "glScissor": "per-cell clear (cell interior vs grid lines)",
+    "glEnable": "SCISSOR_TEST during per-cell clears",
+    "glDisable": "DITHER disabled so colors are exact; SCISSOR_TEST restored",
+    "glClearColor": "background pixels equal the clear color",
+    "glClear": "COLOR_BUFFER_BIT, also per cell through the scissor",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE readback of 23 probes per cell"
+  },
+  "features": [
+    "ES30.BUFFER.MAP_RANGE",
+    "ES30.BUFFER.MAP_FLAGS",
+    "ES30.BUFFER.FLUSH_EXPLICIT",
+    "ES30.BUFFER.COPY",
+    "ES30.BUFFER.PARAM64",
+    "ES30.BUFFER.INVALID_RANGES",
+    "ES20.BUFFER.VBO",
+    "ES20.BUFFER.SUBDATA",
+    "ES20.BUFFER.QUERY",
+    "ES20.ERRORS.INVALID_VALUE",
+    "ES20.ERRORS.INVALID_OPERATION",
+    "ES20.DRAW.ARRAYS"
+  ],
+  "glsl_features": [
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.LAYOUT.LOCATION",
+    "GLSL300.FRAG.OUTPUT"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "state-query",
+    "gl-error",
+    "negative",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5",
+    "notes": "Viewed gpu es-max and llvmpipe es-min captures (256x256, identical): 4x4 grid of cells separated by 2-px lighter grid lines on a dark-blue background; every cell shows a 2x2 arrangement of four flat-colored quads. Cell 0 red/green over blue/yellow; cell 1 cyan/magenta over orange/white; cell 2 inverted colors (blue, red, green, tan); cell 3 dark slate and teal in the corners with yellow/green in between; cell 5 has an empty top-left slot (quad 2 not flushed, not drawn); cell 8 repeats its bottom row on top; cell 12 shows only quads 1 and 2 (top-left yellow, bottom-right blue) with the other two slots empty; cell 14 shows blue/orange over magenta/yellow after the mapped-draw experiment was cleared. No stray marks."
+  }
+}

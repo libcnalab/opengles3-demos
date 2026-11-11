@@ -1,0 +1,83 @@
+{
+  "name": "es30-instancing",
+  "title": "Instancing, divisors, primitive restart",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es30",
+  "order": 30,
+  "summary": "glDrawArraysInstanced / glDrawElementsInstanced with per-instance attributes (divisors 0, 1, 2, 3) and gl_InstanceID, instanced vs non-instanced draws, gl_PointSize per instance, glDrawRangeElements and PRIMITIVE_RESTART_FIXED_INDEX for UBYTE/USHORT/UINT indices, MAX_ELEMENT_INDEX: every instance position and every strip gap is probed against a CPU model.",
+  "spec": [
+    "ES 3.0 §2.9 Vertex Arrays (VertexAttribDivisor)",
+    "ES 3.0 §2.9.1 Transferring Array Elements (primitive restart)",
+    "ES 3.0 §2.9.3 Drawing Commands (DrawArraysInstanced, DrawElementsInstanced, DrawRangeElements, MAX_ELEMENT_INDEX, MAX_ELEMENTS_VERTICES/INDICES)",
+    "ES 3.0 §2.11 Vertex Array Objects, Tables 6.2 and 6.3 (divisor is VAO state, the restart flag is not)",
+    "ES 3.0 §2.12.9.5 Shader Inputs (gl_VertexID, gl_InstanceID)",
+    "ES 3.0 §3.4 Points (gl_PointSize, clamping to ALIASED_POINT_SIZE_RANGE)",
+    "ES 3.0 §2.5 GL Errors, §6.1.2 Data Conversions, Table 6.28 (MAX_ELEMENT_INDEX)",
+    "GLSL ES 3.00 §7.1 Vertex Shader Special Variables (gl_VertexID, gl_InstanceID, gl_Position, gl_PointSize)"
+  ],
+  "api": {
+    "glGenVertexArrays": "four VAOs with different divisor sets, a strip VAO and an empty VAO drive the validated draws",
+    "glBindVertexArray": "VAO switching selects divisors and element buffer: divisor 1/2/3/0 cells match their models; ARRAY_DIVISOR read back per VAO",
+    "glDeleteVertexArrays": "scratch VAO deleted; cleanup, final glGetError == NO_ERROR",
+    "glEnableVertexAttribArray": "instanced attribute arrays 0/1/2 and strip arrays are sourced from buffers",
+    "glVertexAttribPointer": "float vec2/vec3 and normalized UNSIGNED_BYTE vec3 attributes (stride 12) observed through pixels",
+    "glVertexAttribDivisor": "divisor 0, 1, 2 and 3 on the offset/color attributes: each instance reads element floor(i / divisor); VERTEX_ATTRIB_ARRAY_DIVISOR read back (also 7 on a scratch VAO, 0 on a fresh VAO); index = MAX_VERTEX_ATTRIBS -> INVALID_VALUE",
+    "glGetVertexAttribiv": "VERTEX_ATTRIB_ARRAY_DIVISOR of attributes 0/1/2 in four VAOs",
+    "glDrawArraysInstanced": "TRIANGLE_STRIP x16, x5, and POINTS x4: every instance position/color and the empty remaining slots match the CPU model; instanceCount 0 draws nothing and raises no error; negative instanceCount / count -> INVALID_VALUE",
+    "glDrawElementsInstanced": "TRIANGLES x16 with divisor-2 colors and TRIANGLE_STRIP x3 with primitive restart match the model; instanceCount 0 draws nothing; negative instanceCount -> INVALID_VALUE; type FLOAT -> INVALID_ENUM",
+    "glDrawRangeElements": "[0,11] with a restart index in the list, [6,11] from byte offset 14, and a call exceeding MAX_ELEMENTS_VERTICES and MAX_ELEMENTS_INDICES all match the model; end < start -> INVALID_VALUE; type INT -> INVALID_ENUM",
+    "glDrawArrays": "non-instanced draw with a divisor-1 VAO shows instance 0 only; gl_InstanceID reads 0",
+    "glDrawElements": "TRIANGLE_STRIP with UNSIGNED_SHORT, UNSIGNED_BYTE and UNSIGNED_INT indices: gaps at the restart index (and the spike when restart is disabled) match the model",
+    "glEnable": "PRIMITIVE_RESTART_FIXED_INDEX: strips split at 0xFF / 0xFFFF / 0xFFFFFFFF; glIsEnabled and glGetBooleanv report TRUE",
+    "glDisable": "PRIMITIVE_RESTART_FIXED_INDEX: index 0xFF becomes vertex 255 (spike); glIsEnabled FALSE",
+    "glIsEnabled": "PRIMITIVE_RESTART_FIXED_INDEX initially FALSE, TRUE after glEnable, FALSE after glDisable, not VAO state",
+    "glGetBooleanv": "PRIMITIVE_RESTART_FIXED_INDEX = TRUE after glEnable",
+    "glGetInteger64v": "MAX_ELEMENT_INDEX >= 2^24 - 1",
+    "glGetIntegerv": "MAX_ELEMENT_INDEX clamped to INT_MAX, MAX_ELEMENTS_VERTICES, MAX_ELEMENTS_INDICES (used to size an exceeding draw), ELEMENT_ARRAY_BUFFER_BINDING per VAO, MAX_VERTEX_ATTRIBS",
+    "glGetFloatv": "ALIASED_POINT_SIZE_RANGE decides which point sizes are compared",
+    "glGenBuffers": "vertex, offset, color, ribbon and index buffers feed the validated draws",
+    "glBindBuffer": "ELEMENT_ARRAY_BUFFER re-pointed per strip draw (VAO state); ARRAY_BUFFER captured by the attribute pointers",
+    "glBufferData": "data observed through the rendered pixels (including a 3004-vertex buffer)",
+    "glDeleteBuffers": "cleanup",
+    "glUseProgram": "four programs select the cell types",
+    "glGetUniformLocation": "uniforms of all four programs located; effects observed in the pixels",
+    "glUniform1f": "u_size, u_step, u_size0, u_dsize, u_fade: instance geometry and fading match the model",
+    "glUniform1i": "u_columns: 4 slots per row in the gl_InstanceID shader",
+    "glUniform2f": "u_origin, u_scale, u_step, u_cell: strip placement, instance stacking and point positions match the model",
+    "glViewport": "per-cell viewports map NDC to the probed pixels",
+    "glClearColor": "background pixels equal the clear color",
+    "glClear": "COLOR_BUFFER_BIT",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE readback of every cell"
+  },
+  "features": [
+    "ES30.DRAW.INSTANCED",
+    "ES30.ATTRIB.DIVISOR",
+    "ES30.DRAW.RANGE_ELEMENTS",
+    "ES30.DRAW.PRIMITIVE_RESTART",
+    "ES30.DRAW.MAX_ELEMENT_INDEX",
+    "ES20.DRAW.ARRAYS",
+    "ES20.DRAW.ELEMENTS",
+    "ES20.BUFFER.IBO",
+    "ES20.ERRORS.INVALID_VALUE",
+    "ES20.ERRORS.INVALID_ENUM"
+  ],
+  "glsl_features": [
+    "GLSL300.BUILTIN_VARS.VS",
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.LAYOUT.LOCATION"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "gl-error",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5",
+    "notes": "Viewed gpu/llvmpipe/zink captures (256x256; identical within 1/255): row 3 shows four 4x4 quad grids (16 distinct colors; horizontal color pairs for divisor 2; groups of three for divisor 3; growing squares colored by gl_InstanceID bits); row 2 the twisted sliver of divisor 0, one quad plus a small dark-blue square (non-instanced draw), five quads (instanceCount 5) and four points of growing size 3/5/7/9; row 1 four ribbon strips: continuous with glue triangles, then two gapped (USHORT, UBYTE) and one with a white spike toward vertex 255 (restart disabled); row 0 the UINT gapped strip, three faded stacked gapped strips, the range-elements strip with its gap and the second ribbon alone. Background is the dark-blue clear color; no stray marks."
+  }
+}

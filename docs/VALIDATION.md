@@ -129,6 +129,16 @@ The generator lints every `api` claim: the entry point must be called by the exe
 through a `common/` helper or a meta-gl convenience overload. The lint is name-based, so it is a heuristic; the
 actual verification is described per entry in `demo.json`.
 
+## Reproducibility from a clean checkout (verified 2026-11-11 23:40)
+1. Clone meta-gl from its origin, branch `opengles3-demos/enum-gaps` (`333d777`), to `<root>/libcna/meta-gl`.
+2. Clone opengles3-demos (`d100bfc`) to `<root>/libcnalab/opengles3-demos`.
+3. Run `cmake --preset debug && cmake --build --preset debug`: no warnings, 83 executables.
+4. Run `ctest --preset debug`: 563/563, with ANGLE auto-detected from the Android SDK.
+
+The coverage generator on that fresh tree gives the same 82 FULLY_VALIDATED + 1 VISUALLY_VERIFIED as the working
+tree. Requirements not in the repositories: Mesa (radeonsi, llvmpipe, zink and lavapipe ICDs), EGL, optionally SDL3,
+and for the `angle` driver an ANGLE build (`OGLES3_ANGLE_DIR`).
+
 ## Coverage status definitions
 
 See `tools/coverage/generate_coverage.py` (single source of truth):

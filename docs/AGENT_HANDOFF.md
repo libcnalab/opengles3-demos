@@ -62,7 +62,6 @@ tessellation-domains and tessellation-terrain.
 meta-gl G8 (transpose = GL_TRUE) is fixed on its branch (`3bb7411`).
 Running Claude subagents (worktrees under .claude/worktrees/):
 - es32 multisample-array-and-border-color (56)
-- es32 base-vertex-and-robustness (60)
 - es32 advanced-blend-and-sample-shading (59)
 - es31 compute-particles (3D showcase)
 Still unassigned: 57 (ASTC + copy image), 62 (glsl320 built-ins), 35 (glsl310 built-ins),

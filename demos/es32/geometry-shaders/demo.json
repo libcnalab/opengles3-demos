@@ -1,0 +1,93 @@
+{
+  "name": "es32-geometry-shaders",
+  "title": "Geometry shaders: amplification, adjacency, invocations",
+  "min_es": "3.2",
+  "glsl": [
+    "320 es"
+  ],
+  "category": "es32",
+  "order": 4010,
+  "summary": "Four 3D scenes drawn by geometry shaders: 151 points become camera-facing sphere impostors (amplification, gl_PrimitiveIDIn), an icosphere's 80 triangles become prisms (cap strip + side strips separated by EndPrimitive, gl_PrimitiveID to the fragment shader), a torus drawn with TRIANGLES_ADJACENCY gets silhouette outlines, and layout(invocations = 6) places six copies of one cube (gl_InvocationID). Data travels VS -> GS -> FS in interface blocks. Every unambiguous pixel of all four scenes is compared with a CPU model that re-implements the shaders and rasterizes their output; the geometry shader output is captured with transform feedback and compared bit for bit (the exact model uses dyadic data); the adjacency vertex order of LINES_ADJACENCY, LINE_STRIP_ADJACENCY and TRIANGLES_ADJACENCY is read back through gl_VertexID; program queries, MAX_GEOMETRY_* limits, the 5 x 11 input-type / draw-mode matrix and the geometry-shader link rules are checked.",
+  "spec": [
+    "ES 3.2 §11.3 Geometry Shaders: §11.3.1 Input Primitives (the five input types, mismatch rule), §11.3.2 Output Primitives (max_vertices, GEOMETRY_* queries), §11.3.3 Variables, §11.3.4 Execution Environment (§11.3.4.2 Instanced Geometry Shaders and output order, §11.3.4.3 Inputs and gl_PrimitiveIDIn, §11.3.4.4 Outputs and gl_PrimitiveID, §11.3.4.6 Primitive Type Mismatches and Drawing Commands)",
+    "ES 3.2 §10.1.5 Triangle Strips, §10.1.8 Lines with Adjacency, §10.1.9 Line Strips with Adjacency, §10.1.10 Triangles with Adjacency (vertex order and ignored trailing vertices)",
+    "ES 3.2 §7.3 Program Objects (LinkProgram failure conditions for geometry shaders), §7.4.1 Shader Interface Matching, §7.12 Program Queries (GEOMETRY_VERTICES_OUT / INPUT_TYPE / OUTPUT_TYPE / SHADER_INVOCATIONS and their INVALID_OPERATION rule)",
+    "ES 3.2 §11.1.2.1 Output Variables (TransformFeedbackVaryings: geometry shader outputs, block members named Block.member), §12.1 The Last Vertex Processing Stage, §12.2 / §12.2.2 Transform Feedback and Table 12.1 (mode compared with the output type of the geometry shader), §12.3 Primitive Queries (PRIMITIVES_GENERATED), Table 12.3 (provoking vertex)",
+    "ES 3.2 Table 21.47 Implementation Dependent Geometry Shader Limits, Table 21.40 (SUBPIXEL_BITS), §9.8 / §11.3.4.5 (LAYER_PROVOKING_VERTEX query)",
+    "GLSL ES 3.20 §4.4.1 Input Layout Qualifiers (Geometry Inputs: points, lines, lines_adjacency, triangles, triangles_adjacency, invocations), §4.4.2 Output Layout Qualifiers (Geometry Outputs: points, line_strip, triangle_strip, max_vertices), §4.3.9 Interface Blocks, §7.1.4 Geometry Shader Special Variables, §7.1.5 gl_PrimitiveID, §8.13 Geometry Shader Functions (EmitVertex, EndPrimitive; numbered 8.16 in the project inventory)"
+  ],
+  "api": {
+    "glCreateShader": "GEOMETRY_SHADER objects for all four scenes and for ~30 small shaders in validate(); compile status of the invalid ones (invocations = MAX + 1 and 0, max_vertices = MAX + 1, gl_in[3] with layout(triangles)) is FALSE",
+    "glShaderSource": "geometry shader sources from files and from generated strings",
+    "glCompileShader": "invocations = MAX_GEOMETRY_SHADER_INVOCATIONS + 1 and = 0 fail to compile (GLSL ES 3.20 §4.4.1); the valid control with invocations = MAX compiles and links",
+    "glAttachShader": "vertex + geometry + fragment programs (and geometry-only variants for the link-rule tests)",
+    "glLinkProgram": "links with a geometry shader; fails for: no input layout, no output type, no max_vertices, no vertex shader (non-separable), max_vertices above the limit, VS/GS block member type mismatch, GS input block without a matching VS output, GS input block array of the wrong size; a program whose total output components exceed MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS links on Mesa (XFAIL)",
+    "glGetProgramiv": "LINK_STATUS; GEOMETRY_VERTICES_OUT (4, 15, 12, 3 for the scenes; 1, 2, 1, 3, 3 for the five small programs), GEOMETRY_INPUT_TYPE (all five types), GEOMETRY_OUTPUT_TYPE, GEOMETRY_SHADER_INVOCATIONS (1, 1, 1, 6) compared with the shader sources; the four pnames on a program without a geometry shader -> INVALID_OPERATION",
+    "glTransformFeedbackVaryings": "geometry shader output block members ('GS_OUT.eye', 'GS_OUT.world', ...) in INTERLEAVED_ATTRIBS mode; the captured words equal the CPU model bit for bit",
+    "glBeginTransformFeedback": "TRIANGLES capture of a GL_POINTS draw whose geometry shader outputs triangle_strip is legal (the output type is compared, section 12.2.2); POINTS and LINES -> INVALID_OPERATION at the draw; POINTS capture of lines_adjacency / triangles_adjacency geometry shaders records the vertices",
+    "glEndTransformFeedback": "ends each capture; the buffer is mapped afterwards",
+    "glBindBufferBase": "TRANSFORM_FEEDBACK_BUFFER index 0 receives the interleaved geometry shader output",
+    "glBufferData": "capture buffer pre-filled with a sentinel (bytes after the expected words stay untouched); vertex, index and adjacency index buffers",
+    "glMapBufferRange": "reads the captured buffer for the bit-exact comparison",
+    "glUnmapBuffer": "after each read",
+    "glGenQueries": "two query objects: PRIMITIVES_GENERATED and TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN",
+    "glBeginQuery": "both targets active at once around every capture",
+    "glEndQuery": "closes the counts",
+    "glGetQueryObjectuiv": "PRIMITIVES_GENERATED equals the number of triangles / points the geometry shader emitted (302, 560, 124, 72, and the adjacency tests) and equals TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN",
+    "glEnable": "RASTERIZER_DISCARD around captures and the error matrix; DEPTH_TEST and SCISSOR_TEST for the cells",
+    "glDisable": "RASTERIZER_DISCARD afterwards; the offscreen mismatch test then renders pixels",
+    "glDrawArrays": "GL_POINTS (cell A), the 55-pair draw-mode matrix (INVALID_OPERATION exactly for incompatible pairs), the offscreen mismatch draws (no fragment rendered), LINES_ADJACENCY / LINE_STRIP_ADJACENCY / TRIANGLES_ADJACENCY vertex-order captures",
+    "glDrawElements": "TRIANGLES (cells B, D), TRIANGLES_ADJACENCY with an index list holding the neighbour vertices (cell C); pixels and captures compared with the model",
+    "glGenVertexArrays": "five VAOs for the four scenes (the adjacency and triangle index buffers of the torus are separate VAO state)",
+    "glBindVertexArray": "selects the scene's vertex and index sources",
+    "glVertexAttribPointer": "positions, sizes and normals of the scenes; observed through pixels and captured vertices",
+    "glEnableVertexAttribArray": "attribute arrays of the scenes",
+    "glUniformMatrix4fv": "view, projection and view-projection matrices; changing them for the exact capture changes the captured values as modelled",
+    "glUniform1f": "u_lift (prism height) and u_bias",
+    "glUniform2f": "silhouette line half width in NDC (observed: outline pixels)",
+    "glUniform3f": "eye position (silhouette facing decisions) and light directions",
+    "glUniform4fv": "u_place[6] of the instanced geometry shader (the six copies move as modelled)",
+    "glUniform2fv": "u_spin[6] (cos, sin) of the six copies",
+    "glClear": "per cell colour and depth clear under a scissor rectangle",
+    "glScissor": "four cells share one framebuffer",
+    "glViewport": "per-cell viewport",
+    "glGenRenderbuffers": "16x16 RGBA8 target of the mismatch test",
+    "glRenderbufferStorage": "RGBA8 16x16",
+    "glFramebufferRenderbuffer": "colour attachment of the mismatch test framebuffer; complete",
+    "glCheckFramebufferStatus": "COMPLETE for the 16x16 target",
+    "glReadPixels": "cell readback (through demo::read_rgba8) for the pixel comparison and the 16x16 mismatch test",
+    "glGetIntegerv": "MAX_GEOMETRY_* limits compared with ES 3.2 Table 21.47, MAX_FRAGMENT_INPUT_COMPONENTS, LAYER_PROVOKING_VERTEX is one of the three legal values"
+  },
+  "features": [
+    "ES32.GEOMETRY.BASIC",
+    "ES32.GEOMETRY.AMPLIFICATION",
+    "ES32.GEOMETRY.ADJACENCY",
+    "ES30.TF.BASIC",
+    "ES30.TF.QUERY",
+    "ES30.TF.RASTERIZER_DISCARD",
+    "ES30.QUERY.OBJECTS",
+    "ES30.VAO.BASIC",
+    "ES20.DRAW.ELEMENTS",
+    "ES20.BUFFER.IBO",
+    "ES20.ERRORS.INVALID_OPERATION",
+    "ES20.STATE.QUERIES"
+  ],
+  "glsl_features": [
+    "GLSL320.GEOMETRY.LAYOUT",
+    "GLSL320.GEOMETRY.BUILTINS",
+    "GLSL320.INTERFACE_BLOCKS_IO",
+    "GLSL320.STAGE_COMBINATIONS"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "state-query",
+    "gl-error",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5",
+    "notes": "Viewed the gpu es-max capture (256x256). Top left: a three-armed spiral galaxy of about 150 shaded colour spheres (red, yellow, green, cyan, violet, pink) around a bright central bulge on a navy background, nearer spheres overlapping farther ones with correct occlusion. Top right: an icosphere whose faces have grown into prisms of three heights, each face its own palette colour with lit and shadowed sides and visible depth, on a purple background. Bottom left: a teal Blinn-Phong torus seen from above with a continuous thin yellow outline along its silhouette, outer rim and inner hole, none across the shaded surface. Bottom right: six cubes in a ring (red, orange, green, teal, violet, pink), each with three face brightnesses, on a brown background."
+  }
+}

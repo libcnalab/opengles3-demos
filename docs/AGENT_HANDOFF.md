@@ -61,6 +61,7 @@ float-targets-and-indexed-blend, texture-buffer, cube-map-array, geometry-shader
 tessellation-domains and tessellation-terrain.
 meta-gl G8 (transpose = GL_TRUE) is fixed on its branch (`3bb7411`).
 Running Claude subagents (worktrees under .claude/worktrees/):
+- tests glsl320-builtins (62)
 - GLSL language-rule coverage (shader-tests cases + test-glsl-language): the 16 NOT_STARTED GLSL100/300/310 rows
 Still unassigned: 62 (glsl320 built-ins), 35 (glsl310 built-ins),
 ES 3.0 items 10, 14, 16-20, 3D fog and skybox.

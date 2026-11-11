@@ -136,7 +136,16 @@ qualifiers on `in`/`out`), §4.4.3 (uniform locations), §9 Shader Interface Mat
 * `glUseProgramStages` requires a program that was **linked** with `PROGRAM_SEPARABLE` set. The flag only matters at link
   time (ES 3.2 §7.3: "does not take effect until after the next time LinkProgram ... is called"): setting it afterwards
   and not relinking leaves the program non-separable, and `glUseProgramStages` must fail with `INVALID_OPERATION`.
-  **Mesa honours the flag immediately** and accepts the call (recorded as XFAIL, see `docs/KNOWN_LIMITATIONS.md`).
+  **Mesa and ANGLE both honour the flag immediately** and accept the call (recorded as XFAIL on each, see
+  `docs/KNOWN_LIMITATIONS.md`). Two independent implementations agreeing against the text prompted a re-read: ES 3.1 and
+  ES 3.2 §7.3 both contain the sentence, ES 3.2 §7.5 additionally restores "PROGRAM_SEPARABLE ... that were in effect when
+  the program was linked" from a binary, and no change log entry relaxes it, so the strict check stays.
+* `glValidateProgramPipeline(p)` validates `p` "against the current GL state" (§11.1.3.11); `p` does not have to be the
+  bound pipeline. ANGLE validates the draw state of the *bound* pipeline instead (its log names the bound pipeline's
+  error), so the repaired pipelines are checked twice: once while another, invalid pipeline is bound (XFAIL on ANGLE) and
+  once while bound (strict everywhere).
+* `glUseProgramStages` with the name of a shader object is `INVALID_OPERATION` (§7.4); ANGLE raises `INVALID_VALUE`
+  (XFAIL on ANGLE).
 * A program that was linked from several stages must be active for **all** of them or none (§11.1.3.11). Taking only the
   vertex stage of a two-stage program and the fragment stage of another program is an invalid pipeline; so is replacing
   just one of its stages. Replace both (cells A4 to A6).

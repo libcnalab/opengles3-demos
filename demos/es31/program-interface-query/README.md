@@ -156,6 +156,9 @@ compute shader, an `out` array at consecutive fragment output locations.
   conform; XFAIL on radeonsi only). All Mesa drivers ignore `count` when `glGetProgramResourceiv` returns `ACTIVE_VARIABLES`
   (they write every index and report the full length, although "only the first count integer values will be written"; XFAIL
   on Mesa). Both are recorded in `docs/KNOWN_LIMITATIONS.md` by the integrator.
+* **Drivers (ANGLE).** ANGLE lists the single entry `o_id[0]` for `out ivec2 o_id[2]` but returns its index for
+  `glGetProgramResourceIndex(PROGRAM_OUTPUT, "o_id[1]")`, although §7.3.1.1 says "a name identifying any array element other
+  than the first (e.g., "a[1]") is not considered to match" (XFAIL on ANGLE).
 * `IS_PER_PATCH` and the `REFERENCED_BY_TESS_*` / `_GEOMETRY_` properties are ES 3.2 only and have no program to query here.
 * `MATRIX_STRIDE` is the distance between **columns** of a column-major matrix but between **rows** of a `row_major` one, and
   a `row_major` `mat2x3` occupies three rows, not two columns (see `Params.skew` and `Source.rm`). Packing a row-major matrix

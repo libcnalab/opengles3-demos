@@ -46,7 +46,7 @@
     "glClearColor": "background pixels equal the clear colour",
     "glDisable": "DITHER, for exact colours",
     "glReadPixels": "RGBA/UNSIGNED_BYTE readback of strip cells, bars and both panels",
-    "glCompileShader": "layout-rule experiments: a counter at binding MAX_ATOMIC_COUNTER_BUFFER_BINDINGS, an offset without binding and an atomic_uint in a structure are rejected; all shaders of the demo compile",
+    "glCompileShader": "layout-rule experiments: a counter at binding MAX_ATOMIC_COUNTER_BUFFER_BINDINGS, an offset without binding, counters without any binding (GLSL ES 3.20 section 4.4.6 clarification) and an atomic_uint in a structure are rejected; all shaders of the demo compile",
     "glLinkProgram": "overlapping counter offsets are rejected; min(MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS, MAX_ATOMIC_COUNTER_BUFFER_BINDINGS) bindings link",
     "glDeleteProgram": "cleanup"
   },

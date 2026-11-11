@@ -69,7 +69,7 @@ positive controls that must link.
 
 | rows | case | spec |
 |---|---|---|
-| COMMENTS_TOKENS | `3/**/-/**/1` is 2 (a comment is one space). A `//` comment ending in `\` swallows the next line, because phase 6 (line continuation) runs before phase 7 (comments). `in\`+newline+`t` is the keyword `int`. `my__value` is legal | GLSL ES 3.00 §3.1, §3.6, §3.8 |
+| COMMENTS_TOKENS | `3/**/-/**/1` is 2 (a comment is one space). A `//` comment ending in `\` swallows the next line, because phase 6 (line continuation) runs before phase 7 (comments). `in\`+newline+`t` is the keyword `int`. `my__value` is legal (its own case: ANGLE rejects it, XFAIL on ANGLE) | GLSL ES 3.00 §3.1, §3.6, §3.8 |
 | OPERATORS | `+ - *` correctly rounded, unary `-`/`+`, division in 2.5 ULP | §5.9, §4.5.1 |
 | OPERATORS | `< <= > >=` (incl. unsigned compare of 0xFFFFFFFFu), `== !=` on scalars, vectors, structures and arrays | §5.9, §5.7 |
 | OPERATORS | `&& \|\| ^^ !` truth tables; short-circuit of `&&`/`\|\|`, `^^` evaluates both, `?:` evaluates one branch (side-effect counters) | §5.9 |

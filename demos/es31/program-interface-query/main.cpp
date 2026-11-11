@@ -1074,7 +1074,13 @@ namespace
                    "BLOCK_INDEX of a member of a block array is the index of the FIRST block of the array (\"Cell.color\" -> Cell[0])");
             const Query out{gfx_, PI::ProgramOutput};
             rec.eq(out.index("o_id"), out.index("o_id[0]"), "PROGRAM_OUTPUT: \"o_id\" matches the entry \"o_id[0]\"");
-            rec.eq(out.index("o_id[1]"), GL_INVALID_INDEX, "PROGRAM_OUTPUT: \"o_id[1]\" is not a list entry");
+            // ES 3.1/3.2 section 7.3.1.1: "if an interface enumerates a single active resource list entry for an array variable (e.g., "a[0]"), a name
+            // identifying any array element other than the first (e.g., "a[1]") is not considered to match". ANGLE enumerates the single entry
+            // "o_id[0]" (ACTIVE_RESOURCES = 2 above) yet returns its index for "o_id[1]".
+            const GLuint o_id1 = out.index("o_id[1]");
+            rec.deviation(o_id1 == GL_INVALID_INDEX, "PROGRAM_OUTPUT: \"o_id[1]\" is not a list entry",
+                          o_id1 == GL_INVALID_INDEX ? std::string{} : std::format("actual={} expected=INVALID_INDEX", o_id1), "ANGLE",
+                          "ANGLE's glGetProgramResourceIndex(PROGRAM_OUTPUT, \"o_id[1]\") returns the index of the single entry \"o_id[0]\"; section 7.3.1.1 says a name of an element other than the first does not match");
             const Query ssbo_vars{comp_, PI::BufferVariable};
             rec.eq(ssbo_vars.index("Source.w"), ssbo_vars.index("Source.w[0]"), "BUFFER_VARIABLE: \"Source.w\" matches \"Source.w[0]\"");
             rec.eq(ssbo_vars.index("Result.items[1].p"), GL_INVALID_INDEX, "BUFFER_VARIABLE: only element 0 of a top-level array exists (\"Result.items[1].p\")");

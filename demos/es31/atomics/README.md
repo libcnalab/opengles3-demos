@@ -148,9 +148,13 @@ fullscreen triangle runs exactly one fragment-shader invocation per pixel (ES 3.
 - Optional stages: ES 3.1 allows zero vertex/fragment shader storage blocks and zero fragment atomic counters. The demo queries the
   limits and prints a note when it has to skip the fragment-shader displays or the fragment counting.
 
-## Known driver deviation
+## Atomic counters need a binding
 
-GLSL ES 3.10 §4.4.5: *"Any uniform sampler, image or atomic counter variable declared without a binding qualifier is
-initially bound to unit zero."* Mesa (all drivers) rejects `uniform atomic_uint a;` with "atomic counters require explicit
-binding point" (a desktop `ARB_shader_atomic_counters` rule). The demo keeps the strict check and reports XFAIL via
-`expect_or_known_deviation("Mesa")`; all its own shaders declare a binding.
+`uniform atomic_uint a;` without a `binding` is a compile-time error, and the demo checks that it is rejected. GLSL ES 3.10
+§4.4.5 reads as if it were allowed (*"Any uniform sampler, image or atomic counter variable declared without a binding
+qualifier is initially bound to unit zero"*), and an earlier version of this demo expected it to compile, with an XFAIL on
+Mesa. Mesa and ANGLE, two independent compilers, both reject it, which prompted a re-read: GLSL ES 3.10 §4.1.8 already
+forbids `atomic_uint` in structures *"since there is no mechanism to specify the binding"*, and GLSL ES 3.20 revision 6
+("Clarify error conditions when declaring atomic counters") states in §4.4.6: *"It is a compile-time error if any such
+declaration does not include a binding layout qualifier."* The demo follows the clarified rule on every driver; all its
+own shaders declare a binding.

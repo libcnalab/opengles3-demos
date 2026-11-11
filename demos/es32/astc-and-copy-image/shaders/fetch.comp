@@ -1,0 +1,34 @@
+#version 320 es
+// Reads every texel of level 0 of a 2D texture with texelFetch and stores its four components as raw
+// 32-bit words, so that the CPU sees exactly what the texture unit returned (floats via floatBitsToUint,
+// which keeps NaN payloads and the exact value of decoded compressed texels).
+// main.cpp inserts the defines after the #version line:
+//   SAMPLER   sampler2D | usampler2D
+//   KIND_FLOAT | KIND_UINT
+precision highp float;
+precision highp int;
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(binding = 0) uniform highp SAMPLER u_tex;
+uniform highp ivec2 u_size;  // the size the CPU expects; also the row length of the output
+
+layout(std430, binding = 0) writeonly buffer Result
+{
+    ivec4 size;     // textureSize(u_tex, 0), checked by the CPU
+    uvec4 texel[];  // index y * u_size.x + x
+} result;
+
+void main()
+{
+    ivec2 c = ivec2(gl_GlobalInvocationID.xy);
+    if (c == ivec2(0))
+        result.size = ivec4(textureSize(u_tex, 0), 0, 0);
+    if (any(greaterThanEqual(c, u_size)))
+        return;
+#if defined(KIND_FLOAT)
+    result.texel[c.y * u_size.x + c.x] = floatBitsToUint(texelFetch(u_tex, c, 0));
+#else
+    result.texel[c.y * u_size.x + c.x] = texelFetch(u_tex, c, 0);
+#endif
+}

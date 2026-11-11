@@ -872,16 +872,6 @@ namespace
                          "negative control: RGBA4 bits decoded as 5_5_5_1 would give a different image (the bit layout is observable)");
         }
 
-        // The GL_RENDERER string when GL_VERSION says Mesa, else a string that matches nothing: the matching rule for deviations that all Mesa drivers share.
-        static std::string mesa_renderer()
-        {
-            const auto text = [](mgl::StringName name) {
-                const GLubyte* s = mgl::glGetString(name);
-                return s != nullptr ? std::string(reinterpret_cast<const char*>(s)) : std::string{};
-            };
-            const std::string renderer = text(mgl::StringName::Renderer);
-            return text(mgl::StringName::Version).find("Mesa") != std::string::npos && !renderer.empty() ? renderer : std::string("\x01no-such-renderer");
-        }
 
         [[nodiscard]] std::size_t find_case(std::string_view name) const
         {
@@ -1062,14 +1052,14 @@ namespace
                                  [&] { mgl::glTexImage2D(TT::Texture2D, 0, c.internal, 4, 4, 0, c.format, c.type, zeros.data()); });
                     continue;
                 }
-                // Strict check with a documented deviation: Mesa (all three drivers of the matrix) accepts RGB + FLOAT for the unsized
-                // internal format RGB, a pair that exists only in the OES_texture_float extension. Table 3.3 of ES 3.0 (Table 8.3 of ES 3.2)
-                // lists RGB only with UNSIGNED_BYTE and UNSIGNED_SHORT_5_6_5.
-                (void)demo::drain_gl_errors();
-                mgl::glTexImage2D(TT::Texture2D, 0, c.internal, 4, 4, 0, c.format, c.type, zeros.data());
-                const mgl::ErrorCode got = demo::drain_gl_errors();
-                check.expect_or_known_deviation(got == mgl::ErrorCode::InvalidOperation, what, std::format("glGetError() = {}", demo::error_name(got)), mesa_renderer(),
-                                                "Mesa accepts RGB + FLOAT for unsized RGB (an OES_texture_float combination) although ES 3.0 Table 3.3 does not list it");
+                // Unsized RGB + RGB + FLOAT is not in core ES 3.0 Table 3.3 (ES 3.2 Table 8.3), but GL_OES_texture_float
+                // adds exactly this pair, and an implementation exposing an extension must accept its additions.
+                // The expectation therefore follows the context (the extension is not used for anything else).
+                const bool oes_float = mgl::HasExtension("GL_OES_texture_float");
+                expect_error(check, oes_float ? mgl::ErrorCode::NoError : mgl::ErrorCode::InvalidOperation,
+                             std::format("glTexImage2D {}: {}", c.what,
+                                         oes_float ? "accepted because GL_OES_texture_float is exposed" : "invalid in core -> INVALID_OPERATION"),
+                             [&] { mgl::glTexImage2D(TT::Texture2D, 0, c.internal, 4, 4, 0, c.format, c.type, zeros.data()); });
             }
 
             // glTexSubImage2D applies the same constraints, against the internal format of the existing level.

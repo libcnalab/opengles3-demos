@@ -128,15 +128,6 @@ namespace
         }
     };
 
-    /// Mesa driver name in GL_RENDERER, for Check::expect_or_known_deviation (see integer-float-textures).
-    std::string mesa_driver_tag()
-    {
-        const GLubyte* r = mgl::glGetString(mgl::StringName::Renderer);
-        const std::string_view renderer = r != nullptr ? reinterpret_cast<const char*>(r) : "";
-        for (const std::string_view tag : {std::string_view{"zink"}, std::string_view{"radeonsi"}, std::string_view{"llvmpipe"}})
-            if (renderer.find(tag) != std::string_view::npos) return std::string{tag};
-        return "<not a known Mesa driver>";
-    }
 
     class Srgb final : public demo::Demo
     {
@@ -501,11 +492,12 @@ namespace
                                  std::format("{}: {} returns alpha as {} for all 256 texels (largest relative error {:.1e})", f.name, lookup, f.has_alpha ? "stored byte / 255, NOT linearized" : "1 (an RGB format has alpha 1)",
                                              alpha.max_rel),
                                  alpha.first_rel);
-                    // The strict reading of ES 3.0 2.1.1 ("accurate to about 1 part in 10^5"): no tested driver meets it for the sRGB decode.
+                    // ES 3.0 §3.8.16 states no accuracy for the sRGB decode, and §2.1.1 is a general remark about
+                    // floating-point computation, not a requirement on this conversion. So the decode accuracy is
+                    // reported as an implementation-quality measurement, not asserted (the 1-step check above is).
                     if (f.decode_rgb && f.has_alpha && mode == 1)
-                        check.expect_or_known_deviation(rgb.bad_rel == 0, "SRGB8_ALPHA8: texelFetch() returns equation 3.26 to a relative error of 1e-4 (the generic accuracy of ES 3.0 2.1.1)",
-                                                        std::format("largest relative error {:.1e} ({:.3f} 8-bit steps); {}", rgb.max_rel, rgb.max_steps, rgb.first_rel), mesa_driver_tag(),
-                                                        "Mesa decodes sRGB with lookup tables / short polynomials of roughly 10-bit accuracy, far from 1 part in 10^5");
+                        std::cout << std::format("     note: SRGB8_ALPHA8 texelFetch decode: largest relative error {:.1e} ({:.3f} 8-bit steps)\n",
+                                                 rgb.max_rel, rgb.max_steps);
                 }
             }
 

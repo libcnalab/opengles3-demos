@@ -1456,7 +1456,7 @@ namespace
                 }
                 return at == got.size();
             };
-            const char* strict_note = "Mesa applies the ES 3.2 rule (Table 12.1) in every context version: MESA_GLES_VERSION_OVERRIDE changes only the reported version";
+            const char* strict_note = "artifact of MESA_GLES_VERSION_OVERRIDE, not a driver bug: Mesa is an ES 3.2 driver and keeps applying the ES 3.2 rule (Table 12.1) when only the reported version is lowered";
 
             arm(scratch_[0], 1024);  // room for 32 particles: nothing below overflows
             mgl::glBeginTransformFeedback(Cap::Points);

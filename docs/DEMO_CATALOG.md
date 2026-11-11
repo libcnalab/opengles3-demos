@@ -37,17 +37,17 @@ reader should study them. Feature IDs refer to `inventory/features.csv`.
 | 17 | `es20-copy-tex-image` | `glCopyTexImage2D/SubImage2D` | implemented as `es20-copy-and-read-pixels` |
 | 18 | `es20-read-pixels` | readback formats, pack alignment, implementation read format | implemented as `es20-copy-and-read-pixels` |
 | 19 | `es30-sampler-objects` | sampler vs texture state, two samplers on one texture | implemented |
-| 20 | `es30-texture-3d-and-arrays` | 3D and 2D-array textures, layer addressing | planned |
-| 21 | `es30-immutable-storage` | `glTexStorage*`, immutability errors, sized formats | planned |
-| 22 | `es30-integer-float-textures` | isampler/usampler, float/half textures, filterability rules | planned |
-| 23 | `es30-srgb` | sRGB textures and render targets | planned |
-| 24 | `es30-texture-swizzle-lod` | swizzles, base/max level, min/max LOD | planned |
+| 20 | `es30-texture-3d-and-arrays` | 3D and 2D-array textures, layer addressing | implemented |
+| 21 | `es30-immutable-storage` | `glTexStorage*`, immutability errors, sized formats | implemented |
+| 22 | `es30-integer-float-textures` | isampler/usampler, float/half textures, filterability rules | implemented |
+| 23 | `es30-srgb` | sRGB textures and render targets | implemented |
+| 24 | `es30-texture-swizzle-lod` | swizzles, base/max level, min/max LOD | implemented |
 | 25 | `es30-etc2-eac` | required compressed formats | planned |
-| 26 | `es30-pixel-buffer-objects` | PBO pack/unpack | planned |
+| 26 | `es30-pixel-buffer-objects` | PBO pack/unpack | implemented |
 | 27 | `es30-multiple-render-targets` | `glDrawBuffers`, fragment output locations | implemented |
-| 28 | `es30-framebuffer-blit-msaa` | read/draw FBOs, blits, multisample resolve | planned |
+| 28 | `es30-framebuffer-blit-msaa` | read/draw FBOs, blits, multisample resolve | implemented |
 | 29 | `es30-clear-buffer` | `glClearBuffer*` per attachment and type | implemented inside `es30-multiple-render-targets` |
-| 30 | `es30-framebuffer-layers-invalidate` | layer attachments, invalidation | planned |
+| 30 | `es30-framebuffer-invalidate` | invalidation, attachment queries (layers: `es30-texture-3d-and-arrays`) | implemented |
 | 31 | `es30-depth-textures-shadow` | depth textures, comparison sampling, shadow-map basics | planned |
 
 ## Stage 4 — ES 3.0 data paths
@@ -58,11 +58,11 @@ reader should study them. Feature IDs refer to `inventory/features.csv`.
 | 33 | `es30-integer-and-packed-attributes` | `glVertexAttribIPointer`, 2_10_10_10, half float | implemented inside `es30-vertex-array-objects` |
 | 34 | `es30-instancing` | divisors, instanced draws, `gl_InstanceID` | implemented |
 | 35 | `es30-draw-range-primitive-restart` | `glDrawRangeElements`, primitive restart | implemented inside `es30-instancing` |
-| 36 | `es30-buffer-mapping` | map flags, explicit flush, copy, 64-bit queries | planned |
-| 37 | `es30-uniform-buffer-objects` | std140, ranges, introspection, sharing | planned |
-| 38 | `es30-transform-feedback` | capture, modes, objects, pause/resume, render from capture | planned |
+| 36 | `es30-buffer-mapping` | map flags, explicit flush, copy, 64-bit queries | implemented |
+| 37 | `es30-uniform-buffer-objects` | std140, ranges, introspection, sharing | implemented |
+| 38 | `es30-transform-feedback` | capture, modes, objects, pause/resume, render from capture | implemented |
 | 39 | `es30-occlusion-queries` | query objects, availability | planned |
-| 40 | `es30-sync-objects` | fences, client/server waits | planned |
+| 40 | `es30-sync-objects` | fences, client/server waits | implemented |
 | 41 | `es30-program-binary` | binary retrieval/reload + recompile fallback | planned |
 | 42 | `es30-flat-centroid` | flat/centroid interpolation, provoking vertex | planned |
 | 43 | `diagnostics-capabilities` | version, limits, extension report | implemented |

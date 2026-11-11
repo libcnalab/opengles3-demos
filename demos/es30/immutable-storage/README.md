@@ -111,8 +111,11 @@ which need not hold half-float values, and `sampler3D` / `sampler2DArray` have n
 
 ## Known driver deviation and spec notes
 
-- **Mesa accepts `RGB + FLOAT` for the unsized internal format `RGB`** (all three drivers of the matrix), although Table 3.3 of ES 3.0 (Table 8.3 of ES 3.2) lists `RGB` only with
-  `UNSIGNED_BYTE` and `UNSIGNED_SHORT_5_6_5`. The pair belongs to `OES_texture_float`. The check keeps the strict expectation and reports XFAIL on Mesa; `RGBA + HALF_FLOAT` is rejected correctly.
+- **Unsized `RGB + FLOAT` depends on `GL_OES_texture_float`.** Core ES 3.0 Table 3.3 (ES 3.2 Table 8.3) lists
+  unsized `RGB` only with `UNSIGNED_BYTE` and `UNSIGNED_SHORT_5_6_5`. `OES_texture_float` adds `RGB/RGBA + FLOAT`, and
+  every Mesa context here exposes it. So accepting the pair is correct, and the check's expectation follows the
+  context. (This was first reported as a Mesa deviation; integration review found the extension.)
+  `RGBA + HALF_FLOAT` stays invalid, because `OES_texture_half_float` defines a different token, `HALF_FLOAT_OES`.
 - **Not checked: `INVALID_ENUM` for an unsized internal format in `glTexStorage*`** (ES 3.0 §3.8.4: "If internalformat is one of the unsized base internal formats listed in table 3.3, an
   INVALID_ENUM error is generated"). meta-gl types the argument as `SizedInternalFormat` or `CompressedInternalFormat`, so `GL_RGBA` cannot be passed without a cast, and the demos do not cast.
 - ES 3.0.6 has no `glGetTexLevelParameter` (it is ES 3.1), so the level sizes are verified with `textureSize` in the shader, and the dimensions of a refused respecification by drawing the sheet again.

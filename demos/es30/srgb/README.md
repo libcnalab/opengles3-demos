@@ -93,11 +93,13 @@ All 8-bit comparisons are in steps of 1/255 of `|stored byte - 255 * exact value
 - **Rounding (`0.52`).** For byte copies and results that are integers or half-integers before the conversion: equation 2.3 rounds to the nearest step (error 0.5, a tie may go either way);
   ES 3.0 section 2.1.1 lets the float arithmetic be off by "about 1 part in 10^5", at most 0.003 steps.
 - **Conversion (`1.0`).** For computed floats and for results of an sRGB conversion. docs/VALIDATION.md's policy is "8-bit quantization +-1". The measurements agree: real hardware converts a computed
-  float to 8 bits with up to ~0.6 steps of error (radeonsi 0.604), and **the specification gives no accuracy for equations 3.26 and 4.1** beyond the generic 2.1.1 *about 1 part in 10^5*, which none of the three drivers meets
-  for the decode (they use tables or short polynomials: the unrounded decode result is off by up to 0.49 steps on radeonsi and 0.31 on llvmpipe/zink; relative error 3.8e-3 and 2.5e-2 at the dark end). The largest deviation measured in any 8-bit
+  float to 8 bits with up to ~0.6 steps of error (radeonsi 0.604), and **the specification gives no accuracy for equations 3.26 and 4.1**
+  (§2.1.1's "about 1 part in 10^5" describes general floating-point computation and is not a requirement on these conversions). The drivers
+  decode (they use tables or short polynomials: the unrounded decode result is off by up to 0.49 steps on radeonsi and 0.31 on llvmpipe/zink; relative error 3.8e-3 and 2.5e-2 at the dark end). The largest deviation measured in any 8-bit
   result is 0.85 steps. One step is far tighter than any plausible mistake: a gamma-2.2 curve instead of the sRGB curve is up to 6 steps off and a missing conversion up to 100.
-- **Strict reading, XFAIL on Mesa.** One of the decode checks keeps the 1e-4 relative bound of 2.1.1 for the `SRGB8_ALPHA8` decode and is recorded as a known deviation on radeonsi, llvmpipe and zink.
-  The names of the passing decode checks print the measured errors.
+- **Decode accuracy is reported, not asserted.** The run prints the measured `SRGB8_ALPHA8` decode error as a note. An earlier version
+  asserted a 1e-4 relative bound derived from §2.1.1 and marked it XFAIL on Mesa. That bound is not a requirement of the specification,
+  so it was removed during integration.
 
 ## Spec ambiguities and how they were resolved
 

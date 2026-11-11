@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <string>
 
 namespace demo
 {
@@ -32,9 +33,13 @@ namespace demo
     bool Check::expect_or_known_deviation(bool ok, std::string_view what, std::string_view detail,
                                           std::string_view renderer_substring, std::string_view reason)
     {
-        const GLubyte* r = metagl::glGetString(metagl::StringName::Renderer);
-        const std::string_view renderer = r != nullptr ? reinterpret_cast<const char*>(r) : "";
-        if (renderer.find(renderer_substring) == std::string_view::npos) return expect(ok, what, detail);
+        auto text = [](metagl::StringName n) {
+            const GLubyte* p = metagl::glGetString(n);
+            return std::string(p != nullptr ? reinterpret_cast<const char*>(p) : "");
+        };
+        // Matched against GL_RENDERER and GL_VERSION, so "radeonsi" selects one driver and "Mesa" all Mesa drivers.
+        const std::string haystack = text(metagl::StringName::Renderer) + " | " + text(metagl::StringName::Version);
+        if (haystack.find(renderer_substring) == std::string::npos) return expect(ok, what, detail);
         if (!ok) ++xfail_;
         return expect(true, what,
                       std::format("{} on '{}': {}{}{}", ok ? "XPASS (driver now conforms)" : "XFAIL known driver deviation",

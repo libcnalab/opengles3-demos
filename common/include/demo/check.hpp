@@ -37,8 +37,8 @@ namespace demo
 
         bool expect_near(double actual, double expected, double tolerance, std::string_view what);
 
-        /// Strict check with a *documented* driver deviation: when `ok` is false and GL_RENDERER contains
-        /// `renderer_substring`, the result is recorded as XFAIL (passing, but labelled) with `reason`, which
+        /// Strict check with a *documented* driver deviation: when `ok` is false and GL_RENDERER or GL_VERSION
+        /// contains `renderer_substring` (e.g. "radeonsi" for one driver, "Mesa" for all Mesa drivers), the result is recorded as XFAIL (passing, but labelled) with `reason`, which
         /// must also be listed in docs/KNOWN_LIMITATIONS.md. Every other driver gets the strict check. If
         /// the named driver starts conforming, the check passes and is labelled XPASS.
         bool expect_or_known_deviation(bool ok, std::string_view what, std::string_view detail,

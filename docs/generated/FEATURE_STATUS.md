@@ -168,20 +168,20 @@
 | ES30.MULTISAMPLE.DEFAULT | 3.0 | multisample | Multisampled default framebuffer; SAMPLES / SAMPLE_BUFFERS | ES 3.0 §3.3 | NOT_STARTED |  |
 | ES30.EXTENSIONS.REPORT | 3.0 | diagnostics | Extension enumeration via glGetStringi + capability/limit report | ES 3.0 §6.1.6 | FULLY_VALIDATED | diagnostics-capabilities |
 | ES31.COMPUTE.DISPATCH | 3.1 | compute | Compute shaders + glDispatchCompute + work group built-ins | ES 3.2 §17; GLSL 3.10 §7.1 | FULLY_VALIDATED | es31-compute-basics |
-| ES31.COMPUTE.INDIRECT | 3.1 | compute | glDispatchComputeIndirect from DISPATCH_INDIRECT_BUFFER | ES 3.2 §17 | NOT_STARTED |  |
+| ES31.COMPUTE.INDIRECT | 3.1 | compute | glDispatchComputeIndirect from DISPATCH_INDIRECT_BUFFER | ES 3.2 §17 | FULLY_VALIDATED | es31-compute-indirect-and-to-render |
 | ES31.COMPUTE.SHARED | 3.1 | compute | shared variables + barrier() within a work group | GLSL 3.10 §4.3.8 | FULLY_VALIDATED | es31-compute-shared-memory |
 | ES31.COMPUTE.LIMITS | 3.1 | compute | MAX_COMPUTE_WORK_GROUP_COUNT/SIZE/INVOCATIONS / SHARED_MEMORY_SIZE | ES 3.2 §20 | FULLY_VALIDATED | diagnostics-capabilities, es31-compute-basics, es31-compute-shared-memory |
-| ES31.COMPUTE.TO_RENDER | 3.1 | compute | Compute-generated vertex/indirect data consumed by rendering | ES 3.2 §17 §7.11 | FULLY_VALIDATED | es31-indirect-draw |
+| ES31.COMPUTE.TO_RENDER | 3.1 | compute | Compute-generated vertex/indirect data consumed by rendering | ES 3.2 §17 §7.11 | FULLY_VALIDATED | es31-compute-indirect-and-to-render, es31-indirect-draw |
 | ES31.SSBO.BASIC | 3.1 | storage | Shader storage blocks + SHADER_STORAGE_BUFFER bindings | ES 3.2 §7.8 | NOT_STARTED |  |
 | ES31.SSBO.STD430 | 3.1 | storage | std430 layout + runtime-sized arrays (.length()) | GLSL 3.10 §4.4.4 | NOT_STARTED |  |
 | ES31.SSBO.LIMITS | 3.1 | storage | MAX_SHADER_STORAGE_BLOCK_SIZE / SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT / per-stage block limits | ES 3.2 §20 | FULLY_VALIDATED | diagnostics-capabilities |
-| ES31.IMAGE.LOAD_STORE | 3.1 | images | glBindImageTexture + imageLoad/imageStore + format qualifiers | ES 3.2 §8.23 | NOT_STARTED |  |
-| ES31.IMAGE.ACCESS | 3.1 | images | readonly/writeonly/coherent/volatile/restrict qualifiers | GLSL 3.10 §4.10 | NOT_STARTED |  |
-| ES31.IMAGE.QUERY | 3.1 | images | IMAGE_BINDING_* indexed queries + IMAGE_FORMAT_COMPATIBILITY_TYPE | ES 3.2 §8.23.1 | NOT_STARTED |  |
+| ES31.IMAGE.LOAD_STORE | 3.1 | images | glBindImageTexture + imageLoad/imageStore + format qualifiers | ES 3.2 §8.23 | FULLY_VALIDATED | es31-image-load-store |
+| ES31.IMAGE.ACCESS | 3.1 | images | readonly/writeonly/coherent/volatile/restrict qualifiers | GLSL 3.10 §4.10 | FULLY_VALIDATED | es31-image-load-store |
+| ES31.IMAGE.QUERY | 3.1 | images | IMAGE_BINDING_* indexed queries + IMAGE_FORMAT_COMPATIBILITY_TYPE | ES 3.2 §8.23.1 | FULLY_VALIDATED | es31-image-load-store |
 | ES31.ATOMIC.COUNTERS | 3.1 | atomics | Atomic counter buffers + atomicCounterIncrement/Decrement | ES 3.2 §7.7 | NOT_STARTED |  |
 | ES31.ATOMIC.MEMORY | 3.1 | atomics | atomicAdd/Min/Max/And/Or/Xor/Exchange/CompSwap on SSBO + shared | GLSL 3.10 §8.11 | NOT_STARTED |  |
 | ES31.BARRIER.MEMORY | 3.1 | sync | glMemoryBarrier bits + memoryBarrier*() in shaders | ES 3.2 §7.11.2 | FULLY_VALIDATED | es31-compute-shared-memory |
-| ES31.BARRIER.BY_REGION | 3.1 | sync | glMemoryBarrierByRegion | ES 3.2 §7.11.2 | NOT_STARTED |  |
+| ES31.BARRIER.BY_REGION | 3.1 | sync | glMemoryBarrierByRegion | ES 3.2 §7.11.2 | FULLY_VALIDATED | es31-compute-indirect-and-to-render |
 | ES31.DRAW.INDIRECT | 3.1 | drawing | glDrawArraysIndirect / glDrawElementsIndirect command layouts | ES 3.2 §10.3.9 §10.5 | FULLY_VALIDATED | es31-indirect-draw |
 | ES31.VERTEX.SEPARATE_FORMAT | 3.1 | vertex-input | glVertexAttribFormat/IFormat/Binding + glBindVertexBuffer + glVertexBindingDivisor | ES 3.2 §10.3.1 | FULLY_VALIDATED | es31-separate-vertex-format |
 | ES31.PIPELINE.OBJECTS | 3.1 | shaders | Separable programs + program pipeline objects + glUseProgramStages | ES 3.2 §7.4 | NOT_STARTED |  |
@@ -195,7 +195,7 @@
 | ES31.TEXTURE.LEVEL_QUERY | 3.1 | textures | glGetTexLevelParameteriv/fv | ES 3.2 §8.11.3 | NOT_STARTED |  |
 | ES31.SAMPLE_MASK | 3.1 | multisample | glSampleMaski + SAMPLE_MASK | ES 3.2 §13.8.3 | FULLY_VALIDATED | es31-multisample-textures |
 | ES31.FBO.NO_ATTACHMENTS | 3.1 | framebuffer | Framebuffers without attachments (glFramebufferParameteri defaults) | ES 3.2 §9.2.1 | NOT_STARTED |  |
-| ES31.STATE.BOOLEANI | 3.1 | state | glGetBooleani_v (IMAGE_BINDING_LAYERED) | ES 3.2 §20.1 | NOT_STARTED |  |
+| ES31.STATE.BOOLEANI | 3.1 | state | glGetBooleani_v (IMAGE_BINDING_LAYERED) | ES 3.2 §20.1 | FULLY_VALIDATED | es31-image-load-store |
 | ES31.SHADER.HELPER_INVOCATION | 3.1 | shaders | gl_HelperInvocation | GLSL 3.10 §7.1 | NOT_STARTED |  |
 | ES32.GEOMETRY.BASIC | 3.2 | geometry | Geometry shaders: input/output layouts EmitVertex/EndPrimitive | ES 3.2 §11.3 | NOT_STARTED |  |
 | ES32.GEOMETRY.AMPLIFICATION | 3.2 | geometry | Primitive amplification + invocations | ES 3.2 §11.3.4 | NOT_STARTED |  |

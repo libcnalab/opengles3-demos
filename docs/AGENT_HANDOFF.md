@@ -53,17 +53,26 @@ cmake --build --preset debug --target coverage
 4. Phase 6 audit (coverage gaps: run `coverage` and read docs/generated/COVERAGE_SUMMARY.md), then phase 7
    final verification on a clean build.
 
-## In flight (2026-11-11 20:30)
+## In flight (2026-11-11 20:10): continuation directive (rigour over statistics)
 
-The suite has 82 executables. Coverage: API 358/358; ES features 100% for 3.0-3.2 (the ES 2.0 feedback-loop row is
-DOCUMENTED_ONLY); GLSL 100% at all four language versions.
-Phase 7 verification:
-- debug preset (gpu, llvmpipe, zink × es-max/es-min, plus softpipe for 3.2): 474/474;
-- headless-ci (-Werror, llvmpipe and softpipe): clean build, 172/172;
-- sanitize (ASan/UBSan): 474/474.
-Next: Codex phase 6 audits start at 22:05 (background job; tools/agents/codex_audit.sh, brief
-docs/agent-briefs/AUDIT_BRIEF.md). Reports go to ../opengles3-demos-worktrees/audit-*.report.md. Triage each
-finding against the spec, fix the real ones in the demos, and record any changed deviations.
+The owner's continuation superprompt sets the priorities: correctness, then real gaps, then test reliability,
+reproducibility, independent validation and education.
+Done in this phase:
+- **meta-gl** is read-only again (AGENTS.md rule 2, policy conflict). The required revision is documented in
+  docs/METAGL_DEPENDENCY.md: with public `develop`, 17 executables do not build.
+- **Evidence traceability:** result JSON records the executable and run time. The generator ignores stale results,
+  states the source revision, and lints `api` claims against the code.
+- **docs/generated/DEVIATIONS.md** holds the per-run XFAIL/XPASS evidence. Every 'Mesa' match reproduces on all
+  three Mesa drivers.
+- **ANGLE** (Android SDK build, native ES 3.1, Vulkan/RADV) is in the matrix as driver `angle`, mode `native`.
+  First run: 55/82 pass, 27 fail. **The suite is not green on ANGLE until triage is done.**
+Running Claude subagents:
+- MSAA resolve assumptions: demote non-normative resolve checks (framebuffer-blit-msaa, flat-centroid,
+  multisample-default-framebuffer).
+- ANGLE triage, three groups per docs/agent-briefs/ANGLE_TRIAGE_BRIEF.md: textures/ES2, FBO/queries/TF,
+  programs/GLSL. flat-centroid and framebuffer-blit-msaa are left to the MSAA agent and triaged on ANGLE after it.
+Codex audits (tools/agents/codex_audit.sh, AUDIT_BRIEF.md) are prepared but not started. Start them when CPU
+capacity frees up: the limit is 8 cores in total, and 4 agents × -j2 run now.
 
 ## Parallel work / Codex
 

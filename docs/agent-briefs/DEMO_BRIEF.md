@@ -41,7 +41,19 @@ matters more than speed.
 - Never loosen a check to make a driver pass, and never "accept either outcome". If a driver
   contradicts the normative text, keep the strict check and use
   `check.expect_or_known_deviation(ok, what, detail, "<GL_RENDERER substring>", "<reason>")`. Quote the
-  spec in your report, and the integrator adds the row to docs/KNOWN_LIMITATIONS.md.
+  spec in your report, and the integrator adds the row to docs/KNOWN_LIMITATIONS.md. The substring is matched
+  against GL_RENDERER and GL_VERSION, so "radeonsi" selects one driver and "Mesa" selects all Mesa drivers.
+- **Before claiming a deviation, check the extensions.** Exposed extensions amend core tables. For example,
+  `OES_texture_float`, `OES_texture_float_linear` and `EXT_color_buffer_float` make float uploads, filtering and
+  rendering legal, so the "error" is gone. `diagnostics-capabilities` lists the extensions. Compute the
+  expectation from `metagl::HasExtension()` without using the extension. Several reported "deviations" were
+  extension effects.
+- **No requirement without normative text.** Do not derive accuracy bounds from general remarks such as
+  ES 3.0 §2.1.1. If the spec gives no precision, assert only a justified sanity tolerance and print the
+  measured value.
+- **es-min runs lower only the reported version** (MESA_GLES_VERSION_OVERRIDE). Mesa stays an ES 3.2 driver,
+  so rules that ES 3.2 relaxed may still follow 3.2 behaviour there. That is an override artifact, not a
+  driver deviation.
 - If meta-gl cannot express something, do NOT work around it with raw casts. Report the gap (exact
   enum or function, spec evidence) and skip that check.
 

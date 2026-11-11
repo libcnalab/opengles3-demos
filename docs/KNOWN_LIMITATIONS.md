@@ -43,6 +43,9 @@
 | `es30-framebuffer-invalidate` | ES 3.0 §6.1.13 / ES 3.2 §9.2.3: default framebuffer bound and attachment not BACK/DEPTH/STENCIL → INVALID_OPERATION | INVALID_ENUM is raised instead. All Mesa drivers |
 | `es30-texture-3d-and-arrays` | ES 3.0 §2.1: commands execute in order; reads see all prior commands | zink: `glCopyTexSubImage3D` directly after scissored `glClear`s copies stale texels (a `glFlush` in between fixes it) |
 
+| `es31-indirect-draw` (es-min only) | ES 3.1 §10.5/§12.1.2: any `Draw*Indirect` while transform feedback is active and not paused → INVALID_OPERATION (relaxed in ES 3.2 §12.2.2) | Mesa applies the ES 3.2 rule on ES 3.1 contexts too, including **natively on softpipe** (so not only an override artifact). XFAIL on "Mesa" when the context reports 3.1 |
+| `es31-separate-vertex-format` | ES 3.2 Table 21.3, §2.2.2: `VERTEX_BINDING_OFFSET` is 64-bit state; `GetIntegeri_v` clamps | after `glBindVertexBuffer(..., 2^33+8, ...)` `GetInteger64i_v` returns 8 (truncated to 32 bits) and `GetIntegeri_v` is truncated instead of clamped. All Mesa drivers |
+
 Not deviations (verified during integration): Mesa accepting `glGenerateMipmap` on R32F and unsized
 `RGB + FLOAT` uploads is correct, because the contexts expose `GL_OES_texture_float_linear`,
 `GL_EXT_color_buffer_float` and `GL_OES_texture_float`. The ES 3.0 transform-feedback mode rule failing under

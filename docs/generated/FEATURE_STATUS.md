@@ -6,9 +6,9 @@
 | ES20.CONTEXT.INIT | 2.0 | context | Context creation + meta-gl initialization + version/API verification | ES 3.0 §2.1-2.2; meta-gl Loader.hpp | FULLY_VALIDATED | diagnostics-capabilities, test-metagl-contracts |
 | ES20.CONTEXT.STRINGS | 2.0 | context | GL_VENDOR/RENDERER/VERSION/SHADING_LANGUAGE_VERSION strings and version parsing | ES 3.0 §6.1.6 | FULLY_VALIDATED | diagnostics-capabilities |
 | ES20.ERRORS.GETERROR | 2.0 | errors | glGetError semantics: sticky flags; command ignored on error | ES 3.0 §2.5 | NOT_STARTED |  |
-| ES20.ERRORS.INVALID_ENUM | 2.0 | errors | GL_INVALID_ENUM generation (only reachable via raw casts through typed wrappers) | ES 3.0 §2.5 Table 2.3 | FULLY_VALIDATED | es30-framebuffer-invalidate, es30-instancing, es30-transform-feedback, es30-vertex-array-objects |
-| ES20.ERRORS.INVALID_VALUE | 2.0 | errors | GL_INVALID_VALUE generation (negative sizes/out-of-range indices) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-copy-and-read-pixels, es20-culling-front-face, es30-buffer-mapping, es30-framebuffer-blit-msaa, es30-framebuffer-invalidate, es30-instancing, es30-sync-objects, es30-transform-feedback, es30-uniform-buffer-objects, es30-vertex-array-objects, es31-compute-basics |
-| ES20.ERRORS.INVALID_OPERATION | 2.0 | errors | GL_INVALID_OPERATION generation (state-dependent misuse) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-copy-and-read-pixels, es30-buffer-mapping, es30-framebuffer-blit-msaa, es30-framebuffer-invalidate, es30-transform-feedback, es30-vertex-array-objects, es31-compute-basics |
+| ES20.ERRORS.INVALID_ENUM | 2.0 | errors | GL_INVALID_ENUM generation (only reachable via raw casts through typed wrappers) | ES 3.0 §2.5 Table 2.3 | FULLY_VALIDATED | es30-framebuffer-invalidate, es30-instancing, es30-transform-feedback, es30-vertex-array-objects, es31-indirect-draw, es31-separate-vertex-format |
+| ES20.ERRORS.INVALID_VALUE | 2.0 | errors | GL_INVALID_VALUE generation (negative sizes/out-of-range indices) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-copy-and-read-pixels, es20-culling-front-face, es30-buffer-mapping, es30-framebuffer-blit-msaa, es30-framebuffer-invalidate, es30-instancing, es30-sync-objects, es30-transform-feedback, es30-uniform-buffer-objects, es30-vertex-array-objects, es31-compute-basics, es31-indirect-draw, es31-separate-vertex-format |
+| ES20.ERRORS.INVALID_OPERATION | 2.0 | errors | GL_INVALID_OPERATION generation (state-dependent misuse) | ES 3.0 §2.5 | FULLY_VALIDATED | es20-copy-and-read-pixels, es30-buffer-mapping, es30-framebuffer-blit-msaa, es30-framebuffer-invalidate, es30-transform-feedback, es30-vertex-array-objects, es31-compute-basics, es31-indirect-draw, es31-separate-vertex-format |
 | ES20.ERRORS.INVALID_FB_OP | 2.0 | errors | GL_INVALID_FRAMEBUFFER_OPERATION on incomplete framebuffer | ES 3.0 §4.4.4 | FULLY_VALIDATED | es20-framebuffer-objects, es30-framebuffer-blit-msaa |
 | ES20.VIEWPORT | 2.0 | transform | glViewport mapping NDC->window; MAX_VIEWPORT_DIMS | ES 3.0 §2.13.1 | FULLY_VALIDATED | es20-clear-viewport-scissor |
 | ES20.DEPTH_RANGE | 2.0 | transform | glDepthRangef mapping of NDC z to window z | ES 3.0 §2.13.1 | FULLY_VALIDATED | es20-clear-viewport-scissor, es20-depth-test |
@@ -33,12 +33,12 @@
 | ES20.ATTRIB.ACTIVE_QUERY | 2.0 | vertex-input | glGetActiveAttrib enumeration (name/type/size) | ES 3.0 §2.12.5 | FULLY_VALIDATED | es20-vertex-attributes |
 | ES20.ATTRIB.CONSTANT | 2.0 | vertex-input | Current (constant) generic attribute values glVertexAttrib*f[v] | ES 3.0 §2.8 | FULLY_VALIDATED | es20-vertex-attributes |
 | ES20.ATTRIB.FORMATS | 2.0 | vertex-input | Attribute types BYTE/UBYTE/SHORT/USHORT/FLOAT/FIXED with normalized flag | ES 3.0 §2.9 Table 2.4 | FULLY_VALIDATED | es20-vertex-attributes |
-| ES20.ATTRIB.INTERLEAVED | 2.0 | vertex-input | Interleaved vs planar layouts; stride and offset | ES 3.0 §2.9 | FULLY_VALIDATED | es20-vertex-attributes, es30-vertex-array-objects |
-| ES20.ATTRIB.QUERY | 2.0 | vertex-input | glGetVertexAttrib*/glGetVertexAttribPointerv state queries | ES 3.0 §6.1.12 | FULLY_VALIDATED | es20-vertex-attributes, es30-vertex-array-objects |
+| ES20.ATTRIB.INTERLEAVED | 2.0 | vertex-input | Interleaved vs planar layouts; stride and offset | ES 3.0 §2.9 | FULLY_VALIDATED | es20-vertex-attributes, es30-vertex-array-objects, es31-separate-vertex-format |
+| ES20.ATTRIB.QUERY | 2.0 | vertex-input | glGetVertexAttrib*/glGetVertexAttribPointerv state queries | ES 3.0 §6.1.12 | FULLY_VALIDATED | es20-vertex-attributes, es30-vertex-array-objects, es31-separate-vertex-format |
 | ES20.ATTRIB.CLIENT_ARRAYS | 2.0 | vertex-input | Client-memory vertex arrays on the default VAO (legal only with VAO 0) | ES 3.0 §2.9 §2.11 | FULLY_VALIDATED | es20-vertex-attributes |
 | ES20.BUFFER.VBO | 2.0 | buffers | Vertex buffer objects (ARRAY_BUFFER) glGenBuffers/glBindBuffer/glBufferData | ES 3.0 §2.10 | FULLY_VALIDATED | es20-culling-front-face, es20-indexed-drawing, es20-primitive-topology, es20-vertex-attributes, es30-buffer-mapping, es30-hello-triangle |
-| ES20.BUFFER.IBO | 2.0 | buffers | Index buffers (ELEMENT_ARRAY_BUFFER) with UBYTE/USHORT/UINT indices | ES 3.0 §2.10.7 | FULLY_VALIDATED | es20-indexed-drawing, es30-instancing |
-| ES20.BUFFER.SUBDATA | 2.0 | buffers | glBufferSubData partial updates | ES 3.0 §2.10.2 | FULLY_VALIDATED | es20-indexed-drawing, es30-buffer-mapping, es30-uniform-buffer-objects |
+| ES20.BUFFER.IBO | 2.0 | buffers | Index buffers (ELEMENT_ARRAY_BUFFER) with UBYTE/USHORT/UINT indices | ES 3.0 §2.10.7 | FULLY_VALIDATED | es20-indexed-drawing, es30-instancing, es31-indirect-draw |
+| ES20.BUFFER.SUBDATA | 2.0 | buffers | glBufferSubData partial updates | ES 3.0 §2.10.2 | FULLY_VALIDATED | es20-indexed-drawing, es30-buffer-mapping, es30-uniform-buffer-objects, es31-indirect-draw |
 | ES20.BUFFER.REALLOC | 2.0 | buffers | glBufferData re-specification (orphaning) and size/usage queries | ES 3.0 §2.10.2 §6.1.9 | FULLY_VALIDATED | es20-indexed-drawing |
 | ES20.BUFFER.QUERY | 2.0 | buffers | glGetBufferParameteriv / glIsBuffer | ES 3.0 §6.1.9 | FULLY_VALIDATED | es20-indexed-drawing, es30-buffer-mapping |
 | ES20.DRAW.ARRAYS | 2.0 | drawing | glDrawArrays | ES 3.0 §2.9.3 | FULLY_VALIDATED | es20-blending, es20-copy-and-read-pixels, es20-culling-front-face, es20-framebuffer-objects, es20-indexed-drawing, es20-primitive-topology, es30-buffer-mapping, es30-hello-triangle, es30-instancing, es30-vertex-array-objects |
@@ -90,10 +90,10 @@
 | ES20.LIGHTING.SHADER | 2.0 | shading | Shader-based lighting (directional/point/spot; Phong/Blinn-Phong) with normal matrix | n/a (composition) | NOT_STARTED |  |
 | ES20.CAMERA.MVP | 2.0 | shading | Model/view/projection matrices; perspective vs orthographic; camera movement | n/a (composition) | NOT_STARTED |  |
 | ES30.VAO.BASIC | 3.0 | vertex-input | Vertex array objects: gen/bind/delete/isVertexArray; per-VAO attribute state | ES 3.0 §2.11 | FULLY_VALIDATED | es20-culling-front-face, es20-vertex-attributes, es30-hello-triangle, es30-vertex-array-objects |
-| ES30.VAO.SWITCHING | 3.0 | vertex-input | Multiple VAOs with different configurations; ELEMENT_ARRAY_BUFFER is VAO state | ES 3.0 §2.11 | FULLY_VALIDATED | es20-indexed-drawing, es30-vertex-array-objects |
+| ES30.VAO.SWITCHING | 3.0 | vertex-input | Multiple VAOs with different configurations; ELEMENT_ARRAY_BUFFER is VAO state | ES 3.0 §2.11 | FULLY_VALIDATED | es20-indexed-drawing, es30-vertex-array-objects, es31-indirect-draw |
 | ES30.ATTRIB.INTEGER | 3.0 | vertex-input | glVertexAttribIPointer + ivec/uvec inputs; glVertexAttribI4*; glGetVertexAttribI* | ES 3.0 §2.8-2.9 | FULLY_VALIDATED | es30-vertex-array-objects, test-glsl300-builtins |
 | ES30.ATTRIB.PACKED | 3.0 | vertex-input | INT_2_10_10_10_REV / UNSIGNED_INT_2_10_10_10_REV and HALF_FLOAT attributes | ES 3.0 §2.9.2 | FULLY_VALIDATED | es30-vertex-array-objects |
-| ES30.ATTRIB.DIVISOR | 3.0 | vertex-input | glVertexAttribDivisor per-instance attributes | ES 3.0 §2.9 | FULLY_VALIDATED | es30-instancing |
+| ES30.ATTRIB.DIVISOR | 3.0 | vertex-input | glVertexAttribDivisor per-instance attributes | ES 3.0 §2.9 | FULLY_VALIDATED | es30-instancing, es31-indirect-draw |
 | ES30.DRAW.INSTANCED | 3.0 | drawing | glDrawArraysInstanced / glDrawElementsInstanced + gl_InstanceID | ES 3.0 §2.9.3 | FULLY_VALIDATED | es30-instancing |
 | ES30.DRAW.RANGE_ELEMENTS | 3.0 | drawing | glDrawRangeElements + MAX_ELEMENTS_VERTICES/INDICES | ES 3.0 §2.9.3 | FULLY_VALIDATED | es30-instancing |
 | ES30.DRAW.PRIMITIVE_RESTART | 3.0 | drawing | PRIMITIVE_RESTART_FIXED_INDEX | ES 3.0 §2.9.3 | FULLY_VALIDATED | es30-instancing |
@@ -171,7 +171,7 @@
 | ES31.COMPUTE.INDIRECT | 3.1 | compute | glDispatchComputeIndirect from DISPATCH_INDIRECT_BUFFER | ES 3.2 §17 | NOT_STARTED |  |
 | ES31.COMPUTE.SHARED | 3.1 | compute | shared variables + barrier() within a work group | GLSL 3.10 §4.3.8 | FULLY_VALIDATED | es31-compute-shared-memory |
 | ES31.COMPUTE.LIMITS | 3.1 | compute | MAX_COMPUTE_WORK_GROUP_COUNT/SIZE/INVOCATIONS / SHARED_MEMORY_SIZE | ES 3.2 §20 | FULLY_VALIDATED | diagnostics-capabilities, es31-compute-basics, es31-compute-shared-memory |
-| ES31.COMPUTE.TO_RENDER | 3.1 | compute | Compute-generated vertex/indirect data consumed by rendering | ES 3.2 §17 §7.11 | NOT_STARTED |  |
+| ES31.COMPUTE.TO_RENDER | 3.1 | compute | Compute-generated vertex/indirect data consumed by rendering | ES 3.2 §17 §7.11 | FULLY_VALIDATED | es31-indirect-draw |
 | ES31.SSBO.BASIC | 3.1 | storage | Shader storage blocks + SHADER_STORAGE_BUFFER bindings | ES 3.2 §7.8 | NOT_STARTED |  |
 | ES31.SSBO.STD430 | 3.1 | storage | std430 layout + runtime-sized arrays (.length()) | GLSL 3.10 §4.4.4 | NOT_STARTED |  |
 | ES31.SSBO.LIMITS | 3.1 | storage | MAX_SHADER_STORAGE_BLOCK_SIZE / SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT / per-stage block limits | ES 3.2 §20 | FULLY_VALIDATED | diagnostics-capabilities |
@@ -182,8 +182,8 @@
 | ES31.ATOMIC.MEMORY | 3.1 | atomics | atomicAdd/Min/Max/And/Or/Xor/Exchange/CompSwap on SSBO + shared | GLSL 3.10 §8.11 | NOT_STARTED |  |
 | ES31.BARRIER.MEMORY | 3.1 | sync | glMemoryBarrier bits + memoryBarrier*() in shaders | ES 3.2 §7.11.2 | FULLY_VALIDATED | es31-compute-shared-memory |
 | ES31.BARRIER.BY_REGION | 3.1 | sync | glMemoryBarrierByRegion | ES 3.2 §7.11.2 | NOT_STARTED |  |
-| ES31.DRAW.INDIRECT | 3.1 | drawing | glDrawArraysIndirect / glDrawElementsIndirect command layouts | ES 3.2 §10.3.9 §10.5 | NOT_STARTED |  |
-| ES31.VERTEX.SEPARATE_FORMAT | 3.1 | vertex-input | glVertexAttribFormat/IFormat/Binding + glBindVertexBuffer + glVertexBindingDivisor | ES 3.2 §10.3.1 | NOT_STARTED |  |
+| ES31.DRAW.INDIRECT | 3.1 | drawing | glDrawArraysIndirect / glDrawElementsIndirect command layouts | ES 3.2 §10.3.9 §10.5 | FULLY_VALIDATED | es31-indirect-draw |
+| ES31.VERTEX.SEPARATE_FORMAT | 3.1 | vertex-input | glVertexAttribFormat/IFormat/Binding + glBindVertexBuffer + glVertexBindingDivisor | ES 3.2 §10.3.1 | FULLY_VALIDATED | es31-separate-vertex-format |
 | ES31.PIPELINE.OBJECTS | 3.1 | shaders | Separable programs + program pipeline objects + glUseProgramStages | ES 3.2 §7.4 | NOT_STARTED |  |
 | ES31.PIPELINE.CREATE_SHADER_PROGRAM | 3.1 | shaders | glCreateShaderProgramv + glActiveShaderProgram + glProgramUniform* | ES 3.2 §7.3 §7.6.1 | NOT_STARTED |  |
 | ES31.PIPELINE.VALIDATE | 3.1 | shaders | glValidateProgramPipeline + info log; interface mismatch | ES 3.2 §7.4.1 | NOT_STARTED |  |

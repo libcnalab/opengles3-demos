@@ -1,0 +1,91 @@
+{
+  "name": "es30-normal-mapping",
+  "title": "Normal mapping: tangent space, specular map, mip chains",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es30",
+  "order": 420,
+  "summary": "Brick wall, rotating crate and sphere lit per fragment by an orbiting point light: procedural albedo, tangent-space normal and specular maps with full mip chains (trilinear), CPU-computed tangents with handedness; validated against an analytic CPU model with negative controls.",
+  "spec": [
+    "ES 3.0 §3.7.1 Pixel Storage Modes",
+    "ES 3.0 §3.8.1 Texture Objects, §3.8.3 Texture Image Specification",
+    "ES 3.0 §3.8.10 Texture Minification (3.8.10.1 level of detail, 3.8.10.2 texel selection, 3.8.10.4 Mipmapping), §3.8.11 Magnification",
+    "ES 3.0 §3.8.13 Texture Completeness, §3.9.2 Shader Execution (incomplete textures, MAX_TEXTURE_IMAGE_UNITS)",
+    "ES 3.0 §4.1.9 Dithering, §2.1.6.2 float to normalized fixed-point conversion",
+    "ES 3.0 §4.4.2.4 Attaching Texture Images to a Framebuffer, §6.1.13 Framebuffer Object Queries",
+    "ES 3.0 Tables 6.32 and 6.33 (texture image unit limits)",
+    "GLSL ES 3.00 §4.1.7 Opaque Types, §4.5.1 Range and Precision, §4.5.4 Default Precision Qualifiers",
+    "GLSL ES 3.00 §5.4.2 Vector and Matrix Constructors, §8.5 Geometric Functions, §8.8 Texture Lookup Functions"
+  ],
+  "api": {
+    "glGenTextures": "three textures (albedo, normal, specular); TEXTURE_BINDING_2D of units 0, 1, 2 equals them",
+    "glBindTexture": "per-unit binding verified with TEXTURE_BINDING_2D; sampled pixels match the CPU model of each map",
+    "glActiveTexture": "units 0, 1, 2 hold the three maps; the lit pixels depend on all three (negative controls fail without them)",
+    "glTexImage2D": "8 levels x 3 textures (RGBA8, RGBA8, R8) uploaded level by level; every byte read back through a framebuffer object equals the CPU chain",
+    "glPixelStorei": "UNPACK_ALIGNMENT 1: the 2x2 and 1x1 R8 levels (rows of 2 and 1 bytes) read back identical",
+    "glTexParameteri": "MIN_FILTER NEAREST gives the exact CPU texel at 2454 wall probes; LINEAR_MIPMAP_LINEAR at lambda = 1 blends levels 1 and 2; MIN_FILTER read back",
+    "glGetTexParameteriv": "TEXTURE_MIN_FILTER == LINEAR_MIPMAP_LINEAR",
+    "glGetUniformLocation": "all lit-program uniforms located; unused/mislocated uniforms would change the lit colours",
+    "glUniform1i": "sampler units 0/1/2 read back with glGetUniformiv; feature toggles (normal map, specular map, handedness) change the pixels as predicted",
+    "glGetUniformiv": "u_albedo/u_normal/u_specular == 0/1/2",
+    "glUniform1f": "ambient and shininess: part of the lit-colour CPU model (max error 0.62/255)",
+    "glUniform3f": "light position/colour and eye: part of the lit-colour CPU model, incl. the animated light of the validated frame",
+    "glUniformMatrix4fv": "model and view-projection matrices: probe pixels land on the analytically projected points",
+    "glUniformMatrix3fv": "normal matrix of the rotated crate: its 369 probes match the CPU model, a model without the rotated tangent frame does not",
+    "glGenBuffers": "vertex and index buffer per mesh",
+    "glBindBuffer": "ARRAY_BUFFER and ELEMENT_ARRAY_BUFFER (the latter recorded in the VAO)",
+    "glBufferData": "interleaved position/normal/uv/tangent vertices and 16-bit indices; geometry, UVs and tangents observed through the probes",
+    "glGenVertexArrays": "one VAO per mesh",
+    "glBindVertexArray": "VAO state replays the four attribute arrays and the element buffer",
+    "glEnableVertexAttribArray": "locations 0-3",
+    "glVertexAttribPointer": "4-component tangent with handedness in w, uv, normal, position interleaved; verified by the lit pixels",
+    "glDrawElements": "UNSIGNED_SHORT triangles; wall, crate and sphere",
+    "glViewport": "full-surface viewport: pixel centres map to the CPU-projected ray hits",
+    "glGenFramebuffers": "temporary FBO to read back mip levels",
+    "glBindFramebuffer": "FBO bound for the level readback, default framebuffer restored",
+    "glFramebufferTexture2D": "attaches level 0..7 of each texture (ES 3.0 allows any level); status COMPLETE",
+    "glCheckFramebufferStatus": "COMPLETE for all 24 level attachments",
+    "glGetFramebufferAttachmentParameteriv": "RED/GREEN/BLUE/ALPHA_SIZE: normal map 8/8/8/8, specular map 8/0/0/0",
+    "glReadPixels": "lit passes (probe comparison) and mip level readback",
+    "glGetIntegerv": "TEXTURE_BINDING_2D per unit, MAX_TEXTURE_IMAGE_UNITS (>= 16), MAX_COMBINED_TEXTURE_IMAGE_UNITS (>= 32)",
+    "glUseProgram": "lit and marker programs: draws produce the verified colours",
+    "glDeleteTextures": "cleanup, final glGetError == NO_ERROR",
+    "glDeleteBuffers": "cleanup",
+    "glDeleteVertexArrays": "cleanup",
+    "glDeleteFramebuffers": "cleanup of the readback FBO",
+    "glDeleteProgram": "cleanup"
+  },
+  "features": [
+    "ES20.LIGHTING.SHADER",
+    "ES20.TEXTURE.MIPMAP",
+    "ES20.TEXTURE.UNITS",
+    "ES20.TEXTURE.2D",
+    "ES20.TEXTURE.FILTER",
+    "ES30.TEXTURE.SIZED_FORMATS",
+    "ES20.BUFFER.VBO",
+    "ES20.BUFFER.IBO",
+    "ES20.DRAW.ELEMENTS",
+    "ES30.VAO.BASIC"
+  ],
+  "glsl_features": [
+    "GLSL300.TYPES.SAMPLERS",
+    "GLSL300.FN.TEXTURE.BASIC",
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.LAYOUT.LOCATION",
+    "GLSL300.UNIFORM",
+    "GLSL300.FN.GEOMETRIC",
+    "GLSL300.MATRIX_OPS"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "negative"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5",
+    "notes": "Viewed the gpu, llvmpipe and zink 256x256 captures (identical to <0.2% MAE), an 800x800 capture and an interactive xvfb session driven by key events. Dark-red brick wall whose bevelled bricks and recessed grey mortar exist only in the normal map; warm light-bulb disc at the upper right with a raking highlight and glints on the glazed bricks while the mortar stays matte; tilted brick crate (left, one face dark = ambient only) and brick sphere (right) with correctly bent bevels. Keys: N flattens the bricks, S makes the mortar glossy, H breaks the right half of the wall (bevels inside out), F bilinear shows aliasing, V shows albedo / blue-violet normal map / specular mask (mirrored about the seam)."
+  }
+}

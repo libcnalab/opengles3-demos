@@ -1,0 +1,80 @@
+{
+  "name": "es31-separate-vertex-format",
+  "title": "Separate vertex format and vertex buffer bindings",
+  "min_es": "3.1",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es31",
+  "order": 2800,
+  "summary": "glVertexAttribFormat / glVertexAttribIFormat / glVertexAttribBinding / glBindVertexBuffer / glVertexBindingDivisor: one binding (with a binding offset and relative offsets) feeding three attributes, a binding re-pointed to another buffer and stride without touching the formats, two bindings with divisor 0 and 1 (then 2), an attribute moved to another binding, exact pure integer formats, the legacy glVertexAttribPointer / glVertexAttribDivisor as shorthand for the same state (queried through VERTEX_ATTRIB_BINDING, RELATIVE_OFFSET and VERTEX_BINDING_BUFFER/OFFSET/STRIDE/DIVISOR), the limits MAX_VERTEX_ATTRIB_BINDINGS / RELATIVE_OFFSET / STRIDE in use, and every error including the default vertex array object; twelve cells compared with a CPU model that fetches from the same bytes.",
+  "spec": [
+    "ES 3.2 §10.3.1 Specifying Arrays for Generic Vertex Attributes (Table 10.3, VertexAttribFormat, VertexAttribIFormat, BindVertexBuffer, VertexAttribBinding, the equivalence of VertexAttribPointer, errors)",
+    "ES 3.2 §10.3.2 Vertex Attribute Divisors (VertexBindingDivisor, VertexAttribDivisor)",
+    "ES 3.2 §10.3.3 Transferring Array Elements (missing components), §10.3.7 Vertex Arrays in Buffer Objects (offset + relativeoffset + i * stride)",
+    "ES 3.2 §10.4 Vertex Array Objects, §10.5 Drawing Commands Using Vertex Arrays (instance element index)",
+    "ES 3.2 §10.6 Vertex Array and Vertex Array Object Queries, §10.7 Required State (initial binding stride 16)",
+    "ES 3.2 §2.2.2 Data Conversions For State Query Commands, §2.3.1 Errors, §20.1 Simple Queries (indexed state)",
+    "ES 3.2 Table 21.3 Vertex Array Object State, Table 21.42 and 21.44 (MAX_VERTEX_ATTRIB_BINDINGS / RELATIVE_OFFSET / STRIDE, MAX_VERTEX_ATTRIBS)",
+    "GLSL ES 3.00 §4.3.4 Input Variables, §4.3.8.1 Input Layout Qualifiers (layout(location))"
+  ],
+  "api": {
+    "glVertexAttribFormat": "size/type/normalized/relativeoffset of float, normalized UNSIGNED_BYTE and normalized SHORT attributes (relative offsets 0, 8, 12, up to the limit) observed in the pixels; state read back (SIZE, TYPE, NORMALIZED, INTEGER, RELATIVE_OFFSET, BINDING unchanged); INVALID_VALUE (attribindex, size 0/5, relativeoffset MAX+1), INVALID_ENUM, INVALID_OPERATION (packed type with size 3, default VAO); a failed call changes nothing",
+    "glVertexAttribIFormat": "UNSIGNED_BYTE x2, INT and SHORT attributes arrive exactly (2^24 + 1 and -3, the band turns red otherwise); INTEGER flag read back; FLOAT / HALF_FLOAT / packed -> INVALID_ENUM, size 5, relativeoffset MAX+1 -> INVALID_VALUE, default VAO -> INVALID_OPERATION",
+    "glVertexAttribBinding": "one binding feeds attributes 0-2, an attribute is moved to binding 2 (pixels), the highest binding indices MAX-1 and MAX-2 are used; VERTEX_ATTRIB_BINDING read back; attribindex / bindingindex out of range -> INVALID_VALUE, default VAO -> INVALID_OPERATION",
+    "glBindVertexBuffer": "buffer, binding offset (24, 8, 0, 4096; also above 2^32) and stride (16, 24, 12, 8, 4, MAX_VERTEX_ATTRIB_STRIDE) fetch the pixels; re-pointing a binding without any format call changes the picture; VERTEX_BINDING_BUFFER / OFFSET / STRIDE and VERTEX_ATTRIB_ARRAY_BUFFER_BINDING read back; errors: bindingindex, negative offset or stride, stride MAX+1, never generated or deleted buffer name (INVALID_OPERATION), default VAO; a failed call changes nothing; a generated but never bound name is valid",
+    "glVertexBindingDivisor": "divisor 1 and 2 on the binding that feeds the color and offset attributes: instances advance together or in pairs (pixels); VERTEX_BINDING_DIVISOR and VERTEX_ATTRIB_ARRAY_DIVISOR of every attribute on the binding read back; bindingindex = MAX -> INVALID_VALUE, default VAO -> INVALID_OPERATION",
+    "glVertexAttribPointer": "defines attributes 0-2 of two VAOs (pixels); afterwards VERTEX_ATTRIB_BINDING = index, RELATIVE_OFFSET reset to 0, VERTEX_BINDING_BUFFER/OFFSET/STRIDE (effective stride from stride 0), VERTEX_ATTRIB_ARRAY_STRIDE keeps the argument, the divisor of the binding is unchanged; it overrides an earlier glVertexAttribBinding/glBindVertexBuffer of the same attribute",
+    "glVertexAttribIPointer": "sets INTEGER 1, binding = index and the effective stride 4 (UNSIGNED_SHORT x2), read back",
+    "glVertexAttribDivisor": "equivalent to glVertexAttribBinding(i, i) + glVertexBindingDivisor(i, d): BINDING becomes i, VERTEX_BINDING_DIVISOR[i] = d, the previously used binding keeps its divisor",
+    "glEnableVertexAttribArray": "arrays 0-5 enabled in the VAOs whose pixels are compared",
+    "glGetVertexAttribiv": "VERTEX_ATTRIB_BINDING, RELATIVE_OFFSET, ARRAY_SIZE/TYPE/NORMALIZED/INTEGER/STRIDE/DIVISOR/BUFFER_BINDING after each command above and the initial values of a fresh VAO",
+    "glGetVertexAttribPointerv": "VERTEX_ATTRIB_ARRAY_POINTER is the byte offset passed to glVertexAttribPointer (24, 40)",
+    "glGetIntegeri_v": "VERTEX_BINDING_BUFFER / STRIDE / DIVISOR / OFFSET of indexed bindings (fresh VAO: 0, 16, 0, 0; after commands); index = MAX_VERTEX_ATTRIB_BINDINGS -> INVALID_VALUE; a 64-bit offset is clamped to INT_MAX (known Mesa deviation)",
+    "glGetInteger64i_v": "VERTEX_BINDING_OFFSET (64-bit state, Table 21.3): 0, 4096, and 2^33 + 8 (known Mesa deviation: low 32 bits only)",
+    "glGetIntegerv": "MAX_VERTEX_ATTRIBS, MAX_VERTEX_ATTRIB_BINDINGS, MAX_VERTEX_ATTRIB_RELATIVE_OFFSET and MAX_VERTEX_ATTRIB_STRIDE compared with their minimum values and used by the limit cells and the error checks",
+    "glGenVertexArrays": "ten VAOs: eight drawn, one fresh (defaults, isolation), one scratch for the state and error checks",
+    "glBindVertexArray": "selects the vertex state of each cell; the default VAO makes the new commands INVALID_OPERATION",
+    "glDeleteVertexArrays": "cleanup",
+    "glGenBuffers": "fourteen data buffers plus four names used only in state and error checks",
+    "glBindBuffer": "ARRAY_BUFFER for the legacy glVertexAttribPointer calls; a name is bound once to create a buffer that is then deleted for the INVALID_OPERATION check",
+    "glBufferData": "vertex data observed through the rendered pixels (CPU model reads the same bytes)",
+    "glDeleteBuffers": "cleanup; a deleted name passed to glBindVertexBuffer -> INVALID_OPERATION",
+    "glDrawArrays": "TRIANGLES from every non-instanced cell; pixels match the CPU model",
+    "glDrawArraysInstanced": "TRIANGLE_STRIP x4 instances with binding divisor 1, 2 and with an attribute on another binding",
+    "glUseProgram": "float and integer programs select the cells",
+    "glGetUniformLocation": "u_scale, u_expect_cell, u_expect_big, u_expect_neg located; effects observed in the pixels",
+    "glUniform1i": "u_expect_big / u_expect_neg: the integer band turns red when the expectation is wrong (negative control)",
+    "glUniform2f": "u_scale places instanced quads; matches the model",
+    "glUniform2ui": "u_expect_cell compared with the uvec2 attribute in the shader",
+    "glViewport": "per-cell viewports map NDC to the probed pixels",
+    "glClearColor": "background pixels equal the clear color",
+    "glClear": "COLOR_BUFFER_BIT",
+    "glDisable": "DITHER off for exact color writes",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE readback of every cell (through demo::read_rgba8)",
+    "glDeleteProgram": "cleanup"
+  },
+  "features": [
+    "ES31.VERTEX.SEPARATE_FORMAT",
+    "ES20.ATTRIB.INTERLEAVED",
+    "ES20.ATTRIB.QUERY",
+    "ES20.ERRORS.INVALID_ENUM",
+    "ES20.ERRORS.INVALID_VALUE",
+    "ES20.ERRORS.INVALID_OPERATION"
+  ],
+  "glsl_features": [
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.LAYOUT.LOCATION"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "gl-error",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5",
+    "notes": "Viewed the gpu and llvmpipe captures (256x256); the zink capture differs from gpu in 41 edge pixels (compare with 2% fuzz). Top row: a Gouraud triangle (red/green/blue corners) displaced per vertex through the SHORT offset; the inverted yellow/cyan/magenta triangle of buffer B (re-pointed binding, stride 24); four squares (red, green bottom; blue, yellow top) for divisor 1; only the bottom pair (red, green) for divisor 2. Middle row: four squares on a diagonal (offset attribute on binding 2); three green bands (every integer arrived exactly); the legacy red/green/blue triangle; the same colors on L2's positions (re-pointed binding 0). Bottom row: the legacy triangle shifted by buffer Y; orange/teal/purple triangle (two bindings on one buffer); white/red/blue triangle (bindings MAX-1, MAX-2); yellow/cyan/magenta triangle (stride 2048, relative offset 2044). Background is the dark-blue clear color; no stray marks."
+  }
+}

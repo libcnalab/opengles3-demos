@@ -116,15 +116,15 @@
 | ES30.UBO.LIMITS | 3.0 | uniforms | MAX_UNIFORM_BLOCK_SIZE / MAX_*_UNIFORM_BLOCKS / MAX_UNIFORM_BUFFER_BINDINGS | ES 3.0 §6.2 | FULLY_VALIDATED | diagnostics-capabilities, es30-uniform-buffer-objects |
 | ES30.UNIFORM.UINT | 3.0 | uniforms | glUniform{1234}ui[v] / glGetUniformuiv | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-uniforms |
 | ES30.UNIFORM.NONSQUARE | 3.0 | uniforms | glUniformMatrix{2x3 3x2 2x4 4x2 3x4 4x3}fv | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-uniforms |
-| ES30.TEXTURE.3D | 3.0 | textures | 3D textures glTexImage3D/glTexSubImage3D/glCopyTexSubImage3D | ES 3.0 §3.8.3 | FULLY_VALIDATED | es30-texture-3d-and-arrays, es32-layered-rendering |
-| ES30.TEXTURE.2D_ARRAY | 3.0 | textures | 2D array textures + layer addressing | ES 3.0 §3.8.3 | FULLY_VALIDATED | es30-etc2-eac, es30-texture-3d-and-arrays, es32-layered-rendering |
+| ES30.TEXTURE.3D | 3.0 | textures | 3D textures glTexImage3D/glTexSubImage3D/glCopyTexSubImage3D | ES 3.0 §3.8.3 | FULLY_VALIDATED | es30-glsl-texture-functions, es30-texture-3d-and-arrays, es32-layered-rendering |
+| ES30.TEXTURE.2D_ARRAY | 3.0 | textures | 2D array textures + layer addressing | ES 3.0 §3.8.3 | FULLY_VALIDATED | es30-etc2-eac, es30-glsl-texture-functions, es30-texture-3d-and-arrays, es32-layered-rendering |
 | ES30.TEXTURE.IMMUTABLE | 3.0 | textures | glTexStorage2D/3D + TEXTURE_IMMUTABLE_FORMAT/LEVELS + respecification error | ES 3.0 §3.8.4 | FULLY_VALIDATED | es30-etc2-eac, es30-immutable-storage, es32-cube-map-array, es32-layered-rendering |
 | ES30.TEXTURE.SIZED_FORMATS | 3.0 | textures | Sized internal formats (normalized/snorm/integer/float/half/sRGB/packed) | ES 3.0 §3.8.3 Table 3.13 | FULLY_VALIDATED | es30-immutable-storage, es30-normal-mapping |
-| ES30.TEXTURE.INTEGER | 3.0 | textures | Integer textures with isampler/usampler (NEAREST only) | ES 3.0 §3.8.3 §3.8.13 | FULLY_VALIDATED | es30-integer-float-textures |
+| ES30.TEXTURE.INTEGER | 3.0 | textures | Integer textures with isampler/usampler (NEAREST only) | ES 3.0 §3.8.3 §3.8.13 | FULLY_VALIDATED | es30-glsl-texture-functions, es30-integer-float-textures |
 | ES30.TEXTURE.FLOAT | 3.0 | textures | Float/half-float textures; filterability rules (R32F not filterable) | ES 3.0 Table 3.13 | FULLY_VALIDATED | es30-integer-float-textures |
 | ES30.TEXTURE.SRGB | 3.0 | textures | sRGB textures decode on sampling | ES 3.0 §3.8.16 | FULLY_VALIDATED | es30-etc2-eac, es30-post-processing, es30-srgb, es32-astc-and-copy-image |
 | ES30.TEXTURE.SHARED_EXPONENT | 3.0 | textures | RGB9_E5 and R11F_G11F_B10F | ES 3.0 §3.8.17 | FULLY_VALIDATED | es30-immutable-storage, es30-integer-float-textures |
-| ES30.TEXTURE.DEPTH | 3.0 | textures | Depth textures + comparison mode/func + sampler2DShadow | ES 3.0 §3.8.8 §3.8.15 | FULLY_VALIDATED | es30-deferred-shading, es30-shadow-mapping |
+| ES30.TEXTURE.DEPTH | 3.0 | textures | Depth textures + comparison mode/func + sampler2DShadow | ES 3.0 §3.8.8 §3.8.15 | FULLY_VALIDATED | es30-deferred-shading, es30-glsl-texture-functions, es30-shadow-mapping |
 | ES30.TEXTURE.DEPTH_STENCIL | 3.0 | textures | DEPTH24_STENCIL8 / DEPTH32F_STENCIL8 textures | ES 3.0 §3.8.12 | FULLY_VALIDATED | es31-stencil-texturing-and-level-queries |
 | ES30.TEXTURE.SWIZZLE | 3.0 | textures | TEXTURE_SWIZZLE_R/G/B/A | ES 3.0 §3.8.7 | FULLY_VALIDATED | es30-texture-swizzle-lod |
 | ES30.TEXTURE.LOD_PARAMS | 3.0 | textures | TEXTURE_BASE_LEVEL/MAX_LEVEL/MIN_LOD/MAX_LOD | ES 3.0 §3.8.7 §3.8.10 | FULLY_VALIDATED | es20-mipmaps, es30-texture-swizzle-lod |
@@ -145,10 +145,10 @@
 | ES30.FBO.CLEAR_BUFFER | 3.0 | framebuffer | glClearBuffer{fv iv uiv fi} per draw buffer | ES 3.0 §4.2.3 | FULLY_VALIDATED | es30-multiple-render-targets, es32-advanced-blend-and-sample-shading, es32-float-targets-and-indexed-blend, es32-layered-rendering |
 | ES30.FBO.SRGB | 3.0 | framebuffer | sRGB render targets: encoding on write; FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING | ES 3.0 §4.1.8 | FULLY_VALIDATED | es30-post-processing, es30-srgb |
 | ES30.FBO.DEPTH_STENCIL_ATTACHMENT | 3.0 | framebuffer | DEPTH_STENCIL_ATTACHMENT point | ES 3.0 §4.4.2 | FULLY_VALIDATED | es20-framebuffer-objects, es30-multiple-render-targets |
-| ES30.FBO.INTEGER_TARGET | 3.0 | framebuffer | Integer color attachments + glClearBufferiv/uiv + readback | ES 3.0 §4.4.4 | FULLY_VALIDATED | es30-multiple-render-targets |
+| ES30.FBO.INTEGER_TARGET | 3.0 | framebuffer | Integer color attachments + glClearBufferiv/uiv + readback | ES 3.0 §4.4.4 | FULLY_VALIDATED | es30-glsl-texture-functions, es30-multiple-render-targets |
 | ES30.FBO.ATTACHMENT_QUERY | 3.0 | framebuffer | COMPONENT_TYPE / color sizes / TEXTURE_LAYER attachment queries | ES 3.0 §6.1.13 | FULLY_VALIDATED | es30-deferred-shading, es30-framebuffer-invalidate, es32-float-targets-and-indexed-blend, es32-layered-rendering |
 | ES30.INTERNALFORMAT.QUERY | 3.0 | framebuffer | glGetInternalformativ NUM_SAMPLE_COUNTS / SAMPLES | ES 3.0 §6.1.15 | FULLY_VALIDATED | es30-framebuffer-blit-msaa, es31-multisample-textures, es32-multisample-array-and-border-color |
-| ES30.TF.BASIC | 3.0 | transform-feedback | glTransformFeedbackVaryings + begin/end capture into a buffer | ES 3.0 §2.15 | FULLY_VALIDATED | es30-transform-feedback, es32-geometry-shaders, test-glsl300-builtins |
+| ES30.TF.BASIC | 3.0 | transform-feedback | glTransformFeedbackVaryings + begin/end capture into a buffer | ES 3.0 §2.15 | FULLY_VALIDATED | es30-glsl-texture-functions, es30-transform-feedback, es32-geometry-shaders, test-glsl300-builtins |
 | ES30.TF.MODES | 3.0 | transform-feedback | INTERLEAVED_ATTRIBS vs SEPARATE_ATTRIBS | ES 3.0 §2.15.2 | FULLY_VALIDATED | es30-transform-feedback |
 | ES30.TF.OBJECTS | 3.0 | transform-feedback | Transform feedback objects gen/bind/delete/isTransformFeedback | ES 3.0 §2.15.1 | FULLY_VALIDATED | es30-transform-feedback |
 | ES30.TF.PAUSE_RESUME | 3.0 | transform-feedback | glPauseTransformFeedback / glResumeTransformFeedback | ES 3.0 §2.15.2 | FULLY_VALIDATED | es30-transform-feedback |

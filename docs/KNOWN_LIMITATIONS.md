@@ -75,6 +75,7 @@
 | `es30-occlusion-queries` | ES 3.0 §2.14: deleting an active query frees its name, but the object stays active until it is no longer active | `glDeleteQueries` on an active query ends it: `CURRENT_QUERY` reads 0 and the following `glEndQuery` raises INVALID_OPERATION. All Mesa drivers |
 | `es30-occlusion-queries` | ES 3.2 §4.2: an object created as ANY_SAMPLES_PASSED or ANY_SAMPLES_PASSED_CONSERVATIVE "may be reused for either target" | `glBeginQuery(ANY_SAMPLES_PASSED_CONSERVATIVE)` on an ANY_SAMPLES_PASSED object raises INVALID_OPERATION. All Mesa drivers |
 | `es30-occlusion-queries` | ES 3.0 §6.1.7: once a query reports available, all earlier queries of the same type are available; an occlusion result is boolean | zink (lavapipe), only after QUERY_RESULT_AVAILABLE has been polled to TRUE: QUERY_RESULT returns a partial sample count (e.g. 30), or 0 for a visible box, and earlier queries still report unavailable. Blocking reads are correct |
+| **crash** (worked around) `es30-glsl-texture-functions` | correct execution of a valid shader | a fragment shader with a `switch` over about 80 texture-lookup cases segfaults in libgallium on the first draw on llvmpipe and zink (the llvmpipe backtrace shows a recursion about 80 frames deep). The demo compiles the shader six times, once per sampler family (`#define GROUP n`), so no check needs an XFAIL |
 
 Not deviations (verified during integration): Mesa accepting `glGenerateMipmap` on R32F and unsized
 `RGB + FLOAT` uploads is correct, because the contexts expose `GL_OES_texture_float_linear`,

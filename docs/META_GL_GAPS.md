@@ -84,6 +84,23 @@ meta-gl revision audited: `develop` @ `795bcdc` (v0.4.1). Fixes live on the loca
 - **Follow-up (not changed, would be breaking):** `TextureParameterQuery` still contains these and the
   multisample pnames, which ES does not accept for `glGetTexParameter*`.
 
+### G8 — `glUniformMatrix<…>` helpers rejected legal `transpose = GL_TRUE` — FIXED (meta-gl, after `a451376`)
+- **Expected:** ES 3.0 §2.12.6.1 / ES 3.2 §7.6.1: "If transpose is FALSE, the matrix is specified in column major
+  order, otherwise in row major order." Only ES 2.0 required `GL_FALSE`.
+- **Actual:** `detail::checked_matrix_count` called `std::terminate()` on `GL_TRUE`, so the helpers enforced the
+  ES 2.0 rule on every context. The raw `glUniformMatrix*fv` wrappers were correct.
+- **Found by:** the es20-transformations-camera work. This project had copied the wrong rule into
+  `test-metagl-contracts`, the uniforms README and `math.hpp`, and all three are corrected.
+- **Fix:** the helper passes `transpose` through. `test-metagl-contracts` now asserts that a row-major upload
+  reads back transposed.
+
+### O8 — meta-gl `test_release_contract` cases do not isolate their contracts
+The child processes call `Initialize(dummy_loader)`. The dummy loader returns no-op functions, so `Initialize`
+fails, and *every* wrapper then terminates because meta-gl is uninitialized, whatever its arguments. That is how
+`test_invalid_transpose` passed although the raw wrapper never checked transpose. It was replaced by a
+partial-matrix case, but the harness still needs a working mock context to prove contracts.
+`test-metagl-contracts` in this repository checks them with a real context.
+
 ### Note — arbitrary sample masks
 `SampleMaskValue` (for `glSampleMaski`) has only `None` and `All`. Since it is a registered 32-bit bitfield
 (`all_bits = 0xFFFFFFFF`), a chosen mask is formed with `static_cast<SampleMaskValue>(bits)`. Every value is

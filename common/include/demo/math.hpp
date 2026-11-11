@@ -1,6 +1,6 @@
 // Minimal column-major linear algebra for demos. Matrices match GLSL's mat4 memory layout,
 // so `glUniformMatrix4fv(loc, 1, GL_FALSE, m.data())` uploads them unchanged.
-// (OpenGL ES requires transpose == GL_FALSE for glUniformMatrix*.)
+// (ES 2.0 requires transpose == GL_FALSE; ES 3.0+ also accepts GL_TRUE for row-major data.)
 #pragma once
 
 #include <array>

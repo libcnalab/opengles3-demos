@@ -86,6 +86,7 @@ namespace
         void validate(demo::Env& env, demo::Check& check) override
         {
             check_termination_contracts(check);
+            check_row_major_upload(check);
             check_context_loss_cycle(env, check);
         }
 
@@ -102,8 +103,6 @@ namespace
                 ChildEnd expected;
             } cases[] = {
                 {"control: no violation -> normal exit", [] {}, ChildEnd::ExitedZero},
-                {"glUniformMatrix with transpose = GL_TRUE terminates (ES requires GL_FALSE)",
-                 [loc] { mgl::glUniformMatrix<4>(loc, std::array<float, 16>{}, GL_TRUE); }, ChildEnd::Aborted},
                 {"glUniformMatrix<4> with 15 floats (not a whole matrix) terminates",
                  [loc] { mgl::glUniformMatrix<4>(loc, std::vector<float>(15)); }, ChildEnd::Aborted},
                 {"glUniform<3> with 4 floats (not whole vec3s) terminates",
@@ -123,6 +122,29 @@ namespace
                              : end == ChildEnd::ExitedZero ? "child exited normally"
                                                            : "child ended otherwise");
             }
+        }
+
+        // ES 3.0+ accepts transpose = GL_TRUE (row-major data, ES 3.0 §2.12.6.1). meta-gl's helper used to
+        // terminate on it (gap G8, fixed); a row-major upload must read back as the transposed matrix.
+        static void check_row_major_upload(demo::Check& check)
+        {
+            const mgl::ProgramId p = demo::build_program_from_source(
+                "#version 300 es\nuniform mat4 u_m;\nvoid main() { gl_Position = u_m[0] + u_m[1] + u_m[2] + u_m[3]; }\n",
+                "#version 300 es\nprecision mediump float;\nout vec4 o;\nvoid main() { o = vec4(1.0); }\n", "row-major");
+            mgl::glUseProgram(p);
+            const mgl::UniformLocation loc = mgl::glGetUniformLocation(p, "u_m");
+            const std::array<float, 16> row_major = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+            mgl::glUniformMatrix<4>(loc, row_major, GL_TRUE);  // must not terminate
+            check.expect_no_gl_error("glUniformMatrix<4>(..., GL_TRUE) is legal on an ES 3.x context");
+            std::array<float, 16> back{};
+            mgl::glGetUniformfv(p, loc, back.data());
+            bool transposed = true;
+            for (int c = 0; c < 4; ++c)
+                for (int r = 0; r < 4; ++r)
+                    transposed = transposed && back[static_cast<std::size_t>(c * 4 + r)] == row_major[static_cast<std::size_t>(r * 4 + c)];
+            check.expect(transposed, "a row-major upload (transpose = GL_TRUE) reads back as the column-major transpose");
+            mgl::glUseProgram(mgl::ProgramId{0});
+            mgl::glDeleteProgram(p);
         }
 
         static void check_context_loss_cycle(demo::Env& env, demo::Check& check)

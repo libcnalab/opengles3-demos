@@ -35,8 +35,8 @@ fixed, and `mediump` ints may be only 16 bits, too few for `0x80000001u`.
 - **Arrays.** The location of `a` equals that of `a[0]`. `glUniform*v(loc(a[k]), N, ...)` replaces
   elements k … k+N−1. Reading back requires one `glGetUniform*v` call per element.
 - **Matrices are column-major.** `mat2x3` has **2 columns of 3 rows**, so `m[1][2]` is column 1,
-  row 2. The upload array is 6 floats in column order, and `transpose` must be `GL_FALSE` in OpenGL ES.
-  (meta-gl's `glUniformMatrix<C,R>()` helper terminates the process otherwise.)
+  row 2. The upload array is 6 floats in column order with `transpose = GL_FALSE`. ES 3.0+ also accepts
+  `GL_TRUE` for row-major data (§2.12.6.1); only ES 2.0 requires `GL_FALSE`.
 - **Structs** have no location of their own. Each member has one, named `s.member` / `arr[i].member`.
 - **Uniform state belongs to the program object.** `glUniform*` writes to the *current* program.
   ES 3.1 adds `glProgramUniform*` to target any program.

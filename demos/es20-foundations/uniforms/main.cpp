@@ -129,7 +129,7 @@ namespace
             mgl::glUniform3uiv(loc("u_uv3arr"), 2, u8);
             mgl::glUniform4uiv(loc("u_uv4arr"), 2, u8);
 
-            // --- matrices: data is column-major; transpose must be GL_FALSE in OpenGL ES ---------
+            // --- matrices: column-major data with transpose = GL_FALSE (ES 3.0+ also allows GL_TRUE) --
             const float m[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
             mgl::glUniformMatrix2fv(loc("u_m2"), 1, GL_FALSE, m);
             mgl::glUniformMatrix3fv(loc("u_m3"), 1, GL_FALSE, m);

@@ -19,6 +19,7 @@
 | es20-mipmaps | 3.0 | es20-foundations | Mipmaps: level of detail, the four mipmap filters, glGenerateMipmap, completeness | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es20-copy-and-read-pixels | 3.0 | es20-foundations | Copy and read pixels: glReadPixels, glCopyTexImage2D, glCopyTexSubImage2D | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es20-cube-map | 3.0 | es20-foundations | Cube map textures: face selection (Table 3.21) and completeness | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| es20-transformations-camera | 3.0 | es20-foundations | Transformations and camera | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-hello-triangle | 3.0 | es30 | Hello Triangle | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-vertex-array-objects | 3.0 | es30 | Vertex array objects, integer and packed attributes | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-instancing | 3.0 | es30 | Instancing, divisors, primitive restart | FULLY_VALIDATED | gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |

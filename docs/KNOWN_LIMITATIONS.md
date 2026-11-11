@@ -29,6 +29,9 @@
 
 | `es20-depth-test` cell 13 | ES 3.0 §3.9.2.3 / ES 3.2 §14.2.3: fragment depth is clamped to [0,1]; "the depth range computation is not applied" | radeonsi clamps `gl_FragDepth` into [near, far] (llvmpipe and zink conform). Reported as XFAIL on "radeonsi" via `Check::expect_or_known_deviation` |
 
+| `shader-tests/glsl300/multiple-outputs-{need,partial}-locations.frag` | ES 3.0 §3.9.2.3, GLSL ES 3.00 §4.3.8.2: with more than one fragment output, all need `layout(location)`; CompileShader must fail | Mesa compiles and links them, assigning locations itself (XFAIL on Mesa). Duplicate/out-of-range locations are rejected, but at link time rather than at CompileShader |
+| **crash** (not testable in-process) | ES 3.0 §4.3.2.1: `glReadPixels` with `READ_BUFFER = NONE` → INVALID_OPERATION | radeonsi, llvmpipe and zink **segfault** in libgallium when the bound FBO also has an integer color attachment (e.g. COLOR0 = RGBA8, COLOR3 = RG32I). With only normalized attachments the error is raised correctly. `es30-multiple-render-targets` tests the rule on a normalized-only FBO and never makes the crashing call. A crash-isolating test (separate process) is a backlog item |
+
 Because of the softpipe miscompilation row, softpipe is not used as a general correctness oracle. It runs only where
 its native ES 3.1 boundary is informative (ES 3.2 executables must SKIP, plus version-gating tests
 that opt in with `"extra_drivers": ["softpipe"]`).

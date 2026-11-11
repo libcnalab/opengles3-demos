@@ -7,8 +7,8 @@ Result directories: build/debug/test-results
 
 | ES | total | passed | passed % | NOT_STARTED | FULLY_VALIDATED |
 |---|---|---|---|---|---|
-| 2.0 | 142 | 119 | 84% | 23 | 119 |
-| 3.0 | 104 | 29 | 28% | 75 | 29 |
+| 2.0 | 142 | 130 | 92% | 12 | 130 |
+| 3.0 | 104 | 47 | 45% | 57 | 47 |
 | 3.1 | 68 | 0 | 0% | 68 | 0 |
 | 3.2 | 44 | 0 | 0% | 44 | 0 |
 
@@ -16,8 +16,8 @@ Result directories: build/debug/test-results
 
 | ES | total | passed | passed % | NOT_STARTED | FULLY_VALIDATED |
 |---|---|---|---|---|---|
-| 2.0 | 86 | 66 | 77% | 20 | 66 |
-| 3.0 | 78 | 13 | 17% | 65 | 13 |
+| 2.0 | 86 | 67 | 78% | 19 | 67 |
+| 3.0 | 78 | 22 | 28% | 56 | 22 |
 | 3.1 | 30 | 2 | 7% | 28 | 2 |
 | 3.2 | 31 | 1 | 3% | 30 | 1 |
 
@@ -26,7 +26,7 @@ Result directories: build/debug/test-results
 | GLSL | total | passed | passed % | NOT_STARTED | FULLY_VALIDATED |
 |---|---|---|---|---|---|
 | 100 | 4 | 0 | 0% | 4 | 0 |
-| 300 | 51 | 25 | 49% | 26 | 25 |
+| 300 | 51 | 27 | 53% | 24 | 27 |
 | 310 | 23 | 0 | 0% | 23 | 0 |
 | 320 | 16 | 0 | 0% | 16 | 0 |
 
@@ -34,4 +34,4 @@ Result directories: build/debug/test-results
 
 | status | count |
 |---|---|
-| FULLY_VALIDATED | 15 |
+| FULLY_VALIDATED | 17 |

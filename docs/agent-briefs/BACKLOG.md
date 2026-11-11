@@ -30,6 +30,8 @@ followed by feature IDs. Claim an item by moving it to "In progress" with the ag
 18. `es20-foundations/state-queries-errors` → ES20.STATE.QUERIES, ES20.ERRORS.*, ES20.HINT, ES20.DITHER, ES30.STATE.INDEXED
 19. `es30/glsl-texture-functions` → GLSL300.FN.TEXTURE.* (textureLod/Grad/Offset/texelFetch/textureSize/Proj), GLSL300.FN.DERIVATIVES
 
+20. `tests/negative/driver-crash-readpixels-none` → run the Mesa crash case (READ_BUFFER NONE + integer attachment) in a child process; report crash as a known deviation, PASS when the driver raises INVALID_OPERATION
+
 ## Then: compositions (ES 3.0)
 lighting, normal-mapping, post-processing (blur/Sobel/gamma), fog, deferred-shading, shadow-mapping, particles-transform-feedback.
 

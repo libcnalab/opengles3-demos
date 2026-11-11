@@ -163,6 +163,28 @@ namespace
         }
         if (link && out.all_compiled)
         {
+            // A graphics program needs a vertex AND a fragment shader (ES 3.0 §2.12.3). If the case
+            // supplies only one of them, add a minimal partner of the same #version so that the link
+            // result reflects the property under test, not the missing stage. (Without this, a
+            // fragment-only "build-fail" case would pass vacuously.)
+            bool has_vs = false, has_fs = false, has_cs = false;
+            for (const auto& f : c.files)
+            {
+                has_vs = has_vs || f.type == mgl::ShaderType::Vertex;
+                has_fs = has_fs || f.type == mgl::ShaderType::Fragment;
+                has_cs = has_cs || f.type == mgl::ShaderType::Compute;
+            }
+            const std::string version_line = c.files.front().source.substr(0, c.files.front().source.find('\n') + 1);
+            auto add_partner = [&](mgl::ShaderType type, const std::string& body) {
+                std::string log;
+                const mgl::ShaderId s = demo::compile_shader(type, version_line + body, log);
+                if (s.value != 0) shaders.push_back(s);
+                else out.log += "[partner] " + log;
+            };
+            if (!has_cs && !has_vs) add_partner(mgl::ShaderType::Vertex, "void main() { gl_Position = vec4(0.0); }\n");
+            if (!has_cs && !has_fs)
+                add_partner(mgl::ShaderType::Fragment, "precision mediump float;\nout vec4 partner_out;\nvoid main() { partner_out = vec4(1.0); }\n");
+
             const mgl::ProgramId p = mgl::glCreateProgram();
             for (const auto s : shaders) mgl::glAttachShader(p, s);
             mgl::glLinkProgram(p);

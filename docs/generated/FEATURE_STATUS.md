@@ -69,16 +69,16 @@
 | ES20.TEXTURE.2D | 2.0 | textures | 2D textures: glGenTextures/glBindTexture/glTexImage2D/glActiveTexture | ES 3.0 §3.8.1 §3.8.3 | FULLY_VALIDATED | es20-textures-2d |
 | ES20.TEXTURE.SUBIMAGE | 2.0 | textures | glTexSubImage2D updates | ES 3.0 §3.8.5 | FULLY_VALIDATED | es20-textures-2d |
 | ES20.TEXTURE.COPY | 2.0 | textures | glCopyTexImage2D / glCopyTexSubImage2D from framebuffer | ES 3.0 §3.8.5 | NOT_STARTED |  |
-| ES20.TEXTURE.FILTER | 2.0 | textures | NEAREST/LINEAR mag+min filtering | ES 3.0 §3.8.10-11 | FULLY_VALIDATED | es20-textures-2d |
-| ES20.TEXTURE.WRAP | 2.0 | textures | REPEAT/CLAMP_TO_EDGE/MIRRORED_REPEAT | ES 3.0 §3.8.10 | FULLY_VALIDATED | es20-textures-2d |
+| ES20.TEXTURE.FILTER | 2.0 | textures | NEAREST/LINEAR mag+min filtering | ES 3.0 §3.8.10-11 | FULLY_VALIDATED | es20-textures-2d, es30-sampler-objects |
+| ES20.TEXTURE.WRAP | 2.0 | textures | REPEAT/CLAMP_TO_EDGE/MIRRORED_REPEAT | ES 3.0 §3.8.10 | FULLY_VALIDATED | es20-textures-2d, es30-sampler-objects |
 | ES20.TEXTURE.MIPMAP | 2.0 | textures | Mipmap chains + glGenerateMipmap + mipmap min filters | ES 3.0 §3.8.10 | NOT_STARTED |  |
 | ES20.TEXTURE.CUBE | 2.0 | textures | Cube map textures + face selection | ES 3.0 §3.8.9 | NOT_STARTED |  |
-| ES20.TEXTURE.UNITS | 2.0 | textures | Multiple texture units / MAX_COMBINED_TEXTURE_IMAGE_UNITS | ES 3.0 §3.8.1 | FULLY_VALIDATED | es20-textures-2d |
+| ES20.TEXTURE.UNITS | 2.0 | textures | Multiple texture units / MAX_COMBINED_TEXTURE_IMAGE_UNITS | ES 3.0 §3.8.1 | FULLY_VALIDATED | es20-textures-2d, es30-sampler-objects |
 | ES20.TEXTURE.UNPACK_ALIGNMENT | 2.0 | textures | GL_UNPACK_ALIGNMENT effect on uploads | ES 3.0 §3.7.1 | FULLY_VALIDATED | es20-textures-2d |
 | ES20.TEXTURE.UNSIZED_FORMATS | 2.0 | textures | Unsized RGBA/RGB/LUMINANCE/LUMINANCE_ALPHA/ALPHA + packed 565/4444/5551 types | ES 3.0 §3.8.3 Table 3.3 | FULLY_VALIDATED | es20-textures-2d |
-| ES20.TEXTURE.COMPLETENESS | 2.0 | textures | Incomplete texture sampling returns (0 | 0 | FULLY_VALIDATED | es20-textures-2d |
+| ES20.TEXTURE.COMPLETENESS | 2.0 | textures | Incomplete texture sampling returns (0 | 0 | FULLY_VALIDATED | es20-textures-2d, es30-sampler-objects |
 | ES20.TEXTURE.QUERY | 2.0 | textures | glGetTexParameter* / glIsTexture | ES 3.0 §6.1.4 | FULLY_VALIDATED | es20-textures-2d |
-| ES20.FBO.RENDER_TO_TEXTURE | 2.0 | framebuffer | Framebuffer objects with texture color attachment (render to texture) | ES 3.0 §4.4 | NOT_STARTED |  |
+| ES20.FBO.RENDER_TO_TEXTURE | 2.0 | framebuffer | Framebuffer objects with texture color attachment (render to texture) | ES 3.0 §4.4 | FULLY_VALIDATED | es30-multiple-render-targets |
 | ES20.FBO.RENDERBUFFER | 2.0 | framebuffer | Renderbuffers (color/depth/stencil) glRenderbufferStorage | ES 3.0 §4.4.2 | NOT_STARTED |  |
 | ES20.FBO.COMPLETENESS | 2.0 | framebuffer | glCheckFramebufferStatus incl. intentionally incomplete cases | ES 3.0 §4.4.4 | NOT_STARTED |  |
 | ES20.FBO.QUERY | 2.0 | framebuffer | glGetFramebufferAttachmentParameteriv / glGetRenderbufferParameteriv / glIs* | ES 3.0 §6.1.13-14 | NOT_STARTED |  |
@@ -132,19 +132,19 @@
 | ES30.TEXTURE.PIXEL_STORE | 3.0 | textures | UNPACK_ROW_LENGTH/SKIP_PIXELS/SKIP_ROWS/IMAGE_HEIGHT/SKIP_IMAGES; PACK_* | ES 3.0 §3.7.1 | NOT_STARTED |  |
 | ES30.TEXTURE.FORMAT_VALIDATION | 3.0 | textures | Invalid format/type/internalformat combinations rejected | ES 3.0 §3.8.3 | NOT_STARTED |  |
 | ES30.TEXTURE.COMPLETENESS_INTEGER | 3.0 | textures | Integer/float texture completeness vs filter rules | ES 3.0 §3.8.13 | NOT_STARTED |  |
-| ES30.SAMPLER.OBJECTS | 3.0 | textures | Sampler objects override texture sampling state | ES 3.0 §3.8.2 | NOT_STARTED |  |
-| ES30.SAMPLER.SAME_TEXTURE | 3.0 | textures | Two samplers reading the same texture differently | ES 3.0 §3.8.2 | NOT_STARTED |  |
-| ES30.SAMPLER.QUERY | 3.0 | textures | glGetSamplerParameter* / glIsSampler / SAMPLER_BINDING | ES 3.0 §6.1.5 | NOT_STARTED |  |
-| ES30.FBO.MRT | 3.0 | framebuffer | Multiple render targets glDrawBuffers + layout(location) | ES 3.0 §4.2.1 | NOT_STARTED |  |
-| ES30.FBO.READ_DRAW | 3.0 | framebuffer | Separate READ/DRAW framebuffer bindings + glReadBuffer | ES 3.0 §4.4.1 §4.3.1 | NOT_STARTED |  |
+| ES30.SAMPLER.OBJECTS | 3.0 | textures | Sampler objects override texture sampling state | ES 3.0 §3.8.2 | FULLY_VALIDATED | es30-sampler-objects |
+| ES30.SAMPLER.SAME_TEXTURE | 3.0 | textures | Two samplers reading the same texture differently | ES 3.0 §3.8.2 | FULLY_VALIDATED | es30-sampler-objects |
+| ES30.SAMPLER.QUERY | 3.0 | textures | glGetSamplerParameter* / glIsSampler / SAMPLER_BINDING | ES 3.0 §6.1.5 | FULLY_VALIDATED | es30-sampler-objects |
+| ES30.FBO.MRT | 3.0 | framebuffer | Multiple render targets glDrawBuffers + layout(location) | ES 3.0 §4.2.1 | FULLY_VALIDATED | es30-multiple-render-targets |
+| ES30.FBO.READ_DRAW | 3.0 | framebuffer | Separate READ/DRAW framebuffer bindings + glReadBuffer | ES 3.0 §4.4.1 §4.3.1 | FULLY_VALIDATED | es30-multiple-render-targets |
 | ES30.FBO.BLIT | 3.0 | framebuffer | glBlitFramebuffer color/depth/stencil + filters + scaling | ES 3.0 §4.3.3 | NOT_STARTED |  |
 | ES30.FBO.MSAA_RENDERBUFFER | 3.0 | framebuffer | glRenderbufferStorageMultisample + resolve blit | ES 3.0 §4.4.2 | NOT_STARTED |  |
 | ES30.FBO.LAYER | 3.0 | framebuffer | glFramebufferTextureLayer (3D / 2D array layers) | ES 3.0 §4.4.2 | NOT_STARTED |  |
 | ES30.FBO.INVALIDATE | 3.0 | framebuffer | glInvalidateFramebuffer / glInvalidateSubFramebuffer | ES 3.0 §4.5 | NOT_STARTED |  |
-| ES30.FBO.CLEAR_BUFFER | 3.0 | framebuffer | glClearBuffer{fv iv uiv fi} per draw buffer | ES 3.0 §4.2.3 | NOT_STARTED |  |
+| ES30.FBO.CLEAR_BUFFER | 3.0 | framebuffer | glClearBuffer{fv iv uiv fi} per draw buffer | ES 3.0 §4.2.3 | FULLY_VALIDATED | es30-multiple-render-targets |
 | ES30.FBO.SRGB | 3.0 | framebuffer | sRGB render targets: encoding on write; FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING | ES 3.0 §4.1.8 | NOT_STARTED |  |
-| ES30.FBO.DEPTH_STENCIL_ATTACHMENT | 3.0 | framebuffer | DEPTH_STENCIL_ATTACHMENT point | ES 3.0 §4.4.2 | NOT_STARTED |  |
-| ES30.FBO.INTEGER_TARGET | 3.0 | framebuffer | Integer color attachments + glClearBufferiv/uiv + readback | ES 3.0 §4.4.4 | NOT_STARTED |  |
+| ES30.FBO.DEPTH_STENCIL_ATTACHMENT | 3.0 | framebuffer | DEPTH_STENCIL_ATTACHMENT point | ES 3.0 §4.4.2 | FULLY_VALIDATED | es30-multiple-render-targets |
+| ES30.FBO.INTEGER_TARGET | 3.0 | framebuffer | Integer color attachments + glClearBufferiv/uiv + readback | ES 3.0 §4.4.4 | FULLY_VALIDATED | es30-multiple-render-targets |
 | ES30.FBO.ATTACHMENT_QUERY | 3.0 | framebuffer | COMPONENT_TYPE / color sizes / TEXTURE_LAYER attachment queries | ES 3.0 §6.1.13 | NOT_STARTED |  |
 | ES30.INTERNALFORMAT.QUERY | 3.0 | framebuffer | glGetInternalformativ NUM_SAMPLE_COUNTS / SAMPLES | ES 3.0 §6.1.15 | NOT_STARTED |  |
 | ES30.TF.BASIC | 3.0 | transform-feedback | glTransformFeedbackVaryings + begin/end capture into a buffer | ES 3.0 §2.15 | FULLY_VALIDATED | test-glsl300-builtins |
@@ -160,7 +160,7 @@
 | ES30.SYNC.FENCE | 3.0 | sync | glFenceSync/glClientWaitSync/glWaitSync/glGetSynciv/glIsSync/glDeleteSync | ES 3.0 §5.2 | NOT_STARTED |  |
 | ES30.SYNC.ERRORS | 3.0 | sync | Invalid sync usage (flags/timeout) errors | ES 3.0 §5.2 | NOT_STARTED |  |
 | ES30.PROGRAM.BINARY | 3.0 | shaders | glGetProgramBinary/glProgramBinary + PROGRAM_BINARY_RETRIEVABLE_HINT + fallback | ES 3.0 §2.12.4 | NOT_STARTED |  |
-| ES30.PROGRAM.FRAG_DATA_LOCATION | 3.0 | shaders | glGetFragDataLocation | ES 3.0 §3.9.2 | NOT_STARTED |  |
+| ES30.PROGRAM.FRAG_DATA_LOCATION | 3.0 | shaders | glGetFragDataLocation | ES 3.0 §3.9.2 | FULLY_VALIDATED | es30-multiple-render-targets |
 | ES30.RASTER.FLAT | 3.0 | rasterization | flat qualifier + provoking vertex (last vertex in ES 3.0) | ES 3.0 §2.17 | NOT_STARTED |  |
 | ES30.RASTER.CENTROID | 3.0 | rasterization | centroid interpolation with multisampling | ES 3.0 §3.6.3 | NOT_STARTED |  |
 | ES30.BLEND.MINMAX | 3.0 | fragment-ops | MIN/MAX blend equations | ES 3.0 §4.1.7 | FULLY_VALIDATED | es20-blending |

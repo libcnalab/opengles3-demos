@@ -40,7 +40,7 @@ with `texture()`; every level of the 32×16 test texture is shown in its own pal
 2 yellow, 3 green, 4 cyan, 5 blue), with a parity checkerboard of the texels. The bands are where the implementation's
 implicit level of detail crosses a level; their exact position is implementation-dependent and is not checked.
 
-The rest of the window is a grid with one cell per fragment-stage lookup (154 cells, row-major from the top left).
+The rest of the window is a grid with one cell per fragment-stage lookup (148 cells on the drivers tested here, one per fragment-stage lookup block, row-major from the top left).
 A cell is the 4×4 result block of that lookup, magnified: lookups on RGBA8 and integer textures show the palette colour
 of the level they returned with the texel-parity shade; shadow lookups show green when the result pair is the expected
 (1, 0); `textureSize` cells encode width/height/depth in red/green/blue; derivative cells show |value| / 8.

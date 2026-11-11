@@ -1,0 +1,26 @@
+#version 310 es
+// 3x3 binomial (Gaussian) blur of an RGBA8 image, edge pixels clamped:
+// weights 1 2 1 / 2 4 2 / 1 2 1, divided by 16. `restrict` promises the compiler that these two
+// variables are the only way this shader touches that memory (GLSL ES 3.10 4.9).
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(rgba8, binding = 0) uniform readonly restrict highp image2D u_src;
+layout(rgba8, binding = 1) uniform writeonly restrict highp image2D u_dst;
+
+void main()
+{
+    ivec2 size = imageSize(u_src);
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(p, size)))
+        return;
+    vec4 sum = vec4(0.0);
+    for (int dy = -1; dy <= 1; ++dy)
+    {
+        for (int dx = -1; dx <= 1; ++dx)
+        {
+            float w = float((2 - abs(dx)) * (2 - abs(dy)));
+            ivec2 q = clamp(p + ivec2(dx, dy), ivec2(0), size - 1);
+            sum += w * imageLoad(u_src, q);
+        }
+    }
+    imageStore(u_dst, p, sum / 16.0);
+}

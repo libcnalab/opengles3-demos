@@ -1,0 +1,12 @@
+#version 310 es
+// Copies raw 32-bit words between two images that are both accessed with the format r32ui, whatever the
+// internal format of the textures is (ES 3.2 8.23: formats of the same texel size are compatible).
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(r32ui, binding = 0) uniform readonly highp uimage2D u_src;
+layout(r32ui, binding = 1) uniform writeonly highp uimage2D u_dst;
+
+void main()
+{
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    imageStore(u_dst, p, imageLoad(u_src, p));
+}

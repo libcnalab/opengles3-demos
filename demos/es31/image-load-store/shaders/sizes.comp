@@ -1,0 +1,21 @@
+#version 310 es
+// imageSize() of four image variables of different types (GLSL ES 3.10 8.12). The textures and the bound
+// level or layer are chosen by main.cpp. A readonly writeonly image can be queried but not accessed.
+// Every image is accessed with the format r32ui, which is also the format of the bound textures
+// (a format mismatch would make the result of imageSize undefined, ES 3.2 8.23).
+layout(local_size_x = 1) in;
+
+layout(r32ui, binding = 0) uniform readonly writeonly highp uimage2D u_img2d;      // one level of a 2D texture
+layout(r32ui, binding = 1) uniform readonly writeonly highp uimage3D u_img3d;      // all slices of a 3D texture
+layout(r32ui, binding = 2) uniform readonly writeonly highp uimage2DArray u_arr;   // all layers of a 2D array
+layout(r32ui, binding = 3) uniform readonly writeonly highp uimage2D u_layer;      // ONE layer of a 2D array
+
+layout(std430, binding = 0) buffer Out { ivec4 sizes[]; } u_out;
+
+void main()
+{
+    u_out.sizes[0] = ivec4(imageSize(u_img2d), 0, 0);
+    u_out.sizes[1] = ivec4(imageSize(u_img3d), 0);
+    u_out.sizes[2] = ivec4(imageSize(u_arr), 0);
+    u_out.sizes[3] = ivec4(imageSize(u_layer), 0, 0);
+}

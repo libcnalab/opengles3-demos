@@ -1,0 +1,17 @@
+#version 310 es
+// Inverts the color of the bound level of an RGBA8 texture. Read-write access to one image
+// variable needs a 32-bit single-channel format, so source and destination are separate image units
+// (they may be two different levels of the same texture).
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(rgba8, binding = 0) uniform readonly highp image2D u_src;
+layout(rgba8, binding = 1) uniform writeonly highp image2D u_dst;
+
+void main()
+{
+    ivec2 size = imageSize(u_src);
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(p, size)))
+        return;
+    vec4 c = imageLoad(u_src, p);
+    imageStore(u_dst, p, vec4(1.0 - c.rgb, c.a));
+}

@@ -1,0 +1,26 @@
+#version 310 es
+// Sobel edge magnitude of the luminance of an RGBA8 image (edge pixels clamped).
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(rgba8, binding = 0) uniform readonly restrict highp image2D u_src;
+layout(rgba8, binding = 1) uniform writeonly restrict highp image2D u_dst;
+
+float luma(ivec2 q, ivec2 size)
+{
+    vec4 c = imageLoad(u_src, clamp(q, ivec2(0), size - 1));
+    return dot(c.rgb, vec3(0.299, 0.587, 0.114));
+}
+
+void main()
+{
+    ivec2 size = imageSize(u_src);
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(p, size)))
+        return;
+    float tl = luma(p + ivec2(-1, -1), size), t = luma(p + ivec2(0, -1), size), tr = luma(p + ivec2(1, -1), size);
+    float l = luma(p + ivec2(-1, 0), size), r = luma(p + ivec2(1, 0), size);
+    float bl = luma(p + ivec2(-1, 1), size), b = luma(p + ivec2(0, 1), size), br = luma(p + ivec2(1, 1), size);
+    float gx = (tr + 2.0 * r + br) - (tl + 2.0 * l + bl);
+    float gy = (bl + 2.0 * b + br) - (tl + 2.0 * t + tr);
+    float mag = clamp(length(vec2(gx, gy)), 0.0, 1.0);
+    imageStore(u_dst, p, vec4(vec3(mag), 1.0));
+}

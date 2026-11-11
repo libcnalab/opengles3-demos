@@ -1,0 +1,16 @@
+#version 310 es
+// Turns the triangle counter written by gen_geometry.comp into a complete DrawElementsIndirectCommand
+// { count, instanceCount, firstIndex, baseVertex, reservedMustBeZero } (ES 3.2 10.5).
+layout(local_size_x = 1) in;
+
+layout(std430, binding = 2) buffer Command { uint cmd[8]; } u_cmd;
+
+void main()
+{
+    uint triangles = u_cmd.cmd[5];
+    u_cmd.cmd[0] = 3u * triangles;  // count
+    u_cmd.cmd[1] = 1u;              // instanceCount
+    u_cmd.cmd[2] = 2u;              // firstIndex
+    u_cmd.cmd[3] = 3u;              // baseVertex
+    u_cmd.cmd[4] = 0u;              // reservedMustBeZero
+}

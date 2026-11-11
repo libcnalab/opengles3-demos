@@ -1,0 +1,16 @@
+#version 310 es
+// Layered binding (BindImageTexture layered = TRUE): one image variable addresses the whole level, the
+// third coordinate selects the layer of a 2D array or the slice of a 3D texture (ES 3.2 Table 8.25).
+// main.cpp injects IMAGE (uimage2DArray or uimage3D) and BASE after the first line.
+#ifndef IMAGE
+#define IMAGE uimage2DArray
+#define BASE 0u
+#endif
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+layout(r32ui, binding = 0) uniform writeonly highp IMAGE u_img;
+
+void main()
+{
+    ivec3 p = ivec3(gl_GlobalInvocationID);
+    imageStore(u_img, p, uvec4(BASE + 1000u * uint(p.z) + uint(p.y * 8 + p.x)));
+}

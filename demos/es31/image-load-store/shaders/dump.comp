@@ -1,0 +1,50 @@
+#version 310 es
+// Reads one level / layer of a texture through a *sampler* (texelFetch: an access path that is
+// independent of image load/store) and writes the raw 32-bit words of every texel into a shader
+// storage buffer, 4 words per texel. Macros injected by main.cpp choose the sampler type.
+#ifndef SAMPLER
+#define SAMPLER sampler2D
+#define DIM 2
+#define KIND 0
+#endif
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+uniform highp SAMPLER u_tex;
+uniform int u_level;
+uniform int u_layer;     // layer of an array / slice of a 3D texture (DIM == 3)
+uniform ivec2 u_size;    // size of the selected level
+
+layout(std430, binding = 0) buffer Out { uint words[]; } u_out;
+
+void main()
+{
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(p, u_size)))
+        return;
+#if DIM == 2
+    ivec2 c = p;
+#else
+    ivec3 c = ivec3(p, u_layer);
+#endif
+    uint base = uint(p.y * u_size.x + p.x) * 4u;
+#if KIND == 0
+    vec4 t = texelFetch(u_tex, c, u_level);
+    u_out.words[base + 0u] = floatBitsToUint(t.x);
+    u_out.words[base + 1u] = floatBitsToUint(t.y);
+    u_out.words[base + 2u] = floatBitsToUint(t.z);
+    u_out.words[base + 3u] = floatBitsToUint(t.w);
+#elif KIND == 1
+    ivec4 t = texelFetch(u_tex, c, u_level);
+    u_out.words[base + 0u] = uint(t.x);
+    u_out.words[base + 1u] = uint(t.y);
+    u_out.words[base + 2u] = uint(t.z);
+    u_out.words[base + 3u] = uint(t.w);
+#else
+    uvec4 t = texelFetch(u_tex, c, u_level);
+    u_out.words[base + 0u] = t.x;
+    u_out.words[base + 1u] = t.y;
+    u_out.words[base + 2u] = t.z;
+    u_out.words[base + 3u] = t.w;
+#endif
+}

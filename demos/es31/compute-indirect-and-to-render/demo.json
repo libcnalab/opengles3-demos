@@ -1,0 +1,86 @@
+{
+  "name": "es31-compute-indirect-and-to-render",
+  "title": "Indirect dispatch and compute to render",
+  "min_es": "3.1",
+  "glsl": [
+    "310 es"
+  ],
+  "category": "es31",
+  "order": 365,
+  "summary": "GPU-driven work: glDispatchComputeIndirect with group counts written by earlier compute passes (compaction chain, ten overlapping byte offsets with a zero count, image-size-derived counts) and its errors; a compute shader that writes vertices, indices and a DrawElementsIndirect command (firstIndex 2, baseVertex 3, count from an atomic counter) which is then drawn after VERTEX_ATTRIB_ARRAY | ELEMENT_ARRAY | COMMAND barriers; glMemoryBarrierByRegion between fragment-shader passes (image chain, image store -> texelFetch, buffer store -> buffer load), pixel by pixel against CPU models.",
+  "spec": [
+    "ES 3.2 §17 Compute Shaders: DispatchCompute, DispatchComputeIndirect (command layout, offset must be a multiple of 4, errors for a negative / unaligned offset, a command beyond the buffer end, no buffer bound, no program)",
+    "ES 3.2 §10.3.9 Indirect Commands in Buffer Objects (Table 10.4: DRAW_INDIRECT_BUFFER, DISPATCH_INDIRECT_BUFFER), §10.5 Drawing Commands Using Vertex Arrays (DrawElementsIndirect and its command structure, firstIndex and baseVertex)",
+    "ES 3.2 §7.11.2 Shader Memory Access Synchronization: MemoryBarrier (VERTEX_ATTRIB_ARRAY, ELEMENT_ARRAY, COMMAND, SHADER_STORAGE, TEXTURE_FETCH, FRAMEBUFFER, BUFFER_UPDATE bits) and MemoryBarrierByRegion (only ATOMIC_COUNTER, FRAMEBUFFER, SHADER_IMAGE_ACCESS, SHADER_STORAGE, TEXTURE_FETCH and UNIFORM are legal; the region may be as small as one pixel)",
+    "ES 3.2 §7.11.1 Shader Memory Access Ordering (one fragment invocation per pixel without multisampling), §8.23 Texture Image Loads and Stores (r32ui read-write image, r32f / rgba8 images), §7.8 Shader Storage Blocks, §2.3.1 Errors (an erroring command has no effect)",
+    "GLSL ES 3.10 §7.1.3 Compute Shader Special Variables (gl_NumWorkGroups, gl_WorkGroupID, gl_LocalInvocationIndex, gl_GlobalInvocationID), §4.4.5 / §4.3.7 shader storage blocks and std430, §8.11 atomicAdd, §8.12 Image Functions"
+  ],
+  "api": {
+    "glDispatchComputeIndirect": "group counts written by compute passes (compaction chain: ceil(761/64) = 12 groups; image fill: 8x8 from imageSize; a 12-word table dispatched from ten byte offsets 0..36 including three zero-count commands): launched groups, invocations, gl_NumWorkGroups and every group id counted exactly once; errors INVALID_VALUE (offsets 2, 6, -4), INVALID_OPERATION (offsets size-8, size, 1 MiB, no buffer bound, no program) launch nothing; offset size-12 is accepted",
+    "glDispatchCompute": "generation, finalize, compaction, table-writing and image-setup passes (single group); a direct one-group dispatch is the negative control of the indirect chain",
+    "glDrawElementsIndirect": "UNSIGNED_INT triangles from a compute-written command {15, 1, firstIndex 2, baseVertex 3, 0}: the 5 surviving triangles appear in their colors at the CPU centroids, the 3 culled sectors and the gaps show the clear color",
+    "glMemoryBarrier": "SHADER_STORAGE between generation and finalize, VERTEX_ATTRIB_ARRAY | ELEMENT_ARRAY | COMMAND before the draw, COMMAND before every indirect dispatch, TEXTURE_FETCH | FRAMEBUFFER before sampling / glReadPixels, BUFFER_UPDATE before MapBufferRange: consumers see the data the CPU model predicts; ALL_BARRIER_BITS raises no error",
+    "glMemoryBarrierByRegion": "SHADER_IMAGE_ACCESS (five-pass r32ui chain, 16384 pixels), TEXTURE_FETCH (image store then texelFetch, 8192 pixels), SHADER_STORAGE (buffer store then load, 8192 pixels) between fragment-shader passes: every pixel equals the CPU model; the six legal bits and ALL_BARRIER_BITS raise no error",
+    "glGenBuffers": "vertex / index / command, compaction input / work / output, table, probe and fragment storage buffers",
+    "glBindBuffer": "DISPATCH_INDIRECT_BUFFER, DRAW_INDIRECT_BUFFER, ARRAY_BUFFER and ELEMENT_ARRAY_BUFFER bindings consumed by the commands; COPY_READ / COPY_WRITE for uploads and mapping",
+    "glBindBufferBase": "SHADER_STORAGE_BUFFER binding points 0..3 of the compute and fragment shaders",
+    "glBufferData": "initial contents (junk vertices, sentinel output, input data) that must survive where the shaders do not write",
+    "glBufferSubData": "resets the work / output / probe buffers between experiments",
+    "glMapBufferRange": "reads vertex, index, command, work, output and probe words after BUFFER_UPDATE_BARRIER_BIT; compared word by word with the model",
+    "glEnableVertexAttribArray": "attributes 0 (position) and 1 (sector) read from the compute-written vertex buffer",
+    "glVertexAttribPointer": "vec2 position at offset 0, stride 16: positions of the drawn triangles match the CPU centroids",
+    "glVertexAttribIPointer": "uint sector attribute at offset 8, stride 16: the palette color of every triangle depends on it",
+    "glGenVertexArrays": "VAO that records the vertex and ELEMENT_ARRAY_BUFFER bindings (glDrawElementsIndirect needs a non-default VAO)",
+    "glBindVertexArray": "VAO bound for the indirect draw and an empty VAO for the gl_VertexID triangles",
+    "glBindImageTexture": "rgba8 image sized by imageSize (readonly writeonly), writeonly rgba8 fill, r32ui read-write chain image, writeonly r32f image: the stores and loads reach the textures (checked by readback and by the fragment passes)",
+    "glTexStorage2D": "immutable RGBA8 / R32UI / R32F textures required by image units",
+    "glTexParameteri": "NEAREST filters (typed glTexParameter overloads) that make the R32F texture complete for texelFetch",
+    "glGenTextures": "image fill, chain and texture-fetch textures",
+    "glBindTexture": "sampler binding of the filled image and of the R32F texture",
+    "glActiveTexture": "unit 0 for the samplers",
+    "glUseProgram": "compute, star, display and fragment programs",
+    "glGetUniformLocation": "u_seed, u_slot, u_pass, u_tex, u_origin, u_scale",
+    "glUniform1ui": "u_seed decides which sectors survive; u_slot selects the probe slot of every indirect command",
+    "glUniform1i": "u_pass of the chain, sampler units and scale",
+    "glUniform2i": "cell origin of the image display",
+    "glGenFramebuffers": "framebuffer object for glReadPixels of the filled RGBA8 texture",
+    "glBindFramebuffer": "FRAMEBUFFER target for the texture read-back and the default framebuffer for the display",
+    "glFramebufferTexture2D": "attaches the filled texture to COLOR_ATTACHMENT0",
+    "glCheckFramebufferStatus": "FRAMEBUFFER_COMPLETE for the RGBA8 attachment",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE: every texel of the filled image, probes of the star and all pixels of the three ByRegion pipelines in the capture",
+    "glDrawArrays": "gl_VertexID triangles for the image display and the five fragment-shader pipelines",
+    "glViewport": "128x128 cells and 128x64 strips",
+    "glClear": "COLOR_BUFFER_BIT: the clear color is the expected pixel of culled sectors",
+    "glClearColor": "(0.10, 0.10, 0.14, 1)",
+    "glDeleteBuffers": "cleanup",
+    "glDeleteTextures": "cleanup",
+    "glDeleteFramebuffers": "cleanup",
+    "glDeleteVertexArrays": "cleanup",
+    "glDeleteProgram": "cleanup"
+  },
+  "features": [
+    "ES31.COMPUTE.INDIRECT",
+    "ES31.COMPUTE.TO_RENDER",
+    "ES31.BARRIER.BY_REGION"
+  ],
+  "glsl_features": [
+    "GLSL310.COMPUTE.LAYOUT",
+    "GLSL310.COMPUTE.BUILTINS",
+    "GLSL310.SSBO",
+    "GLSL310.IMAGES",
+    "GLSL310.FN.IMAGE",
+    "GLSL310.LAYOUT.BINDING"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "gl-error",
+    "negative",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet (subagent)",
+    "notes": "256x256 radeonsi es-max capture viewed at 1x and 3x (llvmpipe and zink differ by at most 1/255 per channel). Top left: five triangles (orange, green, dark gray, light green, yellow) pointing outwards on the dark background, three of the eight sectors empty. Top right: a checker of orange (x-ramp) and blue (y-ramp) 8x8-texel tiles at 2 pixels per texel with a white dot at the origin of every tile. Bottom left: diagonal-edged yellow/blue/gray stripes of 8 pixels (five-pass r32ui chain). Bottom right: upper strip a blocky pink/green XOR pattern, lower strip diagonal pink-to-teal ramps."
+  }
+}

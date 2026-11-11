@@ -1,0 +1,35 @@
+#version 310 es
+// Pass 1 of the GPU-driven chain. One invocation scans the input, compacts the indices of the "active" elements
+// (those whose two low bits are not both zero) into a list, and writes the number of work groups that pass 2 needs
+// into the first three words of the same buffer. That buffer is later bound to DISPATCH_INDIRECT_BUFFER, so the CPU
+// never learns how many groups are launched.
+layout(local_size_x = 1) in;
+
+layout(std430, binding = 0) readonly buffer Input { uint values[]; } u_in;
+layout(std430, binding = 1) buffer Work
+{
+    uint cmd[3];            // DispatchIndirectCommand: num_groups_x, num_groups_y, num_groups_z
+    uint active_count;
+    uint groups_seen;       // incremented by pass 2, once per launched work group
+    uint invocations_seen;  // incremented by pass 2, once per launched invocation
+    uint list[];            // indices of the active elements
+} u_work;
+
+const uint kGroupSize = 64u;  // local_size_x of pass 2
+
+void main()
+{
+    uint n = 0u;
+    for (uint i = 0u; i < uint(u_in.values.length()); ++i)
+    {
+        if ((u_in.values[i] & 3u) != 0u)
+        {
+            u_work.list[n] = i;
+            n += 1u;
+        }
+    }
+    u_work.active_count = n;
+    u_work.cmd[0] = (n + kGroupSize - 1u) / kGroupSize;
+    u_work.cmd[1] = 1u;
+    u_work.cmd[2] = 1u;
+}

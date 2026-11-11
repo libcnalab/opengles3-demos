@@ -1,0 +1,28 @@
+#version 310 es
+// Launched indirectly: every work group records that it ran. Per slot (u_slot, one slot per indirect command):
+//   groups[slot]       number of launched groups        invocations[slot]  number of launched invocations
+//   dims[slot]         gl_NumWorkGroups seen by the groups
+//   visits[slot * 32 + linear group id]  how often each group id ran (must be exactly once)
+layout(local_size_x = 4) in;
+
+uniform uint u_slot;
+
+layout(std430, binding = 2) buffer Probe
+{
+    uint groups[16];
+    uvec4 dims[16];
+    uint visits[512];
+    uint invocations[16];
+} u_probe;
+
+void main()
+{
+    uint linear = (gl_WorkGroupID.z * gl_NumWorkGroups.y + gl_WorkGroupID.y) * gl_NumWorkGroups.x + gl_WorkGroupID.x;
+    atomicAdd(u_probe.invocations[u_slot], 1u);
+    if (gl_LocalInvocationIndex == 0u)
+    {
+        atomicAdd(u_probe.groups[u_slot], 1u);
+        u_probe.dims[u_slot] = uvec4(gl_NumWorkGroups, 0u);
+        atomicAdd(u_probe.visits[u_slot * 32u + linear], 1u);
+    }
+}

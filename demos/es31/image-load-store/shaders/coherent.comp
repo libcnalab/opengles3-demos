@@ -1,0 +1,25 @@
+#version 310 es
+// Work-group-local communication through an image. u_scratch is read AND written, so it must be a
+// 32-bit single-channel format (r32ui). `coherent` makes a store by one invocation visible to the
+// loads of the other invocations of the group once memoryBarrierImage() and barrier() have been
+// passed; `volatile` implies coherent (GLSL ES 3.10 4.9) and additionally forbids the compiler to cache or
+// drop accesses. main.cpp runs the shader once with each qualifier set (QUALIFIERS macro).
+// Each group of 8 reverses a row segment: out[x] = scratch[7 - x] with scratch = 3 * in + 1.
+#ifndef QUALIFIERS
+#define QUALIFIERS coherent restrict
+#endif
+layout(local_size_x = 8, local_size_y = 1) in;
+layout(r32ui, binding = 0) uniform QUALIFIERS highp uimage2D u_scratch;
+layout(r32ui, binding = 1) uniform readonly restrict highp uimage2D u_src;
+layout(r32ui, binding = 2) uniform writeonly restrict highp uimage2D u_dst;
+
+void main()
+{
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    uint v = imageLoad(u_src, p).x;
+    imageStore(u_scratch, p, uvec4(v * 3u + 1u));
+    memoryBarrierImage();
+    barrier();
+    ivec2 q = ivec2(int(gl_WorkGroupID.x) * 8 + 7 - int(gl_LocalInvocationID.x), p.y);
+    imageStore(u_dst, p, uvec4(imageLoad(u_scratch, q).x));
+}

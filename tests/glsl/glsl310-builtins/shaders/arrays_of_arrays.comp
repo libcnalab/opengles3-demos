@@ -1,0 +1,158 @@
+#version 310 es
+// Arrays of arrays (GLSL ES 3.10 §4.1.9). One invocation evaluates every case and writes one int per
+// case into res[]. main.cpp (kAoaExpect) holds the label and the CPU expectation of each index; the
+// numbers in the comments below are those indices.
+layout(local_size_x = 1) in;
+precision highp float;
+precision highp int;
+
+layout(std430, binding = 0) readonly buffer Source
+{
+    int src[2][3][4];   // written by the CPU, inner-most index fastest (§4.1.9 memory order)
+    int sel[4];         // run-time indices {1, 2, 3, 0}: dynamic indexing, cannot be constant-folded
+};
+
+layout(std430, binding = 1) writeonly buffer Results
+{
+    int res[];
+};
+
+layout(std430, binding = 2) buffer Grid
+{
+    uint grid[3][4];    // read back by the CPU at (i * 4 + j) * 4
+    uvec2 pairs[2][2];  // offset 48, stride 8
+    uint rt[][3];       // offset 80; outer dimension sized at run time from the buffer size
+};
+
+struct Cell
+{
+    int v[2];
+};
+
+// Formal parameters of array-of-array type must be sized (§4.1.9); length() works on each level.
+int sum23(int x[2][3])
+{
+    int s = 0;
+    for (int i = 0; i < x.length(); ++i)
+        for (int j = 0; j < x[i].length(); ++j) s += x[i][j];
+    return s;
+}
+
+// The same type spelled type-first: int[2][3] is "array of 2 of array of 3 of int".
+void scale23(inout int[2][3] x, int s)
+{
+    for (int i = 0; i < 2; ++i)
+        for (int j = 0; j < 3; ++j) x[i][j] *= s;
+}
+
+// Array-of-array return type.
+int[3][2] transpose23(int x[2][3])
+{
+    int t[3][2];
+    for (int i = 0; i < 2; ++i)
+        for (int j = 0; j < 3; ++j) t[j][i] = x[i][j];
+    return t;
+}
+
+void main()
+{
+    // --- declaration forms (§4.1.9) ---------------------------------------------------------------
+    float a[2][3];      // name-first
+    float[3] b[2];      // mixed: size-2 array of float[3]
+    float[2][3] c;      // type-first: same as float c[2][3]
+    vec4[2] w[3];       // size-3 array of vec4[2]
+    int d[2][3][4];     // three levels
+
+    res[0] = a.length();
+    res[1] = a[0].length();
+    res[2] = b.length();
+    res[3] = b[1].length();
+    res[4] = c.length();
+    res[5] = c[1].length();
+    res[6] = w.length();
+    res[7] = w[0].length();
+    res[8] = d.length();
+    res[9] = d[1].length();
+    res[10] = d[1][2].length();
+
+    // length() of a compile-time sized array is a constant expression (§4.3.3): usable as a size.
+    int q[d[0][0].length() * 2];
+    res[11] = q.length();
+
+    for (int i = 0; i < 2; ++i)
+        for (int j = 0; j < 3; ++j)
+        {
+            a[i][j] = float(i * 3 + j) * 0.5;
+            b[i][j] = float(i * 10 + j);
+            c[i][j] = float(i * 100 + j);
+        }
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 2; ++j) w[i][j] = vec4(float(i), float(j), float(i * 2 + j), 1.0);
+    for (int i = 0; i < 2; ++i)
+        for (int j = 0; j < 3; ++j)
+            for (int k = 0; k < 4; ++k) d[i][j][k] = i * 100 + j * 10 + k;
+
+    res[12] = int(a[1][2] * 2.0);
+    res[13] = int(b[1][2]);
+    res[14] = int(c[1][2]);
+    res[15] = int(w[2][1].z);
+    res[16] = d[sel[0]][sel[1]][sel[2]];
+
+    // --- initializers -----------------------------------------------------------------------------
+    const int k[2][3] = int[2][3](int[3](1, 2, 3), int[3](4, 5, 6));
+    res[17] = k[1][2];
+    res[18] = sum23(k);
+
+    int m[][3] = int[][3](int[3](7, 8, 9), int[3](10, 11, 12), int[3](13, 14, 15));  // outer size from the initializer
+    res[19] = m.length();
+    res[20] = m[2][0];
+
+    int n[2][3] = int[][](int[](1, 2, 3), int[](4, 5, 6));  // both sizes from the constructor arguments
+    res[21] = n.length() * 10 + n[0].length();
+    res[22] = n[1][0];
+
+    // --- whole-array assignment and equality (§5.7), functions ------------------------------------
+    int e[2][3] = k;
+    res[23] = int(e == k);
+    e[sel[3]][sel[0]] = 0;      // e[0][1], dynamic indices on an l-value
+    res[24] = int(e != k);
+    e = k;
+    scale23(e, 3);
+    res[25] = sum23(e);
+
+    int t[3][2] = transpose23(k);
+    res[26] = t[2][0];
+    res[27] = t[0][1];
+    res[28] = t.length() * 10 + t[0].length();
+
+    // --- arrays of arrays of structures containing arrays -----------------------------------------
+    Cell cells[2][2];
+    for (int i = 0; i < 2; ++i)
+        for (int j = 0; j < 2; ++j)
+            for (int l = 0; l < 2; ++l) cells[i][j].v[l] = i * 4 + j * 2 + l;
+    res[29] = cells[sel[0]][sel[3]].v[1];
+    res[30] = cells.length() * 100 + cells[0].length() * 10 + cells[0][0].v.length();
+
+    // --- shader storage block members -------------------------------------------------------------
+    int s = 0;
+    for (int j = 0; j < 3; ++j)
+        for (int i4 = 0; i4 < 4; ++i4) s += src[1][j][i4];
+    res[31] = s;
+    res[32] = src[sel[0]][sel[1]][sel[2]];
+    res[33] = src.length() * 100 + src[0].length() * 10 + src[0][0].length();
+    res[34] = rt.length();
+    res[35] = rt[0].length();
+    res[36] = grid.length() * 10 + grid[0].length();
+    res[37] = pairs.length() * 10 + pairs[0].length();
+
+    // --- constructors as expressions --------------------------------------------------------------
+    res[38] = int[2][2](int[2](sel[0], sel[1]), int[2](sel[2], sel[3]))[1][0];
+    res[39] = int(int[2][2](int[2](1, 2), int[2](3, 4)) == int[2][2](int[2](1, 2), int[2](3, 5)));
+
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 4; ++j) grid[i][j] = 0xA000u + uint(i * 16 + j);
+    for (int i = 0; i < 2; ++i)
+        for (int j = 0; j < 2; ++j) pairs[i][j] = uvec2(uint(i * 2 + j), 0xB000u + uint(i * 2 + j));
+    for (int i = 0; i < rt.length(); ++i)
+        for (int j = 0; j < rt[i].length(); ++j) rt[i][j] = 0xC000u + uint(i * 16 + j);
+}

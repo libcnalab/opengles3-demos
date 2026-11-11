@@ -32,8 +32,9 @@ and fog, compute particles, tessellated terrain, and geometry shaders.
 
 - Linux, CMake ≥ 3.23, Ninja, a C++23 compiler (GCC 14 / Clang 19 tested)
 - EGL + an OpenGL ES 3.x driver (Mesa radeonsi/llvmpipe tested)
-- meta-gl source checkout at `../../libcna/meta-gl` (override with `-DOGLES3_METAGL_SOURCE_DIR=...`,
-  or use an installed package with `-DOGLES3_USE_INSTALLED_METAGL=ON`)
+- meta-gl source checkout at `../../libcna/meta-gl`, **on the local branch `opengles3-demos/enum-gaps`**
+  (public `develop` lacks enumerators that 17 executables need; see
+  [docs/METAGL_DEPENDENCY.md](docs/METAGL_DEPENDENCY.md)). Override the path with `-DOGLES3_METAGL_SOURCE_DIR=...`.
 - Optional: SDL3 for windowed mode; Python 3 for the coverage tools
 
 ## Build and run
@@ -67,6 +68,7 @@ Exit status: 0 PASS, 1 FAIL, 77 SKIP_UNSUPPORTED / BLOCKED_*, 2 usage error.
 | [docs/GLSL_COVERAGE.md](docs/GLSL_COVERAGE.md) | GLSL ES coverage strategy |
 | [docs/VALIDATION.md](docs/VALIDATION.md) | what a PASS means, test matrix, tolerances |
 | [docs/META_GL_GAPS.md](docs/META_GL_GAPS.md) | meta-gl audit, gaps and fixes |
+| [docs/METAGL_DEPENDENCY.md](docs/METAGL_DEPENDENCY.md) | exact meta-gl revision required, behaviour on public `develop` |
 | [docs/EXTENSIONS_POLICY.md](docs/EXTENSIONS_POLICY.md) | core-only policy, future extension module |
 | [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) | environment and scope limits |
 | [docs/AGENT_HANDOFF.md](docs/AGENT_HANDOFF.md) | current state and next tasks |

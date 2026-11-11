@@ -3,6 +3,13 @@
 
 Result directories: build/debug/test-results
 
+Source revision: 84711be (with uncommitted changes)
+
+Only results from the current executables count. A result is ignored when its executable was
+rebuilt after the run, or when the demo's sources, `common/` or the CMake glue are newer than the
+executable. `es-min` runs use `MESA_GLES_VERSION_OVERRIDE`: they prove API-version detection on an
+ES 3.2 driver, not conformance of a native ES 3.0/3.1 implementation (see VALIDATION.md).
+
 ## Core API entry points (by introducing ES version)
 
 | ES | total | passed | passed % | FULLY_VALIDATED |

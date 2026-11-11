@@ -7,6 +7,8 @@
 #include <metagl/metagl.hpp>
 
 #include <charconv>
+#include <chrono>
+#include <cstdlib>
 #include <cstdio>
 #include <exception>
 #include <format>
@@ -15,6 +17,9 @@
 #include <sstream>
 #include <string>
 #include <vector>
+
+#include <sys/stat.h>
+#include <unistd.h>
 
 namespace demo
 {
@@ -184,6 +189,15 @@ namespace demo
                 std::cerr << "warning: cannot write " << o.result_json << "\n";
                 return;
             }
+            // Traceability: which binary produced this result, and when. The coverage generator rejects a result
+            // whose executable has since been rebuilt or whose sources are newer than the executable.
+            char exe[4096] = {};
+            const ssize_t n = readlink("/proc/self/exe", exe, sizeof(exe) - 1);
+            struct stat st{};
+            const long long exe_mtime = (n > 0 && stat(exe, &st) == 0) ? static_cast<long long>(st.st_mtime) : 0;
+            const long long run_time = std::chrono::duration_cast<std::chrono::seconds>(
+                                           std::chrono::system_clock::now().time_since_epoch()).count();
+            const char* mesa_override = std::getenv("MESA_GLES_VERSION_OVERRIDE");
             auto checks = [&](const Check& c) {
                 std::string s = "[";
                 bool first = true;
@@ -200,13 +214,16 @@ namespace demo
                 "  \"reason\": \"{}\",\n  \"validated\": {},\n  \"context_version\": \"{}\",\n"
                 "  \"gl_version\": \"{}\",\n  \"gl_renderer\": \"{}\",\n  \"gl_vendor\": \"{}\",\n"
                 "  \"glsl_version\": \"{}\",\n  \"platform\": \"{}\",\n  \"metagl_version\": \"{}\",\n"
+                "  \"executable\": \"{}\",\n  \"executable_mtime\": {},\n  \"run_time\": {},\n"
+                "  \"version_override\": \"{}\",\n"
                 "  \"capture\": \"{}\",\n  \"checks_passed\": {},\n  \"checks_failed\": {},\n"
                 "  \"runtime_checks\": {},\n  \"demo_checks\": {}\n}}\n",
                 json_escape(o.test_id), json_escape(info.name), to_string(info.min_es), to_string(rep.outcome),
                 json_escape(rep.reason), o.validate ? "true" : "false", to_string(rep.context_version),
                 json_escape(rep.gl_version), json_escape(rep.gl_renderer), json_escape(rep.gl_vendor),
                 json_escape(rep.glsl_version), json_escape(rep.platform), metagl::GetVersionString(),
-                json_escape(rep.capture), demo_checks.passed(), demo_checks.failed(), checks(runtime_checks),
+                json_escape(n > 0 ? std::string(exe, static_cast<std::size_t>(n)) : std::string()), exe_mtime, run_time,
+                json_escape(mesa_override ? mesa_override : ""), json_escape(rep.capture), demo_checks.passed(), demo_checks.failed(), checks(runtime_checks),
                 checks(demo_checks));
         }
 

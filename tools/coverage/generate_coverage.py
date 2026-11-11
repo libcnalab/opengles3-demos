@@ -20,6 +20,7 @@ Status rules (see docs/VALIDATION.md):
   NOT_STARTED            no executable claims it
   DOCUMENTED_ONLY        inventory method is "doc" (undefined behaviour): documented, never asserted
   IMPLEMENTED_UNVERIFIED claimed by a manifest, no executable built
+  STALE_RESULTS          result files exist, but none matches the current executable or sources (rebuild + rerun)
   BUILD_PASSED           executable built, no result files
   FAILED                 any run FAILED
   BLOCKED_BY_META_GL     every run reported BLOCKED_META_GL
@@ -40,7 +41,7 @@ import re
 import sys
 from collections import Counter, defaultdict
 
-RANK = ["NOT_STARTED", "DOCUMENTED_ONLY", "IMPLEMENTED_UNVERIFIED", "FAILED", "BLOCKED_BY_PLATFORM", "BLOCKED_BY_META_GL",
+RANK = ["NOT_STARTED", "DOCUMENTED_ONLY", "IMPLEMENTED_UNVERIFIED", "STALE_RESULTS", "FAILED", "BLOCKED_BY_PLATFORM", "BLOCKED_BY_META_GL",
         "UNSUPPORTED_BY_CONTEXT", "BUILD_PASSED", "RUNTIME_PASSED", "VISUALLY_VERIFIED", "FULLY_VALIDATED"]
 
 
@@ -86,10 +87,45 @@ def load_results(result_dirs):
     return by_demo
 
 
+def newest_mtime(paths):
+    newest = 0.0
+    for root in paths:
+        if os.path.isfile(root):
+            newest = max(newest, os.path.getmtime(root))
+            continue
+        for d, _, files in os.walk(root):
+            for fn in files:
+                if fn.endswith((".md", ".json")):  # documentation and manifests do not affect a run
+                    continue
+                newest = max(newest, os.path.getmtime(os.path.join(d, fn)))
+    return newest
+
+
+def fresh_runs(m, runs, repo):
+    """Keep only results produced by the current executable, built after the newest relevant source.
+
+    A result counts as evidence only if (1) it records the executable that produced it, (2) that executable
+    still has the recorded mtime (not rebuilt since), and (3) no source of the demo, of common/ or of the
+    demo CMake glue is newer than the executable (the binary is not out of date)."""
+    src = newest_mtime([os.path.join(repo, m["_dir"]), os.path.join(repo, "common"),
+                        os.path.join(repo, "cmake", "OglesDemo.cmake")])
+    fresh, stale = [], []
+    for r in runs:
+        exe = r.get("executable", "")
+        ok = bool(exe) and os.path.exists(exe)
+        if ok:
+            cur = int(os.path.getmtime(exe))
+            ok = cur == int(r.get("executable_mtime", -1)) and src <= os.path.getmtime(exe) + 1
+        (fresh if ok else stale).append(r)
+    return fresh, stale
+
+
 def demo_status(m, results, bin_dirs):
     runs = results.get(m["name"], [])
     built = any(os.path.exists(os.path.join(b, m["name"])) for b in bin_dirs)
     if not runs:
+        if m.get("_stale"):
+            return "STALE_RESULTS", runs
         return ("BUILD_PASSED" if built else "IMPLEMENTED_UNVERIFIED"), runs
     outcomes = [r["outcome"] for r in runs]
     if "FAIL" in outcomes:
@@ -119,6 +155,51 @@ def demo_status(m, results, bin_dirs):
     if m.get("visual_review"):
         return "VISUALLY_VERIFIED", runs
     return "RUNTIME_PASSED", runs
+
+
+def common_helper_calls(repo, extra_files=()):
+    """Map each function defined in common/src/{gl_util,check,image}.cpp (and in extra_files, e.g. meta-gl's
+    inline convenience overloads such as glTexParameter -> glTexParameteri/f) to the GL entry points it calls,
+    including through other helpers (fixed point). Name-based, so overloads share one entry: a heuristic lint."""
+    bodies = {}
+    paths = [os.path.join(repo, "common", "src", n) for n in ("gl_util.cpp", "check.cpp", "image.cpp")]
+    for path in list(paths) + list(extra_files):
+        try:
+            src = open(path).read()
+        except OSError:
+            continue
+        for mt in re.finditer(r"(?:\w+::)?(\w+)\s*\([^;{}]*\)\s*(?:const\s*)?\{", src):
+            fname = mt.group(1)
+            if fname in ("if", "for", "while", "switch", "catch", "return"):
+                continue
+            depth, i = 0, mt.end() - 1
+            while i < len(src):
+                depth += {"{": 1, "}": -1}.get(src[i], 0)
+                if depth == 0:
+                    break
+                i += 1
+            bodies[fname] = bodies.get(fname, "") + src[mt.end():i]
+    calls = {f: set(re.findall(r"\b(gl[A-Z]\w*)\s*[(<]", b)) for f, b in bodies.items()}
+    changed = True
+    while changed:
+        changed = False
+        for f, b in bodies.items():
+            for g in bodies:
+                if g != f and re.search(r"\b" + g + r"\s*\(", b) and not calls[g] <= calls[f]:
+                    calls[f] |= calls[g]
+                    changed = True
+    return {f: c for f, c in calls.items() if c}
+
+
+def git_revision(repo):
+    import subprocess
+    try:
+        rev = subprocess.run(["git", "-C", repo, "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
+        dirty = subprocess.run(["git", "-C", repo, "status", "--porcelain", "--untracked-files=no"],
+                               capture_output=True, text=True).stdout.strip()
+        return rev + (" (with uncommitted changes)" if dirty else "")
+    except OSError:
+        return "unknown"
 
 
 def metagl_wrappers(metagl_dir):
@@ -154,6 +235,32 @@ def main():
     manifests = load_manifests(repo)
     results = load_results(result_dirs)
     wrappers = metagl_wrappers(metagl_dir)
+    problems_early = []
+
+    stale_report = []
+    for m in manifests:
+        fresh, stale = fresh_runs(m, results.get(m["name"], []), repo)
+        results[m["name"]] = fresh
+        if stale:
+            m["_stale"] = len(stale)
+            stale_report.append(f"{m['name']}: {len(stale)} stale result file(s) ignored")
+
+    # Manifest honesty lint: every claimed API entry point must be called by the executable's own sources,
+    # directly or through a common/ helper (demo::get_integer -> glGetIntegerv, Check::expect_pixel -> glReadPixels).
+    helpers = common_helper_calls(repo, glob.glob(os.path.join(metagl_dir, "include", "metagl", "*.hpp")))
+    for m in manifests:
+        srcs = ""
+        for d, _, files in os.walk(os.path.join(repo, m["_dir"])):
+            for fn in files:
+                if fn.endswith((".cpp", ".hpp", ".h")):
+                    srcs += open(os.path.join(d, fn), errors="replace").read()
+        called = set(re.findall(r"\b(gl[A-Z]\w*)\b", srcs))
+        for h, gls in helpers.items():
+            if h in called or re.search(r"\b" + re.escape(h) + r"\s*[(<]", srcs):
+                called |= gls
+        for fn in m.get("api", {}):
+            if fn not in called:
+                problems_early.append(f"{m['name']}: api '{fn}' is claimed but never called (directly or via common/)")
 
     status_of = {}
     for m in manifests:
@@ -173,7 +280,7 @@ def main():
     known_fns = {c["name"] for c in commands}
     known_feats = {f["id"] for f in features}
     known_glsl = {g["id"] for g in glsl}
-    problems = []
+    problems = list(problems_early)
     for m in manifests:
         for fn in m.get("api", {}):
             if fn not in known_fns:
@@ -244,10 +351,17 @@ def main():
     with open(os.path.join(gen, "COVERAGE_SUMMARY.md"), "w") as f:
         f.write(header + "# Coverage summary\n\n")
         f.write(f"Result directories: {', '.join(os.path.relpath(d, repo) for d in result_dirs) or '(none)'}\n\n")
+        f.write(f"Source revision: {git_revision(repo)}\n\n")
+        f.write("Only results from the current executables count. A result is ignored when its executable was\n"
+                "rebuilt after the run, or when the demo's sources, `common/` or the CMake glue are newer than the\n"
+                "executable. `es-min` runs use `MESA_GLES_VERSION_OVERRIDE`: they prove API-version detection on an\n"
+                "ES 3.2 driver, not conformance of a native ES 3.0/3.1 implementation (see VALIDATION.md).\n\n")
         f.write("## Core API entry points (by introducing ES version)\n\n" + summary(api_rows, "ES") + "\n\n")
         f.write("## Semantic features (by introducing ES version)\n\n" + summary(feat_rows, "ES") + "\n\n")
         f.write("## GLSL ES features (by language version)\n\n" + summary(glsl_rows, "GLSL") + "\n\n")
         f.write("## Executables\n\n" + md_table(sorted(Counter(status_of.values()).items()), ["status", "count"]) + "\n")
+        if stale_report:
+            f.write("\n## Stale results (ignored)\n\n" + "\n".join(f"- {x}" for x in stale_report) + "\n")
         if problems:
             f.write("\n## Manifest problems\n\n" + "\n".join(f"- {p}" for p in problems) + "\n")
     with open(os.path.join(gen, "FEATURE_STATUS.md"), "w") as f:

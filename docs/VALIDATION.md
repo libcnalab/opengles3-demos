@@ -88,6 +88,21 @@ is listed in `docs/KNOWN_LIMITATIONS.md`. Checks are never loosened to make a dr
   Both READMEs state the assumption. A conformant implementation that resolves differently would fail these
   checks without violating the spec.
 
+## Evidence traceability and staleness
+Every result JSON records:
+- the executable path and mtime, and the run time;
+- the GL/GLSL version, renderer and vendor strings;
+- the EGL platform and meta-gl version;
+- `version_override`, which holds the `MESA_GLES_VERSION_OVERRIDE` value for es-min runs;
+- every check with its detail.
+
+The coverage generator ignores a result when its executable was rebuilt after the run, or when a source of the
+demo (code, shaders, CMake glue) or `common/` is newer than the executable. Those results are listed under
+"Stale results" in COVERAGE_SUMMARY.md. The summary also states the source revision it was generated from.
+The generator lints every `api` claim: the entry point must be called by the executable's sources, directly or
+through a `common/` helper or a meta-gl convenience overload. The lint is name-based, so it is a heuristic; the
+actual verification is described per entry in `demo.json`.
+
 ## Coverage status definitions
 
 See `tools/coverage/generate_coverage.py` (single source of truth):

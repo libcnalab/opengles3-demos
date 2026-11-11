@@ -38,7 +38,7 @@ Every executable is registered as `<name>:<driver>:<mode>`:
 |---|---|---|
 | `gpu` | default EGL vendor (radeonsi on the reference machine) | real hardware path |
 | `llvmpipe` | `LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe` | deterministic software ES 3.2 |
-| `softpipe` | `... GALLIUM_DRIVER=softpipe` | a **native ES 3.1 / GLSL ES 3.10** implementation: ES 3.2 demos must report `SKIP_UNSUPPORTED`, 3.20 shaders must be rejected |
+| `softpipe` | `... GALLIUM_DRIVER=softpipe` | a **native ES 3.1 / GLSL ES 3.10** implementation: ES 3.2 executables must report `SKIP_UNSUPPORTED`, 3.20 shaders must be rejected. Only registered for `min_es` 3.2 executables and those listing it in `extra_drivers` (it miscompiles some complex shaders, see KNOWN_LIMITATIONS.md) |
 | `zink` | `... GALLIUM_DRIVER=zink` (on lavapipe) | GL-on-Vulkan: a different backend (NIR→SPIR-V), so agreement is less correlated |
 
 | mode | environment |

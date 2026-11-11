@@ -1,0 +1,84 @@
+{
+  "name": "es20-uniforms",
+  "title": "Uniform variables",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es20-foundations",
+  "order": 70,
+  "summary": "All glUniform*/glUniformMatrix* variants plus bool/struct/array uniforms, verified in the shader, by readback and by enumeration, with the INVALID_OPERATION cases.",
+  "spec": [
+    "ES 3.0 §2.12.6 Uniform Variables, §2.12.6.1 Loading Uniform Variables",
+    "ES 3.0 §6.1.12 (GetUniform*, GetActiveUniform)",
+    "GLSL ES 3.00 §4.3.5 Uniform Variables, §5.4.2 matrix constructors (column-major)"
+  ],
+  "api": {
+    "glUniform1f": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform2f": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform3f": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform4f": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform1fv": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform2fv": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform3fv": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform4fv": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform1i": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform2i": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform3i": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform4i": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform1iv": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform2iv": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform3iv": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform4iv": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform1ui": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform2ui": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform3ui": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform4ui": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform1uiv": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform2uiv": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform3uiv": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniform4uiv": "cell checked in the shader against the exact value + glGetUniform*v readback",
+    "glUniformMatrix2fv": "column-major element check in the shader + readback",
+    "glUniformMatrix3fv": "column-major element check in the shader + readback",
+    "glUniformMatrix4fv": "column-major element check in the shader + readback",
+    "glUniformMatrix2x3fv": "column-major element check in the shader + readback",
+    "glUniformMatrix3x2fv": "column-major element check in the shader + readback",
+    "glUniformMatrix2x4fv": "column-major element check in the shader + readback",
+    "glUniformMatrix4x2fv": "column-major element check in the shader + readback",
+    "glUniformMatrix3x4fv": "column-major element check in the shader + readback",
+    "glUniformMatrix4x3fv": "column-major element check in the shader + readback",
+    "glGetUniformLocation": "struct-member, struct-array and array-element names resolved",
+    "glGetUniformfv": "float/vector/matrix values read back exactly",
+    "glGetUniformiv": "int and bool values read back exactly",
+    "glGetUniformuiv": "uint values incl. 0x80000001 and 0xFFFFFFFF read back exactly",
+    "glGetActiveUniform": "names (name[0] for arrays), sizes and types of 12 uniforms",
+    "glGetProgramiv": "ACTIVE_UNIFORMS, ACTIVE_UNIFORM_MAX_LENGTH",
+    "glUseProgram": "glUniform* without a current program -> INVALID_OPERATION"
+  },
+  "features": [
+    "ES20.UNIFORM.SCALAR_VECTOR",
+    "ES20.UNIFORM.MATRIX",
+    "ES20.UNIFORM.ARRAY_STRUCT",
+    "ES20.UNIFORM.ACTIVE_QUERY",
+    "ES30.UNIFORM.UINT",
+    "ES30.UNIFORM.NONSQUARE"
+  ],
+  "glsl_features": [
+    "GLSL300.UNIFORM",
+    "GLSL300.TYPES.MATRIX",
+    "GLSL300.TYPES.STRUCT",
+    "GLSL300.TYPES.ARRAY",
+    "GLSL300.PRECISION.QUALIFIERS",
+    "GLSL300.CONTROL_FLOW"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "negative"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-opus-5.5",
+    "notes": "radeonsi: 38 green cells (rows of 8 from the bottom), remaining area dark gray; softpipe capture showed cells >=3 red (driver bug, documented)."
+  }
+}

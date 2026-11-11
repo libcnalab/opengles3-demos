@@ -54,7 +54,7 @@ glGenRenderbuffers,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGenTextures,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGenerateMipmap,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetActiveAttrib,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glGetActiveUniform,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glGetActiveUniform,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,"names (name[0] for arrays), sizes and types of 12 uniforms",FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
 glGetAttachedShaders,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,returns exactly the two attached shader names,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glGetAttribLocation,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetBooleanv,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,SHADER_COMPILER = TRUE,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
@@ -64,7 +64,7 @@ glGetFloatv,2.0,GL_ES_VERSION_2_0,yes,diagnostics-capabilities,"point/line width
 glGetFramebufferAttachmentParameteriv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetIntegerv,2.0,GL_ES_VERSION_2_0,yes,diagnostics-capabilities es30-hello-triangle,"~100 implementation limits checked against per-version minimums / CURRENT_PROGRAM, VERTEX_ARRAY_BINDING",FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glGetProgramInfoLog,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,printed for link failure,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
-glGetProgramiv,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,"LINK_STATUS, ATTACHED_SHADERS, DELETE_STATUS, VALIDATE_STATUS / LINK_STATUS queried",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
+glGetProgramiv,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es20-uniforms es30-hello-triangle,"LINK_STATUS, ATTACHED_SHADERS, DELETE_STATUS, VALIDATE_STATUS / ACTIVE_UNIFORMS, ACTIVE_UNIFORM_MAX_LENGTH / LINK_STATUS queried",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es20-uniforms:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glGetRenderbufferParameteriv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetShaderInfoLog,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,INFO_LOG_LENGTH consistent with returned log,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glGetShaderPrecisionFormat,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,all 6 precision types x 2 stages meet GLSL ES 3.00 minimums,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
@@ -73,9 +73,9 @@ glGetShaderiv,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-trian
 glGetString,2.0,GL_ES_VERSION_2_0,yes,diagnostics-capabilities,VERSION/VENDOR/RENDERER/SHADING_LANGUAGE_VERSION equal meta-gl Capabilities; EXTENSIONS set equals glGetStringi set,FULLY_VALIDATED,,diagnostics-capabilities:FULLY_VALIDATED
 glGetTexParameterfv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetTexParameteriv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glGetUniformLocation,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,u_color located in each program,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
-glGetUniformfv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glGetUniformiv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
+glGetUniformLocation,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es20-uniforms,"u_color located in each program / struct-member, struct-array and array-element names resolved",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es20-uniforms:FULLY_VALIDATED
+glGetUniformfv,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,float/vector/matrix values read back exactly,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glGetUniformiv,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,int and bool values read back exactly,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
 glGetVertexAttribPointerv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetVertexAttribfv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glGetVertexAttribiv,2.0,GL_ES_VERSION_2_0,yes,es30-hello-triangle,VERTEX_ATTRIB_ARRAY_STRIDE == sizeof(Vertex),FULLY_VALIDATED,,es30-hello-triangle:FULLY_VALIDATED
@@ -110,26 +110,26 @@ glTexParameterfv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glTexParameteri,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glTexParameteriv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glTexSubImage2D,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUniform1f,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUniform1fv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUniform1i,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,sampler unit reassignment resolves the validation failure,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
-glUniform1iv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUniform2f,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUniform2fv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUniform2i,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUniform2iv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUniform3f,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUniform3fv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUniform3i,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUniform3iv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUniform4f,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,per-program colors observed in the image,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
-glUniform4fv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUniform4i,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUniform4iv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUniformMatrix2fv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUniformMatrix3fv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUniformMatrix4fv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
-glUseProgram,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es30-hello-triangle,INVALID_OPERATION for an unlinked program; current program survives deletion / GL_CURRENT_PROGRAM verified,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
+glUniform1f,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform1fv,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform1i,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es20-uniforms,sampler unit reassignment resolves the validation failure / cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es20-uniforms:FULLY_VALIDATED
+glUniform1iv,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform2f,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform2fv,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform2i,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform2iv,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform3f,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform3fv,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform3i,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform3iv,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform4f,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es20-uniforms,per-program colors observed in the image / cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es20-uniforms:FULLY_VALIDATED
+glUniform4fv,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform4i,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform4iv,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniformMatrix2fv,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,column-major element check in the shader + readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniformMatrix3fv,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,column-major element check in the shader + readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniformMatrix4fv,2.0,GL_ES_VERSION_2_0,yes,es20-uniforms,column-major element check in the shader + readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUseProgram,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation es20-uniforms es30-hello-triangle,INVALID_OPERATION for an unlinked program; current program survives deletion / glUniform* without a current program -> INVALID_OPERATION / GL_CURRENT_PROGRAM verified,FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED es20-uniforms:FULLY_VALIDATED es30-hello-triangle:FULLY_VALIDATED
 glValidateProgram,2.0,GL_ES_VERSION_2_0,yes,es20-shader-compilation,"FALSE for sampler2D+samplerCube on one unit, TRUE after fixing the unit",FULLY_VALIDATED,,es20-shader-compilation:FULLY_VALIDATED
 glVertexAttrib1f,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
 glVertexAttrib1fv,2.0,GL_ES_VERSION_2_0,yes,,,NOT_STARTED,,
@@ -196,7 +196,7 @@ glGetSynciv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glGetTransformFeedbackVarying,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glGetUniformBlockIndex,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glGetUniformIndices,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glGetUniformuiv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
+glGetUniformuiv,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,uint values incl. 0x80000001 and 0xFFFFFFFF read back exactly,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
 glGetVertexAttribIiv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glGetVertexAttribIuiv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glInvalidateFramebuffer,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
@@ -222,21 +222,21 @@ glTexStorage2D,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glTexStorage3D,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glTexSubImage3D,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glTransformFeedbackVaryings,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glUniform1ui,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glUniform1uiv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glUniform2ui,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glUniform2uiv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glUniform3ui,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glUniform3uiv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glUniform4ui,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glUniform4uiv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
+glUniform1ui,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform1uiv,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform2ui,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform2uiv,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform3ui,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform3uiv,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform4ui,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniform4uiv,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,cell checked in the shader against the exact value + glGetUniform*v readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
 glUniformBlockBinding,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glUniformMatrix2x3fv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glUniformMatrix2x4fv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glUniformMatrix3x2fv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glUniformMatrix3x4fv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glUniformMatrix4x2fv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
-glUniformMatrix4x3fv,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
+glUniformMatrix2x3fv,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,column-major element check in the shader + readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniformMatrix2x4fv,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,column-major element check in the shader + readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniformMatrix3x2fv,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,column-major element check in the shader + readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniformMatrix3x4fv,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,column-major element check in the shader + readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniformMatrix4x2fv,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,column-major element check in the shader + readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
+glUniformMatrix4x3fv,3.0,GL_ES_VERSION_3_0,yes,es20-uniforms,column-major element check in the shader + readback,FULLY_VALIDATED,,es20-uniforms:FULLY_VALIDATED
 glUnmapBuffer,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glVertexAttribDivisor,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,
 glVertexAttribI4i,3.0,GL_ES_VERSION_3_0,yes,,,NOT_STARTED,,

@@ -62,10 +62,10 @@
 | ES20.COLOR_MASK | 2.0 | fragment-ops | glColorMask per-channel write mask | ES 3.0 §4.2.2 | NOT_STARTED |  |
 | ES20.DITHER | 2.0 | fragment-ops | GL_DITHER enable state (effect implementation-dependent) | ES 3.0 §4.1.9 | NOT_STARTED |  |
 | ES20.SAMPLE_COVERAGE | 2.0 | multisample | glSampleCoverage + SAMPLE_ALPHA_TO_COVERAGE | ES 3.0 §4.1.3 | NOT_STARTED |  |
-| ES20.UNIFORM.SCALAR_VECTOR | 2.0 | uniforms | glUniform{1234}{f | i}[v] and glGetUniform* | NOT_STARTED |  |
-| ES20.UNIFORM.MATRIX | 2.0 | uniforms | glUniformMatrix{234}fv (transpose must be GL_FALSE) | ES 3.0 §2.12.6 | NOT_STARTED |  |
-| ES20.UNIFORM.ARRAY_STRUCT | 2.0 | uniforms | Uniform arrays and structs (element/member locations) | ES 3.0 §2.12.6 | NOT_STARTED |  |
-| ES20.UNIFORM.ACTIVE_QUERY | 2.0 | uniforms | glGetActiveUniform enumeration | ES 3.0 §2.12.6 | NOT_STARTED |  |
+| ES20.UNIFORM.SCALAR_VECTOR | 2.0 | uniforms | glUniform{1234}{f | i}[v] and glGetUniform* | FULLY_VALIDATED | es20-uniforms |
+| ES20.UNIFORM.MATRIX | 2.0 | uniforms | glUniformMatrix{234}fv (transpose must be GL_FALSE) | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-uniforms |
+| ES20.UNIFORM.ARRAY_STRUCT | 2.0 | uniforms | Uniform arrays and structs (element/member locations) | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-uniforms |
+| ES20.UNIFORM.ACTIVE_QUERY | 2.0 | uniforms | glGetActiveUniform enumeration | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-uniforms |
 | ES20.TEXTURE.2D | 2.0 | textures | 2D textures: glGenTextures/glBindTexture/glTexImage2D/glActiveTexture | ES 3.0 §3.8.1 §3.8.3 | NOT_STARTED |  |
 | ES20.TEXTURE.SUBIMAGE | 2.0 | textures | glTexSubImage2D updates | ES 3.0 §3.8.5 | NOT_STARTED |  |
 | ES20.TEXTURE.COPY | 2.0 | textures | glCopyTexImage2D / glCopyTexSubImage2D from framebuffer | ES 3.0 §3.8.5 | NOT_STARTED |  |
@@ -113,8 +113,8 @@
 | ES30.UBO.INTROSPECTION | 3.0 | uniforms | glGetUniformBlockIndex/glGetActiveUniformBlockiv/Name/glGetUniformIndices/glGetActiveUniformsiv | ES 3.0 §2.12.6 | NOT_STARTED |  |
 | ES30.UBO.SHARED | 3.0 | uniforms | One UBO shared by several programs; update between draws | ES 3.0 §2.12.6.2 | NOT_STARTED |  |
 | ES30.UBO.LIMITS | 3.0 | uniforms | MAX_UNIFORM_BLOCK_SIZE / MAX_*_UNIFORM_BLOCKS / MAX_UNIFORM_BUFFER_BINDINGS | ES 3.0 §6.2 | FULLY_VALIDATED | diagnostics-capabilities |
-| ES30.UNIFORM.UINT | 3.0 | uniforms | glUniform{1234}ui[v] / glGetUniformuiv | ES 3.0 §2.12.6 | NOT_STARTED |  |
-| ES30.UNIFORM.NONSQUARE | 3.0 | uniforms | glUniformMatrix{2x3 3x2 2x4 4x2 3x4 4x3}fv | ES 3.0 §2.12.6 | NOT_STARTED |  |
+| ES30.UNIFORM.UINT | 3.0 | uniforms | glUniform{1234}ui[v] / glGetUniformuiv | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-uniforms |
+| ES30.UNIFORM.NONSQUARE | 3.0 | uniforms | glUniformMatrix{2x3 3x2 2x4 4x2 3x4 4x3}fv | ES 3.0 §2.12.6 | FULLY_VALIDATED | es20-uniforms |
 | ES30.TEXTURE.3D | 3.0 | textures | 3D textures glTexImage3D/glTexSubImage3D/glCopyTexSubImage3D | ES 3.0 §3.8.3 | NOT_STARTED |  |
 | ES30.TEXTURE.2D_ARRAY | 3.0 | textures | 2D array textures + layer addressing | ES 3.0 §3.8.3 | NOT_STARTED |  |
 | ES30.TEXTURE.IMMUTABLE | 3.0 | textures | glTexStorage2D/3D + TEXTURE_IMMUTABLE_FORMAT/LEVELS + respecification error | ES 3.0 §3.8.4 | NOT_STARTED |  |

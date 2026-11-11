@@ -2,12 +2,25 @@
   "name": "glsl-compile-tests",
   "title": "GLSL ES compile and link tests",
   "min_es": "3.0",
-  "glsl": ["100", "300 es", "310 es", "320 es"],
+  "glsl": [
+    "100",
+    "300 es",
+    "310 es",
+    "320 es"
+  ],
   "category": "shader-tests",
   "order": 1,
   "summary": "Positive and negative compile/link cases for GLSL ES 1.00-3.20; version gating on older contexts.",
-  "spec": ["GLSL ES 3.00/3.10/3.20 (per-case @spec annotations)", "ES 3.0 §2.12.1, §2.12.3; ES 3.2 §7.3"],
-  "case_dirs": ["glsl100", "glsl300", "glsl310", "glsl320"],
+  "spec": [
+    "GLSL ES 3.00/3.10/3.20 (per-case @spec annotations)",
+    "ES 3.0 §2.12.1, §2.12.3; ES 3.2 §7.3"
+  ],
+  "case_dirs": [
+    "glsl100",
+    "glsl300",
+    "glsl310",
+    "glsl320"
+  ],
   "api": {
     "glCompileShader": "COMPILE_STATUS asserted TRUE/FALSE per case expectation",
     "glLinkProgram": "LINK_STATUS asserted per case expectation (incl. ES 3.2 stage combinations)",
@@ -16,5 +29,11 @@
   },
   "features": [],
   "glsl_features": [],
-  "validation": ["negative", "compile"]
+  "validation": [
+    "negative",
+    "compile"
+  ],
+  "extra_drivers": [
+    "softpipe"
+  ]
 }

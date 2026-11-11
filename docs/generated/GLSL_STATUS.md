@@ -11,15 +11,15 @@
 | GLSL300.PREPROCESSOR | 300 | structure | #define/#undef/#if/#ifdef/#elif/#else/#endif/#error/#pragma/#extension/#line, __LINE__ __FILE__ __VERSION__ GL_ES | GLSL ES 3.00 §3.4 | compile+negative | NOT_STARTED |  |
 | GLSL300.COMMENTS_TOKENS | 300 | structure | Comments; identifiers; reserved words (__ prefix / gl_ prefix errors) | GLSL ES 3.00 §3.5-3.8 | negative | NOT_STARTED |  |
 | GLSL300.TYPES.SCALAR_VECTOR | 300 | types | bool/int/uint/float, vec/ivec/uvec/bvec 2-4 | GLSL ES 3.00 §4.1 | compute-check | NOT_STARTED |  |
-| GLSL300.TYPES.MATRIX | 300 | types | mat2..mat4 and non-square matCxR; column-major indexing | GLSL ES 3.00 §4.1.6 | compute-check | NOT_STARTED |  |
+| GLSL300.TYPES.MATRIX | 300 | types | mat2..mat4 and non-square matCxR; column-major indexing | GLSL ES 3.00 §4.1.6 | compute-check | FULLY_VALIDATED | es20-uniforms |
 | GLSL300.TYPES.SAMPLERS | 300 | types | sampler2D/3D/Cube/2DArray, *Shadow, isampler*/usampler*; opaque rules | GLSL ES 3.00 §4.1.7 | render+negative | NOT_STARTED |  |
-| GLSL300.TYPES.STRUCT | 300 | types | Structures; nested; constructors; equality | GLSL ES 3.00 §4.1.8 | compute-check | NOT_STARTED |  |
-| GLSL300.TYPES.ARRAY | 300 | types | Arrays; array constructors; .length(); assignment/comparison of arrays | GLSL ES 3.00 §4.1.9 | compute-check | NOT_STARTED |  |
+| GLSL300.TYPES.STRUCT | 300 | types | Structures; nested; constructors; equality | GLSL ES 3.00 §4.1.8 | compute-check | FULLY_VALIDATED | es20-uniforms |
+| GLSL300.TYPES.ARRAY | 300 | types | Arrays; array constructors; .length(); assignment/comparison of arrays | GLSL ES 3.00 §4.1.9 | compute-check | FULLY_VALIDATED | es20-uniforms |
 | GLSL300.TYPES.IMPLICIT_CONVERSION | 300 | types | No implicit conversions in ES (int->float is an error) | GLSL ES 3.00 §4.1.10 | negative | NOT_STARTED |  |
 | GLSL300.SCOPE | 300 | structure | Scoping rules; redeclaration errors; shadowing | GLSL ES 3.00 §4.2 | compile+negative | NOT_STARTED |  |
 | GLSL300.QUAL.CONST | 300 | qualifiers | const and constant expressions (incl. built-in calls) | GLSL ES 3.00 §4.3.2-4.3.3 | compile+negative | NOT_STARTED |  |
 | GLSL300.IO.IN_OUT | 300 | interface | in/out storage qualifiers vertex->fragment | GLSL ES 3.00 §4.3.4 §4.3.6 | render | FULLY_VALIDATED | es30-hello-triangle |
-| GLSL300.UNIFORM | 300 | interface | Default-block uniforms incl. arrays/structs | GLSL ES 3.00 §4.3.5 | render | FULLY_VALIDATED | es20-shader-compilation |
+| GLSL300.UNIFORM | 300 | interface | Default-block uniforms incl. arrays/structs | GLSL ES 3.00 §4.3.5 | render | FULLY_VALIDATED | es20-shader-compilation, es20-uniforms |
 | GLSL300.INTERFACE_BLOCK | 300 | interface | Uniform blocks with instance names / arrays of blocks | GLSL ES 3.00 §4.3.7 | render | NOT_STARTED |  |
 | GLSL300.LAYOUT.LOCATION | 300 | interface | layout(location) on VS inputs and FS outputs | GLSL ES 3.00 §4.3.8.1-4.3.8.2 | render | FULLY_VALIDATED | es30-hello-triangle |
 | GLSL300.LAYOUT.BLOCK | 300 | interface | shared/packed/std140, row_major/column_major | GLSL ES 3.00 §4.3.8.3 | state | NOT_STARTED |  |
@@ -28,7 +28,7 @@
 | GLSL300.INTERP.SMOOTH_FLAT | 300 | interface | smooth / flat interpolation qualifiers | GLSL ES 3.00 §4.3.9 | render | NOT_STARTED |  |
 | GLSL300.INTERP.CENTROID | 300 | interface | centroid in/out | GLSL ES 3.00 §4.3.9 | render | NOT_STARTED |  |
 | GLSL300.INTERFACE_MATCHING | 300 | interface | VS output / FS input matching rules + link errors | GLSL ES 3.00 §4.3.10 | negative | FULLY_VALIDATED | es20-shader-compilation |
-| GLSL300.PRECISION.QUALIFIERS | 300 | precision | lowp/mediump/highp + precision ranges | GLSL ES 3.00 §4.5.1-4.5.3 | compute-check | NOT_STARTED |  |
+| GLSL300.PRECISION.QUALIFIERS | 300 | precision | lowp/mediump/highp + precision ranges | GLSL ES 3.00 §4.5.1-4.5.3 | compute-check | FULLY_VALIDATED | es20-uniforms |
 | GLSL300.PRECISION.DEFAULT | 300 | precision | Default precision statements; missing float precision in FS is an error | GLSL ES 3.00 §4.5.4 | negative | FULLY_VALIDATED | es20-shader-compilation, es30-hello-triangle |
 | GLSL300.INVARIANT | 300 | precision | invariant qualifier + #pragma STDGL invariant(all) | GLSL ES 3.00 §4.6 | compile | NOT_STARTED |  |
 | GLSL300.OPERATORS | 300 | expressions | Arithmetic, relational, logical, ternary, comma, ++/-- | GLSL ES 3.00 §5.1 | compute-check | NOT_STARTED |  |
@@ -38,7 +38,7 @@
 | GLSL300.MATRIX_OPS | 300 | expressions | Matrix*vector, vector*matrix, matrix*matrix, component-wise ops | GLSL ES 3.00 §5.10-5.11 | compute-check | NOT_STARTED |  |
 | GLSL300.FUNCTIONS | 300 | statements | Declarations/definitions/overloading/recursion forbidden | GLSL ES 3.00 §6.1 | compile+negative | NOT_STARTED |  |
 | GLSL300.PARAM_QUALIFIERS | 300 | statements | in/out/inout parameters | GLSL ES 3.00 §6.1.1 | compute-check | NOT_STARTED |  |
-| GLSL300.CONTROL_FLOW | 300 | statements | if/else, switch, for, while, do-while, break/continue/return | GLSL ES 3.00 §6.2-6.4 | compute-check | NOT_STARTED |  |
+| GLSL300.CONTROL_FLOW | 300 | statements | if/else, switch, for, while, do-while, break/continue/return | GLSL ES 3.00 §6.2-6.4 | compute-check | FULLY_VALIDATED | es20-uniforms |
 | GLSL300.DISCARD | 300 | statements | discard in fragment shader | GLSL ES 3.00 §6.4 | render | NOT_STARTED |  |
 | GLSL300.BUILTIN_VARS.VS | 300 | builtins | gl_VertexID, gl_InstanceID, gl_Position, gl_PointSize | GLSL ES 3.00 §7.1 | render | FULLY_VALIDATED | es20-shader-compilation |
 | GLSL300.BUILTIN_VARS.FS | 300 | builtins | gl_FragCoord, gl_FrontFacing, gl_PointCoord, gl_FragDepth | GLSL ES 3.00 §7.2 | render | NOT_STARTED |  |

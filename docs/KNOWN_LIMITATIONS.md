@@ -22,6 +22,12 @@
 
 | `diagnostics-capabilities` limits | ES 3.1 Table 20.x: `MAX_SAMPLES` ≥ 4, `MAX_FRAMEBUFFER_SAMPLES` ≥ 4 | softpipe reports 1 for both (no MSAA) while advertising ES 3.1 |
 
+| `es20-uniforms` (38-way branch over 70+ uniforms) | correct execution | softpipe returns wrong comparison results for every branch after the third; same shader is correct on radeonsi, llvmpipe and zink, and each construct works in isolation on softpipe → softpipe backend miscompilation. Reproduce: `GALLIUM_DRIVER=softpipe LIBGL_ALWAYS_SOFTWARE=1 es20-uniforms --headless --validate` |
+
+Because of the last row, softpipe is not used as a general correctness oracle. It runs only where
+its native ES 3.1 boundary is informative (ES 3.2 executables must SKIP, plus version-gating tests
+that opt in with `"extra_drivers": ["softpipe"]`).
+
 These are reported as XFAIL only on the matching driver (`GL_VERSION` contains "Mesa", or
 `GL_RENDERER` contains "softpipe"). Every other driver gets the strict check. Consequence: demos that
 need a multisampled default framebuffer report BLOCKED_ENVIRONMENT on softpipe.

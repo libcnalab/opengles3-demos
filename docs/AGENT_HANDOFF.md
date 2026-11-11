@@ -55,15 +55,15 @@ cmake --build --preset debug --target coverage
 5. Stage 3–4 (textures, framebuffers, ES 3.0 data paths), then `glsl300-builtins` via transform feedback.
 6. `diagnostics-capabilities`.
 
-## In flight (2026-11-11 14:35)
+## In flight (2026-11-11 ~15:45)
 
-Batch 1+2 (16 demos) merged; full suite 148/148 PASS, 197/358 entry points with evidence.
-Batch 3 (Claude subagents, worktrees `.claude/worktrees/agent-*`): backlog items 1,2,3,4,5,7,8,9,11,12,13,15
-(see `docs/agent-briefs/BACKLOG.md`). Integration procedure per branch: merge; `cmake --preset debug`;
-`ctest -R <names>`; view captures; check driver-deviation claims against the spec yourself (two of the
-agent claims so far were wrong: one accept-either check, one extension-dependent rule); record real
-deviations in KNOWN_LIMITATIONS.md via `Check::expect_or_known_deviation`; regenerate coverage; remove
-the worktree.
+Batches 1-3 (28 demos) merged; full suite 220/220 PASS; 239/358 entry points with evidence.
+Batch 4 (ES 3.1, Claude subagents in `.claude/worktrees/agent-*`): backlog items 21-34.
+Integration procedure per branch: merge; `cmake --preset debug`; `ctest -R <names>`; view captures;
+verify every claimed driver deviation yourself against the spec AND the exposed extensions
+(false positives so far: accept-either check, R32F mipmaps, RGB+FLOAT, sRGB accuracy, TF mode under
+es-min); record real deviations in KNOWN_LIMITATIONS.md; regenerate coverage; remove the worktree.
+Codex (after ~22:00): ES 3.0 items 6, 10, 14, 16-20 and 35 via `tools/agents/codex_demo.sh`.
 
 ## Parallel work / Codex
 

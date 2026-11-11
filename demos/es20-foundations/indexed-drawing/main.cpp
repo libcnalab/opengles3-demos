@@ -39,6 +39,7 @@ namespace mgl = metagl;
 namespace
 {
     constexpr int kTiles = 4;                                        // 4 x 4 tiles
+    constexpr int kMinTile = 40;  // smallest tile edge: leaves >= 2 px of clear margin around the mesh (5 % per side)
     constexpr std::array<float, 4> kClear = {0.10f, 0.12f, 0.20f, 1.0f};
 
     // ---------------------------------------------------------------------------------------------
@@ -215,8 +216,12 @@ namespace
                                       pr->x, pr->y, demo::format_rgba(got));
             }
         }
-        for (const Pt corner : {Pt{2, 2}, Pt{static_cast<double>(tile.w - 3), 2}, Pt{2, static_cast<double>(tile.h - 3)},
-                                Pt{static_cast<double>(tile.w - 3), static_cast<double>(tile.h - 3)}})
+        // The mesh spans NDC [-0.9, 0.9], so a clear margin of 0.05 * size runs around it. The corner probes sit
+        // one pixel inside the margin's outer half (at most 2 px in from the tile edge), never on the mesh edge.
+        const auto inset = [](int size) { return std::clamp(static_cast<int>(std::floor(0.05 * size)) - 1, 0, 2); };
+        const double ix = inset(tile.w), iy = inset(tile.h);
+        for (const Pt corner : {Pt{ix, iy}, Pt{static_cast<double>(tile.w) - 1 - ix, iy}, Pt{ix, static_cast<double>(tile.h) - 1 - iy},
+                                Pt{static_cast<double>(tile.w) - 1 - ix, static_cast<double>(tile.h) - 1 - iy}})
         {
             const demo::Rgba8 got = demo::read_pixel(tile.x + static_cast<int>(corner.x), tile.y + static_cast<int>(corner.y));
             if (differs(got, clear, 1))
@@ -263,7 +268,12 @@ namespace
         // =========================================================================================
         void init(demo::Env& env) override
         {
-            pitch_ = std::min(env.width, env.height) / kTiles;
+            // The tiles partition the surface: each one is width/4 x height/4 pixels (not necessarily square).
+            tile_w_ = env.width / kTiles;
+            tile_h_ = env.height / kTiles;
+            if (tile_w_ < kMinTile || tile_h_ < kMinTile)
+                throw demo::Skip(std::format("the 4x4 tiles need at least {0}x{0} px each, i.e. a {1}x{1} surface (got {2}x{3})",
+                                             kMinTile, kTiles * kMinTile, env.width, env.height));
             program_ = demo::build_program(env, "shaders/mesh.vert", "shaders/mesh.frag");
 
             mesh_ = make_vertices();
@@ -404,7 +414,7 @@ namespace
     private:
         [[nodiscard]] Rect tile(int col, int row) const
         {
-            return {col * pitch_, (kTiles - 1 - row) * pitch_, pitch_, pitch_};
+            return {col * tile_w_, (kTiles - 1 - row) * tile_h_, tile_w_, tile_h_};
         }
 
         void set_tile(int col, int row)
@@ -856,7 +866,8 @@ namespace
         }
 
         // ---- members --------------------------------------------------------------------------
-        int pitch_ = 64;
+        int tile_w_ = 64;
+        int tile_h_ = 64;
         mgl::ProgramId program_{};
 
         Vertices mesh_{}, moved_{}, inverted_{}, rotated_{};

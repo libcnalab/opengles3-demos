@@ -20,8 +20,12 @@ checks every result against a CPU reference. It covers:
 
 ## Reading the image
 
-The window is a 4 × 4 grid of 64-pixel tiles (row 0 at the top). Each tile is one `glDrawElements` (or
-`glDrawArrays`) call into its own viewport.
+The window is a 4 × 4 grid of tiles (row 0 at the top) that partitions the surface: each tile is
+`width / 4` × `height / 4` pixels, so on a wide or tall surface the tiles (and the mesh in them) are
+stretched. Each tile is one `glDrawElements` (or `glDrawArrays`) call into its own viewport. The mesh
+spans NDC ±0.9, leaving a clear margin of 5 % of the tile on every side; a tile must be at least 40 px
+in each direction so that the margin is 2 px wide. **Minimum surface: 160x160**; smaller surfaces report
+`SKIP_UNSUPPORTED`.
 
 | | col 0 | col 1 | col 2 | col 3 |
 |---|---|---|---|---|

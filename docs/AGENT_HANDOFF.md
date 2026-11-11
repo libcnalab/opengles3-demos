@@ -53,26 +53,39 @@ cmake --build --preset debug --target coverage
 4. Phase 6 audit (coverage gaps: run `coverage` and read docs/generated/COVERAGE_SUMMARY.md), then phase 7
    final verification on a clean build.
 
-## In flight (2026-11-11 20:10): continuation directive (rigour over statistics)
+## In flight (2026-11-11 21:00): continuation directive (rigour over statistics)
 
-The owner's continuation superprompt sets the priorities: correctness, then real gaps, then test reliability,
-reproducibility, independent validation and education.
-Done in this phase:
-- **meta-gl** is read-only again (AGENTS.md rule 2, policy conflict). The required revision is documented in
-  docs/METAGL_DEPENDENCY.md: with public `develop`, 17 executables do not build.
-- **Evidence traceability:** result JSON records the executable and run time. The generator ignores stale results,
-  states the source revision, and lints `api` claims against the code.
-- **docs/generated/DEVIATIONS.md** holds the per-run XFAIL/XPASS evidence. Every 'Mesa' match reproduces on all
-  three Mesa drivers.
-- **ANGLE** (Android SDK build, native ES 3.1, Vulkan/RADV) is in the matrix as driver `angle`, mode `native`.
-  First run: 55/82 pass, 27 fail. **The suite is not green on ANGLE until triage is done.**
-Running Claude subagents:
-- MSAA resolve assumptions: demote non-normative resolve checks (framebuffer-blit-msaa, flat-centroid,
-  multisample-default-framebuffer).
-- ANGLE triage, three groups per docs/agent-briefs/ANGLE_TRIAGE_BRIEF.md: textures/ES2, FBO/queries/TF,
-  programs/GLSL. flat-centroid and framebuffer-blit-msaa are left to the MSAA agent and triaged on ANGLE after it.
-Codex audits (tools/agents/codex_audit.sh, AUDIT_BRIEF.md) are prepared but not started. Start them when CPU
-capacity frees up: the limit is 8 cores in total, and 4 agents × -j2 run now.
+The owner's continuation directive sets the priorities: correctness, gaps, test reliability, reproducibility,
+independent validation, then education.
+
+**Done in this phase**
+- **meta-gl:** edits are authorized again and the branch `opengles3-demos/enum-gaps` is pushed to origin.
+  docs/METAGL_DEPENDENCY.md documents it: with public `develop`, 17 executables do not build.
+- **Evidence:**
+  - Result JSON records the executable, run time and override value.
+  - A run writes `CRASHED` first, so crashes cannot vanish.
+  - The generator ignores stale results (code vs. exe mtime, run-time inputs vs. run time), lints `api` claims
+    against the code, and writes docs/generated/DEVIATIONS.md (per-run XFAIL/XPASS evidence).
+- **ANGLE** (Android SDK build 2.1.17841, native ES 3.1, Vulkan/RADV) runs as driver `angle`, mode `native`.
+  Triage done for 22 executables:
+  - Most failures were real ANGLE deviations (KNOWN_LIMITATIONS, ANGLE table).
+  - Test bugs fixed: es31-indirect-draw was missing a barrier before reusing the command buffer; es31-ssbo-std430
+    asserted length() rounding.
+  - Two of our readings were wrong and are corrected: atomic counters without binding; SAMPLE_BUFFERS of an
+    attachment-less FBO.
+  - Three readings were re-verified because ANGLE agrees with Mesa: occlusion-query reuse,
+    PROGRAM_SEPARABLE after link, 64-bit VERTEX_BINDING_OFFSET.
+- **MSAA:** resolve-dependent hard checks in three demos were demoted to printed observations or replaced by
+  per-sample checks (texelFetch on sampler2DMS, stencil/occlusion counting). VALIDATION.md is updated.
+
+**Running**
+- A Claude subagent on the last 5 ANGLE failures: flat-centroid, framebuffer-blit-msaa, and the crashes in
+  immutable-storage, program-binary and image-load-store (crashes go into a child process).
+- Codex phase 6 audits: background job from 22:05, two waves of three groups (es20, es31, es32, then es30a,
+  es30b, tests), per docs/agent-briefs/AUDIT_BRIEF.md. Reports go to
+  ../opengles3-demos-worktrees/audit-*.report.md. Triage each finding against the spec.
+
+**Last full run:** 551/556. The 5 failures are the ANGLE items above.
 
 ## Parallel work / Codex
 

@@ -113,6 +113,7 @@
 | `es31-stencil-texturing-and-level-queries` | ES 3.2 §8.11.3: compressed formats report the post-decompression component types | RGB8_ETC2 R/G/B types read NONE |
 | `es31-stencil-texturing-and-level-queries`, `es31-multisample-textures` | ES 3.1 §8.8 / 3.2 §8.11.3: multisample textures have only level 0 | `GetTexLevelParameteriv(…, level 1)` raises no error |
 | `es31-multisample-textures` | ES 3.2 §8.14.4: `GenerateMipmap` target list | `TEXTURE_2D_MULTISAMPLE` raises no error (INVALID_ENUM expected) |
+| intermittent (not reproduced) `es31-image-load-store` | correct execution | one SIGSEGV of `es31-image-load-store:zink:es-min` during a full `ctest -j6` run on 2026-11-11. Not reproduced in 16 sequential and 90 parallel (3×15×2) repeats. No check is changed; if it recurs, isolate the call in a child process |
 
 Not deviations (verified during integration): `es31-framebuffer-no-attachments` SAMPLE_BUFFERS/SAMPLES of an
 attachment-less FBO with default samples 4 was our misreading. §9.2.3.1 derives the queried values only from

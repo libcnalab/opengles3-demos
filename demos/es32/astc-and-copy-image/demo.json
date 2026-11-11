@@ -1,0 +1,66 @@
+{
+  "name": "es32-astc-and-copy-image",
+  "title": "ASTC textures and glCopyImageSubData",
+  "min_es": "3.2",
+  "glsl": [
+    "320 es"
+  ],
+  "category": "es32",
+  "order": 4570,
+  "summary": "Hand-encoded ASTC LDR blocks (void-extent constant colours, CEM 0 luminance, CEM 4 luminance + alpha, CEM 8 RGB with and without blue contraction, CEM 12 RGBA; 2- and 3-bit weights on 4x4 and 3x3 grids with bilinear infill; HDR void extent, reserved block mode and an oversized weight grid as error blocks) decoded texel by texel against a CPU decoder written from the Khronos Data Format Specification, in linear and sRGB formats and in the 4x4, 5x4, 6x6 and 12x12 footprints (with partial edge blocks); COMPRESSED_TEXTURE_FORMATS lists all 28 ASTC formats; CompressedTexImage2D / CompressedTexSubImage2D imageSize and block-alignment rules for every footprint. glCopyImageSubData texture -> texture, renderbuffer -> texture -> renderbuffer, several 2D array layers in one call, array layers -> cube faces -> 2D, RGBA8UI <-> R32F reinterpretation, ASTC / ETC2 / EAC blocks <-> RGBA32UI / RGBA16UI texels, ASTC linear -> sRGB, DEPTH_COMPONENT32F and DEPTH24_STENCIL8 (depth and stencil), completeness (mipmap rules apply, format rules do not) and 29 defined CopyImageSubData errors. The picture: the 16-block ASTC tile set and a 32 x 32 sunset assembled from it with 64 glCopyImageSubData calls, every pixel compared with the CPU decoder at any surface size.",
+  "spec": [
+    "ES 3.2 §8.7 Compressed Texture Images (NUM_COMPRESSED_TEXTURE_FORMATS / COMPRESSED_TEXTURE_FORMATS, Table 8.17, CompressedTexImage2D / CompressedTexSubImage2D: imageSize consistent with the format and dimensions, format must match, offsets on block boundaries, width / height a multiple of the block size unless the region ends at TEXTURE_WIDTH / TEXTURE_HEIGHT, untouched blocks preserved)",
+    "ES 3.2 Appendix C, C.1 ASTC Compressed Texture Image Formats (Table C.1, LDR profile only, sRGB conversion of R, G, B only); Khronos Data Format Specification 1.1 chapter 18: §18.5 (error colour, magenta or NaN for linear decode), §18.9 block layout, §18.10 block mode (Tables 81, 82), §18.11 / §18.14 colour endpoint modes 0, 4, 8, 12 and blue_contract, §18.12 integer sequence encoding (bits), §18.16 - §18.18 weight decoding, unquantization and infill, §18.19 weight application (UNORM16 interpolation, 0x80 expansion for sRGB, decode_float16 / decode_unorm8), §18.22 data size determination, §18.23 void-extent blocks, §18.24 illegal encodings, §18.25 LDR profile",
+    "ES 3.2 §16.2.2 Copying Between Images (CopyImageSubData: texel / block correspondence of Table 16.3, view classes of Table 16.4, slices and cube faces selected by z in the order of Table 8.20, reinterpretation as for image bindings (§8.23), completeness ignoring format-based rules, every error of the section)",
+    "ES 3.2 §8.17 Texture Completeness (mipmap completeness required by a mipmapping MIN_FILTER; format-based rules), §8.21 sRGB Texture Color Conversion (equation 8.14), §8.16 / §8.10 DEPTH_STENCIL_TEXTURE_MODE, §2.3.1 Errors (a failed command has no effect), §2.3.5.2 conversion to normalized fixed point (one of the two closest values)",
+    "GLSL ES 3.20 §8.9.2 Texel Lookup Functions (texelFetch on sampler2D / usampler2D), §8.9.1 textureSize, §8.3 floatBitsToUint"
+  ],
+  "api": {
+    "glGetIntegerv": "NUM_COMPRESSED_TEXTURE_FORMATS and COMPRESSED_TEXTURE_FORMATS: exactly NUM values written, all 28 ASTC LDR and all 10 ETC2 / EAC formats present",
+    "glCompressedTexImage2D": "RGBA_ASTC_4x4 / SRGB8_ALPHA8_ASTC_4x4 16 x 16, RGBA_ASTC_6x6 17 x 10, error-block textures, RGBA8_ETC2_EAC / RGB8_ETC2 8 x 4: every texel decoded and compared; a (2 bw + 1) x (bh + 3) image for each of the 14 footprints accepted with imageSize = ceil(w / bw) * ceil(h / bh) * 16 (TEXTURE_WIDTH / HEIGHT read back) and INVALID_VALUE with one byte less; INVALID_VALUE for the 6x6 image with one block too few",
+    "glCompressedTexSubImage2D": "whole-level uploads into immutable 5x4 (15 x 8) and 12x12 (30 x 30) storage; block-aligned updates, a 6-texel-wide / -high region ending at the texture edge; INVALID_OPERATION for misaligned x / y offsets, a non-multiple width / height not ending at the edge, a mismatched format (sRGB vs linear, 4x4 vs 12x12); INVALID_VALUE for imageSize too small or too large; the decoded result proves untouched blocks preserved and rejected calls without effect",
+    "glTexStorage2D": "immutable ASTC (4x4 mosaic and sRGB copy target, 5x4, 12x12) and RGB8_ETC2 storage, RGBA8 / RGBA8UI / R32F / RGBA32UI / RGBA16UI / DEPTH_COMPONENT32F / DEPTH24_STENCIL8 / RG8 / RGBA16F 2D textures and an RGBA8 cube map, all read back after the copies",
+    "glTexStorage3D": "RGBA8 2D array textures (4 and 6 layers) read back layer by layer",
+    "glTexSubImage2D": "RGBA8, RGBA_INTEGER (RGBA8UI, RGBA32UI raw blocks), RED / FLOAT, DEPTH_COMPONENT / FLOAT and DEPTH_STENCIL / UNSIGNED_INT_24_8 uploads, read back through the copies",
+    "glTexSubImage3D": "per-layer RGBA8 uploads of the 2D arrays",
+    "glTexImage2D": "a mutable level-0-only RGBA8 texture: not complete with the default MIN_FILTER (copy rejected), complete with NEAREST (copy accepted, texels read back)",
+    "glCopyImageSubData": "ASTC -> ASTC (64-block mosaic), RGBA32UI -> ASTC (one texel = one block), ASTC -> RGBA32UI (4x4 and 12x12 including partial edge blocks), ASTC linear -> sRGB, RGBA8_ETC2_EAC -> RGBA32UI, RGB8_ETC2 <-> RGBA16UI, RGBA8 texture -> texture, renderbuffer -> texture, texture -> renderbuffer, 2D array layers 1..2 -> 2..3, array layers 0..5 -> cube faces, cube face 4 -> 2D, RGBA8UI <-> R32F, DEPTH_COMPONENT32F and DEPTH24_STENCIL8 sub-regions: all read back bit-exactly (decoded where compressed); INVALID_ENUM for TEXTURE_BUFFER and a cube face selector; INVALID_VALUE for a deleted name, invalid source / destination level, negative width / depth, regions outside the source, the destination, the array layers and the cube faces, misaligned compressed offsets and widths; INVALID_OPERATION for incomplete source / destination, ten incompatible format pairs (RG8, RGBA16F, ASTC 12x12 vs 4x4, ASTC vs ETC2, texel size vs block size both ways, depth vs colour, different depth formats) and a sample-count mismatch; the rejected calls leave the destinations unchanged",
+    "glRenderbufferStorage": "RGBA8 8 x 8 renderbuffer used as copy source and destination",
+    "glRenderbufferStorageMultisample": "4-sample RGBA8 renderbuffer: copy to a single-sample texture is INVALID_OPERATION",
+    "glClearBufferfv": "two rectangles in the source renderbuffer (one scissored), read back and found in the copy destination",
+    "glTexParameteri": "MIN_FILTER (completeness; LINEAR on an RGBA32UI copy destination does not block the copy), DEPTH_STENCIL_TEXTURE_MODE DEPTH_COMPONENT / STENCIL_INDEX to read depth and stencil of DEPTH24_STENCIL8",
+    "glGetTexLevelParameteriv": "TEXTURE_WIDTH / TEXTURE_HEIGHT of the compressed images of every footprint",
+    "glFramebufferTexture2D": "2D textures and each cube face attached for read-back",
+    "glFramebufferTextureLayer": "each 2D array layer attached for read-back",
+    "glFramebufferRenderbuffer": "the renderbuffer attached for clear and read-back",
+    "glReadPixels": "RGBA8 read-back of textures, faces, layers, the renderbuffer and the whole default framebuffer (picture check at any surface size)",
+    "glDispatchCompute": "texelFetch of every texel of every compressed and uncompressed texture into a shader storage buffer (floats as raw bits)",
+    "glMapBufferRange": "reads the compute results",
+    "glDrawArrays": "the two picture panels, every pixel compared with the CPU decoder",
+    "glViewport": "panel rectangles derived from the surface size, verified by the picture check",
+    "glDeleteTextures": "cleanup; final glGetError == NO_ERROR"
+  },
+  "features": [
+    "ES32.TEXTURE.ASTC",
+    "ES32.TEXTURE.COPY_IMAGE",
+    "ES30.TEXTURE.COMPRESSED_QUERY",
+    "ES30.TEXTURE.SRGB",
+    "ES31.TEXTURE.STENCIL_TEXTURING"
+  ],
+  "glsl_features": [
+    "GLSL300.FN.TEXTURE.FETCH"
+  ],
+  "validation": [
+    "pixel-reference",
+    "readback",
+    "state-query",
+    "gl-error",
+    "negative",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-opus-5.5 (subagent)",
+    "notes": "Captures viewed at 256x256, 800x800, 640x480, 333x777 (radeonsi), 640x480 (zink) and 1000x130 (llvmpipe). Two panels fill the surface with a thin dark margin, side by side when wide and stacked when tall. Left / top: the 4 x 4 tile set of flat-texel blocks, with sand, deep sea and white at the bottom, water ramps, the blue-and-gold checker and the misty blue-contraction ramp above them, then the horizon sky, the pale sun and the grey clouds, and three purple-to-orange sky ramps at the top. Right / bottom: the mosaic reads as a sunset: an indigo-to-gold sky with two pale clouds and two purple star bumps, a square pale-yellow sun flanked by orange glow columns, a grey-blue misty band at the horizon, striped blue waves, a gold-and-blue glitter column below the sun, deep water, and a sand beach with pebbles, a grey foam tile and a black rock. Texels are stretched (up to 2:1 on square surfaces) but crisp, with no seams, half texels or empty areas; no magenta error colour appears in the picture."
+  }
+}

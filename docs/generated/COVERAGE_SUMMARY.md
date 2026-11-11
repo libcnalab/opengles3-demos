@@ -3,7 +3,7 @@
 
 Result directories: build/debug/test-results
 
-Source revision: 8bca1dd (with uncommitted changes)
+Source revision: 894cbab (with uncommitted changes)
 
 Only results from the current executables count. A result is ignored when its executable was
 rebuilt after the run, or when the demo's sources, `common/` or the CMake glue are newer than the
@@ -41,5 +41,5 @@ ES 3.2 driver, not conformance of a native ES 3.0/3.1 implementation (see VALIDA
 
 | status | count |
 |---|---|
-| FULLY_VALIDATED | 81 |
+| FULLY_VALIDATED | 82 |
 | VISUALLY_VERIFIED | 1 |

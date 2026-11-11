@@ -2,7 +2,8 @@
 
 Every executable in the suite, in the order a reader should study them (the `order` field of each
 `demo.json`). Live status per driver and ES version: **[generated/DEMO_STATUS.md](generated/DEMO_STATUS.md)**.
-Executables marked ★ are 3D scenes, good starting points to see what the API pieces add up to.
+Executables marked ★ are 3D scenes, good starting points to see what the API pieces add up to. The capstone
+`es30-interactive-3d-scene` combines them in one explorable scene (mouse look, WASD, technique toggles 1-6).
 
 ## Stage 1–3: ES 2.0 foundations on an ES 3.x context
 
@@ -30,6 +31,7 @@ Executables marked ★ are 3D scenes, good starting points to see what the API p
 
 | executable | min ES | what it teaches |
 |---|---|---|
+| [`es30-interactive-3d-scene`](../demos/es30/interactive-3d-scene/README.md) ★ | 3.0 | Interactive 3D scene (capstone: camera, lighting, textures, normal mapping, shadows, instancing, skybox, fog) |
 | [`es30-hello-triangle`](../demos/es30/hello-triangle/README.md) | 3.0 | Hello Triangle |
 | [`es30-vertex-array-objects`](../demos/es30/vertex-array-objects/README.md) | 3.0 | Vertex array objects, integer and packed attributes |
 | [`es30-instancing`](../demos/es30/instancing/README.md) | 3.0 | Instancing, divisors, primitive restart |

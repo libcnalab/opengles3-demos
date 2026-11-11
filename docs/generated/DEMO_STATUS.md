@@ -51,6 +51,7 @@
 | es30-shadow-mapping | 3.0 | es30 | Shadow Mapping | FULLY_VALIDATED | angle:native=PASS gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-depth-textures | 3.0 | es30 | Depth Textures | FULLY_VALIDATED | angle:native=PASS gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es30-post-processing | 3.0 | es30 | Post-processing: gamma, blur, Sobel, bloom, depth of field | FULLY_VALIDATED | angle:native=PASS gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
+| es30-interactive-3d-scene | 3.0 | es30 | Interactive 3D Scene (capstone) | FULLY_VALIDATED | angle:native=PASS gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es31-compute-basics | 3.1 | es31 | Compute shaders: dispatch, built-ins, limits | FULLY_VALIDATED | angle:native=PASS gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es31-compute-shared-memory | 3.1 | es31 | Compute shaders: shared memory and barriers | FULLY_VALIDATED | angle:native=PASS gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |
 | es31-ssbo-std430 | 3.1 | es31 | Shader storage buffers and std430 | FULLY_VALIDATED | angle:native=PASS gpu:es-max=PASS gpu:es-min=PASS llvmpipe:es-max=PASS llvmpipe:es-min=PASS zink:es-max=PASS zink:es-min=PASS |

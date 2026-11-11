@@ -1,6 +1,8 @@
 #version 310 es
-// Shows a texture produced by the compute shaders, one texel per u_scale x u_scale block of the cell
-// that starts at window pixel u_origin (texelFetch only: no filtering). u_mode selects the sampler:
+// Shows a texture produced by the compute shaders, stretched over the u_cell-pixel cell whose lower-left window
+// pixel is u_origin (texelFetch only: no filtering). Pixel p of the cell shows texel p * size / u_cell (integer
+// division, size = textureSize of the level), so the CPU can name the texel behind every pixel exactly.
+// u_mode selects the sampler:
 //   0  sampler2D (RGBA8) at level u_level
 //   1  usampler2DArray (R32UI), layer u_layer
 //   2  usampler3D (R32UI), slice u_layer
@@ -17,8 +19,8 @@ uniform highp usampler2D u_utex;       // unit 3
 uniform int u_mode;
 uniform int u_level;
 uniform int u_layer;
-uniform int u_scale;
-uniform ivec2 u_origin;
+uniform ivec2 u_origin;     // lower-left window pixel of the cell
+uniform ivec2 u_cell;       // cell size in pixels
 uniform vec2 u_value_scale;
 layout(location = 0) out vec4 o_color;
 
@@ -32,15 +34,15 @@ vec3 tagged_color(uint v)
 
 void main()
 {
-    ivec2 t = (ivec2(gl_FragCoord.xy) - u_origin) / u_scale;
+    ivec2 p = ivec2(gl_FragCoord.xy) - u_origin;  // gl_FragCoord is the pixel centre: truncation gives the pixel
     vec3 c;
     if (u_mode == 0)
-        c = texelFetch(u_tex2d, t, u_level).rgb;
+        c = texelFetch(u_tex2d, p * textureSize(u_tex2d, u_level) / u_cell, u_level).rgb;
     else if (u_mode == 1)
-        c = tagged_color(texelFetch(u_uarr, ivec3(t, u_layer), 0).x);
+        c = tagged_color(texelFetch(u_uarr, ivec3(p * textureSize(u_uarr, 0).xy / u_cell, u_layer), 0).x);
     else if (u_mode == 2)
-        c = tagged_color(texelFetch(u_u3d, ivec3(t, u_layer), 0).x);
+        c = tagged_color(texelFetch(u_u3d, ivec3(p * textureSize(u_u3d, 0).xy / u_cell, u_layer), 0).x);
     else
-        c = vec3(float(texelFetch(u_utex, t, 0).x) * u_value_scale.x + u_value_scale.y);
+        c = vec3(float(texelFetch(u_utex, p * textureSize(u_utex, 0) / u_cell, 0).x) * u_value_scale.x + u_value_scale.y);
     o_color = vec4(c, 1.0);
 }

@@ -48,11 +48,11 @@
     "glReadPixels": "RGBA/UNSIGNED_BYTE: every texel of the blur and Sobel outputs against CPU references, the six cube faces, 8 probes per display cell of the capture; RGBA_INTEGER/UNSIGNED_INT: the four slices of an R32UI 3D texture after a non-layered slice store (crash-isolated child process)",
     "glUseProgram": "compute, display and fragment image programs",
     "glGetUniformLocation": "display, dump and fragment program uniforms",
-    "glUniform1i": "sampler units, level, layer, scale, mode of the dump and display programs",
-    "glUniform2i": "texture size of the dump program, cell origin of the display programs",
+    "glUniform1i": "sampler units, level, layer, mode of the dump and display programs",
+    "glUniform2i": "texture size of the dump program, cell origin and cell size of the display programs (the grid is laid out from the surface size)",
     "glUniform2f": "gray ramp scale of the display program",
     "glDrawArrays": "fragment-shader imageStore pass (64x64 pixels) and the display cells (a triangle from gl_VertexID, empty VAO); the written texels and the capture pixels are compared with the model",
-    "glViewport": "cell and image-store viewports",
+    "glViewport": "the full-surface viewport, the 16 cell viewports of the 4 x 4 grid (k * width / 4, k * height / 4) and the 64 x 64 image-store viewport",
     "glDeleteBuffers": "cleanup",
     "glDeleteFramebuffers": "cleanup",
     "glDeleteProgram": "cleanup"
@@ -82,7 +82,7 @@
   ],
   "visual_review": {
     "date": "2026-11-11",
-    "by": "claude-sonnet (subagent)",
-    "notes": "256x256 radeonsi es-max capture viewed at 1x and 3x (llvmpipe and zink differ by at most 1/255 per channel). 4x4 sheet of 64x64 cells. Row 0: the gradient source with yellow disc, blue square and a pink/white checker patch; the same image blurred (soft disc edge, blurred square); the Sobel result (white outlines of disc, square and checker on black); the source color-inverted by the fragment shader (blue disc, yellow square). Row 1: four 8x8 ramps of the 2D array, gray / red / BLUE / yellow tints (layer 2 blue = the non-layered overwrite). Row 2: four 3D slices green / BLUE / blue / magenta (slice 1 = the single-slice overwrite). Row 3: flat orange level 0, a yellow-green inverted gradient for level 1, flat orange level 2, and a gray ramp black at the bottom left to white at the top right written by the fragment imageStore."
+    "by": "claude-opus (subagent)",
+    "notes": "Window-size fix: 1000x200 llvmpipe capture viewed. The 4x4 grid fills the whole surface with 250x50 cells, each texture stretched over its cell (64x64 images minified vertically, 8x8 ramps as 8 bands), same content as below. Also viewed: 333x777 (83x194 cells, fills the window) and the 256x256 radeonsi es-max capture, unchanged from the earlier review. Earlier review: 256x256 radeonsi es-max capture viewed at 1x and 3x (llvmpipe and zink differ by at most 1/255 per channel). 4x4 sheet of 64x64 cells. Row 0: the gradient source with yellow disc, blue square and a pink/white checker patch; the same image blurred (soft disc edge, blurred square); the Sobel result (white outlines of disc, square and checker on black); the source color-inverted by the fragment shader (blue disc, yellow square). Row 1: four 8x8 ramps of the 2D array, gray / red / BLUE / yellow tints (layer 2 blue = the non-layered overwrite). Row 2: four 3D slices green / BLUE / blue / magenta (slice 1 = the single-slice overwrite). Row 3: flat orange level 0, a yellow-green inverted gradient for level 1, flat orange level 2, and a gray ramp black at the bottom left to white at the top right written by the fragment imageStore."
   }
 }

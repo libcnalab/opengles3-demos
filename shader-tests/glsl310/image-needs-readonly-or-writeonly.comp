@@ -1,0 +1,7 @@
+#version 310 es
+// @expect: compile-fail
+// @spec: GLSL ES 3.10 §4.9 - except for r32f/r32i/r32ui, image variables must be readonly or writeonly
+// @feature: GLSL310.MEMORY_QUALIFIERS
+layout(local_size_x = 1) in;
+layout(rgba8, binding = 0) uniform highp image2D u_img;
+void main() { imageStore(u_img, ivec2(0), imageLoad(u_img, ivec2(1))); }

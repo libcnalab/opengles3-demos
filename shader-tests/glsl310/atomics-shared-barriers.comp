@@ -1,0 +1,29 @@
+#version 310 es
+// @expect: link-pass
+// @spec: GLSL ES 3.10 §4.4.6 Atomic Counter Layout Qualifiers, §4.3.8 Shared Variables, §8.10-§8.11, §8.15-§8.16
+// @feature: GLSL310.ATOMIC_COUNTERS
+// @feature: GLSL310.FN.ATOMIC_MEMORY
+// @feature: GLSL310.SHARED
+// @feature: GLSL310.BARRIERS
+layout(local_size_x = 64) in;
+layout(binding = 0, offset = 0) uniform atomic_uint u_counter;
+layout(std430, binding = 1) buffer Totals { uint sum; int minimum; uint mask; };
+shared uint s_partial[64];
+void main()
+{
+    uint i = gl_LocalInvocationIndex;
+    s_partial[i] = i;
+    memoryBarrierShared();
+    barrier();
+    if (i == 0u)
+    {
+        uint total = 0u;
+        for (int k = 0; k < 64; ++k) total += s_partial[k];
+        atomicAdd(sum, total);
+    }
+    atomicMin(minimum, int(i));
+    atomicOr(mask, 1u << (i & 31u));
+    atomicCounterIncrement(u_counter);
+    memoryBarrierBuffer();
+    groupMemoryBarrier();
+}

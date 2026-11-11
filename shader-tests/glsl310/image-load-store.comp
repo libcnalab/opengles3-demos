@@ -1,0 +1,18 @@
+#version 310 es
+// @expect: link-pass
+// @spec: GLSL ES 3.10 §4.4.7, §4.9 Memory Access Qualifiers, §8.14 Image Functions
+// @feature: GLSL310.IMAGES
+// @feature: GLSL310.FN.IMAGE
+// @feature: GLSL310.MEMORY_QUALIFIERS
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(rgba8, binding = 0) readonly uniform highp image2D u_src;
+layout(rgba8, binding = 1) writeonly restrict uniform highp image2D u_dst;
+layout(r32f, binding = 2) coherent uniform highp image2D u_rw;   // r32f may be read AND written
+void main()
+{
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(u_src);
+    vec4 c = imageLoad(u_src, min(p, size - 1));
+    imageStore(u_dst, p, c.bgra);
+    imageStore(u_rw, p, imageLoad(u_rw, p) + vec4(1.0));
+}

@@ -1,0 +1,7 @@
+#version 310 es
+// @expect: compile-fail
+// @spec: GLSL ES 3.10 §4.4.7 Format Layout Qualifiers - "Any image variable must specify a format layout qualifier"
+// @feature: GLSL310.IMAGES
+layout(local_size_x = 1) in;
+layout(binding = 0) writeonly uniform highp image2D u_img;
+void main() { imageStore(u_img, ivec2(0), vec4(1.0)); }

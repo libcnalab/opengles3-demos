@@ -1,0 +1,7 @@
+#version 310 es
+// @expect: compile-fail
+// @spec: GLSL ES 3.10 §4.4.6 - binding >= gl_MaxAtomicCounterBindings is a compile-time error
+// @feature: GLSL310.ATOMIC_COUNTERS
+layout(local_size_x = 1) in;
+layout(binding = 4096, offset = 0) uniform atomic_uint u_counter;
+void main() { atomicCounterIncrement(u_counter); }

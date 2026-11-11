@@ -49,13 +49,20 @@ namespace
 {
     constexpr int kLayerSize = lr::kLayerSize;  // 64
     constexpr int kLayers = 4;                  // array layers and 3D slices
-    // Cube face size. A net tile of T pixels samples (px + 0.5) / T * kCubeSize: when kCubeSize / T is an EVEN integer every sample lies exactly
-    // on a texel boundary and the model cannot say which texel the GPU returns. 208 = 13 x 16 avoids that for the usual windows: the net tile is
-    // 32 px at 256x256 (6.5 texels per pixel: the samples fall a quarter texel from a boundary), 80 px at 640x480 (2.6) and 112 px at 900x900 (1.86).
+    // Cube face size (the faces were 64 x 64 at first; larger faces give smoother skybox and reflection edges). Any value works: samples that
+    // fall on a texel boundary of a scaled tile are compared against both neighbours.
     constexpr int kCubeSize = 208;
     constexpr float kEnvNear = 0.5f, kEnvFar = 20.0f;
     constexpr float kTime0 = 0.9f;
     constexpr float kPreviewFovDegrees = 62.0f;
+
+    // tan(half the vertical field of view) of the mirror-ball cell. The vertical field of view is 62 degrees; for a cell that is taller than wide
+    // the HORIZONTAL field of view stays 62 degrees instead (so the ball always fits), capped at a vertical angle of 120 degrees.
+    float preview_tan_half(float aspect)
+    {
+        const float half = std::tan(demo::math::radians(kPreviewFovDegrees) * 0.5f);
+        return aspect >= 1.0f ? half : std::min(half / aspect, std::tan(demo::math::radians(60.0f)));
+    }
 
     mgl::UniformLocation loc(int n) { return mgl::UniformLocation{n}; }
 
@@ -366,7 +373,7 @@ namespace
             const float az = 0.55f + 0.5f * t, el = demo::math::radians(16.0f), dist = 3.0f;
             c.eye = {dist * std::cos(el) * std::cos(az), dist * std::sin(el), dist * std::cos(el) * std::sin(az)};
             const Mat4 view = demo::math::look_at(c.eye, {0, 0, 0}, {0, 1, 0});
-            const Mat4 proj = demo::math::perspective(demo::math::radians(kPreviewFovDegrees), aspect, 0.5f, 20.0f);
+            const Mat4 proj = demo::math::perspective(2.0f * std::atan(preview_tan_half(aspect)), aspect, 0.5f, 20.0f);
             c.viewproj = proj * view;
             c.inverse = invert(c.viewproj);
             return c;
@@ -798,19 +805,31 @@ namespace
         // validate(): the displayed cells
         // =====================================================================================================
         // NEAREST sampling of a texture of `n` texels over a tile of `tile` pixels: pixel p (centre p + 0.5) reads texel floor((p + 0.5) / tile * n).
-        // False when the sample point is within 0.02 texel of a texel boundary (the GPU may round either way there).
-        static bool nearest_texel(int p, int tile, int n, int* texel)
+        // When the sample point is within 0.02 texel of a texel boundary, float rounding inside the GPU decides which of the two neighbours is
+        // returned, so BOTH are candidates (a boundary at the edge of the texture leaves one).
+        struct TexelCandidates
+        {
+            std::array<int, 2> texel{};
+            int count = 0;
+        };
+        static TexelCandidates nearest_texels(int p, int tile, int n)
         {
             const float c = (static_cast<float>(p) + 0.5f) / static_cast<float>(tile) * static_cast<float>(n);
-            const float frac = c - std::floor(c);
-            if (frac < 0.02f || frac > 0.98f) return false;
-            *texel = static_cast<int>(std::floor(c));
-            return true;
+            const float boundary = std::round(c);
+            TexelCandidates r;
+            if (std::fabs(c - boundary) < 0.02f)
+            {
+                for (const int t : {static_cast<int>(boundary) - 1, static_cast<int>(boundary)})
+                    if (t >= 0 && t < n) r.texel[static_cast<std::size_t>(r.count++)] = t;
+            }
+            else
+                r.texel[static_cast<std::size_t>(r.count++)] = static_cast<int>(std::floor(c));
+            return r;
         }
 
         struct TileStats
         {
-            std::size_t compared = 0, tile_compared = 0, ambiguous = 0, bad = 0;
+            std::size_t compared = 0, tile_compared = 0, either = 0, room_edge = 0, bad = 0;  // either: samples on a texel boundary (several candidates)
             std::string first_bad;
         };
 
@@ -820,14 +839,17 @@ namespace
             const int cw = cell_w_, ch = cell_h_;
             (void)env;
             const lr::Rgba8 clear = kCellClear;
-            auto compare_pixel = [&](TileStats& st, const std::uint8_t* got, lr::Rgba8 want, bool in_tile, int x, int y, const char* what) {
+            // A pixel is right when it equals ANY of its candidate colours (one candidate except for samples on a texel boundary).
+            auto compare_pixel = [&](TileStats& st, const std::uint8_t* got, std::span<const lr::Rgba8> wants, bool in_tile, int x, int y, const char* what) {
                 ++st.compared;
                 if (in_tile) ++st.tile_compared;
-                if (got[0] != want[0] || got[1] != want[1] || got[2] != want[2] || got[3] != want[3])
-                {
-                    if (st.bad == 0) st.first_bad = std::format("{} pixel ({},{}) is ({},{},{},{}), model ({},{},{},{})", what, x, y, got[0], got[1], got[2], got[3], want[0], want[1], want[2], want[3]);
-                    ++st.bad;
-                }
+                if (wants.size() > 1) ++st.either;
+                for (const lr::Rgba8& w : wants)
+                    if (got[0] == w[0] && got[1] == w[1] && got[2] == w[2] && got[3] == w[3]) return;
+                if (st.bad == 0)
+                    st.first_bad = std::format("{} pixel ({},{}) is ({},{},{},{}), model ({},{},{},{}){}", what, x, y, got[0], got[1], got[2], got[3], wants[0][0], wants[0][1], wants[0][2],
+                                               wants[0][3], wants.size() > 1 ? " or another boundary candidate" : "");
+                ++st.bad;
             };
 
             // ---- bottom cells: the layers as scaled NEAREST tiles ----------------------------------------------------------------
@@ -844,25 +866,28 @@ namespace
                         const int lx = x + cell.x - origin.x, ly = y + cell.y - origin.y;
                         if (lx < 0 || ly < 0 || lx >= 2 * S || ly >= 2 * S)
                         {
-                            compare_pixel(st, p, clear, false, x, y, "margin");  // outside the tiles the cell keeps its clear colour
+                            compare_pixel(st, p, std::span<const lr::Rgba8>(&clear, 1), false, x, y, "margin");  // outside the tiles the cell keeps its clear colour
                             continue;
                         }
                         const int n = lx / S + 2 * (ly / S);
-                        int i = 0, j = 0;
-                        if (!nearest_texel(lx % S, S, kLayerSize, &i) || !nearest_texel(ly % S, S, kLayerSize, &j))
-                        {
-                            ++st.ambiguous;
-                            continue;
-                        }
-                        const std::uint8_t* t = &images[static_cast<std::size_t>(n)][(static_cast<std::size_t>(j) * kLayerSize + static_cast<std::size_t>(i)) * 4];
-                        compare_pixel(st, p, {t[0], t[1], t[2], t[3]}, true, x, y, "tile");
+                        const TexelCandidates cx = nearest_texels(lx % S, S, kLayerSize), cy = nearest_texels(ly % S, S, kLayerSize);
+                        std::array<lr::Rgba8, 4> wants{};
+                        std::size_t count = 0;
+                        for (int a = 0; a < cx.count; ++a)
+                            for (int b = 0; b < cy.count; ++b)
+                            {
+                                const std::uint8_t* t = &images[static_cast<std::size_t>(n)][(static_cast<std::size_t>(cy.texel[static_cast<std::size_t>(b)]) * kLayerSize +
+                                                                                              static_cast<std::size_t>(cx.texel[static_cast<std::size_t>(a)])) * 4];
+                                wants[count++] = {t[0], t[1], t[2], t[3]};
+                            }
+                        compare_pixel(st, p, std::span<const lr::Rgba8>(wants.data(), count), true, x, y, "tile");
                     }
                 return st;
             };
             auto report_tiles = [&](const char* what, const TileStats& st) {
-                std::printf("   %s: %zu pixels compared exactly (%d x %d pixel tiles of 64x64 texels), %zu skipped on a texel boundary\n", what, st.compared, layer_tile_, layer_tile_, st.ambiguous);
-                check.expect(st.bad == 0 && st.tile_compared > static_cast<std::size_t>(layer_tile_ * layer_tile_ * 4 * 8 / 10),
-                             std::format("{}: the four tiles (NEAREST samples of the texture) and the margin equal the CPU layer images exactly", what),
+                std::printf("   %s: %zu pixels compared exactly (%d x %d pixel tiles of 64x64 texels), %zu of them on a texel boundary (either neighbour accepted)\n", what, st.compared, layer_tile_, layer_tile_, st.either);
+                check.expect(st.bad == 0 && st.tile_compared == static_cast<std::size_t>(layer_tile_ * layer_tile_ * 4),
+                             std::format("{}: every pixel of the four tiles (NEAREST samples of the texture; either neighbour on a texel boundary) and of the margin equals the CPU layer images", what),
                              st.bad == 0 ? std::format("{} tile pixels compared", st.tile_compared) : std::format("{} differ, first: {}", st.bad, st.first_bad));
             };
             report_tiles("bottom left (2D array)", layers_match(cell_array_, array_origin_, &lr::array_layer));
@@ -885,29 +910,32 @@ namespace
                         const int face = (lx >= 0 && ly >= 0 && lx < 4 * T && ly < 3 * T) ? face_at[static_cast<std::size_t>((ly / T) * 4 + lx / T)] : -1;
                         if (face < 0)
                         {
-                            compare_pixel(st, p, clear, false, x, y, "net margin");  // the empty corners of the net and the margins keep the clear colour
+                            compare_pixel(st, p, std::span<const lr::Rgba8>(&clear, 1), false, x, y, "net margin");  // the empty corners of the net and the margins keep the clear colour
                             continue;
                         }
                         // The tile pixel (px, py) looks up s = (px + 0.5) / T and t = 1 - (py + 0.5) / T = (T - 1 - py + 0.5) / T.
-                        int i = 0, j = 0;
-                        if (!nearest_texel(lx % T, T, kCubeSize, &i) || !nearest_texel(T - 1 - ly % T, T, kCubeSize, &j))
+                        const TexelCandidates cx = nearest_texels(lx % T, T, kCubeSize), cy = nearest_texels(T - 1 - ly % T, T, kCubeSize);
+                        std::array<lr::Rgba8, 4> wants{};
+                        std::size_t count = 0;
+                        bool room_edge = false;
+                        for (int a = 0; a < cx.count; ++a)
+                            for (int b = 0; b < cy.count; ++b)
+                            {
+                                const std::int32_t entry = uniform_texels_[static_cast<std::size_t>(face)][static_cast<std::size_t>(cy.texel[static_cast<std::size_t>(b)] * kCubeSize + cx.texel[static_cast<std::size_t>(a)])];
+                                if (entry < 0) room_edge = true;  // a polygon edge of the room runs through a candidate texel: its colour is not known exactly
+                                else wants[count++] = {static_cast<std::uint8_t>(entry >> 16), static_cast<std::uint8_t>(entry >> 8), static_cast<std::uint8_t>(entry), 255};
+                            }
+                        if (room_edge)
                         {
-                            ++st.ambiguous;
+                            ++st.room_edge;
                             continue;
                         }
-                        const std::int32_t entry = uniform_texels_[static_cast<std::size_t>(face)][static_cast<std::size_t>(j * kCubeSize + i)];
-                        if (entry < 0)
-                        {
-                            ++st.ambiguous;  // a polygon edge of the room runs through this texel
-                            continue;
-                        }
-                        compare_pixel(st, p, {static_cast<std::uint8_t>(entry >> 16), static_cast<std::uint8_t>(entry >> 8), static_cast<std::uint8_t>(entry), 255}, true, x, y,
-                                      lr::kFaceNames[static_cast<std::size_t>(face)]);
+                        compare_pixel(st, p, std::span<const lr::Rgba8>(wants.data(), count), true, x, y, lr::kFaceNames[static_cast<std::size_t>(face)]);
                     }
-                std::printf("   top right (cube net): %zu pixels compared exactly (%d x %d pixel tiles of %d x %d texels), %zu skipped (texel boundary or room edge)\n", st.compared, T, T, kCubeSize,
-                            kCubeSize, st.ambiguous);
+                std::printf("   top right (cube net): %zu pixels compared exactly (%d x %d pixel tiles of %d x %d texels), %zu of them on a texel boundary (either neighbour accepted), %zu skipped next to a room edge\n", st.compared, T, T, kCubeSize,
+                            kCubeSize, st.either, st.room_edge);
                 check.expect(st.bad == 0 && st.tile_compared > static_cast<std::size_t>(6 * T * T * 4 / 10),
-                             "top right: the six cube-net tiles (direction -> face -> texel, NEAREST) equal the model of the texel they sample, and the empty corners and margins keep the cell clear colour",
+                             "top right: every pixel of the six cube-net tiles (direction -> face -> texel, NEAREST; either neighbour on a texel boundary) equals the model of the texel it samples, and the empty corners and margins keep the cell clear colour",
                              st.bad == 0 ? std::format("{} tile pixels compared", st.tile_compared) : std::format("{} differ, first: {}", st.bad, st.first_bad));
             }
 
@@ -922,7 +950,7 @@ namespace
                 const Vec3 f = normalize(Vec3{0, 0, 0} - cam.eye);
                 const Vec3 r = normalize(cross(f, {0, 1, 0}));
                 const Vec3 u = cross(r, f);
-                const float tan_half = std::tan(demo::math::radians(kPreviewFovDegrees) * 0.5f);
+                const float tan_half = preview_tan_half(aspect);
                 const float px_per_unit = static_cast<float>(ch) * 0.5f / (tan_half * std::sqrt(dot(cam.eye, cam.eye)));
                 std::size_t sky_probes = 0, ball_probes = 0, bad = 0, skipped = 0;
                 std::array<lr::Rgb8, 64> distinct{};

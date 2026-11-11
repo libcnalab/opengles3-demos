@@ -20,8 +20,8 @@ in ES 3.1; softpipe reports `SKIP_UNSUPPORTED`.
 **The presentation scales with the window.** Every cell is half the window wide and high; the cube net, the four array layers and the
 four volume slices are drawn as textured quads (one triangle covering a viewport rectangle, `shaders/fullscreen.vert`) through a NEAREST
 sampler object, as large as the cell allows with the aspect ratio kept (the tiles are square, the rest of the cell keeps its dark
-clear colour). The mirror-ball cell uses the cell's own aspect ratio for its projection. `--width 900 --height 900` and `--width 640
---height 480` are validated as well (see below).
+clear colour). The mirror-ball cell uses the cell's own aspect ratio for its projection. Window sizes from 100x100 to 1920x1080 (square, 4:3, wide, narrow, odd)
+are validated as well (see below).
 
 The cube map is rendered by `shaders/env.geom`: `layout(triangles, invocations = 6) in`, every input triangle is emitted
 six times, invocation k with the view-projection matrix of face k and `gl_Layer = gl_InvocationID`. The fragment shader reads
@@ -77,17 +77,23 @@ six times, invocation k with the view-projection matrix of face k and `gl_Layer 
    texels (6 faces of 208 x 208) are compared; the 9 755 texels whose 3x3 neighbourhood (+-0.75 texel) crosses a colour edge are
    skipped because rasterization decides there. The alpha tag proves that the fragment shader's `gl_Layer` equals the face written.
 2. **The displays, at any window size.** A NEAREST tile pixel p of an S-pixel tile over an N-texel image reads texel
-   `floor((p + 0.5) / S * N)`; the model computes that texel and skips only the pixels whose sample is within 0.02 texel of a texel
-   boundary (the GPU may round either way there; none at 256x256, about 8 percent at 900x900). The two bottom cells are compared
-   pixel for pixel with the layer images *including the margin around the tiles*, which must keep the clear colour. The 6 tiles of
-   the cube net are compared with the room colour of the texel they sample (direction -> face -> texel), the empty corners and
-   margins of the net with the clear colour. The mirror-ball cell is compared with a model that casts the view ray (with the cell's
-   aspect ratio), intersects the analytic sphere, applies `reflect()` and the rim term, and looks up the room: 1 471 sky and 572 ball
-   probes at 256x256 (the ball reflects 12 different environment colours), +-2/255 (8-bit rounding plus bilinear weights on equal
-   texels; the model uses the analytic sphere; the facet error of the tessellated ball is far below the 0.08 rad neighbourhood).
-   Probes are dropped within 3 px of the ball's outline and where the room's colour is not constant within 0.08 rad of the
-   reflected direction. Measured: at most 1/255 at every size. Sizes checked by hand (all PASS, 102 checks each): 256x256,
-   640x480 (80 px net tiles, 120 px layer tiles) and 900x900 (112 px and 225 px tiles).
+   `floor((p + 0.5) / S * N)`. When that sample point is within 0.02 texel of a texel boundary (for example when N / S is an
+   even integer, where *every* sample is on a boundary) float rounding inside the GPU decides which neighbour is returned, so the
+   model accepts **either** neighbour on that axis (four texels at a corner; one at the edge of the texture). Every tile pixel
+   is therefore compared at every window size; nothing is skipped because of a boundary. The two bottom cells are compared pixel
+   for pixel with the layer images *including the margin around the tiles*, which must keep the clear colour. The 6 tiles of the
+   cube net are compared with the room colour of the texel(s) they sample (direction -> face -> texel); the only skipped pixels
+   are those whose candidate texel has a room polygon edge in its neighbourhood (about 1-3 percent of the tile pixels), and the
+   empty corners and margins of the net must keep the clear colour. The mirror-ball cell is compared with a model that casts the view
+   ray (with the cell's aspect ratio), intersects the analytic sphere, applies `reflect()` and the rim term, and looks up the room:
+   1 471 sky and 572 ball probes at 256x256 (the ball reflects 12 different environment colours), +-2/255 (8-bit rounding plus
+   bilinear weights on equal texels; the model uses the analytic sphere; the facet error of the tessellated ball is far below the
+   0.08 rad neighbourhood). Probes are dropped within 3 px of the ball's outline and where the room's colour is not constant within
+   0.08 rad of the reflected direction. Measured: at most 1/255 at every size. For a cell that is taller than wide the horizontal
+   field of view stays 62 degrees (the vertical one grows, capped at 120 degrees) so that the ball always fits.
+   Window sizes run on gpu, llvmpipe and zink (all PASS, 102 checks each): 256x256, 416x312 (net tiles of 52 px: 208 / 52 = 4,
+   every sample on a boundary), 640x480, 900x900 and 333x777; on gpu also 832x624, 208x156, 128x128, 100x100, 512x512, 777x333,
+   1024x768, 1600x400 and 1920x1080.
 3. **Queries.** `LAYERED`, `OBJECT_TYPE`, `TEXTURE_LEVEL` and `TEXTURE_LAYER` for eight attachment kinds (layered 2D array, 3D,
    cube, plain 2D; single layer of array and 3D; cube face; plain 2D via `glFramebufferTexture2D`), and after detaching.
 4. **Completeness.** sixteen configurations: COMPLETE for each layered target alone, `INCOMPLETE_LAYER_TARGETS` for a layered
@@ -124,11 +130,10 @@ six times, invocation k with the view-projection matrix of face k and `gl_Layer 
   `glFramebufferTexture2D` instead, which is equivalent.
 * All three Mesa drivers report `LAYER_PROVOKING_VERTEX` = `UNDEFINED_VERTEX`, which the specification allows. The branch
   that tests FIRST / LAST therefore runs on no machine of the matrix.
-* **Texel-boundary ties.** The cube faces are 208 x 208 (up from 64 x 64, so that the skybox and the ball show smoother edges). A net tile of T
-  pixels samples texel `floor((p + 0.5) / T * 208)`; if 208 / T is an even integer (T = 104, 52, 26, 13) every sample lies exactly on a
-  texel boundary, the model cannot tell which neighbour the GPU returns, and the net comparison would have nothing left to compare (it
-  then fails its non-vacuity requirement instead of passing silently). With the usual window sizes (T = 32, 80, 112, 120, 128, ...) the
-  ratio is not an even integer, which is why 208 was chosen over 128, 192 or 224.
+* **Texel boundaries of scaled tiles.** A NEAREST sample that lies on a texel boundary (a tile whose pixel count divides the texel
+  count evenly, e.g. a 52 px net tile over 208 texels) may return either neighbour; the demo accepts both instead of skipping
+  such pixels, so a valid render never fails the comparison at any window size and the non-vacuity requirement stays in place.
+  The cube faces are 208 x 208 (up from 64 x 64) only to make the skybox and the reflection edges smoother.
 * The cube map face images are stored with t pointing "down" in world space for the side faces (t grows with -y); the cube
   net flips the rows for display.
 

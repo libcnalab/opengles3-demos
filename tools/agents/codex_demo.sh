@@ -23,6 +23,8 @@ rules, build/test commands, report format). meta-gl lives at
 -DOGLES3_METAGL_SOURCE_DIR=/rv/data/development/github.com/libcna/meta-gl. If the GPU is not
 accessible inside your sandbox, run the llvmpipe and zink tests (ctest -L llvmpipe / -L zink) and say
 so in your report.
+CPU LIMIT: the owner allows at most 8 CPU cores for compilation machine-wide and several agents build
+at the same time, so ALWAYS build with -j 2 (cmake --build --preset debug -j 2), never more.
 
 YOUR TASK:
 $(cat "$task_file")"

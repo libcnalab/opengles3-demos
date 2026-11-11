@@ -63,6 +63,9 @@
 | `es32-float-targets-and-indexed-blend` | ES 3.2 §15.1.5.5: `IsEnabled(BLEND)` reports draw buffer 0 | radeonsi returns FALSE when only draw buffer 0 has blending enabled via `glEnablei`; llvmpipe/zink conform |
 | `es32-float-targets-and-indexed-blend` | ES 3.2 §15.2.2: masked color components are not written | zink (lavapipe) with blending enabled and `glColorMask(T,F,T,T)` on all buffers blends and stores G; other mask combinations misbehave too (exact trigger not isolated) |
 
+| `es32-geometry-shaders` | ES 3.2 §11.3.4.4: `GEOMETRY_VERTICES_OUT` × active output components may not exceed `MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS`; "LinkProgram will fail if it determines that the total component limit would be violated" | `max_vertices = 256` with 128 active output components per vertex (31 vec4 read by the FS + `gl_Position`): 256 × 128 = 32 768 > 4095 (radeonsi) / 1024 (llvmpipe, zink) links. The product is known at link time, so we read "if it determines" as satisfied. All Mesa drivers |
+| `es32-layered-rendering` | ES 3.2 §9.2.8: `FramebufferTextureLayer` accepts cube map textures; layer selects the face (Table 8.24) | no error, but the previous attachment stays in place (the cube map is not attached). Layered `glFramebufferTexture` on a cube map works. All Mesa drivers |
+
 Not deviations (verified during integration): Mesa accepting `glGenerateMipmap` on R32F and unsized
 `RGB + FLOAT` uploads is correct, because the contexts expose `GL_OES_texture_float_linear`,
 `GL_EXT_color_buffer_float` and `GL_OES_texture_float`. The ES 3.0 transform-feedback mode rule failing under

@@ -19,9 +19,14 @@ machinery that sits in the same section of the specification: `glDrawRangeElemen
 256 × 256 default framebuffer, a 4 × 4 grid of 64 × 64 cells; row 3 is the top row, cells are numbered in
 reading order. Every cell is laid out in NDC, so it stretches with the surface; to keep cells close to square the
 same 16 cells form an 8 × 2 grid on a wide surface (e.g. 1000 × 200) and a 2 × 8 grid on a tall one (e.g. 200 × 1000),
-still numbered in reading order. **Minimum cell: 60 × 60 pixels** (so at least 240 × 240 for the 4 × 4 grid): below
-that the smallest instance square (0.2 NDC) is too few pixels for a probe that stays clear of its edges, and the demo
-reports SKIP.
+still numbered in reading order. **Minimum cell: 60 × 60 pixels** (at least 240 × 240 for the 4 × 4 grid, 480 × 120
+for 8 × 2, 120 × 480 for 2 × 8). Below that the demo reports SKIP. The smallest instance square (0.2 NDC, the
+`gl_InstanceID` cell's instance 0) is then at least 6 × 6 pixels. Its slot probe aims 0.05 NDC (≥ 1.5 px) below and
+left of the square's centre, on the side away from the diagonal its two triangles share. Relative to the centre,
+the half-open pixel box (−2, −1] × (−2, −1] always contains exactly one pixel centre, and it lies within 1 px of
+the aim point. That pixel is more than 1 px from the square's edges, which are at least 3 px from the centre, and more than
+1 px from the diagonal (√2 px when the cell is square). So the model classifies it with certainty, and the probe
+search finds it. On llvmpipe every size from 240 × 240 to 270 × 270 passes, and 239 × 240 and 240 × 239 skip.
 
 | Cell | What is drawn | What it demonstrates |
 |---|---|---|
@@ -105,6 +110,11 @@ put the square edges on integer coordinates, which no pixel center can touch. `s
   cell 6. For each strip cell, one probe in each of the four ribbon quads and two probes in the gap that the restart
   empties (and that the connecting triangles fill when there is no restart). Cell 13 probes both ribbons and the gap of each of the
   three instances; cell 11 probes the spike; cell 15 probes that the first ribbon is *not* drawn.
+  The probe points are given in NDC. On a small cell the pixel under such a point can lie within 1 px of a model
+  edge, where the model cannot say whether the pixel is covered. So every probe reads the pixel nearest to its
+  point (by the distance of the pixel centre) that the model classifies with certainty as intended: covered or
+  background, more than 1 px from every edge. The search goes at most 2 px away in x and y. The pixel is chosen
+  from the CPU model before anything is read back. If no such pixel exists, the check fails as a demo bug.
 - **Restart evidence independent of the model.** The restarted strips (USHORT, UBYTE, UINT, `glDrawRangeElements`)
   cover the same set of pixels, fewer than the unbroken strip; with restart disabled the spike covers pixels above the
   ribbons that no other strip touches.

@@ -38,6 +38,7 @@
 #include <format>
 #include <iostream>
 #include <numbers>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -734,12 +735,18 @@ namespace
 
     mgl::UniformLocation loc(mgl::ProgramId program, const char* name) { return mgl::glGetUniformLocation(program, name); }
 
+    constexpr int kMinSurface = 128;  // pixels in each direction (see init())
+
     class PostProcessing final : public demo::Demo
     {
     public:
         void init(demo::Env& env) override
         {
-            if (env.width < 64 || env.height < 64) throw demo::Skip("needs a default framebuffer of at least 64x64");
+            // The object outlines in the Sobel map are a few pixels wide at any size, so their share of the image grows as
+            // the surface shrinks: below about 100 x 100 it exceeds the third that "the edge map has strong edges on a small
+            // part of the image" allows (32.6% at 100 x 100, 28.1% at 128 x 128, 16% at 256 x 256). 128 keeps a margin.
+            if (env.width < kMinSurface || env.height < kMinSurface)
+                throw demo::Skip(std::format("needs a default framebuffer of at least {0}x{0}", kMinSurface));
             if (demo::get_integer(mgl::GetParameter::RedBits) < 8 || demo::get_integer(mgl::GetParameter::GreenBits) < 8 ||
                 demo::get_integer(mgl::GetParameter::BlueBits) < 8)
                 throw demo::Skip("needs 8 bits per color channel in the default framebuffer");
@@ -1161,6 +1168,19 @@ namespace
         };
         [[nodiscard]] Probes find_probes() const;
 
+        // Which pixels the CPU reference can predict: unoccluded sky (view ray elevation above 0.02), unoccluded floor
+        // (within 30 units of the origin and 10 units of the eye, away from every checker square edge), or neither.
+        enum class PixelKind { None, Sky, Floor };
+        struct ModelView
+        {
+            Basis basis;
+            std::vector<Sphere> spheres;  // bounding spheres of the objects, 0.1 larger than the objects
+        };
+        [[nodiscard]] ModelView model_view() const;
+        [[nodiscard]] PixelKind classify_pixel(const ModelView& mv, int x, int y) const;
+        /// The CPU value of pixel (x, y) (linear) if classify_pixel() knows it.
+        [[nodiscard]] std::optional<Rgb> model_value(const ModelView& mv, int x, int y) const;
+
         void check_scene(demo::Check& check, const Bytes& a, const Bytes& s, const Probes& probes);
         void check_srgb_target(demo::Check& check, const Bytes& a, const Bytes& s);
 
@@ -1183,11 +1203,18 @@ namespace
         int blur_radius_ = kBlurRadiusDefault;
     };
 
-    PostProcessing::Probes PostProcessing::find_probes() const
+    PostProcessing::ModelView PostProcessing::model_view() const
     {
-        const Basis basis = make_basis(frame_);
-        std::vector<Sphere> spheres;
-        for (const Item& it : frame_.items) spheres.push_back({to_d(it.center), static_cast<double>(it.radius) + 0.1});
+        ModelView mv;
+        mv.basis = make_basis(frame_);
+        for (const Item& it : frame_.items) mv.spheres.push_back({to_d(it.center), static_cast<double>(it.radius) + 0.1});
+        return mv;
+    }
+
+    PostProcessing::PixelKind PostProcessing::classify_pixel(const ModelView& mv, int x, int y) const
+    {
+        const Basis& basis = mv.basis;
+        const std::vector<Sphere>& spheres = mv.spheres;
         const int w = width_, h = height_;
 
         // Is the first thing the view ray hits (before distance t_limit) one of the bounding spheres?
@@ -1199,11 +1226,54 @@ namespace
             }
             return false;
         };
-        auto floor_point = [&](int x, int y, D3& p) {
-            const D3 d = ray_dir(basis, x, y, w, h);
-            if (d.y >= -1.0e-3) return false;
-            p = basis.eye + d * (-basis.eye.y / d.y);
+        auto floor_point = [&](int fx, int fy, D3& fp) {
+            const D3 fd = ray_dir(basis, fx, fy, w, h);
+            if (fd.y >= -1.0e-3) return false;
+            fp = basis.eye + fd * (-basis.eye.y / fd.y);
             return true;
+        };
+
+        const D3 d = ray_dir(basis, x, y, w, h);
+        if (d.y > 0.02) return occluded(d, 1.0e30, -1) ? PixelKind::None : PixelKind::Sky;
+        D3 p, px, py;
+        if (!floor_point(x, y, p) || !floor_point(x + 1, y, px) || !floor_point(x, y + 1, py)) return PixelKind::None;
+        if (std::abs(p.x) > 30.0 || std::abs(p.z) > 30.0 || length(p - basis.eye) > 10.0) return PixelKind::None;
+        const double t = -basis.eye.y / d.y;
+        if (occluded(d, t + 0.01, -1)) return PixelKind::None;
+        // Away from every square edge by more than the footprint of the pixel (the checker filter width).
+        const double margin = std::max({0.2, std::abs(px.x - p.x) + std::abs(py.x - p.x) + 0.05,
+                                        std::abs(px.z - p.z) + std::abs(py.z - p.z) + 0.05});
+        const double fx = fract(p.x), fz = fract(p.z);
+        if (std::min(fx, 1.0 - fx) < margin || std::min(fz, 1.0 - fz) < margin) return PixelKind::None;
+        return PixelKind::Floor;
+    }
+
+    std::optional<Rgb> PostProcessing::model_value(const ModelView& mv, int x, int y) const
+    {
+        const D3 d = ray_dir(mv.basis, x, y, width_, height_);
+        switch (classify_pixel(mv, x, y))
+        {
+        case PixelKind::Sky: return sky_cpu(d);
+        case PixelKind::Floor: return floor_cpu(mv.basis.eye + d * (-mv.basis.eye.y / d.y), frame_);
+        case PixelKind::None: break;
+        }
+        return std::nullopt;
+    }
+
+    PostProcessing::Probes PostProcessing::find_probes() const
+    {
+        const ModelView mv = model_view();
+        const Basis& basis = mv.basis;
+        const std::vector<Sphere>& spheres = mv.spheres;
+        const int w = width_, h = height_;
+        // Is the first thing the view ray hits (before distance t_limit) one of the bounding spheres?
+        auto occluded = [&](D3 d, double t_limit, int skip) {
+            for (std::size_t i = 0; i < spheres.size(); ++i)
+            {
+                double t = 0.0;
+                if (static_cast<int>(i) != skip && ray_sphere(basis.eye, d, spheres[i], t) && t < t_limit) return true;
+            }
+            return false;
         };
 
         Probes probes;
@@ -1211,23 +1281,9 @@ namespace
         for (int y = 3; y < h - 2; y += 5)
             for (int x = 4; x < w - 3; x += 5)
             {
-                const D3 d = ray_dir(basis, x, y, w, h);
-                if (d.y > 0.02)
-                {
-                    if (!occluded(d, 1.0e30, -1)) sky_candidates.push_back({x, y});
-                    continue;
-                }
-                D3 p, px, py;
-                if (!floor_point(x, y, p) || !floor_point(x + 1, y, px) || !floor_point(x, y + 1, py)) continue;
-                if (std::abs(p.x) > 30.0 || std::abs(p.z) > 30.0 || length(p - basis.eye) > 10.0) continue;
-                const double t = -basis.eye.y / d.y;
-                if (occluded(d, t + 0.01, -1)) continue;
-                // Away from every square edge by more than the footprint of the pixel (the checker filter width).
-                const double margin = std::max({0.2, std::abs(px.x - p.x) + std::abs(py.x - p.x) + 0.05,
-                                                std::abs(px.z - p.z) + std::abs(py.z - p.z) + 0.05});
-                const double fx = fract(p.x), fz = fract(p.z);
-                if (std::min(fx, 1.0 - fx) < margin || std::min(fz, 1.0 - fz) < margin) continue;
-                floor_candidates.push_back({x, y});
+                const PixelKind kind = classify_pixel(mv, x, y);
+                if (kind == PixelKind::Sky) sky_candidates.push_back({x, y});
+                else if (kind == PixelKind::Floor) floor_candidates.push_back({x, y});
             }
         auto spread = [](const std::vector<std::array<int, 2>>& all, std::size_t wanted) {
             std::vector<std::array<int, 2>> out;
@@ -1335,11 +1391,37 @@ namespace
                     if (a.at(x, y, c) < 8) ++dark_pixels;
                 }
         report(check, "SRGB8_ALPHA8 scene = encode(RGBA8 scene) at every pixel within the quantization of the 8-bit linear image", cmp, 0.0);
-        // At least 1 in 24 channel values (w*h/8 of the 3*w*h): about 13% of them are dark on a square or portrait surface,
-        // still about 6% on a 5:1 strip, where the wide view shows proportionally more of the bright sky and lit floor.
-        check.expect(dark_pixels > static_cast<std::size_t>(a.w * a.h) / 8,
-                     "the scene has many dark channel values (< 8/255 linear) where the RGBA8 target is coarse",
-                     std::format("{} of {} channel values", dark_pixels, a.w * a.h * 3));
+
+        // The comparison above matters most for dark values (< 8/255 linear), where the RGBA8 target is coarse and the
+        // tolerance is widest. How many of them the image must contain follows from the CPU reference: every sky and floor
+        // pixel the model can predict (classify_pixel) whose exact value v has 255 v + kPassTolerance < 7.5 must be stored as
+        // a byte below 8 (check_scene holds the bytes to 255 v +- kPassTolerance). Those predicted channels are a subset of
+        // the image, so the image has at least that many dark values. The objects and the excluded pixels can only add more.
+        const ModelView mv = model_view();
+        std::size_t predicted_dark = 0, predicted_not_dark = 0, model_channels = 0;
+        std::string first_not_dark;
+        for (int y = 0; y < a.h; ++y)
+            for (int x = 0; x < a.w; ++x)
+            {
+                const std::optional<Rgb> v = model_value(mv, x, y);
+                if (!v) continue;
+                for (int c = 0; c < 3; ++c)
+                {
+                    ++model_channels;
+                    if (255.0 * clamp01((*v)[static_cast<std::size_t>(c)]) + kPassTolerance >= 7.5) continue;
+                    ++predicted_dark;
+                    if (a.at(x, y, c) >= 8 && predicted_not_dark++ == 0)
+                        first_not_dark = std::format("pixel ({},{}) channel {}: got {} expected {:.2f}", x, y, c, a.at(x, y, c),
+                                                     255.0 * clamp01((*v)[static_cast<std::size_t>(c)]));
+                }
+            }
+        check.expect(predicted_dark > 0 && predicted_not_dark == 0 && dark_pixels >= predicted_dark,
+                     "the scene has the dark channel values (< 8/255 linear, where the RGBA8 target is coarse) that the CPU model predicts: "
+                     "every predicted one is dark, so the comparison above covers them",
+                     predicted_not_dark == 0
+                         ? std::format("{} dark channel values in the image, at least the {} the model predicts among the {} channel values it knows",
+                                       dark_pixels, predicted_dark, model_channels)
+                         : std::format("{} of {} predicted dark channel values are not dark; first: {}", predicted_not_dark, predicted_dark, first_not_dark));
     }
 
     // Validation (see the header comment of this file).

@@ -536,6 +536,12 @@ namespace
     public:
         void init(demo::Env& env) override
         {
+            // Every check reads at least one pixel of its cells (rows 0-14, columns 0-7, and the scratch cell at the
+            // top left that the textureSize and negative-control experiments draw into). A cell is width / 8 by
+            // height / 15 pixels, so a smaller surface has empty cells and those checks would compare nothing.
+            if (env.width < kCols || env.height < kRows)
+                throw demo::Skip(std::format("needs a surface of at least {} x {} pixels (one pixel per cell of the {} x {} grid)", kCols, kRows,
+                                             kCols, kRows));
             program_ = demo::build_program(env, "shaders/strip.vert", "shaders/strip.frag");
             loc_s0_ = locate("u_s0");
             loc_range_ = locate("u_s_range");
@@ -916,7 +922,8 @@ namespace
             mgl::glUniform1i(loc_lod_, lod);
             mgl::glDrawArrays(mgl::PrimitiveType::TriangleStrip, 0, 4);
             mgl::glUniform1i(loc_mode_, 0);
-            const Rgba8 p = demo::read_pixel(lay.cw / 2, lay.height - lay.ch / 2);
+            // The centre of the cell viewport [height - ch, height): for ch = 1 that is row height - 1, not height.
+            const Rgba8 p = demo::read_pixel(lay.cw / 2, lay.height - lay.ch + lay.ch / 2);
             return {p[0], p[1]};
         }
 

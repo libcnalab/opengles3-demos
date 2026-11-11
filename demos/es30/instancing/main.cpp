@@ -43,7 +43,7 @@ namespace
     // The 16 cells are arranged 4x4, 8x2 or 2x8, whichever keeps a cell closest to square on this surface: every
     // probe below is placed in NDC, and in a 5:1 cell the narrow direction would squeeze the instance squares
     // (0.2 NDC) and the ribbon quads (0.25 NDC) to a few pixels.
-    constexpr int kMinCellPx = 60;  // smallest instance square (0.2 NDC) is then >= 6 px, its probe >= 1.5 px off its edges
+    constexpr int kMinCellPx = 60;  // smallest instance square (0.2 NDC) is then >= 6 px: find_probe has a certain pixel within 1 px of its aim (README)
     struct Grid
     {
         int cols, rows;
@@ -435,17 +435,51 @@ namespace
                      : enough ? std::string{} : std::format("only {} covered / {} background pixels compared", s.inside, s.outside));
     }
 
-    // Pixel under an NDC point of a cell, expected from the model (a probe on a model edge is a bug in the demo).
-    void expect_model_pixel(demo::Check& check, const Rect& r, const std::vector<Tri>& scene, double nx, double ny, int tolerance, const std::string& what)
+    // Where a point probe is read. The probe points are given in NDC, so on a small cell the pixel under one can lie
+    // within 1 px of a model edge, where the model cannot say whether the pixel is covered. The probe therefore
+    // reads the pixel nearest to the NDC point (by the distance of its centre) that the model classifies with
+    // certainty as `want` (more than 1 px from every model edge). It searches at most kProbeSearchPx pixels away
+    // in x and y. The pixel is chosen from the CPU model alone, before anything is read back.
+    constexpr int kProbeSearchPx = 2;
+    struct Probe
     {
-        const int px = static_cast<int>(std::floor((nx + 1.0) * 0.5 * r.w)), py = static_cast<int>(std::floor((ny + 1.0) * 0.5 * r.h));
-        const Sample s = sample_scene(scene, px + 0.5, py + 0.5, r.w, r.h);
-        if (s.cover == Cover::Unsure)
+        bool found = false;
+        int px = 0, py = 0;  // cell pixel
+        Sample s;
+    };
+    Probe find_probe(const std::vector<Tri>& scene, const Rect& r, double nx, double ny, Cover want)
+    {
+        const double tx = (nx + 1.0) * 0.5 * r.w, ty = (ny + 1.0) * 0.5 * r.h;  // the NDC point in cell pixels
+        const int cx = static_cast<int>(std::floor(tx)), cy = static_cast<int>(std::floor(ty));
+        Probe best;
+        double best_d = std::numeric_limits<double>::infinity();
+        for (int py = cy - kProbeSearchPx; py <= cy + kProbeSearchPx; ++py)
+            for (int px = cx - kProbeSearchPx; px <= cx + kProbeSearchPx; ++px)
+            {
+                if (px < 0 || py < 0 || px >= r.w || py >= r.h) continue;
+                const double d = std::hypot(px + 0.5 - tx, py + 0.5 - ty);
+                if (d >= best_d) continue;
+                const Sample s = sample_scene(scene, px + 0.5, py + 0.5, r.w, r.h);
+                if (s.cover != want) continue;
+                best = {true, px, py, s};
+                best_d = d;
+            }
+        return best;
+    }
+
+    // The pixel at an NDC point of a cell (see find_probe), expected from the model.
+    void expect_model_pixel(demo::Check& check, const Rect& r, const std::vector<Tri>& scene, double nx, double ny, Cover want, int tolerance,
+                            const std::string& what)
+    {
+        const Probe p = find_probe(scene, r, nx, ny, want);
+        if (!p.found)
         {
-            check.expect(false, what, "probe lies within 1 px of a model edge (demo bug)");
+            check.expect(false, what,
+                         std::format("the model has no {} pixel clear of its edges within {} px of ({}, {}) (demo bug)",
+                                     want == Cover::Inside ? "covered" : "background", kProbeSearchPx, nx, ny));
             return;
         }
-        check.expect_pixel(r.x + px, r.y + py, want8(s), tolerance, what);
+        check.expect_pixel(r.x + p.px, r.y + p.py, want8(p.s), tolerance, what);
     }
 
     class Instancing final : public demo::Demo
@@ -773,13 +807,18 @@ namespace
                 for (int i = 0; i < kInstances; ++i)
                 {
                     // 0.05 NDC down-left of the slot center: inside the quad, away from the diagonal shared by its two triangles
+                    // (find_probe moves it to the nearest pixel the model is certain about).
                     const auto c = slot_center(i);
-                    const int px = static_cast<int>(std::floor((c[0] - 0.05 + 1.0) * 0.5 * r.w)), py = static_cast<int>(std::floor((c[1] - 0.05 + 1.0) * 0.5 * r.h));
-                    const Sample s = sample_scene(scene, px + 0.5, py + 0.5, r.w, r.h);
                     const bool drawn = ((mask >> i) & 1u) != 0;
-                    const Rgba8 got = demo::read_pixel(r.x + px, r.y + py);
-                    bool ok = (s.cover == (drawn ? Cover::Inside : Cover::Outside));  // the model itself must agree with the intent
-                    const Rgba8 want = want8(s);
+                    const Probe p = find_probe(scene, r, c[0] - 0.05, c[1] - 0.05, drawn ? Cover::Inside : Cover::Outside);
+                    if (!p.found)  // the model itself must agree with the intent
+                    {
+                        wrong += std::format("{}: no model pixel of the intended coverage near the slot center ", i);
+                        continue;
+                    }
+                    const Rgba8 got = demo::read_pixel(r.x + p.px, r.y + p.py);
+                    const Rgba8 want = want8(p.s);
+                    bool ok = true;
                     for (std::size_t k = 0; k < 4; ++k) ok = ok && std::abs(int(got[k]) - int(want[k])) <= 1;
                     if (!ok) wrong += std::format("{}:{}vs{} ", i, demo::format_rgba(got), demo::format_rgba(want));
                 }
@@ -795,14 +834,14 @@ namespace
                 const std::string name = std::format("cell {}", int(id));
                 // One probe in each of the four quads of the ribbons (off the quads' diagonals).
                 for (const double x : {-0.80, -0.55, 0.40, 0.65})
-                    expect_model_pixel(check, r, scene, x, 0.0, 3, std::format("{}: ribbon quad at x = {} is drawn", name, x));
+                    expect_model_pixel(check, r, scene, x, 0.0, Cover::Inside, 3, std::format("{}: ribbon quad at x = {} is drawn", name, x));
                 const bool restarts = id != kRestartNone;
                 // (-0.2, -0.25) and (0.2, 0.25) lie in the two "glue" triangles that connect the ribbons when no restart happens.
                 for (const auto& p : {std::array<double, 2>{-0.2, -0.25}, std::array<double, 2>{0.2, 0.25}})
                 {
-                    const Sample s = sample_scene(scene, std::floor((p[0] + 1) * 0.5 * r.w) + 0.5, std::floor((p[1] + 1) * 0.5 * r.h) + 0.5, r.w, r.h);
-                    check.expect(s.cover == (restarts ? Cover::Outside : Cover::Inside), std::format("{}: model expects the gap point ({}, {}) to be {}", name, p[0], p[1], restarts ? "background" : "covered"));
-                    expect_model_pixel(check, r, scene, p[0], p[1], 3,
+                    const Cover want = restarts ? Cover::Outside : Cover::Inside;
+                    check.expect(find_probe(scene, r, p[0], p[1], want).found, std::format("{}: model expects the gap point ({}, {}) to be {}", name, p[0], p[1], restarts ? "background" : "covered"));
+                    expect_model_pixel(check, r, scene, p[0], p[1], want, 3,
                                        std::format("{}: gap point ({}, {}) shows {}", name, p[0], p[1], restarts ? "the background (the strip was restarted)" : "the connecting triangle (the strip continues)"));
                 }
             }
@@ -814,15 +853,17 @@ namespace
             {
                 const Rect r = cell_rect(env.width, env.height, kRestartOffUb);
                 const std::vector<Tri> scene = scene_for(kRestartOffUb);
-                expect_model_pixel(check, r, scene, 0.0, 0.3, 3, "cell 11: the middle of the gap, (0, 0.3), is covered by the spike triangle (5, 255, 6)");
+                expect_model_pixel(check, r, scene, 0.0, 0.3, Cover::Inside, 3, "cell 11: the middle of the gap, (0, 0.3), is covered by the spike triangle (5, 255, 6)");
             }
             {
                 // The small square drawn by the gl_InstanceID shader sits on top of the big attribute-driven one: its color
                 // (0, 0, 0.5) is the color the shader computes for gl_InstanceID = 0.
                 const Rect r = cell_rect(env.width, env.height, kNotInstanced);
-                const Sample s = sample_scene(scene_for(kNotInstanced), std::floor((-0.3 + 1.0) * 0.5 * r.w) + 0.5, std::floor((-0.8 + 1.0) * 0.5 * r.h) + 0.5, r.w, r.h);
-                check.expect(s.cover == Cover::Inside, "cell 5: the model has the small square beside the first quad (sanity)");
-                expect_model_pixel(check, r, scene_for(kNotInstanced), -0.3, -0.8, 1, "cell 5: non-instanced draw: gl_InstanceID = 0 gives the instance-0 color (0, 0, 128) at the shader's slot 0");
+                const Probe p = find_probe(scene_for(kNotInstanced), r, -0.3, -0.8, Cover::Inside);
+                // The probe must land on the small square, not on the big quad under it: compare the model color.
+                const bool small_square = p.found && std::abs(p.s.color[0]) < 1e-6 && std::abs(p.s.color[1]) < 1e-6 && std::abs(p.s.color[2] - 0.5) < 1e-6;
+                check.expect(small_square, "cell 5: the model has the small square beside the first quad (sanity)");
+                expect_model_pixel(check, r, scene_for(kNotInstanced), -0.3, -0.8, Cover::Inside, 1, "cell 5: non-instanced draw: gl_InstanceID = 0 gives the instance-0 color (0, 0, 128) at the shader's slot 0");
             }
             {
                 // Cell 13: three instances of the restarted strip, stacked at y = -0.6, 0, 0.6. Each has two ribbons and an empty gap.
@@ -831,20 +872,19 @@ namespace
                 for (int i = 0; i < 3; ++i)
                 {
                     const double y = kInstancedStrip.oy + kInstancedStrip.step_y * i;
-                    expect_model_pixel(check, r, scene, -0.80, y, 3, std::format("cell 13: instance {}: first ribbon is drawn (faded by {})", i, kInstancedStrip.fade * i));
-                    expect_model_pixel(check, r, scene, 0.40, y, 3, std::format("cell 13: instance {}: second ribbon is drawn", i));
-                    const Sample gap = sample_scene(scene, std::floor(0.5 * r.w) + 0.5, std::floor((y + 1.0) * 0.5 * r.h) + 0.5, r.w, r.h);
-                    check.expect(gap.cover == Cover::Outside, std::format("cell 13: the model has an empty gap in instance {} (sanity)", i));
-                    expect_model_pixel(check, r, scene, 0.0, y, 3, std::format("cell 13: instance {}: the gap between its ribbons is background", i));
+                    expect_model_pixel(check, r, scene, -0.80, y, Cover::Inside, 3, std::format("cell 13: instance {}: first ribbon is drawn (faded by {})", i, kInstancedStrip.fade * i));
+                    expect_model_pixel(check, r, scene, 0.40, y, Cover::Inside, 3, std::format("cell 13: instance {}: second ribbon is drawn", i));
+                    check.expect(find_probe(scene, r, 0.0, y, Cover::Outside).found, std::format("cell 13: the model has an empty gap in instance {} (sanity)", i));
+                    expect_model_pixel(check, r, scene, 0.0, y, Cover::Outside, 3, std::format("cell 13: instance {}: the gap between its ribbons is background", i));
                 }
             }
             {
                 const Rect r = cell_rect(env.width, env.height, kRangeSubset);
                 const std::vector<Tri> scene = scene_for(kRangeSubset);
                 for (const double x : {-0.80, -0.55})
-                    expect_model_pixel(check, r, scene, x, 0.0, 3, std::format("cell 15: first ribbon (indices 0..5) at x = {} is NOT drawn", x));
+                    expect_model_pixel(check, r, scene, x, 0.0, Cover::Outside, 3, std::format("cell 15: first ribbon (indices 0..5) at x = {} is NOT drawn", x));
                 for (const double x : {0.40, 0.65})
-                    expect_model_pixel(check, r, scene, x, 0.0, 3, std::format("cell 15: second ribbon (indices 6..11) at x = {} is drawn", x));
+                    expect_model_pixel(check, r, scene, x, 0.0, Cover::Inside, 3, std::format("cell 15: second ribbon (indices 6..11) at x = {} is drawn", x));
             }
         }
 

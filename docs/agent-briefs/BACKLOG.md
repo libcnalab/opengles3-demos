@@ -3,8 +3,14 @@
 The order follows `docs/DEMO_CATALOG.md`. Each line is one delegable task: directory → executable,
 followed by feature IDs. Claim an item by moving it to "In progress" with the agent and branch.
 
-## In progress
-(none)
+## In progress (Claude subagents, batch 3, started 2026-11-11 14:30)
+- items 1+2 (texture-3d-and-arrays, immutable-storage)
+- items 3+4 (integer-float-textures, srgb)
+- items 5+7 (texture-swizzle-lod, pixel-buffer-objects)
+- items 8+9 (framebuffer-blit-msaa, framebuffer-invalidate)
+- items 11+12 (buffer-mapping, uniform-buffer-objects)
+- items 13+15 (transform-feedback, sync-objects)
+Reserved for Codex after its limit resets: items 6, 10, 14, 16, 17, 18, 19, 20.
 
 ## Done
 All Stage 1–4 foundation demos listed as implemented in DEMO_CATALOG.md (merged 2026-11-11).

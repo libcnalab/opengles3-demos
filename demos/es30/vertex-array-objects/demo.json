@@ -1,0 +1,90 @@
+{
+  "name": "es30-vertex-array-objects",
+  "title": "Vertex array objects, integer and packed attributes",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es30",
+  "order": 20,
+  "summary": "Five VAOs with different buffers, formats, strides and element buffers drawn in alternating order, the VAO name lifecycle, integer attributes (glVertexAttribIPointer / glVertexAttribI4*) proven by values above 2^24, 2_10_10_10 packed and HALF_FLOAT attributes decoded against a CPU model of ES 3.0 equations 2.1/2.2, and the errors the spec defines.",
+  "spec": [
+    "ES 3.0 §2.1.6.1 Conversion from Normalized Fixed-Point to Floating-Point (equations 2.1, 2.2)",
+    "ES 3.0 §2.5 GL Errors",
+    "ES 3.0 §2.8 Vertex Specification (current generic attribute values, VertexAttribI4*)",
+    "ES 3.0 §2.9 Vertex Arrays (Table 2.4, VertexAttribPointer / VertexAttribIPointer, INVALID_OPERATION rules)",
+    "ES 3.0 §2.9.1 Transferring Array Elements (missing components)",
+    "ES 3.0 §2.9.2 Packed Vertex Data Formats",
+    "ES 3.0 §2.9.3 Drawing Commands (disabled arrays read the current value)",
+    "ES 3.0 §2.10.6 Vertex Arrays in Buffer Objects, §2.10.7 Array Indices in Buffer Objects",
+    "ES 3.0 §2.11 Vertex Array Objects",
+    "ES 3.0 §6.1.10 Vertex Array Object Queries, §6.1.12 (GetVertexAttrib*)",
+    "ES 3.0 Table 6.2 Vertex Array Object State, Table 6.3 Vertex Array Data (not in vertex array objects)",
+    "GLSL ES 3.00 §4.3.4 Input Variables, §4.3.6 Output Variables, §4.3.8.1 Input Layout Qualifiers, §4.3.9 Interpolation Qualifiers"
+  ],
+  "api": {
+    "glGenVertexArrays": "14 VAOs used by the validated draws; a generated but never bound name is not a VAO (glIsVertexArray FALSE)",
+    "glBindVertexArray": "selects all vertex state: A/B/C/D drawn in two different orders match the CPU model; VERTEX_ARRAY_BINDING read back; binding a deleted or never generated name -> INVALID_OPERATION and the binding is unchanged",
+    "glDeleteVertexArrays": "deleting the bound VAO reverts VERTEX_ARRAY_BINDING to 0 and glIsVertexArray to FALSE; deleting a deleted name or 0 raises no error",
+    "glIsVertexArray": "FALSE for 0 and for a generated-but-unbound name, TRUE after the first bind, FALSE after deletion",
+    "glEnableVertexAttribArray": "VERTEX_ATTRIB_ARRAY_ENABLED per VAO read back; index = MAX_VERTEX_ATTRIBS -> INVALID_VALUE",
+    "glVertexAttribPointer": "float, normalized ubyte, normalized short, UNSIGNED_INT_2_10_10_10_REV and INT_2_10_10_10_REV (normalized and not), HALF_FLOAT: all pixels match the CPU conversion; size/type/normalized/stride/pointer/buffer read back; INVALID_OPERATION (non-default VAO + no ARRAY_BUFFER + non-NULL pointer, packed type with size != 4), INVALID_VALUE (size 0/5, negative stride, index)",
+    "glVertexAttribIPointer": "INT, UNSIGNED_INT, SHORT (size 3), UNSIGNED_BYTE (size 2) into ivec4/uvec4: exact integers compared in the shader (values above 2^24); VERTEX_ATTRIB_ARRAY_INTEGER = TRUE; INVALID_ENUM for FLOAT / HALF_FLOAT / packed types, INVALID_OPERATION without ARRAY_BUFFER",
+    "glVertexAttrib4f": "a disabled attribute array supplies the constant color (orange cell matches the model)",
+    "glVertexAttrib4fv": "current attribute value read back exactly with glGetVertexAttribfv",
+    "glVertexAttribI4i": "exact int values (2^24+1, INT_MIN) reach an ivec4 input and read back with glGetVertexAttribIiv; index = MAX_VERTEX_ATTRIBS -> INVALID_VALUE",
+    "glVertexAttribI4ui": "exact uint values (0xFFFFFFFF, 2^24+1) reach a uvec4 input and read back with glGetVertexAttribIuiv",
+    "glVertexAttribI4iv": "int vector reaches the ivec4 input exactly and reads back",
+    "glVertexAttribI4uiv": "uint vector reaches the uvec4 input exactly and reads back",
+    "glGetVertexAttribiv": "ENABLED, SIZE, TYPE, NORMALIZED, STRIDE, INTEGER, DIVISOR, BUFFER_BINDING of 16 attributes in 11 VAOs; initial values of attributes 0, 1, 15 of a fresh VAO",
+    "glGetVertexAttribfv": "CURRENT_VERTEX_ATTRIB after glVertexAttrib4fv, unchanged by a draw that uses an enabled array",
+    "glGetVertexAttribIiv": "CURRENT_VERTEX_ATTRIB after glVertexAttribI4i / I4iv",
+    "glGetVertexAttribIuiv": "CURRENT_VERTEX_ATTRIB after glVertexAttribI4ui / I4uiv",
+    "glGetVertexAttribPointerv": "buffer offsets of interleaved attributes; the client pointer of the default VAO",
+    "glGenBuffers": "vertex and index buffers feeding the validated draws",
+    "glBindBuffer": "ARRAY_BUFFER is not VAO state (survives VAO switches, 0 during the draws); ELEMENT_ARRAY_BUFFER is (queried per VAO, edited only in the bound VAO)",
+    "glBufferData": "vertex/index data observed through the rendered pixels",
+    "glDeleteBuffers": "cleanup, final glGetError == NO_ERROR",
+    "glDrawArrays": "TRIANGLES and TRIANGLE_STRIP from every VAO kind; pixels match the CPU model",
+    "glDrawElements": "UNSIGNED_SHORT and UNSIGNED_BYTE (byte offset 2) from the element buffer stored in the VAO; the two VAOs sharing a vertex buffer draw different shapes",
+    "glGetIntegerv": "VERTEX_ARRAY_BINDING, ARRAY_BUFFER_BINDING, ELEMENT_ARRAY_BUFFER_BINDING, MAX_VERTEX_ATTRIBS",
+    "glUseProgram": "float and integer programs select the cells",
+    "glGetUniformLocation": "u_scale, u_bias, u_expect_i, u_expect_u located; effects observed in the pixels",
+    "glUniform4f": "u_scale/u_bias map attribute values to colors; the resulting pixels match",
+    "glUniform4i": "u_expect_i: the shader comparison turns red when the value is off by one (negative control)",
+    "glUniform4ui": "u_expect_u compared with the uvec4 input",
+    "glViewport": "per-cell viewports map NDC to the probed pixels",
+    "glClearColor": "background pixels equal the clear color",
+    "glClear": "COLOR_BUFFER_BIT",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE readback of every cell"
+  },
+  "features": [
+    "ES30.VAO.BASIC",
+    "ES30.VAO.SWITCHING",
+    "ES30.ATTRIB.INTEGER",
+    "ES30.ATTRIB.PACKED",
+    "ES20.ATTRIB.INTERLEAVED",
+    "ES20.ATTRIB.QUERY",
+    "ES20.DRAW.ARRAYS",
+    "ES20.DRAW.ELEMENTS",
+    "ES20.ERRORS.INVALID_OPERATION",
+    "ES20.ERRORS.INVALID_VALUE",
+    "ES20.ERRORS.INVALID_ENUM"
+  ],
+  "glsl_features": [
+    "GLSL300.IO.IN_OUT",
+    "GLSL300.LAYOUT.LOCATION",
+    "GLSL300.INTERP.SMOOTH_FLAT"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "gl-error",
+    "negative-control"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet-5.5",
+    "notes": "Viewed gpu/llvmpipe/zink captures (256x256; identical within 1/255): top rows show the skewed RGB triangle (A), the yellow/cyan/magenta/white quad (B) and the two bow-tie wedge pairs (C right-left vs D top-bottom) in the order A B C D and again D C B A; row 1 is eight green shades per cell (all 4 integer cells match, 4 columns x ivec4/uvec4 rows with a blue tint in the lower row); bottom row: orange/light-blue UINT_2_10_10_10 quads (left and right half equal), orange/green INT quads (right half has lower alpha), four half-float quads (dark blue, orange, green-cyan, blue) and the orange triangle of VAO E. Background is the dark-blue clear color; no stray marks."
+  }
+}

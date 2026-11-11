@@ -6,9 +6,13 @@
 
 `glBufferData` and `glBufferSubData` copy client memory into a buffer object. `glMapBufferRange` goes the other
 way round: the GL hands the application a **pointer** into the buffer's data store, the application reads or
-writes through it, and `glUnmapBuffer` gives the store back. Used well it avoids a copy and lets a program stream
-data into a buffer that earlier draws are still reading. The price is a set of flags with precise rules about what
-the application may assume afterwards. This demo exercises every one of them:
+writes through it, and `glUnmapBuffer` gives the store back. Mapping *can* save a copy, but the specification does
+not promise zero-copy access: the pointer may well point to a staging copy that the GL transfers at unmap or flush
+time. An ordinary mapping is also synchronized: `glMapBufferRange` returns only "once all pending operations on that
+buffer have completed" (ES 3.0 §2.10.3), so mapping a buffer that queued draws still read waits for them.
+`MAP_UNSYNCHRONIZED_BIT` removes that wait, and it is safe only when the application itself knows that no pending
+command uses the mapped range (otherwise the results are undefined, with no error). The price is a set of flags with
+precise rules about what the application may assume afterwards. This demo exercises every one of them:
 
 - `MAP_READ_BIT`, `MAP_WRITE_BIT` and the four modifiers `MAP_INVALIDATE_RANGE_BIT`, `MAP_INVALIDATE_BUFFER_BIT`,
   `MAP_FLUSH_EXPLICIT_BIT` and `MAP_UNSYNCHRONIZED_BIT` - alone, combined, and (for the combinations the spec

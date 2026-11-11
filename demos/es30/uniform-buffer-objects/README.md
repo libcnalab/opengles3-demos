@@ -22,6 +22,29 @@ application and the shader must agree on **where every member lives inside the b
   `glBufferData`);
 - an **array of blocks**, the implementation **limits**, the defined **errors**, and a deliberate **layout mistake**.
 
+## Read this first: one std140 block, end to end
+
+Follow the 64-byte block `Palette` through cell A0 before anything else:
+
+1. **Declaration.** `shaders/scene.vert` and `shaders/scene.frag` both declare
+   `layout(std140) uniform Palette { vec4 color[3]; vec2 offset; float gain; int pick; } pal;` (the two declarations
+   must match, or the link fails). The comment in `scene.vert` lists the std140 offsets: `color` 0 (stride 16),
+   `offset` 48, `gain` 56, `pick` 60, 64 bytes in all.
+2. **Layout on the C++ side.** `struct PaletteData` in `main.cpp` mirrors exactly those offsets, and a `static_assert`
+   pins them down at compile time; `check_program_blocks()` (called from `validate()`) also asks the GL for the same
+   offsets with `glGetUniformIndices` and `glGetActiveUniformsiv`.
+3. **Upload.** `init()` creates the buffers (`allocate()`, a `glBufferData` of zeros); `write_palette()` fills one with
+   `glBufferSubData(UNIFORM_BUFFER, 0, sizeof(PaletteData), &p)`.
+4. **Binding.** `init()` looks the block up with `glGetUniformBlockIndex`. At the start of `scene_binding_cells()`,
+   `glUniformBlockBinding(program, block, 0)` connects the block to binding point 0 and
+   `glBindBufferBase(UNIFORM_BUFFER, 0, buffer)` connects the point to the buffer.
+5. **Draw.** `draw_square()` sets the cell's viewport, `glUseProgram` and `glDrawArrays(TRIANGLE_STRIP, 0, 4)`; the
+   shaders read `pal.offset`, `pal.color[pal.pick]` and `pal.gain` straight from the buffer.
+
+The rest of `scene_binding_cells()` (cells A1-A7) varies one link of that chain at a time. After that, read "The
+binding model", "std140 in one table" (the `Probe` block, every member kind), "The layout mistake" and "The packed
+block" below; introspection, limits and errors are reference material.
+
 ## Reading the image
 
 The 256 x 256 surface has two parts.

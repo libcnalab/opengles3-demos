@@ -5,8 +5,18 @@
 ## Purpose
 
 A real 3D scene lit by 48 coloured point lights that move over time, rendered with *deferred shading*: the geometry is
-rasterized once into a **G-buffer**, and lighting is computed afterwards, per pixel, from what the G-buffer holds. The cost of
-the lighting no longer depends on how many objects overlap a pixel, and a light only costs something where it actually shines.
+rasterized once into a **G-buffer**, and lighting is computed afterwards, per pixel, from what the G-buffer holds. For opaque
+surfaces this removes the repeated *lighting* work of overdraw: each pixel is lit once, however many objects overlap it. The
+geometry pass itself is not cheaper - rasterizing the objects and writing three colour planes plus depth still scales with how
+much they overlap. With the light-volume path a light is evaluated only on the pixels its sphere covers; the full-screen path
+loops over every light at every pixel.
+
+**Read this first.** `render()` calls `draw_frame()`, which runs the passes in order: `geometry_pass()` (the G-buffer FBO, depth
+test on, one `draw_object()` per object with `gbuffer.vert/frag`), then `light_pass_volumes()` or `light_pass_fullscreen()` (the
+lighting pass into the light buffer), then `composite()` (into the window). The G-buffer itself - three textures, a depth texture
+and `glDrawBuffers` - is created in `create_targets()`. Above the `DeferredShading` class, `main.cpp` holds the scene and mesh
+generators (used for drawing) and the CPU ray caster, lighting model and error budget (used only by validation);
+`check_configuration()` and `validate()` are defined after the class.
 
 Everything is generated in `main.cpp`: a tiled floor, ten pillars, eight rotated boxes, six small cubes, seven spheres, a torus and
 one small emissive "bulb" sphere per light (81 draws per pass). The camera orbits slowly; the animation clock is `frame / 60 s`,

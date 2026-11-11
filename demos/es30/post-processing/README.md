@@ -12,6 +12,28 @@ target that the hardware encodes and decodes), a **separable Gaussian blur** tha
 **Sobel edge detection**, **bloom** (bright-pass, blur, add) and a **depth-of-field** look that reads the scene's
 depth texture. Every pass is validated by recomputing it on the CPU from the bytes the GPU actually produced.
 
+## Read this first: the passes in order
+
+`render()` calls `draw_frame()` in `main.cpp`, which runs these passes in this order (the names in the Reads and Writes
+columns are members of the demo class, created in `create_targets()`; `scene_a_`, `scene_b_`, `tmp_`, `blur_t_`,
+`edge_t_`, `bright_t_` and `bloom_t_` are framebuffer objects with one color texture, RGBA8 unless noted):
+
+| # | Pass (C++ / shader) | Reads | Writes | What it does |
+|---|---|---|---|---|
+| 1 | scene, `draw_scene(scene_a_.fbo)` / `sky.frag`, `scene.vert/frag` | vertex buffers | `scene_a_` + the `DEPTH_COMPONENT24` **texture** `depth_tex_` | the lit 3D scene in linear light |
+| 2 | sRGB scene, `draw_scene(scene_b_.fbo)` / the same programs | vertex buffers | `scene_b_` (`SRGB8_ALPHA8`) + a `DEPTH_COMPONENT24` **renderbuffer** | the same draws; the hardware encodes on write |
+| 3 | blur, `blur_chain()` = two `pass_blur()` / `blur.frag` | `scene_a_`, then `tmp_` | `tmp_` (horizontal), then `blur_t_` (vertical) | separable Gaussian, ping-pong through `tmp_` |
+| 4 | Sobel, `pass_sobel()` / `sobel.frag` | `scene_a_` | `edge_t_` | edge magnitude, thresholded to white lines |
+| 5 | bright-pass, `pass_bright()` / `bright.frag` | `scene_a_` | `bright_t_` | keeps only what is brighter than the threshold |
+| 6 | bloom blur, `blur_chain()` / `blur.frag` | `bright_t_`, then `tmp_` | `tmp_`, then `bloom_t_` | blurs the bright parts |
+| 7 | present, `pass_present()` / `present.frag` | `scene_a_`, `scene_b_`, `blur_t_`, `edge_t_`, `bloom_t_`, `depth_tex_` | default framebuffer | the selected look: gamma, bloom add, depth of field mix, or the overview stripes |
+| - | depth dump, `pass_depth_dump()` / `depth_dump.frag` | `depth_tex_` | `tmp_` | validation only: writes depth as color (ES 3.0 `glReadPixels` cannot read depth) |
+
+In a single-look mode only the passes that look needs run; the overview runs all of them. **Start with the
+bright-pass** (`pass_bright()` and `bright.frag`): one input texture, one `texelFetch`, one line of arithmetic and one
+full-screen draw, so the whole pattern - bind the target FBO, bind the input texture, draw one triangle - is visible
+without any other detail. The blur and present passes are the same pattern with more uniforms.
+
 ## The scene
 
 A checkerboard floor (80 x 80 units, unit squares, analytically filtered in the shader so it does not alias in the
@@ -45,19 +67,7 @@ same frame, separated by one-pixel lines. Keys select one look full screen:
 the automatic orbit, `r` resets the camera, `space` pauses the animation, `esc` quits. Only the passes the selected look
 needs are drawn; the overview draws everything.
 
-## What happens, pass by pass
-
-| Pass | Program | Reads | Writes |
-|---|---|---|---|
-| scene (RGBA8) | `sky.frag`, `scene.vert/frag` | vertex buffers | RGBA8 color texture + `DEPTH_COMPONENT24` **texture** |
-| scene (sRGB) | the same programs, the same draws | vertex buffers | `SRGB8_ALPHA8` color texture + `DEPTH_COMPONENT24` **renderbuffer** |
-| blur, horizontal | `blur.frag` (`u_dir = (1,0)`) | scene | ping target |
-| blur, vertical | `blur.frag` (`u_dir = (0,1)`) | ping target | blur target |
-| sobel | `sobel.frag` | scene | edge target |
-| bright-pass | `bright.frag` | scene | bright target |
-| bloom blur | `blur.frag` twice | bright target, ping target | bloom target |
-| present | `present.frag` | scene, sRGB scene, blur, edges, bloom, depth | default framebuffer |
-| depth dump | `depth_dump.frag` | depth texture | ping target (validation only) |
+## How the full-screen passes work
 
 Every pass except the scene is `glDrawArrays(TRIANGLES, 0, 3)` of one oversized triangle whose corners come from
 `gl_VertexID` (`fullscreen.vert`); there is no vertex buffer. Each fragment shader reads its input with

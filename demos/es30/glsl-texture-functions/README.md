@@ -13,7 +13,23 @@ GLSL ES 3.00 replaced the ES 2.0 `texture2D`/`textureCube` pair with one overloa
 
 This demo calls every one of those forms on every sampler kind that has it, in the fragment stage and (where the
 function exists without derivatives) in the vertex stage, and compares the result **texel by texel** with a CPU model
-of the ES 3.0 level-of-detail and texel-selection rules. It complements `es30-texture-swizzle-lod`, which looks at how
+of the ES 3.0 level-of-detail and texel-selection rules.
+
+**Where the overloads are listed.** Each lookup is one numbered `case` in `shaders/probe.frag` (fragment stage, grouped
+by sampler family under `#if GROUP == 0 ... 5`) or in `shaders/vertex_lookup.vert` (the 13 vertex-stage cases). The
+same numbers are mirrored by the case table `build_cases()` in `main.cpp` (field `.id`), which holds each case's
+coordinates, derivatives, lod or bias, offsets and negative-control mutations; the CPU model predicts the texel from
+them. The table "What is covered" below is the summary by sampler type.
+
+**Implicit level of detail is a fragment-stage feature.** GLSL ES 3.00 §8.8: "level of detail is not implicitly
+computed for vertex shaders", and "the bias parameter is not accepted in a vertex shader". So every lookup whose level
+comes from implicit derivatives (`texture`, `textureOffset`, `textureProj` and their projective/offset variants, with
+or without bias) is exercised for its level selection in the fragment stage only. The vertex stage runs the explicit
+`Lod` forms, `texelFetch` / `texelFetchOffset`, `textureSize`, and `texture`, `textureOffset`, `textureProj` without
+bias, which there read the base level (ES 3.0 §2.12.9.4). `dFdx`, `dFdy` and `fwidth` exist only in fragment shaders
+(§8.9).
+
+It complements `es30-texture-swizzle-lod`, which looks at how
 texture parameters (swizzle, BASE/MAX_LEVEL, MIN/MAX_LOD) act on a few of these functions on a 2D texture; here the
 subject is the functions themselves across all sampler types.
 

@@ -11,8 +11,9 @@ object becomes *signaled*. The CPU can poll it, block on it (`glClientWaitSync`)
 (`glWaitSync`) without stalling the CPU.
 
 The demo uses the pattern that matters most in practice: a **ring of two vertex buffers that the CPU rewrites without
-synchronization**. `MAP_UNSYNCHRONIZED_BIT` tells the GL not to wait for pending draws that read the buffer; the application
-must do that waiting itself, and the fence is how. It then examines the sync API in isolation: properties, the legal results
+implicit synchronization** (`MAP_UNSYNCHRONIZED_BIT`), **with fences providing the synchronization explicitly**.
+`MAP_UNSYNCHRONIZED_BIT` tells the GL not to wait for pending draws that read the buffer; the application must do that
+waiting itself, and a `glClientWaitSync` on the slot's fence is how. It then examines the sync API in isolation: properties, the legal results
 of every wait, `glFlush` versus `glFinish`, an asynchronous readback guarded by a fence, object lifetime and the errors.
 
 ## What the image shows

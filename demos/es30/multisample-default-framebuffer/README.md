@@ -23,6 +23,25 @@ demo shows that path and what the ES 3.0 specification says about it:
 The runtime requests the config by setting `demo::Info::samples = 4`. The demo itself never calls an EGL
 function.
 
+## Read this first
+
+The technique itself is four short steps in `main.cpp`:
+
+1. **Ask for samples.** `main()` passes `demo::Info{... .samples = kRequestedSamples}` (4); the runtime turns that into
+   the EGL config request. Nothing else is needed to make window drawing multisampled.
+2. **Check what you got.** `check_queries()` reads `SAMPLE_BUFFERS` and `SAMPLES` with the default framebuffer bound,
+   then with single-sample and multisample framebuffer objects bound, to show that both values follow the draw
+   framebuffer.
+3. **Draw normally.** `render()` calls `draw_cube()`: one `glDrawArrays` of 36 vertices with back-face culling, no
+   multisample-specific call.
+4. **Get resolved pixels.** In `validate()`, `read_image()` does a `glReadPixels` straight from the window. Further down,
+   after `bind_read(kDefaultFbo)` and `bind_draw(single_)`, `blit(all, all)` (a thin wrapper around `glBlitFramebuffer`)
+   resolves the whole window into a single-sample RGBA8 framebuffer object.
+
+The rest of this README, and most of `validate()` (stencil sample counting, the single-sample control, the error
+cases), is reference material on what ES 3.0 does and does not promise about multisampling; read it once the four
+steps are clear.
+
 ## What the image shows
 
 A cube rotating about a tilted axis on a dark blue background (`(20, 24, 40)`), drawn with back-face culling.
@@ -83,6 +102,8 @@ are exactly the face color. `cube.frag` writes it out at `highp`. The colors are
 stores exactly. Dithering is disabled for clarity, although it could not change exactly representable values.
 
 ## Validation (`--validate`)
+
+*Reference material: a conformance-level account of every check. Not needed to follow the technique.*
 
 39 checks in an ES 3.1+ context, 36 in an ES 3.0 context (the `glGetMultisamplefv` checks are ES 3.1 API).
 

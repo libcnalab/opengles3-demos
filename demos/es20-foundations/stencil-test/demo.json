@@ -1,0 +1,81 @@
+{
+  "name": "es20-stencil-test",
+  "title": "Stencil buffer test",
+  "min_es": "3.0",
+  "glsl": [
+    "300 es"
+  ],
+  "category": "es20-foundations",
+  "order": 100,
+  "summary": "All stencil functions and operations (clamp and wrap), value/write masks, sfail/dpfail/dppass with the depth test, separate front/back state, a stencil-masked window with outline and an even-odd fill; the stencil value is measured with 255 EQUAL-test draws and checked against a CPU model.",
+  "spec": [
+    "ES 3.0 §3.4 Points",
+    "ES 3.0 §3.6.1 Basic Polygon Rasterization (front/back facing, FrontFace, edge rule)",
+    "ES 3.0 §4.1.4 Stencil Test",
+    "ES 3.0 §4.1.5 Depth Buffer Test (stencil update on depth fail / pass)",
+    "ES 3.0 §4.2.2 Fine Control of Buffer Updates (StencilMask, StencilMaskSeparate, clears use the front mask)",
+    "ES 3.0 §4.2.3 Clearing the Buffers (ClearStencil; clears obey the write mask, not the stencil test)",
+    "ES 3.0 §4.3.2 Reading Pixels (only color is readable: stencil is measured through colors)",
+    "ES 3.0 §4.4.5 Effects of Framebuffer State on Framebuffer Dependent Values (STENCIL_BITS)",
+    "ES 3.0 §6.1.1 Simple Queries",
+    "GLSL ES 3.00 §7.1 Vertex Shader Special Variables (gl_VertexID, gl_PointSize)",
+    "GLSL ES 3.00 §7.2 Fragment Shader Special Variables (gl_FragCoord)"
+  ],
+  "api": {
+    "glEnable": "STENCIL_TEST on/off decides whether the stencil test and updates apply (panel D, window, star); DEPTH_TEST for the sfail/dpfail/dppass cases; SCISSOR_TEST confines every cell and panel",
+    "glDisable": "disabled stencil test leaves the stored value untouched even with REPLACE set (panel D); disabled depth test counts as passed",
+    "glIsEnabled": "STENCIL_TEST: FALSE initially, TRUE after glEnable, FALSE after glDisable",
+    "glStencilFunc": "all 8 functions x 7 reference/mask/clamp cases (56 cells) and the 255 EQUAL readout draws against a CPU model; GL_STENCIL_FUNC/REF/VALUE_MASK and BACK_* round trip for all 8, ref clamping on query; also sets the back face (clockwise triangle cell)",
+    "glStencilFuncSeparate": "FRONT, BACK and FRONT_AND_BACK: front EQUAL 100 passes while back EQUAL 7 fails on the same pixel; queries show only the named face changes",
+    "glStencilOp": "all 8 operations from start values 0, 1, 0x55, 254, 255 (40 cells, incl. INCR/DECR saturation and INCR_WRAP/DECR_WRAP wrap); sfail/dpfail/dppass slots distinguished (panel D); INVERT/REPLACE in the star and window; GL_STENCIL_FAIL/PASS_DEPTH_FAIL/PASS_DEPTH_PASS round trip",
+    "glStencilOpSeparate": "front INCR vs back DECR on CCW/CW triangles (also with glFrontFace(CW) and a point); queries show only the named face changes",
+    "glStencilMask": "only masked bits change (REPLACE, INVERT, ZERO, INCR carry, DECR borrow, mask 0); also applied to glClear; GL_STENCIL_WRITEMASK and BACK_WRITEMASK queried",
+    "glStencilMaskSeparate": "front 0x0F / back 0xF0 REPLACE on CCW / CW triangles; glClear uses the front mask; queries show independent masks and FRONT_AND_BACK",
+    "glClearStencil": "start values of all cells (0..255) and masked clears observed through the readout; GL_STENCIL_CLEAR_VALUE queried",
+    "glClear": "COLOR|DEPTH|STENCIL per cell; stencil-only clears with write masks (the stencil test, set to NEVER, does not apply to clears); scissored",
+    "glClearDepthf": "depth 0.5 in every cell decides dpfail vs dppass in panel D",
+    "glClearColor": "cell base color equals the readout color for value 0, so cells holding 0 are distinguishable from the black grid",
+    "glColorMask": "all channels FALSE during stencil-only draws: cell colors and the star's hole are left unpainted",
+    "glDepthMask": "FALSE: depth not stored by a passing fragment while the stencil update still happens (panel D)",
+    "glFrontFace": "CW swaps which triangle winding uses the front stencil state (panel E)",
+    "glViewport": "per-cell and per-panel viewports map the full-viewport triangle onto the probed pixels",
+    "glScissor": "confines each cell's clear and draws, the readout to the lab band, and each visual panel",
+    "glGetIntegerv": "STENCIL_FUNC/REF/VALUE_MASK/FAIL/PASS_DEPTH_FAIL/PASS_DEPTH_PASS/WRITEMASK, the STENCIL_BACK_* variants, STENCIL_CLEAR_VALUE, STENCIL_BITS",
+    "glGetUniformLocation": "uniform locations of the five programs (-1 for uniforms a program does not have)",
+    "glUniform1i": "u_flip selects CCW or CW winding of the cover triangle",
+    "glUniform1f": "u_depth (NDC z of the cover triangle), u_point_size, u_period (stripe period)",
+    "glUniform2f": "u_center places the point on the probe pixel",
+    "glUniform3f": "u_circle and u_star center/radius of the window disc and the pentagram",
+    "glUniform4f": "readout color (v/255, 0.4, 0.4) per stencil value; stripe colors",
+    "glUseProgram": "five programs (cover, stripes, point, circle, star) rendered the probed pixels",
+    "glDrawArrays": "TRIANGLES (cover triangle), POINTS (point uses front state), TRIANGLE_FAN (disc, pentagram)",
+    "glReadPixels": "RGBA/UNSIGNED_BYTE readback of the 145 probe pixels (via Check::expect_pixel)",
+    "glDeleteProgram": "cleanup, final glGetError == NO_ERROR"
+  },
+  "features": [
+    "ES20.STENCIL.TEST",
+    "ES20.STENCIL.SEPARATE",
+    "ES20.STENCIL.MASK",
+    "ES20.CLEAR.STENCIL",
+    "ES20.CLEAR.SCISSORED",
+    "ES20.SCISSOR",
+    "ES20.STATE.QUERIES"
+  ],
+  "glsl_features": [
+    "GLSL300.VERSION",
+    "GLSL300.UNIFORM",
+    "GLSL300.FRAG.OUTPUT",
+    "GLSL300.BUILTIN_VARS.VS",
+    "GLSL300.BUILTIN_VARS.FS"
+  ],
+  "validation": [
+    "pixel-reference",
+    "state-query",
+    "gl-error"
+  ],
+  "visual_review": {
+    "date": "2026-11-11",
+    "by": "claude-sonnet (subagent)",
+    "notes": "256x256 radeonsi capture: top ~116 px is a black-gridded heat map of 16x14 px cells (teal = stencil 0 through salmon = 255) in the layout described in the README: 8x5 operations table top left, 8x7 functions table top right, masks and sfail/dpfail/dppass rows below the operations table, 13-cell front/back row underneath. Bottom left: circular window with warm orange stripes inside a white outline ring over blue diagonal stripes; bottom right: five-pointed gold-striped star with a hollow pentagon in the middle on a dark gray panel (even-odd INVERT fill). Edges clean, no stray stencil artifacts outside the panels."
+  }
+}

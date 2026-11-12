@@ -24,7 +24,8 @@
 //   * an incomplete texture, which gathers (0, 0, 0, 1);
 //   * the compile-time rules: a non-constant comp or offset is rejected by a 3.10 compiler;
 //   * on an ES 3.2 context only: textureGatherOffsets with a constant offsets array (GLSL ES 3.20).
-// The 256 x 256 window shows sixteen of the result images, one per 64 x 64 cell, read back and compared as well.
+// The window shows sixteen of the result images in a 4 x 4 grid of cells that tiles the surface (boundaries at k * width / 4 and
+// k * height / 4), each image magnified by an integer factor per axis with a NEAREST blit; read back and compared as well.
 
 #include <demo/gl_util.hpp>
 #include <demo/runtime.hpp>
@@ -50,8 +51,8 @@ namespace
 {
     constexpr int kTex = 8;       // texels per edge of every source texture
     constexpr int kTarget = 16;   // edge of the result targets
-    constexpr int kWindow = 256;  // 4 x 4 cells of kCell pixels
-    constexpr int kCell = 64;
+    constexpr int kGrid = 4;        // the window is a kGrid x kGrid grid of cells
+    constexpr int kMinWindow = 40;  // a cell must hold a 9 x 9 result image at scale 1 plus a 1-pixel gap: 4 * (9 + 1)
 
     using U8x4 = std::array<std::uint8_t, 4>;
     using I32x4 = std::array<std::int32_t, 4>;
@@ -333,9 +334,9 @@ namespace
     // ---------------------------------------------------------------------------------------------
     struct Cell
     {
-        int x = 0, y = 0;  // lower-left pixel of the 63 x 63 block in the window
+        int x = 0, y = 0;  // lower-left pixel of the magnified block in the window
         Region region{};
-        int scale = 7;
+        int scale_x = 7, scale_y = 7;  // integer magnification per axis (7 x 7 at 256 x 256)
         Image<std::uint8_t> expected;
     };
 
@@ -344,8 +345,8 @@ namespace
     public:
         void init(demo::Env& env) override
         {
-            if (env.width < kWindow || env.height < kWindow)
-                throw demo::Skip(std::format("this demo draws {0}x{0} pixels and needs a default framebuffer at least that large", kWindow));
+            if (env.width < kMinWindow || env.height < kMinWindow)
+                throw demo::Skip(std::format("the 4 x 4 grid of result images needs a default framebuffer of at least {0}x{0} pixels", kMinWindow));
 
             mgl::glGenVertexArrays(1, &vao_);
             mgl::glBindVertexArray(vao_);  // no attributes: the vertex shader generates its corners from gl_VertexID
@@ -378,10 +379,12 @@ namespace
             mgl::glDisable(mgl::Capability::Dither);  // dithering may perturb 8-bit results; every comparison below is exact
         }
 
-        void render(demo::Env& /*env*/, int /*frame*/) override
+        void render(demo::Env& env, int /*frame*/) override
         {
+            win_w_ = env.width;
+            win_h_ = env.height;
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
-            mgl::glViewport(0, 0, kWindow, kWindow);
+            mgl::glViewport(0, 0, env.width, env.height);
             mgl::glClearColor(0.08f, 0.09f, 0.11f, 1.0f);
             mgl::glClear(mgl::ClearBufferBit::Color);
             cells_.clear();
@@ -706,16 +709,21 @@ namespace
         void show_cell(int index, Region region, Kind kind, const Defines& defines, Bound texture, int layer, float ref, Image<std::uint8_t> expected)
         {
             draw(program(defines), kind, texture, layer, ref, region);
-            const int col = index % 4, row = index / 4;
+            // Cell (col, row) spans [col * w / 4, (col + 1) * w / 4) x [(3 - row) * h / 4, (4 - row) * h / 4): the cells tile the window.
+            // The result image is magnified by the largest integer factor per axis that leaves at least one pixel of gap, and centred.
+            const int col = index % kGrid, row = index / kGrid;
+            const int cx0 = col * win_w_ / kGrid, cx1 = (col + 1) * win_w_ / kGrid;
+            const int cy0 = (kGrid - 1 - row) * win_h_ / kGrid, cy1 = (kGrid - row) * win_h_ / kGrid;
             Cell cell;
-            cell.x = col * kCell;
-            cell.y = kWindow - (row + 1) * kCell;
             cell.region = region;
-            cell.scale = (kCell - 1) / region.w();
+            cell.scale_x = (cx1 - cx0 - 1) / region.w();
+            cell.scale_y = (cy1 - cy0 - 1) / region.h();
+            cell.x = cx0 + (cx1 - cx0 - cell.scale_x * region.w()) / 2;
+            cell.y = cy0 + (cy1 - cy0 - cell.scale_y * region.h()) / 2;
             cell.expected = std::move(expected);
             mgl::glBindFramebuffer(mgl::FramebufferTarget::ReadFramebuffer, result_fbo_[0]);
             mgl::glBindFramebuffer(mgl::FramebufferTarget::DrawFramebuffer, mgl::FramebufferId{0});
-            mgl::glBlitFramebuffer(region.x0, region.y0, region.x1, region.y1, cell.x, cell.y, cell.x + cell.scale * region.w(), cell.y + cell.scale * region.h(),
+            mgl::glBlitFramebuffer(region.x0, region.y0, region.x1, region.y1, cell.x, cell.y, cell.x + cell.scale_x * region.w(), cell.y + cell.scale_y * region.h(),
                                    mgl::ClearBufferBit::Color, mgl::BlitFilter::Nearest);
             cells_.push_back(std::move(cell));
         }
@@ -727,7 +735,7 @@ namespace
         {
             // The window cells were blitted by render(): every block of every cell must hold the gathered value (alpha 255).
             mgl::glBindFramebuffer(mgl::FramebufferTarget::ReadFramebuffer, mgl::FramebufferId{0});
-            const std::vector<std::uint8_t> window = demo::read_rgba8(0, 0, kWindow, kWindow);
+            const std::vector<std::uint8_t> window = demo::read_rgba8(0, 0, win_w_, win_h_);
             int bad = 0;
             int total = 0;
             std::string first;
@@ -738,9 +746,9 @@ namespace
                     for (int x = 0; x < cell.region.w(); ++x)
                     {
                         ++total;
-                        const int px = cell.x + x * cell.scale + cell.scale / 2;
-                        const int py = cell.y + y * cell.scale + cell.scale / 2;
-                        const std::size_t at = static_cast<std::size_t>(py * kWindow + px) * 4;
+                        const int px = cell.x + x * cell.scale_x + cell.scale_x / 2;
+                        const int py = cell.y + y * cell.scale_y + cell.scale_y / 2;
+                        const std::size_t at = (static_cast<std::size_t>(py) * static_cast<std::size_t>(win_w_) + static_cast<std::size_t>(px)) * 4;
                         const auto& want = cell.expected.at(x, y);
                         const bool ok = window[at] == want[0] && window[at + 1] == want[1] && window[at + 2] == want[2] && window[at + 3] == 255;
                         if (!ok && bad++ == 0)
@@ -1126,6 +1134,7 @@ namespace
         std::map<std::string, Program> programs_;
         std::string vertex_source_, fragment_source_, offsets32_source_;
         std::vector<Cell> cells_;
+        int win_w_ = 0, win_h_ = 0;  // surface size of the last render()
         int gather_min_ = -8, gather_max_ = 7;
         Image<std::uint8_t> observed_clamp0_, observed_repeat0_;
     };

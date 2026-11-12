@@ -15,9 +15,11 @@
 //    verifies the implicit-LOD side (level selection by screen-space derivatives, all four mipmap
 //    filters, the effect of BASE/MAX_LEVEL and MIN/MAX_LOD on texture()); this demo does not repeat it.
 //
-// The 256 x 256 framebuffer is a contact sheet of 16 x 16 pixel cells, 16 per row, row 0 at the bottom.
-// Every cell is one draw call whose result is a known color or a known pattern; sections start on a
-// new row:
+// The cells are drawn into an offscreen RGBA8 "contact sheet" of 16 x 16 pixel cells, 16 per row, row 0 at the bottom
+// (256 pixels wide, as high as the rows in use). Every cell is one draw call whose result is a known color or a known
+// pattern; sections start on a new row. The cells measure exact pixel positions, screen-space derivatives and per-pixel
+// texelFetch coordinates, so they keep their 16-pixel design at every window size; the window shows the finished sheet
+// stretched over the whole surface (shaders/present.frag, integer texel mapping):
 //
 //   rows 0-1   swizzle      17 cells: R8, RG8, LUMINANCE_ALPHA, ALPHA and RGBA8 textures under different
 //                           swizzles, one swizzled texture through four lookup functions, and through a sampler
@@ -30,7 +32,8 @@
 // Validation: every pixel of every cell is compared with the CPU model of that cell (a swizzled
 // Table 3.24 base color, a solid level color, a wrapped/mirrored texel of a chain level, a bilinear mix,
 // an encoded size); the swizzle state, the limits and the defined errors are queried and provoked; three
-// negative controls show that the cell comparisons can fail.
+// negative controls show that the cell comparisons can fail. Every window pixel is compared with the sheet
+// texel the presentation maps it to.
 
 #include <demo/gl_util.hpp>
 #include <demo/runtime.hpp>
@@ -58,7 +61,6 @@ namespace
 {
     constexpr int kCellPx = 16;  // edge of a cell in pixels
     constexpr int kCols = 16;
-    constexpr int kRows = 16;
     constexpr int kSwz = 4;      // swizzle textures are 4 x 4 texels (4 pixels per texel in a cell)
 
     constexpr int kLadderW = 64;  // ladder: 64 x 16, 7 levels, every level one solid color
@@ -263,9 +265,6 @@ namespace
     public:
         void init(demo::Env& env) override
         {
-            if (env.width < kCols * kCellPx || env.height < kRows * kCellPx)
-                throw demo::Skip(std::format("this demo draws a {0}x{0} contact sheet and needs a framebuffer at least that large", kCols * kCellPx));
-
             min_offset_ = demo::get_integer(mgl::GetParameter::MinProgramTexelOffset);
             max_offset_ = demo::get_integer(mgl::GetParameter::MaxProgramTexelOffset);
 
@@ -308,28 +307,62 @@ namespace
             mgl::glSamplerParameteri(sampler_, mgl::SamplerParameter::WrapT, static_cast<GLint>(static_cast<GLenum>(Wrap::ClampToEdge)));
 
             build_cells();
+
+            // The offscreen sheet: 16 cells wide, as many rows high as the cells use.
+            for (const Cell& c : cells_) sheet_rows_ = std::max(sheet_rows_, c.row + 1);
+            mgl::glGenTextures(1, &sheet_tex_);
+            mgl::glBindTexture(mgl::TextureTarget::Texture2D, sheet_tex_);
+            mgl::glTexStorage2D(mgl::TextureTarget::Texture2D, 1, mgl::SizedInternalFormat::Rgba8, kCols * kCellPx, sheet_rows_ * kCellPx);
+            nearest_clamp();
+            mgl::glBindTexture(mgl::TextureTarget::Texture2D, mgl::TextureId{0});
+            mgl::glGenFramebuffers(1, &sheet_fbo_);
+            mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, sheet_fbo_);
+            mgl::glFramebufferTexture2D(mgl::FramebufferTarget::Framebuffer, mgl::to_framebuffer_attachment(mgl::ColorAttachment::Color0), mgl::TextureTarget::Texture2D, sheet_tex_, 0);
+            const mgl::FramebufferStatus status = mgl::glCheckFramebufferStatus(mgl::FramebufferTarget::Framebuffer);
+            if (status != mgl::FramebufferStatus::Complete) throw demo::Failure(std::format("the contact-sheet framebuffer is incomplete: {}", demo::framebuffer_status_name(status)));
+            mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
+
+            present_.id = demo::build_program(env, "shaders/quad.vert", "shaders/present.frag");
+            present_.sheet = mgl::glGetUniformLocation(present_.id, "u_sheet");
+            present_.window = mgl::glGetUniformLocation(present_.id, "u_window");
         }
 
-        void render(demo::Env& /*env*/, int /*frame*/) override
+        void render(demo::Env& env, int /*frame*/) override
         {
+            // Pass 1: the cells, into the offscreen sheet.
+            mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, sheet_fbo_);
             mgl::glDisable(mgl::Capability::Dither);  // dithering could change a stored 8-bit value by one step
-            mgl::glViewport(0, 0, kCols * kCellPx, kRows * kCellPx);
+            mgl::glViewport(0, 0, kCols * kCellPx, sheet_rows_ * kCellPx);
             mgl::glClearColor(0.1f, 0.1f, 0.12f, 1.0f);
             mgl::glClear(mgl::ClearBufferBit::Color);
             mgl::glActiveTexture(mgl::TextureUnit::Texture0);
             for (const Cell& c : cells_) draw_cell(c);
+
+            // Pass 2: the sheet, stretched over the window.
+            mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
+            mgl::glViewport(0, 0, env.width, env.height);
+            mgl::glUseProgram(present_.id);
+            mgl::glActiveTexture(mgl::TextureUnit::Texture0);
+            mgl::glBindTexture(mgl::TextureTarget::Texture2D, sheet_tex_);
+            mgl::glUniform1i(present_.sheet, 0);
+            mgl::glUniform2i(present_.window, env.width, env.height);
+            mgl::glDrawArrays(mgl::PrimitiveType::TriangleStrip, 0, 4);
+            mgl::glBindTexture(mgl::TextureTarget::Texture2D, mgl::TextureId{0});  // the sheet is the render target of the next frame
             mgl::glUseProgram(mgl::ProgramId{0});
-            mgl::glViewport(0, 0, kCols * kCellPx, kRows * kCellPx);
         }
 
-        void validate(demo::Env& /*env*/, demo::Check& check) override
+        void validate(demo::Env& env, demo::Check& check) override
         {
+            check_presentation(env, check);
+            // Every cell check reads the sheet (read_cell reads the bound READ framebuffer).
+            mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, sheet_fbo_);
             check_cells(check);
             check_equivalences(check);
             check_negative_controls(check);
             check_offsets_are_meaningful(check);
             check_swizzle_state(check);
             check_limits_and_state(check);
+            mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
             check.expect_no_gl_error("no stray GL error left by the validation sequence");
         }
 
@@ -338,6 +371,10 @@ namespace
             mgl::glBindSampler(3, mgl::SamplerId{0});
             mgl::glBindTexture(mgl::TextureTarget::Texture2D, mgl::TextureId{0});
             mgl::glUseProgram(mgl::ProgramId{0});
+            mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
+            mgl::glDeleteFramebuffers(1, &sheet_fbo_);
+            mgl::glDeleteTextures(1, &sheet_tex_);
+            mgl::glDeleteProgram(present_.id);
             mgl::glDeleteSamplers(1, &sampler_);
             mgl::glDeleteTextures(static_cast<GLsizei>(tex_.size()), tex_.data());
             mgl::glDeleteProgram(off_.id);
@@ -351,6 +388,7 @@ namespace
         struct SwizzleProgram { mgl::ProgramId id{}; mgl::UniformLocation tex{}, lookup{}; };
         struct LodProgram { mgl::ProgramId id{}; mgl::UniformLocation tex{}, func{}, lod{}, dx{}, dy{}, q{}, origin{}; };
         struct OffsetProgram { mgl::ProgramId id{}; mgl::UniformLocation tex{}, func{}, off{}, lod{}, dx{}, dy{}, q{}, origin{}, size{}; };
+        struct PresentProgram { mgl::ProgramId id{}; mgl::UniformLocation sheet{}, window{}; };
 
         // ------------------------------------------------------------------------------------------
         // Texture uploads
@@ -876,6 +914,38 @@ namespace
         // ------------------------------------------------------------------------------------------
         [[nodiscard]] std::vector<std::uint8_t> read_cell(const Cell& c) const { return demo::read_rgba8(c.col * kCellPx, c.row * kCellPx, c.vw, c.vh); }
 
+        /// The window shows the sheet stretched with the integer mapping of shaders/present.frag: every window pixel must be
+        /// exactly the sheet texel that mapping names (RGB), and opaque. The sheet's content is what check_cells verifies.
+        void check_presentation(const demo::Env& env, demo::Check& check) const
+        {
+            const int sw = kCols * kCellPx, sh = sheet_rows_ * kCellPx;
+            mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, sheet_fbo_);
+            const std::vector<std::uint8_t> sheet = demo::read_rgba8(0, 0, sw, sh);
+            mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
+            const std::vector<std::uint8_t> window = demo::read_rgba8(0, 0, env.width, env.height);
+            int bad = 0;
+            std::string first;
+            std::vector<bool> shown(static_cast<std::size_t>(sw * sh), false);
+            for (int y = 0; y < env.height; ++y)
+                for (int x = 0; x < env.width; ++x)
+                {
+                    const int tx = x * sw / env.width, ty = y * sh / env.height;
+                    shown[static_cast<std::size_t>(ty * sw + tx)] = true;
+                    const std::size_t w = (static_cast<std::size_t>(y) * static_cast<std::size_t>(env.width) + static_cast<std::size_t>(x)) * 4;
+                    const std::size_t t = static_cast<std::size_t>(ty * sw + tx) * 4;
+                    const bool ok = window[w] == sheet[t] && window[w + 1] == sheet[t + 1] && window[w + 2] == sheet[t + 2] && window[w + 3] == 255;
+                    if (!ok && bad++ == 0)
+                        first = std::format("window pixel ({},{}) shows {}, expected sheet texel ({},{}) = ({}, {}, {}) opaque", x, y,
+                                            demo::format_rgba({window[w], window[w + 1], window[w + 2], window[w + 3]}), tx, ty, sheet[t], sheet[t + 1], sheet[t + 2]);
+                }
+            const auto shown_count = std::count(shown.begin(), shown.end(), true);
+            check.expect(bad == 0,
+                         std::format("the window ({} x {}) shows the {} x {} contact sheet stretched over the whole surface: every window pixel equals sheet texel (x * {} / {}, y * {} / {}), opaque",
+                                     env.width, env.height, sw, sh, sw, env.width, sh, env.height),
+                         bad == 0 ? std::format("{} pixels compared exactly; {} of {} sheet texels are visible", env.width * env.height, shown_count, sw * sh)
+                                  : std::format("{} of {} pixels differ, {}", bad, env.width * env.height, first));
+        }
+
         void check_cells(demo::Check& check) const
         {
             for (std::size_t i = 0; i < cells_.size(); ++i)
@@ -1028,6 +1098,10 @@ namespace
             mgl::glDeleteTextures(1, &t);
         }
 
+        PresentProgram present_;
+        mgl::TextureId sheet_tex_{};
+        mgl::FramebufferId sheet_fbo_{};
+        int sheet_rows_ = 0;  // rows of cells in use: the sheet is kCols * kCellPx x sheet_rows_ * kCellPx pixels
         SwizzleProgram swz_;
         LodProgram lod_;
         OffsetProgram off_;

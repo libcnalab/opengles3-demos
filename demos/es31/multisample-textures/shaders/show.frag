@@ -1,6 +1,7 @@
 #version 310 es
-// Shows every sample of a multisample texture in one 128 x 128 window cell. The cell is a grid of u_cols x u_cols sub-cells,
-// sub-cell s (row by row from the lower left) shows sample s with its texels stretched to fill the sub-cell.
+// Shows every sample of a multisample texture in one window cell of u_cell pixels (a quarter of the window). The cell is a grid
+// of u_cols x u_cols sub-cells of u_cell / u_cols pixels, sub-cell s (row by row from the lower left) shows sample s with its texels
+// stretched to fill the sub-cell (integer arithmetic: pixel p of a sub-cell n pixels long shows texel p * size / n).
 //
 // main.cpp injects #define lines after the #version line:
 //   SAMPLER   e.g. "highp sampler2DMS"
@@ -12,7 +13,7 @@ precision highp int;
 uniform SAMPLER u_ms;
 uniform ivec2 u_texels;   // width and height of the multisample texture
 uniform ivec2 u_origin;   // lower left pixel of the cell in the window
-uniform int u_cell;       // edge of the cell in pixels
+uniform ivec2 u_cell;     // width and height of the cell in pixels
 uniform int u_samples;    // samples per texel
 uniform int u_cols;       // sub-cells per row and per column
 
@@ -21,7 +22,7 @@ out vec4 o_color;
 void main()
 {
     ivec2 local = ivec2(gl_FragCoord.xy) - u_origin;
-    int sub = u_cell / u_cols;
+    ivec2 sub = u_cell / u_cols;
     ivec2 cell = local / sub;
     int k = cell.y * u_cols + cell.x;
     if (cell.x >= u_cols || cell.y >= u_cols || k >= u_samples)

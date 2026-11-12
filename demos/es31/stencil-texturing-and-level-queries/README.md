@@ -1,7 +1,7 @@
 # es31-stencil-texturing-and-level-queries
 
 **API introduced in:** OpenGL ES 3.1 · **Minimum context:** ES 3.1 · **Shaders:** GLSL ES 3.10 (`#version 310 es`) ·
-**Run:** `es31-stencil-texturing-and-level-queries [--headless --validate]`
+**Run:** `es31-stencil-texturing-and-level-queries [--headless --validate] [--width W --height H]` · **Minimum surface:** 64 x 64 pixels
 
 ## Purpose
 
@@ -23,7 +23,9 @@ query accepts.
 
 ## What the image shows
 
-A 2 x 2 contact sheet of 128 x 128 panels; every panel shows a 32 x 32 texture, one texel per 4 x 4 pixels, through a fragment shader.
+A 2 x 2 contact sheet that fills the window: the panel boundaries are at `w / 2` and `h / 2`, so the panels tile the surface exactly
+(128 x 128 at the default 256 x 256, rectangular when the window is). Every panel stretches a 32 x 32 texture over its pixels through a
+fragment shader with `NEAREST` sampling (at 256 x 256 one texel per 4 x 4 pixels).
 
 ```
  DEPTH32F_STENCIL8  depth (gray)  |  DEPTH32F_STENCIL8  stencil (colors)
@@ -102,7 +104,10 @@ asserted for 3D textures and arrays.
   float conversion) and <= 1e-6 for `DEPTH32F_STENCIL8` (the single-precision viewport transform). The measured error is printed; on all drivers it is 0.
 * **Stencil.** All 1024 values from both lookups, in both formats, **exactly** equal to the model.
 * **Contact sheet.** Every one of the four 1024-texel panels is read back with `glReadPixels` and compared with the model's gray / color at the texel
-  centre, tolerance 1 (8-bit quantization of the shader output).
+  centre, tolerance 1 (8-bit quantization of the shader output). Each texel is probed at the pixel in the middle of its span in the stretched panel,
+  `p = floor((t + 0.5) * n / 32)` along an axis of `n` pixels; that pixel's centre lies at least `0.5 - 16 / n` texels inside the texel. Only when the
+  margin drops below 1/16 texel (panels narrower than 37 pixels, i.e. windows under 74 pixels on a side) is the neighbouring texel on the near side
+  also accepted, and the demo prints how many probes that affected. Below 64 x 64 (panels under 32 pixels, which would skip texels) the demo skips.
 * **Mode ignored.** An RGBA8 texture and a `DEPTH_COMPONENT32F` texture set to `STENCIL_INDEX` are still sampled as before (section 8.16).
 * **Level queries.** As in the table above: one check per level or per group, with the full list of mismatches in the failure text.
 * **Negative controls (the checks can fail).** (1) A depth/stencil texture that was only cleared, run through the identical dump and comparison,

@@ -86,8 +86,8 @@
     "negative-control"
   ],
   "visual_review": {
-    "date": "2026-11-11",
-    "by": "claude-sonnet-5.5",
-    "notes": "256x256 radeonsi capture: 2 x 2 panels of 32 x 32 texels magnified 4x. Left column the depth component as grays (a 4 x 4 grid of 8 x 8 blocks of different gray, the lower-left block white = cleared depth 1, the middle flattened to one gray by the large rectangle, a darker small patch inside it), right column the stencil index as saturated colors (each block its own color; the middle recolored by the INCR pass and the masked INVERT/ZERO pass). The two rows (DEPTH32F_STENCIL8 on top, DEPTH24_STENCIL8 below) are pixel-identical."
+    "date": "2026-11-12",
+    "by": "claude-opus-5.5 (subagent)",
+    "notes": "Window-size review: the 2x2 panels now tile the window (boundaries at w/2, h/2), each stretching its 32x32 texture with NEAREST. 640x400 (llvmpipe): four 320x200 panels, the gray depth blocks on the left and the colored stencil blocks on the right, identical between the two formats (bottom DEPTH24_STENCIL8, top DEPTH32F_STENCIL8), texels 10x6.25 pixels; 800x800: 400x400 panels with 12.5-pixel texels. No background is left uncovered. Earlier review (2026-11-11, claude-sonnet-5.5): 256x256 radeonsi capture: 2 x 2 panels of 32 x 32 texels magnified 4x. Left column the depth component as grays (a 4 x 4 grid of 8 x 8 blocks of different gray, the lower-left block white = cleared depth 1, the middle flattened to one gray by the large rectangle, a darker small patch inside it), right column the stencil index as saturated colors (each block its own color; the middle recolored by the INCR pass and the masked INVERT/ZERO pass). The two rows (DEPTH32F_STENCIL8 on top, DEPTH24_STENCIL8 below) are pixel-identical."
   }
 }

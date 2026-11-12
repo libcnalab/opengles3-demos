@@ -17,10 +17,12 @@ works whatever the positions are.
 
 ## Expected image
 
-The 256 x 256 window has one 128 x 128 cell per multisample texture, from the top left: RGBA8 allocated with
+The window is divided into four equal cells, one per multisample texture (the boundaries are at `w / 2` and `h / 2`, so the
+cells tile the surface exactly and are 128 x 128 at the default 256 x 256), from the top left: RGBA8 allocated with
 `fixedsamplelocations = TRUE`, RGBA8 with `FALSE`, RGBA8UI (`usampler2DMS`) and RGBA8I (`isampler2DMS`). Each cell is a
 grid of sub-cells, one per sample (a 2 x 2 grid for 4 samples, 3 x 3 for 8), and each sub-cell shows the 16 x 12 texels
-of that sample stretched to fill it. Red grows to the right and green upwards inside a sub-cell, blue and the position of
+of that sample stretched to fill it (integer arithmetic, no filtering: pixel `p` of a sub-cell `n` pixels long shows texel
+`p * size / n`, so a wide window gives wide sub-cells and a small one skips texels). Red grows to the right and green upwards inside a sub-cell, blue and the position of
 the diagonal seam (where an 8-bit channel wraps around) change from one sample to the next, so the four sub-cells of a
 cell are clearly different. The four cells look alike because all four textures receive the same pattern numbers; the
 integer cells are converted back to colors by the display shader.
@@ -86,7 +88,8 @@ integer cells are converted back to colors by the display shader.
 
 107 checks on radeonsi (105 on llvmpipe and zink, which offer one sample count fewer), all exact except where noted:
 
-- **Window:** every pixel of the four cells (65 536) against the same arithmetic as `show.frag`.
+- **Window:** every pixel of the four cells, i.e. of the whole window (65 536 at 256 x 256), against the same integer arithmetic as
+  `show.frag`, exactly. The demo skips below 64 x 64 pixels.
 - **Limits and queries:** the four limits and `MAX_SAMPLES`; `glGetInternalformativ` for twelve formats (RGBA8, RGBA8UI,
   RGBA8I, RGB10_A2, RG8, R8, SRGB8_ALPHA8, three depth formats, two depth-stencil formats), `count` 1 and 0.
 - **Allocation:** every format with every reported count: no error, framebuffer complete, `SAMPLES` between the request

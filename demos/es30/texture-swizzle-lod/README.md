@@ -1,7 +1,8 @@
 # es30-texture-swizzle-lod
 
 **API introduced in:** OpenGL ES 3.0 (`TEXTURE_SWIZZLE_*`, `textureLod`/`textureGrad`/`textureSize`/`texelFetch`/texel
-offsets, `MIN_`/`MAX_PROGRAM_TEXEL_OFFSET`) · **Minimum context:** ES 3.0 · **Shaders:** GLSL ES 3.00
+offsets, `MIN_`/`MAX_PROGRAM_TEXEL_OFFSET`) · **Minimum context:** ES 3.0 · **Shaders:** GLSL ES 3.00 ·
+**Run:** `es30-texture-swizzle-lod [--headless --validate] [--width W --height H]` (any surface size)
 
 ## Purpose
 
@@ -17,8 +18,17 @@ does not repeat any of it; it only takes the same texture parameters and asks wh
 
 ## The image
 
-The 256×256 framebuffer is a contact sheet of 16×16-pixel cells, 16 to a row, row 0 at the bottom (the PNG capture has
-row 0 at the bottom too). Sections start on a new row; the first cell of a row is at the left.
+The cells are drawn into an offscreen **contact sheet**, an `RGBA8` texture attached to a framebuffer object: 16×16-pixel
+cells, 16 to a row, row 0 at the bottom, 256 pixels wide and as high as the rows in use (9 rows, 256×144). Sections start on
+a new row; the first cell of a row is at the left.
+
+The window shows that sheet **stretched over the whole surface** by a second pass (`present.frag`): window pixel `(x, y)`
+shows sheet texel `(x · 256 / w, y · 144 / h)`, computed in integer arithmetic and read with `texelFetch`, so every window
+pixel is one exact sheet texel (no filtering), and the window is opaque. Row 0 is at the bottom of the window and of the PNG
+capture. The cells themselves keep their 16-pixel design at every window size on purpose, because what they test depends
+on pixel geometry (the implicit-LOD cell on screen-space derivatives over 16 pixels, the swizzle cells on 4 pixels per
+texel, the fetch and offset cells on one texel per pixel). Scaling the cells with the window would change those experiments; drawing
+them offscreen and stretching the finished picture does not.
 
 | row | cells | content |
 |---|---|---|
@@ -94,8 +104,11 @@ row 0 at the bottom too). Sections start on a new row; the first cell of a row i
 
 ## Validation
 
-119 checks per run.
+120 checks per run.
 
+- **Window.** Every window pixel is compared with the sheet texel the presentation's integer mapping names (RGB exact,
+  alpha 255). Every other check reads the sheet itself (`glReadPixels` from the sheet framebuffer), so the checks below are
+  independent of the window size.
 - **Cells.** Every pixel of every cell is compared with the CPU model of that cell (about 18 000 pixel comparisons).
   Swizzle cells: `swizzle(base_color(format, texel))` with the exact Table 3.24 mapping. LOD cells: the level colour. Blend
   cells: `(1 − f)·c₁ + f·c₂`. Size cells: `(w, h, 0, 255)`. Fetch and offset cells: the chain texel after

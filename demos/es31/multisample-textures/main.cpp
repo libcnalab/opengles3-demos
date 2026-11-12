@@ -10,8 +10,8 @@
 // and on k) is drawn over the whole texture with only sample k enabled in the mask. Reading sample k back must then return
 // pattern k at every texel, exactly, for every sample count and format.
 //
-// The window (256 x 256) has one 128 x 128 cell per multisample texture; a cell is a grid of sub-cells, sub-cell k showing
-// sample k with texelFetch:
+// The window is divided into four equal cells (boundaries at width / 2 and height / 2), one per multisample texture; a cell is
+// a grid of sub-cells, sub-cell k showing sample k with texelFetch:
 //   top-left   RGBA8, fixedsamplelocations = TRUE   | top-right    RGBA8, fixedsamplelocations = FALSE
 //   bottom-left RGBA8UI (usampler2DMS)               | bottom-right  RGBA8I  (isampler2DMS)
 //
@@ -57,8 +57,20 @@ namespace
     constexpr int kTri = 32;         // edge of the texture the triangle is drawn into
     constexpr int kStripW = 1024;    // the single-sample targets that the samples are fetched into: W * samples <= 1024
     constexpr int kStripH = 32;
-    constexpr int kWindow = 256;
-    constexpr int kCellPx = 128;
+    constexpr int kMinWindow = 64;   // smallest surface: the cells are then 32 x 32, at least 4 pixels per sub-cell side for up to 64 samples
+
+    /// Window cell `index` (0 = top left, row by row) as a rectangle: the four cells partition the surface exactly.
+    struct CellRect
+    {
+        int x0 = 0, y0 = 0, w = 0, h = 0;
+    };
+    CellRect cell_rect(int index, int width, int height)
+    {
+        const int col = index % 2, row = index / 2;
+        const int x0 = col * width / 2, x1 = (col + 1) * width / 2;
+        const int y0 = (1 - row) * height / 2, y1 = (2 - row) * height / 2;  // row 0 is the top half
+        return {x0, y0, x1 - x0, y1 - y0};
+    }
     constexpr int kIdA = 40;         // two pattern numbers that no per-sample pattern (0 .. 31) uses
     constexpr int kIdB = 90;
 
@@ -227,8 +239,8 @@ namespace
     public:
         void init(demo::Env& env) override
         {
-            if (env.width < kWindow || env.height < kWindow)
-                throw demo::Skip(std::format("this demo draws {0}x{0} pixels and needs a default framebuffer at least that large", kWindow));
+            if (env.width < kMinWindow || env.height < kMinWindow)
+                throw demo::Skip(std::format("the four sample cells need a default framebuffer of at least {0}x{0} pixels", kMinWindow));
 
             mgl::glGenVertexArrays(1, &vao_);
             mgl::glBindVertexArray(vao_);
@@ -285,21 +297,21 @@ namespace
             mgl::glBindTexture(mgl::TextureTarget::Texture2D, mgl::TextureId{0});
         }
 
-        void render(demo::Env& /*env*/, int /*frame*/) override
+        void render(demo::Env& env, int /*frame*/) override
         {
             for (Ms* m : {&ms_fixed_, &ms_free_, &ms_uint_, &ms_int_}) fill_per_sample(*m);
 
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
-            mgl::glViewport(0, 0, kWindow, kWindow);
+            mgl::glViewport(0, 0, env.width, env.height);
             mgl::glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             mgl::glClear(mgl::ClearBufferBit::Color);
             const std::array<const Ms*, 4> cells = {&ms_fixed_, &ms_free_, &ms_uint_, &ms_int_};
-            for (std::size_t c = 0; c < cells.size(); ++c) show(*cells[c], static_cast<int>(c));
+            for (std::size_t c = 0; c < cells.size(); ++c) show(*cells[c], cell_rect(static_cast<int>(c), env.width, env.height), static_cast<int>(c));
         }
 
-        void validate(demo::Env& /*env*/, demo::Check& check) override
+        void validate(demo::Env& env, demo::Check& check) override
         {
-            check_window(check);
+            check_window(env, check);
             check_limits(check);
             check_internalformat_queries(check);
             check_allocation(check);
@@ -562,21 +574,19 @@ namespace
         }
 
         /// Window cell `index` (0 = top left, row by row): the samples of `m` as a grid of sub-cells.
-        void show(const Ms& m, int index)
+        void show(const Ms& m, CellRect r, int index)
         {
-            const int col = index % 2, row = index / 2;
-            const int x0 = col * kCellPx, y0 = kWindow - (row + 1) * kCellPx;
             const int cols = static_cast<int>(std::ceil(std::sqrt(static_cast<double>(m.samples))));
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
-            mgl::glViewport(x0, y0, kCellPx, kCellPx);
+            mgl::glViewport(r.x0, r.y0, r.w, r.h);
             const Program& p = program(Role::Show, m.kind);
             mgl::glUseProgram(p.id);
             mgl::glActiveTexture(mgl::TextureUnit::Texture0);
             mgl::glBindTexture(mgl::TextureTarget::Texture2DMultisample, m.tex);
             mgl::glUniform1i(p.ms, 0);
             mgl::glUniform2i(p.texels, m.w, m.h);
-            mgl::glUniform2i(p.origin, x0, y0);
-            mgl::glUniform1i(p.cell, kCellPx);
+            mgl::glUniform2i(p.origin, r.x0, r.y0);
+            mgl::glUniform2i(p.cell, r.w, r.h);
             mgl::glUniform1i(p.samples, m.samples);
             mgl::glUniform1i(p.cols, cols);
             mgl::glDrawArrays(mgl::PrimitiveType::Triangles, 0, 3);
@@ -623,34 +633,36 @@ namespace
             return ids;
         }
 
-        void check_window(demo::Check& check)
+        void check_window(const demo::Env& env, demo::Check& check)
         {
             // Replays the arithmetic of shaders/show.frag on the CPU for every pixel of the four cells.
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
-            const std::vector<std::uint8_t> window = demo::read_rgba8(0, 0, kWindow, kWindow);
+            const int width = env.width;
+            const std::vector<std::uint8_t> window = demo::read_rgba8(0, 0, width, env.height);
             const std::array<const Ms*, 4> cells = {&ms_fixed_, &ms_free_, &ms_uint_, &ms_int_};
-            int bad = 0;
+            int bad = 0, compared = 0;
             std::string first;
             for (std::size_t c = 0; c < cells.size(); ++c)
             {
                 const Ms& m = *cells[c];
-                const int x0 = static_cast<int>(c % 2) * kCellPx, y0 = kWindow - (static_cast<int>(c / 2) + 1) * kCellPx;
+                const CellRect r = cell_rect(static_cast<int>(c), width, env.height);
                 const int cols = shown_cols_[c];
-                const int sub = kCellPx / cols;
-                for (int ly = 0; ly < kCellPx; ++ly)
-                    for (int lx = 0; lx < kCellPx; ++lx)
+                const int sub_w = r.w / cols, sub_h = r.h / cols;
+                for (int ly = 0; ly < r.h; ++ly)
+                    for (int lx = 0; lx < r.w; ++lx)
                     {
-                        const int sx = lx / sub, sy = ly / sub;
+                        ++compared;
+                        const int sx = lx / sub_w, sy = ly / sub_h;
                         const int k = sy * cols + sx;
                         std::array<int, 3> want = {0, 0, 0};
                         if (sx < cols && sy < cols && k < m.samples)
                         {
-                            const int tx = std::min(((lx - sx * sub) * m.w) / sub, m.w - 1);
-                            const int ty = std::min(((ly - sy * sub) * m.h) / sub, m.h - 1);
+                            const int tx = std::min(((lx - sx * sub_w) * m.w) / sub_w, m.w - 1);
+                            const int ty = std::min(((ly - sy * sub_h) * m.h) / sub_h, m.h - 1);
                             const Pattern pat = pattern(k, tx, ty);
                             want = {pat[0], pat[1], pat[2]};
                         }
-                        const std::size_t at = static_cast<std::size_t>((y0 + ly) * kWindow + (x0 + lx)) * 4;
+                        const std::size_t at = (static_cast<std::size_t>(r.y0 + ly) * static_cast<std::size_t>(width) + static_cast<std::size_t>(r.x0 + lx)) * 4;
                         const bool ok = window[at] == want[0] && window[at + 1] == want[1] && window[at + 2] == want[2] && window[at + 3] == 255;
                         if (!ok && bad++ == 0)
                             first = std::format("cell {} pixel ({},{}): got {} expected ({}, {}, {}, 255)", c, lx, ly,
@@ -658,7 +670,7 @@ namespace
                     }
             }
             check.expect(bad == 0, "the four window cells show, for every sample of every texel, the value that sample was given (texelFetch of sampler2DMS / usampler2DMS / isampler2DMS)",
-                         bad == 0 ? std::format("{} pixels compared exactly", 4 * kCellPx * kCellPx) : std::format("{} pixels differ, {}", bad, first));
+                         bad == 0 ? std::format("{} pixels compared exactly (every pixel of the window)", compared) : std::format("{} of {} pixels differ, {}", bad, compared, first));
         }
 
         void check_limits(demo::Check& check)

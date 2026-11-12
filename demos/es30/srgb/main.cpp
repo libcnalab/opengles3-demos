@@ -11,7 +11,8 @@
 //     8-bit value is what is stored. Clears (glClear, glClearBuffer) and glBlitFramebuffer take part in the
 //     same conversions (4.2.3, 4.3.3); glCopyTexImage2D refuses a copy that would mix the two encodings (3.8.5).
 //
-// Image (256 x 256, 8 bands of 32 pixels, band 0 on top; pixel column x of a band is the byte value x):
+// Image (8 bands of height/8 pixels that fill the window, band 0 on top; window column x of a band shows texel / byte value
+// x * 256 / width in integer arithmetic, so at 256 x 256 column x is the byte value x):
 //   0  RGBA8 ramp, raw                                         the straight reference ramp
 //   1  SRGB8_ALPHA8 ramp as the shader sees it                 decoded to linear: the dark curve
 //   2  band 1 re-encoded by a shader pow()                     back to the straight ramp
@@ -48,9 +49,14 @@ using demo::Rgba8;
 namespace
 {
     constexpr int kRamp = 256;          // textures and targets are 256 texels wide: texel x = byte value x
-    constexpr int kBand = 32;
     constexpr int kBands = 8;
-    constexpr int kWindow = kRamp;
+    constexpr int kMinWindow = 16;      // every band needs at least two rows (the probe row is the band's middle row)
+
+    /// Band b (0 = top) covers window rows [band_y0(b, h), band_y0(b - 1, h)): the eight bands partition the height exactly.
+    constexpr int band_y0(int band, int height) { return (kBands - 1 - band) * height / kBands; }
+    constexpr int band_height(int band, int height) { return (kBands - band) * height / kBands - band_y0(band, height); }
+    /// The texel that window column x of a band shows (shaders/show.frag computes the same integer expression).
+    constexpr int shown_texel(int x, int width) { return x * kRamp / width; }
 
     using Bytes = std::array<std::uint8_t, 4>;
 
@@ -134,8 +140,8 @@ namespace
     public:
         void init(demo::Env& env) override
         {
-            if (env.width < kWindow || env.height < kWindow)
-                throw demo::Skip(std::format("this demo draws into the lower left {0}x{0} pixels and needs a window at least that large", kWindow));
+            if (env.width < kMinWindow || env.height < kMinWindow)
+                throw demo::Skip(std::format("the eight bands need a window of at least {0}x{0} pixels", kMinWindow));
 
             exact_ = demo::build_program(env, "shaders/quad.vert", "shaders/exact_float.frag");
             show_ = demo::build_program(env, "shaders/quad.vert", "shaders/show.frag");
@@ -190,7 +196,7 @@ namespace
             default_srgb_ = encoding == GL_SRGB;
         }
 
-        void render(demo::Env& /*env*/, int /*frame*/) override
+        void render(demo::Env& env, int /*frame*/) override
         {
             // Dithering (on by default, 4.1.9) may change an 8-bit result by one step; the stored bytes are compared exactly.
             mgl::glDisable(mgl::Capability::Dither);
@@ -228,11 +234,12 @@ namespace
 
             // Pass 3: the bands.
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
-            mgl::glViewport(0, 0, kWindow, kWindow);
+            mgl::glViewport(0, 0, env.width, env.height);
             mgl::glClearColor(0.1f, 0.1f, 0.12f, 1.0f);
             mgl::glClear(mgl::ClearBufferBit::Color);
             mgl::glUseProgram(show_);
             mgl::glUniform1i(mgl::glGetUniformLocation(show_, "u_tex"), 0);
+            mgl::glUniform1i(mgl::glGetUniformLocation(show_, "u_width"), env.width);
             struct BandSource
             {
                 std::size_t texture;
@@ -246,7 +253,7 @@ namespace
             for (int band = 0; band < kBands; ++band)
             {
                 const BandSource& s = sources[static_cast<std::size_t>(band)];
-                mgl::glViewport(0, (kBands - 1 - band) * kBand, kRamp, kBand);
+                mgl::glViewport(0, band_y0(band, env.height), env.width, band_height(band, env.height));
                 mgl::glBindTexture(mgl::TextureTarget::Texture2D, tex_[s.texture]);
                 mgl::glUniform1i(mgl::glGetUniformLocation(show_, "u_row"), s.row);
                 mgl::glUniform1i(mgl::glGetUniformLocation(show_, "u_channel"), s.channel);
@@ -257,7 +264,7 @@ namespace
 
         void validate(demo::Env& env, demo::Check& check) override
         {
-            check_bands(check);   // the window first: everything below draws into other targets (and one patch into the window)
+            check_bands(env, check);   // the window first: everything below draws into other targets (and one patch into the window)
 
             check_texture_decode(check);
             check_texture_filtering(check);
@@ -349,9 +356,10 @@ namespace
         /// framebuffer happens to be sRGB-encoded (6.1.13: implementation-defined), where 4.1.8 encodes it.
         double window_value(double linear) const { return 255.0 * (default_srgb_ ? linear_to_srgb(linear) : linear); }
 
-        void check_bands(demo::Check& check) const
+        void check_bands(const demo::Env& env, demo::Check& check) const
         {
-            const std::vector<std::uint8_t> window = demo::read_rgba8(0, 0, kWindow, kWindow);
+            const int width = env.width;
+            const std::vector<std::uint8_t> window = demo::read_rgba8(0, 0, width, env.height);
             // The stored bytes that bands 3-5 show were read back during render(); read them again now (the targets still hold them).
             const std::vector<std::uint8_t> srgb_stored = read_target(fbo_[kSrgbTargetFbo], kRamp, 2);
             const std::vector<std::uint8_t> lin_stored = read_target(fbo_[kLinTargetFbo], kRamp, 2);
@@ -375,10 +383,11 @@ namespace
             for (int band = 0; band < kBands; ++band)
             {
                 Cmp cmp;
-                const int y = (kBands - 1 - band) * kBand + kBand / 2;
-                for (int x = 0; x < kRamp; ++x)
+                const int y = band_y0(band, env.height) + band_height(band, env.height) / 2;
+                for (int px = 0; px < width; ++px)
                 {
-                    const auto o = static_cast<std::size_t>((y * kWindow + x) * 4);
+                    const int x = shown_texel(px, width);  // the texel (byte value) this column shows
+                    const auto o = (static_cast<std::size_t>(y) * static_cast<std::size_t>(width) + static_cast<std::size_t>(px)) * 4;
                     const double got = static_cast<double>(window[o]);
                     double want = 0.0;
                     switch (band)
@@ -392,9 +401,9 @@ namespace
                     case 4: want = window_value(unorm(srgb_stored[static_cast<std::size_t>((kRamp + x) * 4)])); break;
                     default: want = window_value(unorm(lin_stored[static_cast<std::size_t>((kRamp + x) * 4)])); break;
                     }
-                    cmp.add(got, want, bands[static_cast<std::size_t>(band)].tolerance, std::format("column {}", x));
+                    cmp.add(got, want, bands[static_cast<std::size_t>(band)].tolerance, std::format("column {} (texel {})", px, x));
                     // Green and blue of a band are the same gray; the alpha is 255.
-                    if (window[o + 1] != window[o] || window[o + 2] != window[o] || window[o + 3] != 255) cmp.add(1.0, 0.0, 0.0, std::format("column {} is not an opaque gray", x));
+                    if (window[o + 1] != window[o] || window[o + 2] != window[o] || window[o + 3] != 255) cmp.add(1.0, 0.0, 0.0, std::format("column {} is not an opaque gray", px));
                 }
                 check.expect(cmp.bad == 0, std::format("{} - {} columns, largest deviation {:.3f}", bands[static_cast<std::size_t>(band)].what, cmp.probes, cmp.max_dev), cmp.first);
             }

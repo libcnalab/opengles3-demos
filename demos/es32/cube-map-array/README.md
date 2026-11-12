@@ -22,13 +22,21 @@ A 256 × 256 frame (frame 19 of the animation, time = frame/60 s, camera orbitin
 
 - **Top 181 rows: five spheres, one draw call** (`glDrawElementsInstanced`, 5 instances, a perspective camera with a depth buffer). The fragment shader reflects the view ray on the sphere and looks up
   `textureLod(u_env, vec4(reflect(view, normal), float(layer)), 0.0)` with `layer = gl_InstanceID`: each sphere reflects **its own cube** of the array. The green channel of every texel encodes the layer, so the spheres
-  go from dark to bright green; the red channel encodes the cube face and the blue channel the texel, which gives the blocky 4 × 4-per-face patchwork.
+  go from dark to bright green; the red channel encodes the cube face and the blue channel the texel, which gives the blocky 4 × 4-per-face patchwork. At 256 × 256 the spheres stand in two rows,
+  three above two (sphere 0 at the top left, reading order).
 - **Bottom 75 rows: 30 tiles in a 10 × 3 grid**, tile `n` = layer-face `z = n`, in reading order, i.e. layer 0's six faces, then layer 1's, and so on (the red channel therefore cycles 24, 60, 96, 132, 168, 204
   within every group of six). Each tile is the 4 × 4 image of its layer-face, upright and unmirrored, looked up with the plain `texture()` function through a direction on the plane of the face.
 
 On other surfaces the layout scales: the tile rows are `min(w/10, 3h/10/3)` pixels high, the ten tile columns partition the whole width (`[c·w/10, (c+1)·w/10)`,
-so the tiles may be wider than high), and the spheres take the rest. A portrait scene viewport keeps the 45° *horizontal* field of view (the vertical one widens), so all
-five spheres stay in view.
+so the tiles may be wider than high), and the spheres take the rest. The camera's vertical field of view is 45°, except that a portrait scene viewport keeps a 45°
+*horizontal* field of view, and neither field of view exceeds 90° (very wide or very tall viewports), beyond which the perspective would stretch the outer spheres into ovals.
+
+The spheres fill the scene viewport whatever its shape. `layout_of()` considers four arrangements of the five spheres (centres 1.95 apart, radius 0.8): one row of five, two rows (3 + 2),
+three rows (2 + 2 + 1) and one column of five. For each it computes the camera distance at which the arrangement's bounding box fits the field of view with a 20 % margin (for the
+perspective and the slow orbit), and it uses the arrangement with the smallest distance, i.e. the largest spheres on screen: two rows on a square window, one row on a wide strip
+(1000 × 200), three rows or a column on a tall one. The rows are stacked along the up vector of the initial camera (pitched 16° down), so the arrangement faces the camera and a
+column does not crowd together at the bottom of the screen. The `q` / `e` keys scale the distance. The sphere check derives its probes from the same camera and centres, so it
+follows automatically.
 
 **Minimum size.** `init()` reports SKIP in two cases. The first is a tile row under 8 pixels or a scene under 64 rows.
 The second is a surface too small for the sphere check. The sphere check probes every second pixel in x and y, so
@@ -38,9 +46,10 @@ meets that depends on the projected sphere sizes at the frame `validate()` shows
 camera orbits) and on the aspect ratio. So `init()` runs the same CPU ray model (`sphere_model()`) for that frame
 and skips when the model cannot meet these counts. The check itself can then fail only when the picture
 disagrees with the model. Because the minimum is computed, it is not one rectangle and not monotonic in every
-direction. On llvmpipe: 102 × 102 passes and 101 × 101 skips; 100 × 200 passes and 95 × 200 skips; 1000 × 104 passes,
-and 1000 × 102 and 1000 × 103 skip (1000 × 101 passes). A sweep of every width 80–140 against every height 89–140
-gives only PASS or SKIP. The old guard alone admitted 80 × 89, where the spheres got only 32–39 hits each.
+direction. Since the spheres fill the scene viewport, the sphere check no longer decides the minimum in practice: on llvmpipe a sweep of
+widths 80–140 against heights 85–140 (step 3) gives PASS everywhere except where the tile/scene guard skips (for example 80 × 80 and 90 × 90,
+whose scene is 63 rows high), and 80 × 89, 95 × 200 and 1000 × 101 pass. The sphere-model guard stays, so a surface where it cannot
+meet the counts still reports SKIP rather than a check that cannot fail.
 
 ## Central calls
 
@@ -102,7 +111,7 @@ All references are computed on the CPU. 79 checks:
 - **Compile rules (9).** A control shader with the four sampler types compiles; eight shaders do not: `texelFetch` on `samplerCubeArray` and on `samplerCube`, no precision, a 3-component coordinate, `texture(shadow, vec4)` without the
   compare argument, `textureLod` on the shadow sampler, `textureOffset` on a cube array, `samplerCubeArray` in `#version 310 es`.
 - **Picture (4).** *Tiles:* 14520 pixels at 256 × 256 (more than half of the tile area at any size; texel boundaries excluded) of the 30 tiles equal the CPU texel of the right layer-face; negative controls: the models with t mirrored, s mirrored, transposed, face and layer swapped, or layer + 1 reproduce fewer than half of the tile pixels (measured: none, none, 25 % because the texels on the diagonal are symmetric, 17 %, none).
-  *Spheres:* a ray-sphere intersection from the camera gives the point and normal, `reflect()` the direction, `model_lookup()` the colour; about 800 pixels are compared at 256 × 256 (every second pixel of the scene except grazing angles and
+  *Spheres:* a ray-sphere intersection from the camera gives the point and normal, `reflect()` the direction, `model_lookup()` the colour; about 2400 pixels are compared at 256 × 256 (about 800 before the spheres were made to fill the scene) (every second pixel of the scene except grazing angles and
   anything that changes when the normal is tilted by ±0.012 rad, which covers the difference between the tessellated and the analytic sphere), all five spheres and all six faces appear (every sphere is
   hit by at least 40 probe rays and at least a quarter of them survive the filters, a bound that follows the sphere's size on screen), and a negative control (sphere `k`
   reflecting layer `k + 1`) must reproduce fewer than a quarter of the pixels (measured: none). Tolerance 0 (the colours are exact bytes; the sampled value `c/255` converts back to `c`).

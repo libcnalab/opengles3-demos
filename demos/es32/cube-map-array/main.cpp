@@ -13,7 +13,9 @@
 //
 // Image (256 x 256; other sizes: see Layout / layout_of()):
 //   * top 181 rows: five spheres drawn with ONE glDrawElementsInstanced call, a perspective camera and a depth buffer.
-//     Sphere k reflects layer k of the array (environment mapping: texture(reflect(view, normal), k)).
+//     Sphere k reflects layer k of the array (environment mapping: texture(reflect(view, normal), k)). The spheres are
+//     arranged in 1, 2, 3 or 5 rows, whichever lets them appear largest in the scene viewport, and the camera distance is
+//     chosen so that the arrangement fills the viewport (3 + 2 at 256 x 256, one row on wide surfaces, a column on tall ones).
 //   * bottom 75 rows: 30 tiles, one per layer-face z = 6 layer + face in the order of Table 8.24. Each tile shows the
 //     4 x 4 image of that layer-face (a direction on the plane of the face, plain texture() lookup).
 //
@@ -266,13 +268,33 @@ namespace
     // The tile strip at the bottom: kTileRows rows of `tile` pixels (at most 3/10 of the height, at most a tenth of the
     // width); its kTilesPerRow columns partition the whole width exactly (column c spans [c*w/10, (c+1)*w/10)). The scene
     // viewport takes the rest of the surface. fovy is the scene camera's vertical field of view: 45 degrees, except on a
-    // portrait viewport, which keeps the 45 degree HORIZONTAL field of view so that all five spheres stay in view.
+    // portrait viewport, which keeps the 45 degree HORIZONTAL field of view. Neither field of view exceeds 90 degrees (very
+    // wide or very tall viewports): beyond that the perspective stretches the outer spheres into ovals.
+    //
+    // The five spheres (radius kSphereRadius, centres kSphereSpacing apart) are arranged in `rows` rows, filled in reading order
+    // from the top: 1 row (5), 2 rows (3 + 2), 3 rows (2 + 2 + 1) or 5 rows (one column). layout_of() picks the arrangement that
+    // needs the smallest camera distance to fit the scene viewport, i.e. the one whose spheres appear largest, and stores that
+    // distance (the camera looks at the origin, where the arrangement is centred).
     struct Layout
     {
         int width = 0, height = 0, tile = 0, tile_h = 0, scene_h = 0;
         double fovy = 0.0;
+        int rows = 1;           // sphere arrangement: 1, 2, 3 or 5 rows
+        double distance = 0.0;  // camera distance at which the arrangement fills the scene viewport (zoom 1)
         [[nodiscard]] int col_x(int col) const { return col * width / kTilesPerRow; }
     };
+    constexpr double kSphereRadius = 0.8;
+    constexpr double kSphereSpacing = 1.95;
+    constexpr double kSphereWobble = 0.15;  // vertical animation amplitude of every sphere
+    constexpr double kInitialPitchDeg = 16.0;  // the camera's initial pitch (w / s change it in a window)
+    constexpr double kFitMargin = 1.2;      // room for perspective (the near side of a sphere looks larger) and the orbit/pitch
+    constexpr std::array<int, 4> kArrangements = {1, 2, 3, 5};
+    /// Number of spheres in row `row` (0 = top) of an arrangement with `rows` rows: the rows are filled with ceil(5 / rows).
+    constexpr int spheres_in_row(int rows, int row)
+    {
+        const int per_row = (5 + rows - 1) / rows;
+        return std::min(per_row, 5 - row * per_row);
+    }
     constexpr int kMinTile = 8;     // smallest tile row height (pixels)
     constexpr int kMinScene = 64;   // smallest scene viewport height (pixels)
     // The sphere check (check_picture) probes every second pixel in x and y (one probe per 2 x 2 pixels) and needs, from
@@ -364,9 +386,8 @@ namespace
         void check_picture(demo::Env& env, demo::Check& check);
 
         // ---- rendering -------------------------------------------------------------------------------------
-        [[nodiscard]] dm::Vec3 eye_position() const { return eye_position(shown_frame_); }
-        [[nodiscard]] dm::Vec3 eye_position(int frame) const;
-        [[nodiscard]] std::array<V3, 5> sphere_centres(double t) const;
+        [[nodiscard]] dm::Vec3 eye_position(const Layout& lay, int frame) const;
+        [[nodiscard]] static std::array<V3, 5> sphere_centres(const Layout& lay, double t);
         [[nodiscard]] SphereModel sphere_model(const Layout& lay, int frame) const;
 
         std::array<LookupProgram, 4> kinds_{};
@@ -383,7 +404,7 @@ namespace
         int sphere_index_count_ = 0;
         int initial_binding_ = -1;
 
-        double yaw_deg_ = -6.0, pitch_deg_ = 16.0, distance_ = 9.6;
+        double yaw_deg_ = -6.0, pitch_deg_ = kInitialPitchDeg, zoom_ = 1.0;  // zoom_ scales Layout::distance
         int shown_frame_ = 0;
     };
 
@@ -615,21 +636,47 @@ namespace
         l.scene_h = env.height - l.tile_h;
         const double aspect = static_cast<double>(l.width) / std::max(l.scene_h, 1);
         const double tan_half = std::tan(static_cast<double>(dm::radians(45.0f)) * 0.5);
-        l.fovy = 2.0 * std::atan(aspect < 1.0 ? tan_half / aspect : tan_half);
+        l.fovy = 2.0 * std::atan(aspect < 1.0 ? std::min(tan_half / aspect, 1.0) : std::min(tan_half, 1.0 / aspect));
+        // The camera distance at which an arrangement's bounding box (in the plane z = 0) fits the view: half extents over
+        // the tangents of the half fields of view, plus a margin. The smallest distance gives the largest spheres.
+        const double tan_v = std::tan(l.fovy * 0.5), tan_h = tan_v * aspect;
+        l.distance = std::numeric_limits<double>::max();
+        for (const int rows : kArrangements)
+        {
+            const double half_w = (spheres_in_row(rows, 0) - 1) * 0.5 * kSphereSpacing + kSphereRadius;
+            const double half_h = (rows - 1) * 0.5 * kSphereSpacing + kSphereRadius + kSphereWobble;
+            const double d = kFitMargin * std::max(half_w / tan_h, half_h / tan_v);
+            if (d < l.distance)
+            {
+                l.distance = d;
+                l.rows = rows;
+            }
+        }
         return l;
     }
 
-    dm::Vec3 CubeMapArray::eye_position(int frame) const
+    dm::Vec3 CubeMapArray::eye_position(const Layout& lay, int frame) const
     {
         const float yaw = dm::radians(static_cast<float>(yaw_deg_ + 0.7 * frame)), pitch = dm::radians(static_cast<float>(pitch_deg_));
-        const float d = static_cast<float>(distance_);
+        const float d = static_cast<float>(lay.distance * zoom_);
         return {d * std::cos(pitch) * std::sin(yaw), d * std::sin(pitch), d * std::cos(pitch) * std::cos(yaw)};
     }
 
-    std::array<V3, 5> CubeMapArray::sphere_centres(double t) const
+    std::array<V3, 5> CubeMapArray::sphere_centres(const Layout& lay, double t)
     {
+        // Sphere k sits in reading order (top row first, left to right); every row is centred on x = 0, the rows around the
+        // origin. The rows are stacked along the up vector of the initial camera (pitched down by kInitialPitchDeg), so the
+        // arrangement faces the camera and the rows keep their spacing on screen instead of crowding together at the bottom.
+        const double pitch = kInitialPitchDeg * std::numbers::pi / 180.0;
         std::array<V3, 5> c{};
-        for (int k = 0; k < 5; ++k) c[static_cast<std::size_t>(k)] = {1.95 * (k - 2), 0.15 * std::sin(2.0 * t + 1.3 * k), 0.0};
+        int k = 0;
+        for (int row = 0; row < lay.rows; ++row)
+        {
+            const int n = spheres_in_row(lay.rows, row);
+            const double v = ((lay.rows - 1) * 0.5 - row) * kSphereSpacing;
+            for (int i = 0; i < n; ++i, ++k)
+                c[static_cast<std::size_t>(k)] = {(i - (n - 1) * 0.5) * kSphereSpacing, v * std::cos(pitch) + kSphereWobble * std::sin(2.0 * t + 1.3 * k), -v * std::sin(pitch)};
+        }
         return c;
     }
 
@@ -661,18 +708,18 @@ namespace
         mgl::glEnable(mgl::Capability::DepthTest);
         mgl::glUseProgram(env_program_);
         const dm::Mat4 proj = dm::perspective(static_cast<float>(lay.fovy), static_cast<float>(lay.width) / static_cast<float>(lay.scene_h), 0.5f, 60.0f);
-        const dm::Vec3 eye = eye_position();
+        const dm::Vec3 eye = eye_position(lay, frame);
         const dm::Mat4 vp = proj * dm::look_at(eye, {0, 0, 0}, {0, 1, 0});
         mgl::glUniformMatrix4fv(loc_view_proj_, 1, GL_FALSE, vp.data());
         mgl::glUniform3f(loc_eye_, eye.x, eye.y, eye.z);
         std::array<float, 20> spheres{};
-        const auto centres = sphere_centres(t);
+        const auto centres = sphere_centres(lay, t);
         for (std::size_t k = 0; k < 5; ++k)
         {
             spheres[4 * k + 0] = static_cast<float>(centres[k].x);
             spheres[4 * k + 1] = static_cast<float>(centres[k].y);
             spheres[4 * k + 2] = static_cast<float>(centres[k].z);
-            spheres[4 * k + 3] = 0.8f;
+            spheres[4 * k + 3] = static_cast<float>(kSphereRadius);
         }
         mgl::glUniform4fv(loc_sphere_, 5, spheres.data());
         mgl::glUniform1i(loc_env_, 0);
@@ -688,8 +735,8 @@ namespace
         else if (key == 'd') yaw_deg_ += 5.0;
         else if (key == 'w') pitch_deg_ = std::min(pitch_deg_ + 3.0, 60.0);
         else if (key == 's') pitch_deg_ = std::max(pitch_deg_ - 3.0, -20.0);
-        else if (key == 'q') distance_ = std::max(distance_ - 0.5, 5.0);
-        else if (key == 'e') distance_ = std::min(distance_ + 0.5, 20.0);
+        else if (key == 'q') zoom_ = std::max(zoom_ - 0.05, 0.6);
+        else if (key == 'e') zoom_ = std::min(zoom_ + 0.05, 2.0);
     }
 
     void CubeMapArray::shutdown(demo::Env& /*env*/)
@@ -1567,9 +1614,9 @@ namespace
     {
         SphereModel m;
         const double t = static_cast<double>(frame) / 60.0;
-        const auto centres = sphere_centres(t);
-        constexpr double kRadius = 0.8;
-        const dm::Vec3 eye_f = eye_position(frame);
+        const auto centres = sphere_centres(lay, t);
+        constexpr double kRadius = kSphereRadius;
+        const dm::Vec3 eye_f = eye_position(lay, frame);
         const V3 eye{eye_f.x, eye_f.y, eye_f.z};
         const V3 forward = normalize(V3{0, 0, 0} - eye);
         const V3 right = normalize(cross(forward, V3{0, 1, 0}));

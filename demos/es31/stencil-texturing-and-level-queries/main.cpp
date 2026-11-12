@@ -34,6 +34,7 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace mgl = metagl;
@@ -340,6 +341,8 @@ namespace
     public:
         void init(demo::Env& env) override
         {
+            if (env.width < 2 * kTex || env.height < 2 * kTex)
+                throw demo::Skip(std::format("the 2 x 2 contact sheet shows every texel of a {0} x {0} texture per panel and needs at least {1} x {1} pixels", kTex, 2 * kTex));
             scene_prog_ = demo::build_program(env, "shaders/scene.vert", "shaders/scene.frag");
             show_depth_prog_ = demo::build_program(env, "shaders/quad.vert", "shaders/show_depth.frag");
             show_stencil_prog_ = demo::build_program(env, "shaders/quad.vert", "shaders/show_stencil.frag");
@@ -549,11 +552,20 @@ namespace
             return {{{d24s8_, false, 0, 0}, {d24s8_, true, 1, 0}, {d32fs8_, false, 0, 1}, {d32fs8_, true, 1, 1}}};
         }
 
-        static int panel_size(const demo::Env& env) { return std::max(1, std::min(env.width, env.height) / 2 / kTex) * kTex; }
+        /// Panel rectangle in window pixels: the four panels partition the surface exactly (boundaries at width / 2 and height / 2).
+        struct Rect
+        {
+            int x0 = 0, y0 = 0, w = 0, h = 0;
+        };
+        static Rect panel_rect(const Panel& p, const demo::Env& env)
+        {
+            const int x0 = p.col * env.width / 2, x1 = (p.col + 1) * env.width / 2;
+            const int y0 = p.row * env.height / 2, y1 = (p.row + 1) * env.height / 2;
+            return {x0, y0, x1 - x0, y1 - y0};
+        }
 
         void draw_contact_sheet(const demo::Env& env)
         {
-            const int size = panel_size(env);
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
             mgl::glDisable(mgl::Capability::Dither);
             mgl::glViewport(0, 0, env.width, env.height);
@@ -566,7 +578,8 @@ namespace
                 mgl::glBindTexture(mgl::TextureTarget::Texture2D, p.tex);
                 mgl::glTexParameteri(mgl::TextureTarget::Texture2D, mgl::TextureParameterSetter::DepthStencilTextureMode,
                                      p.stencil ? gl(GL_STENCIL_INDEX) : gl(GL_DEPTH_COMPONENT));
-                mgl::glViewport(p.col * size, p.row * size, size, size);
+                const Rect r = panel_rect(p, env);
+                mgl::glViewport(r.x0, r.y0, r.w, r.h);
                 mgl::glDrawArrays(mgl::PrimitiveType::TriangleStrip, 0, 4);
             }
             mgl::glViewport(0, 0, env.width, env.height);
@@ -817,28 +830,56 @@ namespace
         void check_contact_sheet(const demo::Env& env, demo::Check& check)
         {
             draw_contact_sheet(env);
-            const int size = panel_size(env);
-            const int scale = size / kTex;
             const std::vector<std::uint8_t> image = demo::read_rgba8(0, 0, env.width, env.height);
             const auto pixel = [&](int x, int y) {
                 const std::size_t i = 4 * (static_cast<std::size_t>(y) * static_cast<std::size_t>(env.width) + static_cast<std::size_t>(x));
                 return demo::Rgba8{image[i], image[i + 1], image[i + 2], image[i + 3]};
             };
+            // The panel stretches the texture over w x h pixels; NEAREST sampling at the pixel centre picks texel floor((p + 0.5) * kTex / n)
+            // along an axis of n pixels. Texel t is probed at the pixel in the middle of its span, p = floor((t + 0.5) * n / kTex), whose
+            // centre lies within (t + 0.5 - kTex / 2n, t + 0.5 + kTex / 2n] texels: inside texel t, at least 0.5 - kTex / 2n texels from
+            // its edges. When that margin is below kEdge (thin panels close to kTex pixels), the probe may also show the neighbouring
+            // texel on that side, and either is accepted.
+            constexpr double kEdge = 1.0 / 16.0;
+            int ambiguous = 0;
             for (const Panel& p : panels())
             {
+                const Rect r = panel_rect(p, env);
                 int bad = 0;
                 int max_error = 0;
                 std::string first;
+                const auto want_at = [&](int tx, int ty) {
+                    const Pixel& m = expected_[static_cast<std::size_t>(ty * kTex + tx)];
+                    return p.stencil ? stencil_color(m.stencil) : demo::Rgba8{to8(m.depth), to8(m.depth), to8(m.depth), 255};
+                };
+                // Probe position along an axis of n pixels for texel t, and the neighbour (or t itself) the probe may also show.
+                const auto probe = [&](int t, int n) {
+                    const int pp = (2 * t + 1) * n / (2 * kTex);
+                    const double u = (pp + 0.5) * kTex / n;  // texel coordinate of the pixel centre
+                    int alt = t;
+                    if (u - t < kEdge && t > 0) alt = t - 1;
+                    else if (t + 1 - u < kEdge && t + 1 < kTex) alt = t + 1;
+                    return std::pair{pp, alt};
+                };
                 for (int ty = 0; ty < kTex; ++ty)
                     for (int tx = 0; tx < kTex; ++tx)
                     {
-                        const Pixel& m = expected_[static_cast<std::size_t>(ty * kTex + tx)];
-                        const demo::Rgba8 want = p.stencil ? stencil_color(m.stencil) : demo::Rgba8{to8(m.depth), to8(m.depth), to8(m.depth), 255};
-                        const demo::Rgba8 got = pixel(p.col * size + tx * scale + scale / 2, p.row * size + ty * scale + scale / 2);
-                        int worst = 0;
-                        for (std::size_t c = 0; c < 4; ++c) worst = std::max(worst, std::abs(int{got[c]} - int{want[c]}));
+                        const auto [px, ax] = probe(tx, r.w);
+                        const auto [py, ay] = probe(ty, r.h);
+                        const demo::Rgba8 got = pixel(r.x0 + px, r.y0 + py);
+                        const auto error = [&](demo::Rgba8 want) {
+                            int worst = 0;
+                            for (std::size_t c = 0; c < 4; ++c) worst = std::max(worst, std::abs(int{got[c]} - int{want[c]}));
+                            return worst;
+                        };
+                        int worst = error(want_at(tx, ty));
+                        if (ax != tx || ay != ty)
+                        {
+                            ++ambiguous;
+                            worst = std::min({worst, error(want_at(ax, ty)), error(want_at(tx, ay)), error(want_at(ax, ay))});
+                        }
                         max_error = std::max(max_error, worst);
-                        if (worst > 1 && bad++ == 0) first = std::format("texel ({},{}): got {} expected {}", tx, ty, demo::format_rgba(got), demo::format_rgba(want));
+                        if (worst > 1 && bad++ == 0) first = std::format("texel ({},{}): got {} expected {}", tx, ty, demo::format_rgba(got), demo::format_rgba(want_at(tx, ty)));
                     }
                 const bool is24 = p.tex.value == d24s8_.value;
                 check.expect(bad == 0,
@@ -846,6 +887,9 @@ namespace
                                          p.stencil ? "stencil" : "depth", is24 ? "DEPTH24_STENCIL8" : "DEPTH32F_STENCIL8", p.stencil ? "usampler2D" : "sampler2D"),
                              bad == 0 ? std::format("{} texels, max error {}", kTex * kTex, max_error) : std::format("{} bad, {}", bad, first));
             }
+            if (ambiguous > 0)
+                std::cout << std::format("   note: {} contact-sheet probes lie within 1/16 texel of a texel edge (panels of {} x {} pixels); either neighbour was accepted there\n",
+                                         ambiguous, panel_rect(panels()[0], env).w, panel_rect(panels()[0], env).h);
         }
 
         // ------------------------------------------------------------------------------------------

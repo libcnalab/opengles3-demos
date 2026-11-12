@@ -13,8 +13,10 @@ swizzle, incomplete textures, and the compile-time rules for the `comp` and `off
 
 ## Expected image
 
-The 256 x 256 window is a 4 x 4 grid of 64 x 64 cells. Each cell shows a 9 x 9 (or 7 x 7) result image, one block per
-footprint, stretched with a NEAREST blit. Rows 0 to 2 (from the top) are `CLAMP_TO_EDGE`, `REPEAT` and
+The window is a 4 x 4 grid of cells that tiles the surface exactly (boundaries at `k * w / 4` and `k * h / 4`; 64 x 64 cells at
+the default 256 x 256). Each cell shows a 9 x 9 (or 7 x 7) result image, one block per footprint, magnified with a NEAREST blit
+by the largest integer factor per axis that leaves a one-pixel gap (7 x 7 pixels per block at 256 x 256; the blocks are
+rectangular when the cells are) and centred in the cell. An integer factor keeps every block exactly one source pixel. Rows 0 to 2 (from the top) are `CLAMP_TO_EDGE`, `REPEAT` and
 `MIRRORED_REPEAT`, the columns are `comp` 0 to 3. The source texture is made of four ramps (one per component) that
 run in different directions, so each cell is a smooth gradient with a visible seam where the footprint wraps around
 the edge. The red, green and blue channels of a cell are the x, y and z results of the same gather, i.e. the same ramp
@@ -91,7 +93,8 @@ render each result into a single-sample target (`RGBA8`, `RGBA32I`, `RGBA32UI`) 
   and GEQUAL are complementary;
 - the incomplete texture, the three compile-time checks (a uniform as `comp` is rejected, a uniform-derived offset is
   rejected, constant expressions compile), and on ES 3.2 the `textureGatherOffsets` shader;
-- the window: all 16 cells, every block, against the same model (alpha is made opaque with an alpha-only clear).
+- the window: all 16 cells, every block (probed at its centre pixel), against the same model (alpha is made opaque with an
+  alpha-only clear). The demo skips below 40 x 40 pixels, where a cell cannot hold a 9 x 9 image plus the gap.
 
 Exactness is justified by the rules themselves. A gather does no filtering: it converts four stored texels to floating
 point (equation 2.1, c / 255 for RGBA8) and the render target converts the value back (the float to fixed-point conversion of chapter 2), which is the

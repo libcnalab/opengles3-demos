@@ -1,7 +1,7 @@
 # es30-srgb
 
 **API introduced in:** OpenGL ES 3.0 · **Minimum context:** ES 3.0 · **Shaders:** GLSL ES 3.00 ·
-**Run:** `es30-srgb [--headless --validate]`
+**Run:** `es30-srgb [--headless --validate] [--width W --height H]` · **Minimum surface:** 16 x 16 pixels
 
 ## Purpose
 
@@ -23,7 +23,11 @@ This demo shows each of them, verifies the numbers, and reads back the bytes tha
 
 ## What the image shows
 
-256 x 256 pixels, eight bands of 32 pixels (band 0 on top). In every band, **pixel column *x* is the byte value *x*** (0 on the left, 255 on the right).
+Eight horizontal bands that fill the window (band 0 on top; band `b` covers the rows from `(7 - b) * h / 8` to `(8 - b) * h / 8`, so the bands partition
+the height exactly). Each band stretches a 256-texel ramp over the full width: window column `x` shows **texel (byte value) `x * 256 / w`**, computed in
+integer arithmetic in `show.frag` with `texelFetch`, so no filtering is involved and every column shows one exact texel. At the default 256 x 256 the bands
+are 32 pixels high and **pixel column *x* is the byte value *x*** (0 on the left, 255 on the right); a wider window repeats each texel over several columns,
+a narrower one skips some.
 
 | Band | What | What you see |
 |---|---|---|
@@ -65,7 +69,8 @@ The ramp written to the render targets is `l = x/255`, color `(l, 1 - l, l*l)`, 
 
 57 checks, none of which only checks that a call returned:
 
-- **Bands (8).** Every pixel column of every band (256 probes each) against a CPU model. Bands 0, 3, 4, 5 and 6 are byte copies and must match within the rounding
+- **Bands (8).** Every pixel column of every band (one probe in the middle row of the band per window column, 256 at the default size) against a CPU model
+  of the texel that column shows (`x * 256 / w`, the shader's integer mapping, so the expectation is exact at every width). Bands 0, 3, 4, 5 and 6 are byte copies and must match within the rounding
   of one step; bands 1, 2 and 7 contain the decode and use the conversion tolerance below. Bands 3 to 5 are compared with the bytes read back from the targets
   (those are checked against the equations separately, below).
 - **Exact texture decode (15).** `RGBA8`, `SRGB8_ALPHA8` and `SRGB8` ramps are sampled with `texture()` and with `texelFetch()` into an `RGBA32UI` target

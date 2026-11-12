@@ -85,8 +85,8 @@
     "negative"
   ],
   "visual_review": {
-    "date": "2026-11-11",
-    "by": "claude-sonnet-5.5 (subagent)",
-    "notes": "256x256 radeonsi es-max capture viewed (llvmpipe and zink captures are byte-identical to it; all three use 4 samples). Four 128x128 cells, each a 2x2 grid of 64x64 sub-cells, one per sample, with the 16x12 texels visible as 4x5-pixel blocks. Every sub-cell is a smooth gradient (red growing to the right, green upwards) with a diagonal seam where an 8-bit channel wraps, and the seam position and the blue level change from sample to sample, so the four samples of a cell are clearly distinct. The four cells (RGBA8 fixed, RGBA8 not fixed, RGBA8UI, RGBA8I) look the same, as they should: they hold the same pattern numbers. No black sub-cells, stray pixels or seams between cells."
+    "date": "2026-11-12",
+    "by": "claude-opus-5.5 (subagent)",
+    "notes": "Window-size review: the four cells now tile the window at every size (boundaries at w/2, h/2). 640x400 (llvmpipe, 4 samples): four 320x200 cells, each a 2x2 grid of 160x100 sub-cells with the 16x12 texels as 10x8-pixel blocks, the same gradients and diagonal seams as at 256x256; 800x800: 400x400 cells, 200x200 sub-cells. Nothing outside the cells, no black margins. Earlier review (2026-11-11, claude-sonnet-5.5 (subagent)): 256x256 radeonsi es-max capture viewed (llvmpipe and zink captures are byte-identical to it; all three use 4 samples). Four 128x128 cells, each a 2x2 grid of 64x64 sub-cells, one per sample, with the 16x12 texels visible as 4x5-pixel blocks. Every sub-cell is a smooth gradient (red growing to the right, green upwards) with a diagonal seam where an 8-bit channel wraps, and the seam position and the blue level change from sample to sample, so the four samples of a cell are clearly distinct. The four cells (RGBA8 fixed, RGBA8 not fixed, RGBA8UI, RGBA8I) look the same, as they should: they hold the same pattern numbers. No black sub-cells, stray pixels or seams between cells."
   }
 }

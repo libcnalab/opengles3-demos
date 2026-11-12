@@ -19,10 +19,12 @@ ES 3.0 defines, shows what an incomplete framebuffer does to draw/read commands
 
 ## What the image shows
 
-The 256 x 256 default framebuffer is a grid of 64 x 64 cells; each cell is an off-screen 64 x 64 target
-shown on the screen. Texture targets are shown by **sampling** them in a second pass. Renderbuffers cannot be
-sampled, so those are shown with `glBlitFramebuffer`. The bottom row is empty. Reading order is top row
-first, left to right.
+The default framebuffer is divided into equal cells, 4 x 3 at the default 256 x 256 (or 3 x 4, 6 x 2 or 2 x 6,
+whichever gives the largest cells). Each cell shows an off-screen 64 x 64 target, centred and magnified by the
+**largest integer factor** that fits (cells of 128 pixels or more keep a 4-pixel gutter) (1x at 256 x 256, 3x at 800 x 800). Texture targets are
+shown by **sampling** them in a second pass. Renderbuffers cannot be sampled, so those are shown with
+`glBlitFramebuffer` (NEAREST). Reading order is top row first, left to right. **Minimum surface:** cells of at least
+64 x 64 (for example 256 x 192, 192 x 256, 384 x 128 or 128 x 384); smaller surfaces report `SKIP_UNSUPPORTED`.
 
 | Cell | Target | What is drawn | What it proves |
 |---|---|---|---|
@@ -102,9 +104,11 @@ are on uniforms, so every invocation takes the same path and implicit derivative
   equation 2.3 only promises "one of the two integers closest to f x 255", so a value that lands near a
   half-step may legally differ by one. The measured maximum deviation is printed with each check (1 on
   radeonsi for the gradient, 0 elsewhere).
-- **Each cell on the screen** is compared with what was read back from its framebuffer: +-1 for the sampled
-  textures (a second float -> 8-bit conversion) and **exactly 0** for the blitted renderbuffers (a copy of
-  stored values between equal 8-bit formats).
+- **Each cell on the screen** is compared with what was read back from its framebuffer, magnified by the
+  cell's integer factor `m` (window pixel `(i, j)` shows texel `(i / m, j / m)`, sampled at least `1/(2m)` of a
+  texel away from every texel edge): +-1 for the sampled textures (a second float -> 8-bit conversion) and
+  **exactly 0** for the blitted renderbuffers (NEAREST with an integer magnification copies stored values
+  between equal 8-bit formats).
 - **Negative controls (checks that can fail).** (1) References with a gradient step of 1/64 instead of
   1/63, and shifted by one texel, are rejected for 3000+ and 4000+ of 4096 texels. (2) The two control cells
   (depth test off, stencil test off) are compared with the model *and* required to differ from the tested

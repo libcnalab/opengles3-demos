@@ -4,7 +4,8 @@
 // line segments and triangles (ES 3.0 section 2.7.1), and how those primitives are rasterized
 // (sections 3.4 points, 3.5 line segments, 3.6 polygons).
 //
-// The image is a gallery of 16 cells of 64x64 pixels (4x4, cell 0 top-left, cell 15 bottom-right),
+// The image is a gallery of 16 cells designed as 64x64 pixels (4x4, cell 0 top-left, cell 15 bottom-right), scaled
+// as a whole by an integer factor k to fill the surface (see scale_cell()),
 // every cell isolated from its neighbours by its own viewport and scissor rectangle:
 //
 //    0 POINTS (sizes)       1 POINTS + gl_PointCoord   2 LINES               3 LINE_STRIP
@@ -54,12 +55,19 @@ namespace
     // ---------------------------------------------------------------------------------------------
     // Layout, palette, vertex data types
     // ---------------------------------------------------------------------------------------------
-    constexpr int kCell = 64;
+    constexpr int kCell = 64;  // cell edge in design pixels
     constexpr int kCellCount = 16;
-    // The 16 cells are arranged as 4x4, 8x2 or 2x8, whichever fits the surface (chosen in init()).
-    // The cell content is defined in exact cell-local pixels, so a cell is never scaled.
+    // The 16 cells are arranged as 4x4, 8x2 or 2x8 (chosen in init()). The cell content is designed in exact
+    // cell-local pixels and scaled by one integer factor g_k (see scale_cell()); g_origin_* is the window
+    // position of the gallery's lower-left corner.
     int g_columns = 4;
     int g_rows = 4;
+    int g_k = 1;
+    int g_origin_x = 0;
+    int g_origin_y = 0;
+    int cell_px() { return kCell * g_k; }  // cell edge in window pixels
+    /// Window pixel (cell-local) at the centre of the k x k block that design pixel `d` became.
+    int P(int d) { return d * g_k + g_k / 2; }
 
     struct Rect
     {
@@ -87,13 +95,15 @@ namespace
     Rect cell_rect(Cell c)
     {
         const int i = index_of(c);
-        return {(i % g_columns) * kCell, (g_rows - 1 - i / g_columns) * kCell, kCell, kCell};
+        const int n = cell_px();
+        return {g_origin_x + (i % g_columns) * n, g_origin_y + (g_rows - 1 - i / g_columns) * n, n, n};
     }
 
     constexpr Color kSurface{0.02f, 0.02f, 0.03f, 1.0f};
     constexpr Color kBg{0.06f, 0.07f, 0.10f, 1.0f};
 
-    /// Vertex in cell-local window coordinates (pixels, origin lower-left) plus gl_PointSize.
+    /// Vertex in cell-local coordinates (pixels, origin lower-left) plus gl_PointSize. build_cells() writes design
+    /// pixels; scale_cell() turns them into window pixels.
     struct Vtx
     {
         float x, y, size;
@@ -116,6 +126,7 @@ namespace
         std::vector<Draw> draws;
         int base = 0;       // index of verts[0] in the shared vertex buffer
         int tolerance = 1;  // per-channel comparison tolerance (gl_PointCoord is mediump)
+        bool prescaled = false;  // vertices are already in window pixels (cells sized from the scaled cell)
     };
 
     /// Implementation-dependent ranges (ES 3.0 sections 3.4 and 3.5), queried once.
@@ -231,8 +242,9 @@ namespace
     constexpr std::uint8_t kNone = 0, kCovered = 1, kUnknown = 2;
     constexpr float kTie = 0.05f;  // point squares: pixels closer than this to the square's edge are not compared
 
-    std::size_t at(int x, int y) { return static_cast<std::size_t>(y) * kCell + static_cast<std::size_t>(x); }
-    bool inside(int x, int y) { return x >= 0 && y >= 0 && x < kCell && y < kCell; }
+    std::size_t at(int x, int y) { return static_cast<std::size_t>(y) * static_cast<std::size_t>(cell_px()) + static_cast<std::size_t>(x); }
+    bool inside(int x, int y) { return x >= 0 && y >= 0 && x < cell_px() && y < cell_px(); }
+    std::size_t field_size() { return static_cast<std::size_t>(cell_px()) * static_cast<std::size_t>(cell_px()); }
 
     /// Covered beats unknown beats none.
     void raise(Field& f, int x, int y, std::uint8_t s)
@@ -249,8 +261,8 @@ namespace
             const Vtx& p = verts[static_cast<std::size_t>(i)];
             const float half = p.size * 0.5f;
             // Section 3.4.1: a fragment for each pixel whose center lies inside the square of side `size` around the vertex.
-            for (int y = 0; y < kCell; ++y)
-                for (int x = 0; x < kCell; ++x)
+            for (int y = 0; y < cell_px(); ++y)
+                for (int x = 0; x < cell_px(); ++x)
                 {
                     const float margin = std::min(half - std::fabs(static_cast<float>(x) + 0.5f - p.x),
                                                   half - std::fabs(static_cast<float>(y) + 0.5f - p.y));
@@ -263,14 +275,14 @@ namespace
     /// `rows` is the effective line width in pixels (an integer, see section 3.5.2.1).
     void paint_segment(Field& f, Vec2 a, Vec2 b, int rows)
     {
-        Field seg(static_cast<std::size_t>(kCell * kCell), kNone);
+        Field seg(field_size(), kNone);
         const float dx = b.x - a.x, dy = b.y - a.y;
         const float half = static_cast<float>(rows) * 0.5f;
 
         // Everything within `half + 2.5` pixels of the segment depends on the rasterization algorithm
         // (rules 1-4 of section 3.5.1 allow one pixel of deviation from the diamond-exit result).
-        for (int y = 0; y < kCell; ++y)
-            for (int x = 0; x < kCell; ++x)
+        for (int y = 0; y < cell_px(); ++y)
+            for (int x = 0; x < cell_px(); ++x)
                 if (distance_to_segment(static_cast<float>(x) + 0.5f, static_cast<float>(y) + 0.5f, a, b) < half + 2.5f)
                     seg[at(x, y)] = kUnknown;
 
@@ -297,16 +309,16 @@ namespace
                     seg[at(x, y)] = std::abs(m) <= k ? kCovered : kNone;
                 }
         }
-        for (int y = 0; y < kCell; ++y)
-            for (int x = 0; x < kCell; ++x) raise(f, x, y, seg[at(x, y)]);
+        for (int y = 0; y < cell_px(); ++y)
+            for (int x = 0; x < cell_px(); ++x) raise(f, x, y, seg[at(x, y)]);
     }
 
     /// Merges one triangle into a primitive's field: a pixel is covered if any triangle covers it for sure,
     /// unknown if none does but one might, and uncovered only if every triangle is clearly away from it.
     void paint_triangle(Field& f, const std::array<Vec2, 3>& t)
     {
-        for (int y = 0; y < kCell; ++y)
-            for (int x = 0; x < kCell; ++x)
+        for (int y = 0; y < cell_px(); ++y)
+            for (int x = 0; x < cell_px(); ++x)
             {
                 const float m = triangle_margin(t, static_cast<float>(x) + 0.5f, static_cast<float>(y) + 0.5f);
                 // Edge pixels (|margin| < 1) depend on the fill rule and on subpixel precision.
@@ -318,8 +330,8 @@ namespace
     /// Expected content of one cell; pixels with care == 0 are not compared.
     struct Model
     {
-        std::vector<demo::Rgba8> color = std::vector<demo::Rgba8>(static_cast<std::size_t>(kCell * kCell));
-        std::vector<char> care = std::vector<char>(static_cast<std::size_t>(kCell * kCell), 1);
+        std::vector<demo::Rgba8> color = std::vector<demo::Rgba8>(field_size());
+        std::vector<char> care = std::vector<char>(field_size(), 1);
     };
 
     std::uint8_t to8(float v) { return static_cast<std::uint8_t>(std::lround(std::clamp(v, 0.0f, 1.0f) * 255.0f)); }
@@ -338,7 +350,7 @@ namespace
         for (auto& px : m.color) px = rgba8(kBg);
         for (const Draw& d : cell.draws)
         {
-            Field f(static_cast<std::size_t>(kCell * kCell), kNone);
+            Field f(field_size(), kNone);
             if (d.mode == mgl::PrimitiveType::Points)
                 paint_points(f, cell.verts, d);
             else if (is_line(d.mode))
@@ -362,8 +374,8 @@ namespace
                 }
             }
 
-            for (int y = 0; y < kCell; ++y)
-                for (int x = 0; x < kCell; ++x)
+            for (int y = 0; y < cell_px(); ++y)
+                for (int x = 0; x < cell_px(); ++x)
                 {
                     const std::size_t i = at(x, y);
                     if (f[i] == kCovered)
@@ -426,6 +438,8 @@ namespace
         auto cell = [&](Cell c) -> CellData& { return cells[static_cast<std::size_t>(index_of(c))]; };
         auto add = [](CellData& c, float x, float y, float size = 1.0f) { c.verts.push_back({x, y, size}); };
         const float hi = std::floor(lim.point_hi);
+        const float ks = static_cast<float>(g_k);
+        const float cell_w = static_cast<float>(cell_px());
 
         // 0: POINTS. Size-1 points at fractional positions light exactly the pixel that contains them;
         //    larger sizes (those the implementation supports) cover the pixels whose centers are inside the square.
@@ -438,15 +452,16 @@ namespace
             // fall between pixel centers; two entries are deliberately off-grid (still unambiguous).
             for (const Vtx v : {Vtx{8, 38, 2}, {18.5f, 38.5f, 3}, {30, 38, 4}, {42.5f, 38.5f, 5}, {54, 38, 6}, {12, 20, 8},
                                 {30.5f, 20.5f, 11}, {52.3f, 20.2f, 3}, {54.3f, 8.7f, 2}})
-                if (v.size <= hi) add(c, v.x, v.y, v.size);
+                if (v.size * ks <= hi) add(c, v.x, v.y, v.size);  // the size is scaled by k in scale_cell()
             c.draws.push_back({mgl::PrimitiveType::Points, 0, static_cast<int>(c.verts.size()), kWhite});
         }
 
         // 1: POINTS with gl_PointCoord. The center is 0.25 pixel off the pixel grid on purpose.
         {
             CellData& c = cell(Cell::PointCoord);
-            const float size = std::min(hi, 40.0f);
-            const float corner = std::floor((static_cast<float>(kCell) - size) / 2.0f);
+            c.prescaled = true;  // window pixels: the point is sized and centred in the scaled cell
+            const float size = std::min(hi, 40.0f * ks);
+            const float corner = std::floor((cell_w - size) / 2.0f);
             add(c, corner + size / 2.0f + 0.25f, corner + size / 2.0f - 0.25f, size);
             c.draws.push_back({mgl::PrimitiveType::Points, 0, 1, kWhite, 1.0f, true});
             c.tolerance = 3;  // gl_PointCoord is mediump
@@ -508,8 +523,9 @@ namespace
         // 9: the largest point the implementation supports (up to 60 pixels), edges on the pixel grid.
         {
             CellData& c = cell(Cell::MaxPoint);
-            const float size = std::min(hi, 60.0f);
-            const float corner = std::floor((static_cast<float>(kCell) - size) / 2.0f);
+            c.prescaled = true;  // window pixels
+            const float size = std::min(hi, 60.0f * ks);
+            const float corner = std::floor((cell_w - size) / 2.0f);
             add(c, corner + size / 2.0f, corner + size / 2.0f, size);
             c.draws.push_back({mgl::PrimitiveType::Points, 0, 1, kOrange});
         }
@@ -579,7 +595,7 @@ namespace
         // 15: a house using all seven primitive types, each in its own draw call from one buffer.
         {
             CellData& c = cell(Cell::Scene);
-            const float sun = std::min(hi, 6.0f);
+            const float sun = std::min(hi, 6.0f * ks) / ks;  // design size; k * sun <= the maximum point size
             const int ground = static_cast<int>(c.verts.size());
             for (const Vec2 v : {Vec2{3.5f, 12.5f}, {30.5f, 12.5f}, {60.5f, 12.5f}}) add(c, v.x, v.y);
             const int body = static_cast<int>(c.verts.size());
@@ -604,6 +620,41 @@ namespace
             c.draws.push_back({mgl::PrimitiveType::Points, sun_index, 1, kYellow});
         }
         return cells;
+    }
+
+    /// Scales one cell's design (in design pixels) by the integer factor g_k into window pixels. Every
+    /// vertex keeps the property its experiment relies on:
+    ///   * triangles and points larger than 1: plain scaling x -> k x (and size -> k size). Square edges on
+    ///     integer coordinates stay on integer coordinates, so no pixel center lies on a point's edge;
+    ///   * line vertices and size-1 points: the design pixel i becomes the k x k block [k i, k i + k), and the
+    ///     vertex keeps its offset inside the pixel at the block's center pixel k i + k/2. A line through
+    ///     pixel centers (axis-aligned or 45 degrees) therefore still runs through pixel centers, and a
+    ///     size-1 point still lies strictly inside one pixel. Line widths and size-1 points are not scaled:
+    ///     the rules they show (width rounding, one fragment per column, one pixel per point) are per pixel.
+    void scale_cell(CellData& c)
+    {
+        if (c.prescaled || g_k == 1) return;
+        enum Role : std::uint8_t { kUnset, kLinear, kCenter };
+        std::vector<Role> role(c.verts.size(), kUnset);
+        for (const Draw& d : c.draws)
+            for (int i = d.first; i < d.first + d.count; ++i)
+            {
+                const Vtx& v = c.verts[static_cast<std::size_t>(i)];
+                const Role r = is_line(d.mode) || (d.mode == mgl::PrimitiveType::Points && v.size == 1.0f) ? kCenter : kLinear;
+                Role& slot = role[static_cast<std::size_t>(i)];
+                if (slot != kUnset && slot != r) throw demo::Failure("scale_cell: a vertex is shared by a line and a triangle");
+                slot = r;
+            }
+        const float k = static_cast<float>(g_k);
+        auto center = [&](float v) { return k * std::floor(v) + static_cast<float>(g_k / 2) + (v - std::floor(v)); };
+        for (std::size_t i = 0; i < c.verts.size(); ++i)
+        {
+            Vtx& v = c.verts[i];
+            if (role[i] == kCenter)
+                v = {center(v.x), center(v.y), v.size};
+            else
+                v = {k * v.x, k * v.y, k * v.size};  // the size matters only for points
+        }
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -649,21 +700,24 @@ namespace
     public:
         void init(demo::Env& env) override
         {
-            // Pick the arrangement that fits the surface and whose aspect ratio is closest to it. The
-            // expected images are exact per-pixel rasterization models of 64x64 cells; a surface that
-            // fits none of 256x256, 512x128 and 128x512 cannot show them, so it is skipped rather than shrunk.
+            // Pick the arrangement with the largest integer scale k = floor(min(w / W0, h / H0)), ties broken by
+            // the aspect ratio closest to the surface. The expected images are exact per-pixel rasterization
+            // models of 64x64-pixel designs, which can be scaled by an integer but not shrunk: a surface that fits
+            // none of 256x256, 512x128 and 128x512 cannot show them, so it is skipped.
             bool fits = false;
             double best = 0.0;
             for (const int columns : {4, 8, 2})
             {
                 const int rows = kCellCount / columns;
-                if (env.width < kCell * columns || env.height < kCell * rows) continue;
+                const int k = std::min(env.width / (kCell * columns), env.height / (kCell * rows));
+                if (k < 1) continue;
                 const double mismatch = std::abs(std::log(static_cast<double>(env.width) / env.height *
                                                           static_cast<double>(rows) / columns));
-                if (!fits || mismatch < best)
+                if (!fits || k > g_k || (k == g_k && mismatch < best))
                 {
                     fits = true;
                     best = mismatch;
+                    g_k = k;
                     g_columns = columns;
                     g_rows = rows;
                 }
@@ -671,6 +725,10 @@ namespace
             if (!fits)
                 throw demo::Skip(std::format("the 16 cells of 64x64 px need a 256x256, 512x128 or 128x512 surface (got {}x{})",
                                              env.width, env.height));
+            g_origin_x = (env.width - g_columns * cell_px()) / 2;  // the scaled gallery is centred
+            g_origin_y = (env.height - g_rows * cell_px()) / 2;
+            std::cout << std::format("     layout {}x{} cells of {} px (scale k = {}), origin ({}, {})\n", g_columns, g_rows,
+                                     cell_px(), g_k, g_origin_x, g_origin_y);
 
             // Two programs share the vertex shader: flat color, and gl_PointCoord visualization.
             solid_ = demo::build_program(env, "shaders/primitive.vert", "shaders/solid.frag");
@@ -691,15 +749,17 @@ namespace
                                      limits_.point_lo, limits_.point_hi, limits_.line_lo, limits_.line_hi);
 
             cells_ = build_cells(limits_);
+            for (CellData& c : cells_) scale_cell(c);
 
-            // All cells' vertices in one buffer, converted to clip space for a 64x64 viewport:
-            // x_ndc = 2 * x_window / 64 - 1 (the viewport transform of section 2.13.1 inverted).
+            // All cells' vertices in one buffer, converted to clip space for an n x n viewport (n = 64 k):
+            // x_ndc = 2 * x_window / n - 1 (the viewport transform of section 2.13.1 inverted).
+            const float half = static_cast<float>(cell_px()) / 2.0f;
             std::vector<GpuVertex> gpu;
             for (CellData& c : cells_)
             {
                 c.base = static_cast<int>(gpu.size());
                 for (const Vtx& v : c.verts)
-                    gpu.push_back({v.x / 32.0f - 1.0f, v.y / 32.0f - 1.0f, v.size});
+                    gpu.push_back({v.x / half - 1.0f, v.y / half - 1.0f, v.size});
             }
             mgl::glGenBuffers(1, &vbo_);
             mgl::glBindBuffer(mgl::BufferTarget::Array, vbo_);
@@ -796,15 +856,17 @@ namespace
         [[nodiscard]] const CellData& data(Cell c) const { return cells_[static_cast<std::size_t>(index_of(c))]; }
         [[nodiscard]] const Model& model(Cell c) const { return models_[static_cast<std::size_t>(index_of(c))]; }
 
-        /// Compares the cared-about pixels of `region` with the CPU model; one check.
-        void compare(demo::Check& check, const Image& image, Cell c, Rect region, std::string_view what) const
+        /// Compares the cared-about pixels of `design` (a cell-local rectangle in design pixels, scaled by k) with
+        /// the CPU model; one check.
+        void compare(demo::Check& check, const Image& image, Cell c, Rect design, std::string_view what) const
         {
             const Model& m = model(c);
             const int tolerance = data(c).tolerance;
+            const Rect region{design.x * g_k, design.y * g_k, design.w * g_k, design.h * g_k};
             int compared = 0, bad = 0;
             std::string first_bad;
-            for (int y = std::max(region.y, 0); y < std::min(region.y + region.h, kCell); ++y)
-                for (int x = std::max(region.x, 0); x < std::min(region.x + region.w, kCell); ++x)
+            for (int y = std::max(region.y, 0); y < std::min(region.y + region.h, cell_px()); ++y)
+                for (int x = std::max(region.x, 0); x < std::min(region.x + region.w, cell_px()); ++x)
                 {
                     if (!m.care[at(x, y)]) continue;
                     ++compared;
@@ -814,7 +876,7 @@ namespace
                                                 demo::format_rgba(want));
                 }
             check.expect(compared > 0 && bad == 0, what,
-                         bad == 0 ? std::format("{} pixels compared", compared)
+                         bad == 0 ? std::format("{} pixels compared (scale k = {})", compared, g_k)
                                   : std::format("{} of {} pixels differ; {}", bad, compared, first_bad));
         }
 
@@ -890,7 +952,7 @@ namespace
             if (size >= 4.0f)
             {
                 // t is 0 at the TOP of the point and 1 at the bottom; s grows to the right.
-                const int left = static_cast<int>(std::floor((static_cast<float>(kCell) - size) / 2.0f));  // lower-left pixel
+                const int left = static_cast<int>(std::floor((static_cast<float>(cell_px()) - size) / 2.0f));  // lower-left pixel
                 const int bottom = left;
                 const int right = left + static_cast<int>(size) - 1, top = bottom + static_cast<int>(size) - 1;
                 const demo::Rgba8 tl = image.at(Cell::PointCoord, left, top), br = image.at(Cell::PointCoord, right, bottom);
@@ -906,10 +968,10 @@ namespace
         {
             const float size = data(Cell::MaxPoint).verts[0].size;
             compare(check, image, Cell::MaxPoint,
-                    std::format("largest point (cell 9): a size-{} point (min(ALIASED_POINT_SIZE_RANGE max, 60)) covers its square", size));
+                    std::format("largest point (cell 9): a size-{} point (min(ALIASED_POINT_SIZE_RANGE max, 60 k)) covers its square", size));
             int count = 0;
-            for (int y = 0; y < kCell; ++y)
-                for (int x = 0; x < kCell; ++x)
+            for (int y = 0; y < cell_px(); ++y)
+                for (int x = 0; x < cell_px(); ++x)
                     if (lit(image.at(Cell::MaxPoint, x, y))) ++count;
             const int expected = static_cast<int>(size) * static_cast<int>(size);
             check.expect_eq(count, expected, std::format("largest point: exactly size^2 = {} pixels are lit", expected));
@@ -947,6 +1009,8 @@ namespace
                        std::format("{}: the midpoints of the segments only another line topology would add are clear", label));
         }
 
+        /// `px` are design pixels; each is probed at the center pixel P() of its k x k block, which is where a
+        /// line through that design pixel's center runs after scale_cell().
         void expect_pixels(demo::Check& check, const Image& image, Cell c, std::initializer_list<std::array<int, 2>> px, bool want_lit,
                            std::string_view what) const
         {
@@ -954,11 +1018,11 @@ namespace
             std::string detail;
             for (const auto& p : px)
             {
-                const demo::Rgba8 got = image.at(c, p[0], p[1]);
+                const demo::Rgba8 got = image.at(c, P(p[0]), P(p[1]));
                 if (lit(got) != want_lit)
                 {
                     ok = false;
-                    detail += std::format(" ({},{})={}", p[0], p[1], demo::format_rgba(got));
+                    detail += std::format(" ({},{})={}", P(p[0]), P(p[1]), demo::format_rgba(got));
                 }
             }
             check.expect(ok, what, ok ? "" : "wrong:" + detail);
@@ -1023,17 +1087,17 @@ namespace
             {
                 const int rows = effective_width(w.horizontal[i], limits_);
                 int count = 0;
-                const int cy = static_cast<int>(kWideLineY[i]);
+                const int cy = P(static_cast<int>(kWideLineY[i]));  // the line's row after scale_cell()
                 for (int y = cy - 6; y <= cy + 6; ++y)
-                    if (lit(image.at(Cell::WideLines, 40, y))) ++count;
+                    if (lit(image.at(Cell::WideLines, P(40), y))) ++count;
                 check.expect_eq(count, rows,
                                 std::format("glLineWidth({}): rounded to the nearest integer (0 acts as 1), a vertical cut through the line crosses {} lit pixels (section 3.5.2.1)",
                                             w.horizontal[i], rows));
             }
             const int vrows = effective_width(w.vertical, limits_);
             int vcount = 0;
-            for (int x = 3; x <= 18; ++x)
-                if (lit(image.at(Cell::WideLines, x, 30))) ++vcount;
+            for (int x = P(10) - 7; x <= P(10) + 8; ++x)  // the vertical line runs through column P(10)
+                if (lit(image.at(Cell::WideLines, x, P(30)))) ++vcount;
             check.expect_eq(vcount, vrows, std::format("glLineWidth({}) on a vertical (y-major) line: a horizontal cut crosses {} lit pixels",
                                                        w.vertical, vrows));
         }
@@ -1063,7 +1127,7 @@ namespace
                     const float v_line = va + slope * (static_cast<float>(u) + 0.5f - ua);
                     const int v_ideal = static_cast<int>(std::floor(v_line));  // pixel whose center is nearest to the line
                     int found = 0;
-                    for (int v = std::max(v_ideal - 3, 0); v <= std::min(v_ideal + 3, kCell - 1); ++v)
+                    for (int v = std::max(v_ideal - 3, 0); v <= std::min(v_ideal + 3, cell_px() - 1); ++v)
                     {
                         if (!lit(image.at(Cell::LineRules, x_major ? u : v, x_major ? v : u))) continue;
                         ++found;
@@ -1171,9 +1235,9 @@ namespace
             // TRIANGLES: the two leftover vertices v6=(32,60) and v7=(60,6) start no triangle.
             const Model& m = model(Cell::Triangles);
             bool leftover_clear = true;
-            for (const Rect r : {Rect{27, 55, 11, 9}, Rect{55, 0, 9, 11}})
-                for (int y = r.y; y < r.y + r.h; ++y)
-                    for (int x = r.x; x < r.x + r.w; ++x)
+            for (const Rect d : {Rect{27, 55, 11, 9}, Rect{55, 0, 9, 11}})  // design pixels around v6 and v7
+                for (int y = d.y * g_k; y < (d.y + d.h) * g_k; ++y)
+                    for (int x = d.x * g_k; x < (d.x + d.w) * g_k; ++x)
                         if (m.care[at(x, y)] && lit(image.at(Cell::Triangles, x, y))) leftover_clear = false;
             check.expect(leftover_clear, "TRIANGLES: the 2 leftover vertices (count = 3n + 2) produce nothing around them");
 
@@ -1192,8 +1256,11 @@ namespace
             for (int k = 0; k < 48; ++k)
             {
                 const float a = static_cast<float>(k) * kPi / 24.0f;
-                probe(image, Cell::FanDisc, {32.0f + 22.0f * std::cos(a), 32.0f + 22.0f * std::sin(a)}, Want::Lit, inside_probes, std::to_string(k));
-                probe(image, Cell::FanDisc, {32.0f + 31.0f * std::cos(a), 32.0f + 31.0f * std::sin(a)}, Want::Clear, outside_probes, std::to_string(k));
+                const float kk = static_cast<float>(g_k);  // the disc is scaled linearly: center 32 k, rim radius 27 k
+                probe(image, Cell::FanDisc, {kk * (32.0f + 22.0f * std::cos(a)), kk * (32.0f + 22.0f * std::sin(a))}, Want::Lit,
+                      inside_probes, std::to_string(k));
+                probe(image, Cell::FanDisc, {kk * (32.0f + 31.0f * std::cos(a)), kk * (32.0f + 31.0f * std::sin(a))}, Want::Clear,
+                      outside_probes, std::to_string(k));
             }
             report(check, inside_probes, "fan disc: 48 probes on a ring of radius 22 are all covered (the last rim vertex repeats the first and closes the fan)");
             report(check, outside_probes, "fan disc: 48 probes on a ring of radius 31 (outside the radius-27 rim) are all clear");

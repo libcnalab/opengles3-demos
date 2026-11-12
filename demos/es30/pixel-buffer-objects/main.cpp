@@ -7,8 +7,9 @@
 // on buffer data exactly as on client memory, so a sub-rectangle of a larger image can be selected inside the
 // buffer, and the data can be read back with glMapBufferRange.
 //
-// The 256 x 256 default framebuffer shows seven textures, each uploaded from a buffer (cells of 32 x 32
-// pixels, row 0 at the bottom; small textures are magnified so that every texel is several pixels):
+// The default framebuffer shows seven textures, each uploaded from a buffer. The surface is divided into equal cells
+// (8 x 1, 4 x 2, 3 x 3, 2 x 4 or 1 x 8, whichever gives the largest cells; reading order from the top-left), and every
+// texture is centred in its cell and magnified by the largest integer factor m that fits:
 //
 //   cell 0  the 32 x 32 chart, glTexImage2D with data = offset 0 (a NULL pointer with a buffer bound is NOT "no data")
 //   cell 1  a 20 x 13 sub-rectangle of the chart: UNPACK_ROW_LENGTH 32, SKIP_PIXELS 5, SKIP_ROWS 3
@@ -16,7 +17,8 @@
 //   cell 3  glTexSubImage2D of a 14 x 10 patch (taken from the chart with ROW_LENGTH/SKIP) into a flat texture
 //   cell 4  RGB8 5 x 4 (x6) from a 7 x 6 image with UNPACK_ROW_LENGTH 7 and the default alignment 4 (rows of 24 bytes), data offset 5
 //   cell 5  RGBA4 5 x 4 (x6), type UNSIGNED_SHORT_4_4_4_4 (rows of 12 bytes), data offset 6
-//   cell 6  a GPU round trip: glReadPixels of cell 0 into a PIXEL_PACK_BUFFER, then the SAME buffer as PIXEL_UNPACK_BUFFER of glTexImage2D
+//   cell 6  a GPU round trip: glReadPixels of the 32m x 32m pixels of cell 0 into a PIXEL_PACK_BUFFER, then the SAME buffer as
+//           PIXEL_UNPACK_BUFFER of a 32m x 32m glTexImage2D, shown 1:1 (a pixel-exact copy of cell 0)
 //
 // Validation: textures are compared with CPU models of the memory layout (eq. 3.12 / 3.13), exactly where the texture can be
 // attached to a framebuffer and read back, by sampling (+-1) otherwise; glReadPixels into buffers is read back with
@@ -47,8 +49,7 @@ using demo::Rgba8;
 namespace
 {
     constexpr int kChart = 32;      // the chart is 32 x 32 RGBA8
-    constexpr int kCellPx = 32;     // edge of a cell of the sheet
-    constexpr int kCells = 8;
+    constexpr int kCells = 7;       // display cells in use
     constexpr std::size_t kChartBytes = static_cast<std::size_t>(kChart) * kChart * 4;
     constexpr std::size_t kHeader = 64;                                   // bytes between the two charts in the buffer
     constexpr std::size_t kSecondChart = kChartBytes + kHeader;           // offset of the second (inverted) chart: 4160
@@ -208,6 +209,44 @@ namespace
         check.expect_gl_error(code, what);
     }
 
+    // Screen layout: g_columns x g_rows equal cells partition the g_width x g_height surface (chosen in render()).
+    int g_columns = 8, g_rows = 1, g_width = 256, g_height = 32;
+
+    /// Arrangement whose smallest cell edge is the largest; returns that edge.
+    int choose_layout(int width, int height)
+    {
+        int best = -1;
+        for (const auto& [columns, rows] : {std::pair{8, 1}, std::pair{4, 2}, std::pair{3, 3}, std::pair{2, 4}, std::pair{1, 8}})
+        {
+            const int edge = std::min(width / columns, height / rows);
+            if (columns * rows >= kCells && edge > best)
+            {
+                best = edge;
+                g_columns = columns;
+                g_rows = rows;
+            }
+        }
+        g_width = width;
+        g_height = height;
+        return best;
+    }
+
+    /// Where a w x h texture is shown: centred in display cell `index`, magnified by the integer `scale` (>= 1; cells of
+    /// 128 pixels or more keep a gutter of 4 pixels between the images).
+    struct Display
+    {
+        int x, y, scale;
+    };
+    Display display(int index, int w, int h)
+    {
+        const int col = index % g_columns, row = index / g_columns;  // row 0 is at the top
+        const int x0 = g_width * col / g_columns, x1 = g_width * (col + 1) / g_columns;
+        const int y0 = g_height * (g_rows - 1 - row) / g_rows, y1 = g_height * (g_rows - row) / g_rows;
+        const int gutter = std::min(x1 - x0, y1 - y0) >= 128 ? 4 : 0;  // between neighbouring images, in cells of 128+ pixels
+        const int scale = std::max(1, std::min((x1 - x0 - gutter) / w, (y1 - y0 - gutter) / h));
+        return {x0 + (x1 - x0 - w * scale) / 2, y0 + (y1 - y0 - h * scale) / 2, scale};
+    }
+
     // glReadPixels takes a void* that is a byte offset while a pixel pack buffer is bound.
     void* pack_offset(std::size_t bytes) { return const_cast<void*>(demo::buffer_offset(bytes)); }
 
@@ -216,7 +255,7 @@ namespace
         std::string what;
         mgl::TextureId tex{};
         int index = 0;
-        int w = 0, h = 0, scale = 1;
+        int w = 0, h = 0;
         std::function<Rgba8(int, int)> texel;  // the expected texel (i, j)
         bool exact = false;                     // RGBA8 texture: read it back exactly through a framebuffer
     };
@@ -226,8 +265,10 @@ namespace
     public:
         void init(demo::Env& env) override
         {
-            if (env.width < kCells * kCellPx || env.height < kCellPx)
-                throw demo::Skip(std::format("needs a default framebuffer of at least {}x{}", kCells * kCellPx, kCellPx));
+            // Every cell must show its texture at least 1:1, and the 32 x 32 chart is the largest.
+            if (choose_layout(env.width, env.height) < kChart)
+                throw demo::Skip(std::format("needs a surface whose display cells are at least {0}x{0} pixels, e.g. 256x32, 128x64, 96x96, "
+                                             "64x128 or 32x256 (got {1}x{2})", kChart, env.width, env.height));
 
             show_ = demo::build_program(env, "shaders/quad.vert", "shaders/show.frag");
             show_tex_ = mgl::glGetUniformLocation(show_, "u_tex");
@@ -240,11 +281,6 @@ namespace
             upload_rgb();
             upload_4444();
 
-            // The buffer of the GPU round trip (cell 6) only needs a data store of the right size: glReadPixels fills it.
-            // Without a store its size is 0 and any read into it is "beyond the end of the buffer" (INVALID_OPERATION).
-            mgl::glBindBuffer(mgl::BufferTarget::PixelPack, buf_[kBufRoundTrip]);
-            mgl::glBufferData(mgl::BufferTarget::PixelPack, static_cast<GLsizeiptr>(kChartBytes), nullptr, mgl::BufferUsage::StreamCopy);
-            mgl::glBindBuffer(mgl::BufferTarget::PixelPack, mgl::BufferId{0});
             // The texture that render() re-specifies every frame: its sampling state must make a one-level texture complete
             // (the default MIN_FILTER NEAREST_MIPMAP_LINEAR would not).
             mgl::glBindTexture(mgl::TextureTarget::Texture2D, tex_[kTexRoundTrip]);
@@ -253,10 +289,14 @@ namespace
             build_cells();
         }
 
-        void render(demo::Env& /*env*/, int /*frame*/) override
+        void render(demo::Env& env, int /*frame*/) override
         {
+            (void)choose_layout(env.width, env.height);
+            const Display chart = display(0, kChart, kChart);
+            round_trip_ = kChart * chart.scale;  // the edge of cell 0 on the screen
+            cells_.back().w = cells_.back().h = round_trip_;
             mgl::glDisable(mgl::Capability::Dither);  // dithering could change a stored 8-bit value by one step
-            mgl::glViewport(0, 0, kCells * kCellPx, kCellPx);
+            mgl::glViewport(0, 0, env.width, env.height);
             mgl::glClearColor(0.08f, 0.08f, 0.1f, 1.0f);
             mgl::glClear(mgl::ClearBufferBit::Color);
             mgl::glUseProgram(show_);
@@ -265,26 +305,36 @@ namespace
             // Cells 0 .. 5 show the textures that init() uploaded from pixel unpack buffers.
             for (std::size_t c = 0; c < cells_.size() - 1; ++c) draw_cell(cells_[c]);
 
-            // Cell 6: a GPU-side round trip. The pixels of cell 0 are read into a pixel PACK buffer ...
+            // Cell 6: a GPU-side round trip. The pixels of cell 0 are read into a pixel PACK buffer ... The buffer only needs a
+            // data store of the right size: glReadPixels fills it. Without a store its size is 0 and any read into it is "beyond
+            // the end of the buffer" (INVALID_OPERATION).
+            const std::size_t bytes = static_cast<std::size_t>(round_trip_) * static_cast<std::size_t>(round_trip_) * 4;
             mgl::glBindBuffer(mgl::BufferTarget::PixelPack, buf_[kBufRoundTrip]);
+            if (round_trip_bytes_ != bytes)
+            {
+                mgl::glBufferData(mgl::BufferTarget::PixelPack, static_cast<GLsizeiptr>(bytes), nullptr, mgl::BufferUsage::StreamCopy);
+                round_trip_bytes_ = bytes;
+            }
             mgl::glPixelStorei(mgl::PixelStoreParam::PackAlignment, 4);
-            mgl::glReadPixels(0, 0, kChart, kChart, mgl::PixelFormat::Rgba, mgl::PixelType::UnsignedByte, pack_offset(0));
+            mgl::glReadPixels(chart.x, chart.y, round_trip_, round_trip_, mgl::PixelFormat::Rgba, mgl::PixelType::UnsignedByte, pack_offset(0));
             mgl::glBindBuffer(mgl::BufferTarget::PixelPack, mgl::BufferId{0});
             // ... and the very same buffer object becomes the PIXEL_UNPACK_BUFFER of the texture upload: no pixel crosses to the CPU.
             mgl::glBindBuffer(mgl::BufferTarget::PixelUnpack, buf_[kBufRoundTrip]);
             mgl::glBindTexture(mgl::TextureTarget::Texture2D, tex_[kTexRoundTrip]);
-            mgl::glTexImage2D(mgl::TextureTarget::Texture2D, 0, mgl::InternalFormat::Rgba8, kChart, kChart, 0, mgl::PixelFormat::Rgba, mgl::PixelType::UnsignedByte, demo::buffer_offset(0));
+            mgl::glTexImage2D(mgl::TextureTarget::Texture2D, 0, mgl::InternalFormat::Rgba8, round_trip_, round_trip_, 0, mgl::PixelFormat::Rgba,
+                              mgl::PixelType::UnsignedByte, demo::buffer_offset(0));
             mgl::glBindBuffer(mgl::BufferTarget::PixelUnpack, mgl::BufferId{0});
             draw_cell(cells_.back());
 
             mgl::glBindTexture(mgl::TextureTarget::Texture2D, mgl::TextureId{0});
             mgl::glUseProgram(mgl::ProgramId{0});
-            mgl::glViewport(0, 0, kCells * kCellPx, kCellPx);
+            mgl::glViewport(0, 0, env.width, env.height);
         }
 
         void validate(demo::Env& /*env*/, demo::Check& check) override
         {
-            cell0_ = demo::read_rgba8(0, 0, kChart, kChart);  // the pixels of the chart cell as they are in the framebuffer now
+            const Display chart = display(0, kChart, kChart);
+            cell0_ = demo::read_rgba8(chart.x, chart.y, round_trip_, round_trip_);  // the pixels of the chart cell as they are in the framebuffer now
             check_pixel_store_state(check);
             check_buffer_bindings(check);
             check_cells(check);
@@ -433,43 +483,45 @@ namespace
         // The expected content of every cell (the CPU model of what the unpack should have produced).
         void build_cells()
         {
-            cells_.push_back({"cell 0: glTexImage2D from a PIXEL_UNPACK_BUFFER at offset 0 (32x32 chart)", tex_[kTexChart], 0, kChart, kChart, 1,
+            cells_.push_back({"cell 0: glTexImage2D from a PIXEL_UNPACK_BUFFER at offset 0 (32x32 chart)", tex_[kTexChart], 0, kChart, kChart,
                               [](int i, int j) { return chart_texel(i, j); }, true});
-            cells_.push_back({"cell 1: ROW_LENGTH 32, SKIP_PIXELS 5, SKIP_ROWS 3 select a 20x13 sub-rectangle of the chart in the buffer", tex_[kTexSub1], 1, 20, 13, 1,
+            cells_.push_back({"cell 1: ROW_LENGTH 32, SKIP_PIXELS 5, SKIP_ROWS 3 select a 20x13 sub-rectangle of the chart in the buffer", tex_[kTexSub1], 1, 20, 13,
                               [](int i, int j) { return chart_texel(5 + i, 3 + j); }, true});
-            cells_.push_back({"cell 2: the same selection (SKIP 2, 8) in the inverted chart at byte offset 4160 of the buffer", tex_[kTexSub2], 2, 20, 13, 1,
+            cells_.push_back({"cell 2: the same selection (SKIP 2, 8) in the inverted chart at byte offset 4160 of the buffer", tex_[kTexSub2], 2, 20, 13,
                               [](int i, int j) { return chart2_texel(2 + i, 8 + j); }, true});
-            cells_.push_back({"cell 3: glTexSubImage2D 14x10 patch (SKIP 11, 2) at texel (6, 9) of a flat texture; the rest keeps its color", tex_[kTexPatch], 3, kChart, kChart, 1,
+            cells_.push_back({"cell 3: glTexSubImage2D 14x10 patch (SKIP 11, 2) at texel (6, 9) of a flat texture; the rest keeps its color", tex_[kTexPatch], 3, kChart, kChart,
                               [](int i, int j) {
                                   const bool inside = i >= 6 && i < 6 + 14 && j >= 9 && j < 9 + 10;
                                   return inside ? chart_texel(11 + (i - 6), 2 + (j - 9)) : kBase;
                               },
                               true});
-            cells_.push_back({"cell 4: RGB8 5x4 from a 7x6 image (ROW_LENGTH 7, SKIP 1, 1, alignment 4: 24-byte rows), data offset 5", tex_[kTexRgb], 4, kRgbSubW, kRgbSubH, 6,
+            cells_.push_back({"cell 4: RGB8 5x4 from a 7x6 image (ROW_LENGTH 7, SKIP 1, 1, alignment 4: 24-byte rows), data offset 5", tex_[kTexRgb], 4, kRgbSubW, kRgbSubH,
                               [](int i, int j) {
                                   const auto c = rgb_texel(1 + i, 1 + j);
                                   return Rgba8{c[0], c[1], c[2], 255};
                               },
                               false});
-            cells_.push_back({"cell 5: RGBA4 5x4, UNSIGNED_SHORT_4_4_4_4 from data offset 6 (12-byte rows)", tex_[kTex4444], 5, k4444W, k4444H, 6,
+            cells_.push_back({"cell 5: RGBA4 5x4, UNSIGNED_SHORT_4_4_4_4 from data offset 6 (12-byte rows)", tex_[kTex4444], 5, k4444W, k4444H,
                               [](int i, int j) {
                                   const std::array<int, 4> n = nibbles(i, j);
                                   return Rgba8{u8(n[0] * 17), u8(n[1] * 17), u8(n[2] * 17), u8(n[3] * 17)};  // c / 15 * 255 = 17 c
                               },
                               false});
-            cells_.push_back({"cell 6: glReadPixels into a PIXEL_PACK_BUFFER, then the same buffer as PIXEL_UNPACK_BUFFER of glTexImage2D (cell 0 again)", tex_[kTexRoundTrip], 6,
-                              kChart, kChart, 1, [this](int i, int j) { return cell0_texel(i, j); }, true});
+            // The round trip's size (the edge of cell 0 on the screen) is set by render().
+            cells_.push_back({"cell 6: glReadPixels of cell 0 into a PIXEL_PACK_BUFFER, then the same buffer as PIXEL_UNPACK_BUFFER of glTexImage2D (cell 0 again)",
+                              tex_[kTexRoundTrip], 6, kChart, kChart, [this](int i, int j) { return cell0_texel(i, j); }, true});
         }
 
         [[nodiscard]] Rgba8 cell0_texel(int i, int j) const
         {
-            const std::size_t o = static_cast<std::size_t>((j * kChart + i) * 4);
+            const std::size_t o = static_cast<std::size_t>((j * round_trip_ + i) * 4);
             return {cell0_[o], cell0_[o + 1], cell0_[o + 2], cell0_[o + 3]};
         }
 
         void draw_cell(const ShowCell& c) const
         {
-            mgl::glViewport(c.index * kCellPx, 0, c.w * c.scale, c.h * c.scale);
+            const Display d = display(c.index, c.w, c.h);
+            mgl::glViewport(d.x, d.y, c.w * d.scale, c.h * d.scale);
             mgl::glActiveTexture(mgl::TextureUnit::Texture0);
             mgl::glBindTexture(mgl::TextureTarget::Texture2D, c.tex);
             mgl::glDrawArrays(mgl::PrimitiveType::TriangleStrip, 0, 4);
@@ -603,10 +655,13 @@ namespace
         // ------------------------------------------------------------------------------------------
         void check_cells(demo::Check& check)
         {
-            // The chart cell itself: CPU chart vs framebuffer (the shader's float -> 8-bit conversion allows +-1, 2.1.6.2).
+            // The chart cell itself: CPU chart vs framebuffer (the shader's float -> 8-bit conversion allows +-1, 2.1.6.2). It is shown
+            // magnified by an integer m, so pixel (x, y) samples texel (x / m, y / m) at least 1/(2m) texel away from every texel edge.
             {
-                const Diff d = compare_rgba(cell0_, [](int x, int y) { return chart_texel(x, y); }, kChart, kChart, 1);
-                check.expect(d.bad == 0, std::format("cell 0 as drawn matches the CPU chart (+-1 for the shader's conversion; max deviation {})", d.max_dev), d.first);
+                const int m = round_trip_ / kChart;
+                const Diff d = compare_rgba(cell0_, [m](int x, int y) { return chart_texel(x / m, y / m); }, round_trip_, round_trip_, 1);
+                check.expect(d.bad == 0, std::format("cell 0 as drawn matches the CPU chart (x{} magnified; +-1 for the shader's conversion; max deviation {})", m, d.max_dev),
+                             d.first);
             }
             for (const ShowCell& c : cells_)
             {
@@ -619,11 +674,13 @@ namespace
                     check.expect(d.bad == 0 && !got.empty(), std::format("{}: the texture is exactly the model (glReadPixels through a framebuffer, {}x{} texels)", c.what, c.w, c.h), d.first);
                 }
                 // What the picture shows: the model through a NEAREST lookup (+-1 for the conversions).
-                const std::vector<std::uint8_t> px = demo::read_rgba8(c.index * kCellPx, 0, c.w * c.scale, c.h * c.scale);
-                const int scale = c.scale;
+                const Display shown = display(c.index, c.w, c.h);
+                const int scale = shown.scale;
+                const std::vector<std::uint8_t> px = demo::read_rgba8(shown.x, shown.y, c.w * scale, c.h * scale);
                 const auto texel = c.texel;
-                const Diff d = compare_rgba(px, [scale, texel](int x, int y) { return texel(x / scale, y / scale); }, c.w * c.scale, c.h * c.scale, 1);
-                check.expect(d.bad == 0, std::format("{}: the framebuffer shows the model ({}x{} pixels, +-1; max deviation {})", c.what, c.w * c.scale, c.h * c.scale, d.max_dev), d.first);
+                const Diff d = compare_rgba(px, [scale, texel](int x, int y) { return texel(x / scale, y / scale); }, c.w * scale, c.h * scale, 1);
+                check.expect(d.bad == 0, std::format("{}: the framebuffer shows the model ({}x{} pixels, x{}, +-1; max deviation {})", c.what, c.w * scale, c.h * scale, scale,
+                                                     d.max_dev), d.first);
             }
 
             // Negative controls: the comparisons are able to fail.
@@ -719,11 +776,15 @@ namespace
 
         void check_pack(demo::Check& check)
         {
+            // The rectangles lie in the chart cell (cell 0), whose lower-left corner on the screen is (cx, cy).
+            const Display chart = display(0, kChart, kChart);
+            const int cx = chart.x, cy = chart.y, n = round_trip_;
+            const std::size_t whole = static_cast<std::size_t>(n) * static_cast<std::size_t>(n) * 4;
             const std::vector<PackCase> cases = {
-                {"the whole chart cell into a buffer of exactly 4096 bytes at offset 0", 0, 0, 32, 32, 0, 0, 0, 4, 0, 4096},
-                {"a 10x8 rectangle at byte offset 100 of a 4096-byte buffer", 4, 6, 10, 8, 0, 0, 0, 4, 100, 4096},
-                {"PACK_ROW_LENGTH 24, SKIP_PIXELS 3, SKIP_ROWS 2 for a 10x7 rectangle at offset 36", 8, 4, 10, 7, 24, 2, 3, 4, 36, 1024},
-                {"PACK_ALIGNMENT 8: a 5x3 rectangle (20-byte rows) with 24-byte rows in the buffer", 3, 5, 5, 3, 0, 0, 0, 8, 0, 128},
+                {std::format("the whole {0}x{0} chart cell into a buffer of exactly {1} bytes at offset 0", n, whole), cx, cy, n, n, 0, 0, 0, 4, 0, whole},
+                {"a 10x8 rectangle at byte offset 100 of a 4096-byte buffer", cx + 4, cy + 6, 10, 8, 0, 0, 0, 4, 100, 4096},
+                {"PACK_ROW_LENGTH 24, SKIP_PIXELS 3, SKIP_ROWS 2 for a 10x7 rectangle at offset 36", cx + 8, cy + 4, 10, 7, 24, 2, 3, 4, 36, 1024},
+                {"PACK_ALIGNMENT 8: a 5x3 rectangle (20-byte rows) with 24-byte rows in the buffer", cx + 3, cy + 5, 5, 3, 0, 0, 0, 8, 0, 128},
             };
             int number = 1;
             for (const PackCase& c : cases)
@@ -965,7 +1026,7 @@ namespace
             mgl::glDeleteFramebuffers(1, &fbo);
             mgl::glBindRenderbuffer(mgl::RenderbufferTarget::Renderbuffer, mgl::RenderbufferId{0});
             mgl::glDeleteRenderbuffers(1, &rb);
-            mgl::glViewport(0, 0, kCells * kCellPx, kCellPx);
+            mgl::glViewport(0, 0, g_width, g_height);
         }
 
         // ------------------------------------------------------------------------------------------
@@ -1093,6 +1154,8 @@ namespace
         mgl::FramebufferId attach_fbo_{};
         std::vector<ShowCell> cells_;
         std::vector<std::uint8_t> cell0_;
+        int round_trip_ = kChart;             // edge of the chart cell on the screen (32 m) = size of the round-trip texture
+        std::size_t round_trip_bytes_ = 0;    // current data store size of the round-trip buffer
     };
 }
 

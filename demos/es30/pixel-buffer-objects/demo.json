@@ -84,8 +84,8 @@
     "negative"
   ],
   "visual_review": {
-    "date": "2026-11-11",
-    "by": "claude-sonnet-5.5 (subagent)",
-    "notes": "radeonsi es-max capture viewed at 4x (llvmpipe and zink captures identical). Bottom row, left to right: the 32x32 chart (hue gradient with a 4-pixel checker in blue); a 20x13 sub-rectangle of it, bottom-aligned; a 20x13 rectangle of the color-inverted chart; a flat blue-gray 32x32 square with a 14x10 chart patch in its middle; a 5x4 RGB texture magnified 6x (blue top-left texel, dark red and red texels, light cyan row); a 5x4 RGBA4 texture magnified 6x (teal to rose gradient); and the round-trip copy of the chart, identical to cell 0. The rest of the framebuffer is the dark clear color."
+    "date": "2026-11-12",
+    "by": "claude-opus (subagent, fill-window)",
+    "notes": "Viewed at 800x800 (llvmpipe, 3x3 cells of 266 px: chart 8x, 20x13 rectangles 13x, 5x4 textures 52x, round trip 256x256 at 1x) and 640x400 (4x2 cells of 160x200: chart 4x). Top-left the chart; the 20x13 sub-rectangle and the inverted-chart rectangle; the flat blue-gray texture with its 14x10 chart patch; the RGB8 and RGBA4 5x4 textures as large texel blocks; and the round-trip cell, a pixel-identical copy of the chart cell. The rest is the dark clear color."
   }
 }

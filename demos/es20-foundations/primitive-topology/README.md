@@ -19,14 +19,30 @@ and `count` arguments of `glDrawArrays`.
 
 ## The gallery
 
-The image is a 4x4 grid of 64x64-pixel cells, numbered 0-15 in reading order. Each cell has its
-own viewport and scissor box, so large points and wide lines cannot leak into a neighbour. All
-vertices live in one buffer object; each draw selects its range with `first` and `count`.
+The image is a 4x4 grid of cells, each designed as 64x64 pixels, numbered 0-15 in reading order.
+Each cell has its own viewport and scissor box, so large points and wide lines cannot leak into a
+neighbour. All vertices live in one buffer object; each draw selects its range with `first` and `count`.
 
-The expected images are exact per-pixel models, so a cell is always 64x64 pixels and is never
-scaled. The 16 cells are arranged as 4x4, 8x2 or 2x8, whichever fits the surface with the closest
-aspect ratio (at the default size: 4x4, as in the table below). **Minimum surface:** 256x256,
-512x128 or 128x512. On a surface that fits none of them the demo reports `SKIP_UNSUPPORTED`.
+The expected images are exact per-pixel models, so the design is never shrunk or scaled by a
+fraction. It is multiplied by one integer factor `k = max(1, floor(min(width / W0, height / H0)))`
+(`W0 x H0` = 256x256, 512x128 or 128x512 for the 4x4, 8x2 and 2x8 arrangements; the largest `k`
+wins, ties go to the aspect ratio closest to the surface), and the scaled gallery is centred. At
+800x800 the cells are 192x192 pixels (`k = 3`). Every vertex keeps the property its check relies on:
+
+- triangles and points larger than 1 are scaled plainly (`x -> k x`, `size -> k size`), so a
+  point's square still has its edges on integer coordinates and no pixel center lies on an edge;
+- line endpoints and size-1 points stay at the same offset inside a pixel: design pixel `i` becomes
+  the `k x k` block starting at `k i`, and the vertex moves to its center pixel `k i + k/2`. A line
+  through pixel centers (horizontal, vertical or 45 degrees) therefore still runs through pixel
+  centers and is still checked exactly, and a size-1 point still lies strictly inside one pixel;
+- line widths and size-1 points are **not** scaled: the rules they show (width rounding, exactly
+  one fragment per column, one pixel per size-1 point) are statements about single pixels.
+
+The CPU model is built from the same scaled vertices, the "don't care" margins stay in window
+pixels (1 px around triangle edges, `w/2 + 2.5` px around sloped lines), and the named probes are
+taken at the scaled positions. The numbers in the table and in the check names are design pixels.
+**Minimum surface:** 256x256, 512x128 or 128x512. On a surface that fits none of them the demo
+reports `SKIP_UNSUPPORTED`.
 
 | | col 1 | col 2 | col 3 | col 4 |
 |---|---|---|---|---|
@@ -76,7 +92,8 @@ ranges and builds its pictures from them, so it passes on any conforming impleme
 | radeonsi (reference machine) | [0.125, 2048] | [1, 2048] |
 | llvmpipe | [1, 256] | [1, 255] |
 
-Cell 0 only draws the sizes the range allows, cells 1 and 9 use `min(max, 40)` and `min(max, 60)`,
+Cell 0 only draws the sizes the range allows (after scaling by `k`), cells 1 and 9 use `min(max, 40k)`
+and `min(max, 60k)`,
 and cell 8 requests widths 3 and 2.6 only when the maximum is at least 3 (otherwise width 1). With a
 maximum of 1 the demo still records 71 checks. The expected pixels are computed from the *effective*
 width: rounded to an integer, 0 treated as 1, clamped to the maximum.
@@ -103,7 +120,8 @@ CPU in `main.cpp` and shares nothing with the GPU path but the vertex positions:
 3. **Don't care.** What the specification leaves to the implementation is not compared: pixels
    within 1 px of a triangle edge, the ends of a line segment, and everything within `w/2 + 2.5` px of
    a line that is not horizontal, vertical or 45 degrees. Everything else, lit and unlit, must match.
-   Each cell is one check ("N pixels compared", most are 3 500-4 000 of 4 096).
+   Each cell is one check ("N pixels compared", most are 3 500-4 000 of 4 096 at `k = 1`; at `k = 3`
+   most are 35 000-36 800 of 36 864).
 4. **Named probes.** For the line and triangle cells the checks name the facts: the midpoint of
    every segment this topology builds is lit; the midpoints of the segments that *only another*
    topology would add (the strip's connectors in `LINES`, the closing segment in `LINE_STRIP`) are

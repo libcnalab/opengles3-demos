@@ -71,8 +71,8 @@
     "gl-error"
   ],
   "visual_review": {
-    "date": "2026-11-11",
-    "by": "claude-sonnet (subagent)",
-    "notes": "256x256 radeonsi capture (es-max) viewed: 4x4 gallery of flat panels, no bleed between neighbours. Top row: blue clear; navy panel with a gold box; four strips (pink R, mint G, blue B, dark-blue A-only) over the base color; orange left half / teal right half. Row 2: depth ruler staircase growing 2/6/10/14 columns from bottom to top; green panel with a dark square (masked second clear left no mark); cyan blocks showing the four depth ranges (one diagonal pair, one full column, one empty column); slate panel with an orange viewport rectangle. Row 3: stencil bit-ruler patterns; purple panel with a yellow block in its upper right (the depth and stencil probes that passed); steel panel with an amber box. Bottom row: teal viewport rectangle with a pink inner rectangle; four triangles in four quadrants; mint and coral squares from the negative-origin viewport; violet rectangle from the clipped triangle. llvmpipe captures differ from it by at most 1 per channel."
+    "date": "2026-11-12",
+    "by": "claude-opus (subagent, fill-window)",
+    "notes": "Scaled gallery viewed at 800x800 (llvmpipe; 4x4 with k = 3, panels of 192x192 centred with a 16-px margin) and 640x400 (k = 1, the 256x256 gallery centred horizontally, its bottom row 16 px above the window edge so that panel N's viewport origin stays below the window). Every panel is the 256x256 design multiplied by 3 with crisp edges and no bleed: blue clear; navy panel with a gold box; R/G/B/A mask strips; color-mask halves; depth-ruler staircase; green panel with a dark square; depth-range blocks; slate panel with an orange viewport; stencil bit rulers; purple panel with yellow probe blocks; steel panel with an amber box; teal/pink viewport mapping; four triangles; mint and coral squares of the negative-origin viewport; violet clipped rectangle. Matches the earlier 256x256 review."
   }
 }

@@ -4,10 +4,11 @@
 // renderbuffers, depth and stencil attachments, framebuffer completeness (including the failures the
 // spec defines), INVALID_FRAMEBUFFER_OPERATION, and the object queries and lifecycle rules.
 //
-// The 256 x 256 default framebuffer is a 4 x 3 grid of 64 x 64 cells (top row first; the bottom row
-// stays empty). Every cell shows an off-screen 64 x 64 render target, brought to the screen either by
-// sampling its texture in a second pass (render to texture) or, for renderbuffers that cannot be
-// sampled, by glBlitFramebuffer.
+// The default framebuffer is divided into a grid of cells (4 x 3, top row first, at the default size; 3 x 4,
+// 6 x 2 or 2 x 6 when that gives larger cells). Every cell shows an off-screen 64 x 64 render target,
+// centred and magnified by the largest integer factor that fits, brought to the screen either by sampling
+// its texture in a second pass (render to texture) or, for renderbuffers that cannot be sampled, by
+// glBlitFramebuffer.
 //
 //   row 0: RTT gradient+checker | negative of it (texture -> texture) | mip level 2 (4x) | stencil (S8)
 //   row 1: depth test, D16      | depth test, D24                      | D16, test OFF   | stencil OFF
@@ -42,7 +43,6 @@ using demo::Rgba8;
 namespace
 {
     constexpr int kSize = 64;      // edge of every off-screen target
-    constexpr int kCellSize = 64;  // edge of a cell on the screen
     constexpr int kMipLevel = 2;   // attached mipmap level of the "mip" target (64 -> 32 -> 16)
     constexpr int kMipSize = kSize >> kMipLevel;
 
@@ -60,8 +60,9 @@ namespace
     // "one of the two integers closest to f * 255, rounding to nearest preferred", so a result that is
     // exactly k + 0.5 or a float that rounds differently on the GPU and on the CPU is off by at most 1.
     constexpr int kConvertTolerance = 1;
-    // glBlitFramebuffer between two buffers of the same 8-bit format with identical rectangles and
-    // NEAREST copies the stored values (section 4.3.3: no filtering when the sizes match).
+    // glBlitFramebuffer between two buffers of the same 8-bit format with NEAREST copies stored values: with an
+    // integer magnification m, destination pixel i maps to source position (i + 1/2) / m, which lies inside
+    // source pixel i / m and at least 1/(2m) away from its edges (section 4.3.3), so no value is interpolated.
     constexpr int kBlitTolerance = 0;
 
     constexpr auto kColor0 = mgl::to_framebuffer_attachment(mgl::ColorAttachment::Color0);
@@ -305,19 +306,39 @@ namespace
         kCellPacked, kCellDepthTexColor, kCellDepthTexGray,
         kCellCount
     };
-    constexpr int cell_x(int cell) { return (cell % 4) * kCellSize; }
-    constexpr int cell_y(int cell) { return (3 - cell / 4) * kCellSize; }  // row 0 of the grid is at the top
+    // Screen layout: g_columns x g_rows cells partition the g_width x g_height surface (chosen in init()).
+    int g_columns = 4, g_rows = 3, g_width = 256, g_height = 256;
+
+    /// Where a 64 x 64 target is shown: centred in its cell, magnified by the integer factor `scale` (>= 1;
+    /// cells of 128 pixels or more keep a gutter of 4 pixels between the images).
+    struct Display
+    {
+        int x, y, scale;
+        [[nodiscard]] int size() const { return kSize * scale; }
+    };
+    Display display(int cell)
+    {
+        const int col = cell % g_columns, row = cell / g_columns;  // row 0 of the grid is at the top
+        const int x0 = g_width * col / g_columns, x1 = g_width * (col + 1) / g_columns;
+        const int y0 = g_height * (g_rows - 1 - row) / g_rows, y1 = g_height * (g_rows - row) / g_rows;
+        const int gutter = std::min(x1 - x0, y1 - y0) >= 128 ? 4 : 0;  // between neighbouring images, in cells of 128+ pixels
+        const int scale = std::max(1, (std::min(x1 - x0, y1 - y0) - gutter) / kSize);
+        return {x0 + (x1 - x0 - kSize * scale) / 2, y0 + (y1 - y0 - kSize * scale) / 2, scale};
+    }
 
     std::vector<Rgba8> read_cell(int cell)
     {
+        const Display d = display(cell);
         mgl::glBindFramebuffer(mgl::FramebufferTarget::ReadFramebuffer, mgl::FramebufferId{0});
-        return to_texels(demo::read_rgba8(cell_x(cell), cell_y(cell), kCellSize, kCellSize));
+        return to_texels(demo::read_rgba8(d.x, d.y, d.size(), d.size()));
     }
 
+    /// The window pixel at the center of the block that shows target texel (x, y).
     Rgba8 read_cell_pixel(int cell, int x, int y)
     {
+        const Display d = display(cell);
         mgl::glBindFramebuffer(mgl::FramebufferTarget::ReadFramebuffer, mgl::FramebufferId{0});
-        return demo::read_pixel(cell_x(cell) + x, cell_y(cell) + y);
+        return demo::read_pixel(d.x + x * d.scale + d.scale / 2, d.y + y * d.scale + d.scale / 2);
     }
 
     std::vector<Rgba8> magnify(std::span<const Rgba8> img, int size, int factor)
@@ -385,8 +406,25 @@ namespace
     public:
         void init(demo::Env& env) override
         {
-            if (env.width < 4 * kCellSize || env.height < 4 * kCellSize)
-                throw demo::Skip(std::format("needs a default framebuffer of at least {0}x{0}", 4 * kCellSize));
+            // Arrange the 11 cells so that the smallest cell edge is as large as possible; a cell must show its
+            // 64 x 64 target at least 1:1.
+            int best = -1;
+            for (const auto& [columns, rows] : {std::pair{4, 3}, std::pair{3, 4}, std::pair{6, 2}, std::pair{2, 6}})
+            {
+                if (columns * rows < kCellCount) continue;
+                const int edge = std::min(env.width / columns, env.height / rows);
+                if (edge > best)
+                {
+                    best = edge;
+                    g_columns = columns;
+                    g_rows = rows;
+                }
+            }
+            if (best < kSize)
+                throw demo::Skip(std::format("needs a surface whose cells are at least {0}x{0} pixels: 256x192, 192x256, 384x128 or "
+                                             "128x384 (got {1}x{2})", kSize, env.width, env.height));
+            g_width = env.width;
+            g_height = env.height;
             if (demo::get_integer(mgl::GetParameter::RedBits) < 8 || demo::get_integer(mgl::GetParameter::GreenBits) < 8 ||
                 demo::get_integer(mgl::GetParameter::BlueBits) < 8)
                 throw demo::Skip("needs 8 bits per color channel in the default framebuffer");
@@ -469,7 +507,7 @@ namespace
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
         }
 
-        void render(demo::Env& /*env*/, int /*frame*/) override
+        void render(demo::Env& env, int /*frame*/) override
         {
             // Dithering may change the stored color by one step; pixel comparisons need it off.
             mgl::glDisable(mgl::Capability::Dither);
@@ -509,7 +547,7 @@ namespace
 
             // ---- the default framebuffer: show every target -----------------------------------------
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
-            mgl::glViewport(0, 0, 4 * kCellSize, 4 * kCellSize);
+            mgl::glViewport(0, 0, env.width, env.height);
             mgl::glClearColor(0.05f, 0.05f, 0.08f, 1.0f);
             mgl::glClear(mgl::ClearBufferBit::Color);
 
@@ -525,7 +563,7 @@ namespace
             show_cell(kCellDepthTexColor, tex_[kTexDepthColor], -1, 0.0f, 0.0f, 0.0f);
             show_cell(kCellDepthTexGray, tex_[kTexDepth], -1, 0.0f, 0.0f, /*gray=*/1.0f);
             mgl::glBindTexture(mgl::TextureTarget::Texture2D, mgl::TextureId{0});
-            mgl::glViewport(0, 0, 4 * kCellSize, 4 * kCellSize);
+            mgl::glViewport(0, 0, env.width, env.height);
         }
 
         void validate(demo::Env& env, demo::Check& check) override
@@ -633,16 +671,18 @@ namespace
 
         void show_cell(int cell, mgl::TextureId tex, int lod, float lod_size, float invert, float gray)
         {
-            mgl::glViewport(cell_x(cell), cell_y(cell), kCellSize, kCellSize);
+            const Display d = display(cell);
+            mgl::glViewport(d.x, d.y, d.size(), d.size());
             show(tex, lod, lod_size, invert, gray);
         }
 
-        // A renderbuffer cannot be sampled; glBlitFramebuffer copies it into the cell (1:1, NEAREST).
+        // A renderbuffer cannot be sampled; glBlitFramebuffer copies it into the cell (integer magnification, NEAREST).
         void blit_cell(int cell, std::size_t src)
         {
             mgl::glBindFramebuffer(mgl::FramebufferTarget::ReadFramebuffer, fbo_[src]);
             mgl::glBindFramebuffer(mgl::FramebufferTarget::DrawFramebuffer, mgl::FramebufferId{0});
-            mgl::glBlitFramebuffer(0, 0, kSize, kSize, cell_x(cell), cell_y(cell), cell_x(cell) + kCellSize, cell_y(cell) + kCellSize,
+            const Display d = display(cell);
+            mgl::glBlitFramebuffer(0, 0, kSize, kSize, d.x, d.y, d.x + d.size(), d.y + d.size(),
                                    mgl::ClearBufferBit::Color, mgl::BlitFilter::Nearest);
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
         }
@@ -699,11 +739,15 @@ namespace
                          d.first);
         }
 
+        /// `want` is the 64 x 64 target; the cell shows it magnified by an integer factor m, so every window pixel
+        /// is compared with the texel it shows.
         void check_cell(demo::Check& check, std::string_view name, int cell, std::span<const Rgba8> want, int tolerance, std::string_view how)
         {
+            const Display shown = display(cell);
             const std::vector<Rgba8> got = read_cell(cell);
-            const Diff d = compare(got, want, kCellSize, tolerance);
-            check.expect(d.bad == 0, std::format("{}: the cell on the default framebuffer equals the target ({}; max deviation {})", name, how, d.max_dev), d.first);
+            const Diff d = compare(got, magnify(want, kSize, shown.scale), shown.size(), tolerance);
+            check.expect(d.bad == 0, std::format("{}: the cell on the default framebuffer equals the target ({}; shown x{}; max deviation {})", name, how,
+                                                 shown.scale, d.max_dev), d.first);
         }
 
         void check_render_to_texture(demo::Check& check)
@@ -733,7 +777,7 @@ namespace
             const std::vector<Rgba8> mip_cpu = pattern_image(kMipSize);
             check_target(check, std::format("mipmap level {}", kMipLevel), kFboMip, kMipSize, mip_cpu, "16x16 gradient + checker");
             const std::vector<Rgba8> mip = read_fbo(fbo_[kFboMip], kMipSize);
-            check_cell(check, std::format("mipmap level {}", kMipLevel), kCellMip, magnify(mip, kMipSize, kCellSize / kMipSize), kConvertTolerance,
+            check_cell(check, std::format("mipmap level {}", kMipLevel), kCellMip, magnify(mip, kMipSize, kSize / kMipSize), kConvertTolerance,
                        "texelFetch(level 2), every texel shown 4x4 pixels");
         }
 

@@ -79,6 +79,13 @@ GL ES front-end and GLSL translator, here with the Vulkan backend on RADV.
   not even in a child process. A child process protects the runner, not the machine. It needs an explicit opt-in
   variable (e.g. `OGLES3_RUN_GPU_FAULT_CASES=1`).
 
+## Window-size runs (driver `llvmpipe`, mode `size-333x777`)
+Every executable also runs once at 333x777 on llvmpipe (`OGLES3_TEST_SIZE_VARIANT`, default ON). The size is
+non-square, portrait and odd, so fixed-pixel layouts and size-tuned thresholds show up as failures. The coverage
+generator counts these runs: a failure makes the executable FAILED. `tools/sweep_sizes.sh` runs more sizes
+(1000x200, 200x1000, ...) on demand. The rule is that a valid render PASSes at every size, and a surface too small for
+non-vacuous checks SKIPs with the minimum stated in the README.
+
 ## Known driver deviations (XFAIL)
 
 When a driver demonstrably violates a normative rule, the test keeps the strict expectation and

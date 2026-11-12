@@ -52,6 +52,22 @@ function(ogles_register_gl_tests)
         endif()
         list(APPEND drivers angle)
     endif()
+    # Window-size guard: one llvmpipe run at an odd portrait size. Every demo must lay out and validate at any size
+    # (docs/agent-briefs/DEMO_BRIEF.md "Window size"); tools/sweep_sizes.sh covers more sizes on demand.
+    if(OGLES3_TEST_SIZE_VARIANT AND "llvmpipe" IN_LIST drivers)
+        set(test_name "${T_BASE}:llvmpipe:size-333x777")
+        string(REPLACE ":" "_" file_stem "${test_name}")
+        add_test(NAME "${test_name}"
+            COMMAND $<TARGET_FILE:${T_TARGET}> --headless --validate --width 333 --height 777
+                    --result-json "${OGLES3_RESULTS_DIR}/${file_stem}.json"
+                    --test-id "${test_name}" ${T_ARGS})
+        set(size_env "EGL_PLATFORM=surfaceless" "LIBGL_ALWAYS_SOFTWARE=1" "GALLIUM_DRIVER=llvmpipe")
+        if(OGLES3_SANITIZE)
+            list(APPEND size_env "ASAN_OPTIONS=detect_leaks=0")
+        endif()
+        set_tests_properties("${test_name}" PROPERTIES ENVIRONMENT "${size_env}" SKIP_RETURN_CODE 77 TIMEOUT 120
+                             LABELS "${T_LABELS};llvmpipe;size")
+    endif()
     foreach(driver IN LISTS drivers)
         set(driver_modes ${modes})
         if(driver STREQUAL "angle")

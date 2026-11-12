@@ -20,7 +20,7 @@ where possible), rerun the matrices with `tools/release/collect_evidence.py`, an
   llvmpipe/zink because Mesa's software EGL path gives a 0x0 multisampled pbuffer).
 - 358/358 core entry points, 226 semantic features and 94 GLSL items accounted for (generated/COVERAGE_SUMMARY.md).
 - Matrices with evidence in `docs/evidence/1.0.0-rc.1/`: debug (gpu, llvmpipe, zink, softpipe, ANGLE on lavapipe,
-  333x777), sanitize (ASan/UBSan), headless-ci (-Werror), all from clean clones.
+  333x777), sanitize (ASan/UBSan), headless-ci (-Werror) and a Clang 19 build, all from clean clones at 9050c5a.
 - meta-gl: required and tested at `develop` `333d777` (contains G1–G8). **Agents no longer modify meta-gl**
   (AGENTS.md rule 2). The meta-gl maintainer still has to decide how the AI-authored G1–G8 commits relate to
   meta-gl's AI Contribution Policy (METAGL_DEPENDENCY.md "Policy status").

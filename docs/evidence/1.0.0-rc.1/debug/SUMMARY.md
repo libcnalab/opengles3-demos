@@ -1,12 +1,12 @@
 # Evidence: debug
 
-- opengles3-demos `2544bad7e0605cb7728594f89279ee5cee6a77e3` (2544bad)
+- opengles3-demos `9050c5a4af63396bb8ad3f3b51190154b1566783` (9050c5a)
 - meta-gl `333d777fadbe53613a9c2eead358ffbfe6a2ef33` (v0.4.1-9-g333d777)
 - build `Debug`, c++ (Debian 14.2.0-19) 14.2.0, cmake version 3.31.6
-- run 2026-11-12T06:56:56+01:00 .. 2026-11-12T06:59:27+01:00; `ctest --test-dir /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/316edffb-ec61-4c46-b5e6-4271e88847bb/scratchpad/clean/libcnalab/opengles3-demos/build/debug -j 3 --output-on-failure --output-junit /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/316edffb-ec61-4c46-b5e6-4271e88847bb/scratchpad/clean/final/debug/junit.xml`; ctest exit code 0
+- run 2026-11-12T07:33:38+01:00 .. 2026-11-12T07:35:08+01:00; `ctest --test-dir /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/316edffb-ec61-4c46-b5e6-4271e88847bb/scratchpad/clean/libcnalab/opengles3-demos/build/debug -j 3 --output-on-failure --output-junit /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/316edffb-ec61-4c46-b5e6-4271e88847bb/scratchpad/clean/final2/debug/junit.xml`; ctest exit code 0
 - registered tests: 701; CTest status: notrun 31, run 670
 - outcomes: BLOCKED_ENVIRONMENT 5, N/A (no result JSON by design) 1, PASS 669, SKIP_UNSUPPORTED 26
-- amdgpu fault/timeout/reset lines in the kernel log during the run: 0
+- kernel log read; amdgpu fault/timeout/reset lines during the run: 0
 
 ## Drivers seen
 

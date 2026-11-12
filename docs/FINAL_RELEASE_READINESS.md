@@ -8,13 +8,13 @@ numbers from earlier reports are labelled as historical. This is not a Khronos c
 | | |
 |---|---|
 | proposed version | **1.0.0-rc.1** (no earlier tags or releases exist; nothing is tagged or pushed yet) |
-| tested code revision | opengles3-demos **`2544bad`** (`2544bad6…`, see the manifests). Every executable, test registration and CMake file of the release candidate is identical to this revision |
-| release-candidate commit | the commit that adds this report. It differs from `2544bad` only in documentation, generated docs, evidence files and the coverage generator's dirty-tree detection (`git diff --stat 2544bad` lists them); no executable changes |
+| tested revision | opengles3-demos **`9050c5a`** (full hash in the manifests): the evidence was collected at this commit from a clean clone. Its executables were compiled from clean clones at `2544bad`; `9050c5a` changes no compiled source, shader, CMake file or test registration (only documentation and the two Python tools), and ninja confirmed every build up to date |
+| release-candidate commit | the commit that adds the final version of this report, directly on top of `9050c5a`; it changes documentation and evidence files only |
 | meta-gl | **`333d777fadbe53613a9c2eead358ffbfe6a2ef33`** on `develop` (`v0.4.1-9-g333d777`), cloned from <https://github.com/libcna/meta-gl> for the runs. Configure fails without it (`OGLES3_METAGL_REQUIRED_COMMIT`) |
 | supported and tested | Linux x86-64 (Debian 13, kernel 6.12); GCC 14.2 (C++23); CMake 3.31 + Ninja; Mesa 25.0.7: radeonsi (AMD Radeon 780M), llvmpipe, zink on lavapipe, softpipe; EGL 1.5 surfaceless pbuffers; SDL3 3.4.0 windows (X11, tested under Xvfb); ANGLE 2.1.17841 (Android SDK emulator build) on lavapipe |
 | partly supported | Clang 19.1.7: builds and passes the headless matrix, but with 189 warnings, so the `-Werror` preset fails with Clang (section D, finding 10) |
 | expected to work, not tested | other Linux distributions; other conformant ES 3.0–3.2 drivers (deviations would show as FAIL or need a narrowly matched XFAIL); Wayland |
-| not supported | desktop OpenGL; ES 2.0-only contexts (ES 2.0 features run on ES 3.x contexts); Windows and macOS (the platform layer is EGL/SDL3 and was never built there) |
+| not supported | desktop OpenGL; ES 2.0-only contexts (ES 2.0 features run on ES 3.x contexts); Windows and macOS (not built or tested; the headless path needs EGL) |
 
 ## B. Validation results
 
@@ -22,10 +22,14 @@ numbers from earlier reports are labelled as historical. This is not a Khronos c
 
 | matrix | build | registered | PASS | SKIP_UNSUPPORTED | BLOCKED_ENVIRONMENT | FAIL | duration |
 |---|---|---|---|---|---|---|---|
-| standard (`debug`) | 0 warnings, 83 + 1 executables | 701 | 669 | 26 | 5 | **0** | 06:56:56–06:59:27 |
-| sanitizer (`sanitize`, ASan + UBSan, full matrix incl. ANGLE) | 0 warnings | 701 | 669 | 26 | 5 | **0** | 07:02:26–07:09:29 |
-| strict (`headless-ci`, `-Werror`, llvmpipe + softpipe + ANGLE + size) | **0 warnings, no errors** | 395 | 365 | 26 | 3 | **0** | 07:11:10–07:12:34 |
-| Clang 19.1.7 (`headless-ci` without `-Werror`) | 189 warnings; with `-Werror`: fails | 395 | 365 | 26 | 3 | **0** | (see manifest) |
+| standard (`debug`) | 0 warnings, 83 + 1 executables | 701 | 669 | 26 | 5 | **0** | 07:33:38–07:35:08 |
+| sanitizer (`sanitize`, ASan + UBSan, full matrix incl. ANGLE) | 0 warnings | 701 | 669 | 26 | 5 | **0** | 07:35:08–07:40:24 |
+| strict (`headless-ci`, `-Werror`, llvmpipe + softpipe + ANGLE + size) | **0 warnings, no errors** | 395 | 365 | 26 | 3 | **0** | 07:40:25–07:41:29 |
+| Clang 19.1.7 (`headless-ci` without `-Werror`) | 189 warnings; with `-Werror`: fails | 395 | 365 | 26 | 3 | **0** | 07:41:29–07:42:35 |
+
+The same four matrices had first been collected at `2544bad` (06:56–07:28, identical counts). They were collected
+again at `9050c5a` after the independent review fixed the evidence collector (section H), so the committed manifests
+come from the corrected tool.
 
 The registered count includes the CPU-only `unit-deviation-matcher` (PASS, no result JSON). Breakdown of the
 standard matrix by driver and mode (from `results.csv`):
@@ -54,7 +58,8 @@ standard matrix by driver and mode (from `results.csv`):
 - **Windowed mode:** `es30-hello-triangle`, `es30-interactive-3d-scene`, `es31-compute-particles` and
   `es32-tessellation-terrain` ran in SDL3 windows (X11 under Xvfb, llvmpipe) at 640x400 with `--validate`: all PASS;
   the captures were viewed. Keyboard and mouse control was not driven automatically.
-- **GPU:** the kernel log shows no amdgpu fault, timeout or reset during any of the runs (recorded per manifest).
+- **GPU:** the kernel log was read (`"kernel_log": "read"`) and shows no amdgpu fault, timeout or reset during any
+  of the runs (recorded per manifest).
   The last such event on this machine is the known ANGLE/RADV incident of 2026-11-11 20:38.
 
 ### Fault injection (validation infrastructure, 2026-11-12, throwaway clone)
@@ -80,7 +85,7 @@ sanitizer preset as a whole had never passed: every ANGLE run aborted at startup
 
 ## C. Coverage
 
-From [generated/COVERAGE_SUMMARY.md](generated/COVERAGE_SUMMARY.md) (source revision `2544bad`, meta-gl `333d777`):
+From [generated/COVERAGE_SUMMARY.md](generated/COVERAGE_SUMMARY.md) (source revision `9050c5a`, meta-gl `333d777`):
 
 | | total | with validated evidence | other |
 |---|---|---|---|
@@ -132,7 +137,7 @@ and conditional-link rules remain observations.
   the stretched NEAREST display-blit mapping is assumed for presentation only).
 - Undefined behaviour (feedback loops, the GLSL undefined-behaviour row) is documented, never asserted.
 
-**Release-blocking issues:** none known after the fixes above. The independent review result is in section H.
+**Release-blocking issues:** none known after the fixes above and the review fixes in section H.
 
 ## E. Reproducibility
 
@@ -175,8 +180,9 @@ negative tests deliberately feed invalid input to the driver.
 
 ## G. Decision
 
-**READY WITH DOCUMENTED LIMITATIONS**, for a release candidate 1.0.0-rc.1, provided the independent review in
-section H finds no unresolved BLOCKER or HIGH issue.
+**READY WITH DOCUMENTED LIMITATIONS**, for the release candidate 1.0.0-rc.1. The independent review (section H)
+found two HIGH issues and one MEDIUM issue in the evidence collector; all three were fixed and verified, and the
+evidence was collected again with the fixed tool. No BLOCKER or HIGH issue remains open.
 
 Evidence: the code under release builds cleanly from fresh clones in all three configurations. The standard,
 sanitizer and strict matrices run with zero failures, and their machine-readable evidence is tied to the exact
@@ -192,4 +198,23 @@ tagged, so this suite can pin a tag rather than a `develop` commit.
 
 ## H. Independent final review
 
-_Pending at the time of writing; filled in from the reviewer's report._
+Reviewer: Codex (a different model and agent from the primary implementation agent), in its own worktree at
+`4c6d788`, with [RELEASE_REVIEW_BRIEF.md](agent-briefs/RELEASE_REVIEW_BRIEF.md) (at most 15 high-confidence
+findings, each with file, line, evidence, impact, severity and resolution; llvmpipe only, `-j 1`). Report:
+[audits/2026-11-12-codex-release-review.md](audits/2026-11-12-codex-release-review.md).
+
+The reviewer reconciled every evidence total with the manifests and this report. It confirmed that
+`2544bad..4c6d788` changes no executable or CMake implementation. It built and ran `unit-deviation-matcher` and
+`es30-hello-triangle` (llvmpipe), both PASS. It reported nothing against the executables, result classification,
+GPU safety, policy or documentation. Its three findings concern `tools/release/collect_evidence.py`; each was checked
+against the code by the primary agent and accepted:
+
+| severity | finding | resolution (`9050c5a`) | verified by |
+|---|---|---|---|
+| HIGH | the revision came from the script's checkout while CTest ran in any `--build` directory, so another checkout's results could carry this revision | refuse unless the build's `CMAKE_HOME_DIRECTORY` is the script's checkout | pointing the working-tree collector at the clean clone's build: refused |
+| HIGH | the clean-tree check ignored untracked files, although `shader-tests` discover cases from the source tree at run time | untracked files (outside `.gitignore`) make the tree dirty | an untracked `shader-tests/glsl300/injected.frag`: refused |
+| MEDIUM | `kernel_log_checked` was always true | `"kernel_log": "read"` only when journalctl succeeded, otherwise the failure is named | all four new manifests say `read` |
+
+The committed evidence of `2544bad` had in fact been collected correctly: the build directories belonged to the
+clean clone, the clones had no untracked files, and journalctl worked. The fixes close the gaps for future runs, and
+the evidence was collected again with them at `9050c5a`.

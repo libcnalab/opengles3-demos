@@ -14,8 +14,8 @@ CTest's status `notrun` is its name for exit code 77 (SKIP_UNSUPPORTED or BLOCKE
 
 ## 1.0.0-rc.1
 
-Runs from clean clones (opengles3-demos `2544bad`, meta-gl `333d777` cloned from GitHub) on the reference machine,
-2026-11-12:
+Runs from clean clones (opengles3-demos `9050c5a`, executables compiled at `2544bad` with identical sources;
+meta-gl `333d777` cloned from GitHub) on the reference machine, 2026-11-12:
 
 | run | registered | PASS | SKIP_UNSUPPORTED | BLOCKED_ENVIRONMENT | FAIL | unit test |
 |---|---|---|---|---|---|---|
@@ -29,5 +29,5 @@ strict preset fails with Clang; see FINAL_RELEASE_READINESS.md section D.
 
 The full CTest logs, JUnit reports, every result JSON and the debug captures are not in git (6.5 MB compressed).
 They are in `opengles3-demos-1.0.0-rc.1-evidence.tar.xz` (sha256
-`aad63211ad3b7d1627f6758b29968f2cb222ad75c38ba0182a944638fe102f69`, with the build and configure logs), kept on the reference machine under
+`2d96c3325bbc6c62be8545f135dbe5f01f0e54050f09d7f10045b38b2409cba7`, with the build and configure logs), kept on the reference machine under
 `build/release-evidence/`, and meant to be attached to the release when it is published.

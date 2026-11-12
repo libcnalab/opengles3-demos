@@ -37,7 +37,11 @@ before 1.0.0. Readiness report with all evidence: [docs/FINAL_RELEASE_READINESS.
   records the meta-gl revision.
 - Configure fails with a clear message when the meta-gl checkout lacks the required commit `333d777`.
 - `tools/release/collect_evidence.py` records machine-readable evidence of a matrix run (revisions, configuration,
-  compiler, drivers, per-run outcomes, kernel-log check). The release-candidate evidence is in `docs/evidence/`.
+  compiler, drivers, per-run outcomes, kernel-log check). It refuses a build directory from another checkout and
+  trees with uncommitted or untracked files (fixes from the independent release review). The release-candidate
+  evidence is in `docs/evidence/`.
+- The sanitizer preset passes in full: ANGLE runs preload the ASan runtime first (before, every ANGLE run aborted,
+  and the earlier "480/480" covered the Mesa runs only).
 - Documentation synchronized with the repository (README entry point, VALIDATION, KNOWN_LIMITATIONS,
   METAGL_DEPENDENCY, STATUS, handoff); a short learning path in the catalog. AGENTS.md: agents no longer modify
   meta-gl.

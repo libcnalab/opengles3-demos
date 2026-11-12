@@ -62,3 +62,20 @@ still bite. Findings, all accepted:
 - **README ×2:** the srgb check count (57 → 56) and the cube-map-array field-of-view cap were corrected.
 
 Reports: [a](2026-11-12-codex-diffreview2-a.md), [b](2026-11-12-codex-diffreview2-b.md).
+
+## 2026-11-12: Codex independent final release review (RELEASE_REVIEW_BRIEF.md, commit 4c6d788)
+
+Scope: the stabilization diff, the committed evidence, result classification, reproducibility, GPU safety, policy
+and documentation consistency. The reviewer reconciled every evidence total with the manifests and the readiness
+report, built and ran `unit-deviation-matcher` and `es30-hello-triangle` on llvmpipe, and found nothing in the
+executables, the result classification, GPU safety or policy. Three findings, all in the new evidence collector,
+were verified against the code and accepted:
+- **HIGH:** `collect_evidence.py` took the revision from its own checkout but ran CTest in any `--build` directory.
+  It now refuses unless the build's `CMAKE_HOME_DIRECTORY` is that checkout (fault-injected: refused).
+- **HIGH:** its clean-tree check ignored untracked files, although `shader-tests` discover cases at run time.
+  Untracked files now count (fault-injected with an untracked `.frag`: refused).
+- **MEDIUM:** `kernel_log_checked` was a tautology. The manifest now says `"kernel_log": "read"` only when
+  journalctl succeeded.
+
+Fixed in 9050c5a. All four matrices were then collected again with the fixed tool, at 9050c5a, from the clean
+clones. Report: [release review](2026-11-12-codex-release-review.md).

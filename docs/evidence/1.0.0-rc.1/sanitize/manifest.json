@@ -2,8 +2,8 @@
   "label": "sanitize",
   "opengles3_demos": {
     "path": "/tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/316edffb-ec61-4c46-b5e6-4271e88847bb/scratchpad/clean/libcnalab/opengles3-demos",
-    "commit": "2544bad7e0605cb7728594f89279ee5cee6a77e3",
-    "describe": "2544bad",
+    "commit": "9050c5a4af63396bb8ad3f3b51190154b1566783",
+    "describe": "9050c5a",
     "branch": "main",
     "dirty": false
   },
@@ -192,10 +192,10 @@
       "runs": 83
     }
   ],
-  "command": "ctest --test-dir /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/316edffb-ec61-4c46-b5e6-4271e88847bb/scratchpad/clean/libcnalab/opengles3-demos/build/sanitize -j 2 --output-on-failure --output-junit /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/316edffb-ec61-4c46-b5e6-4271e88847bb/scratchpad/clean/final/sanitize/junit.xml",
+  "command": "ctest --test-dir /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/316edffb-ec61-4c46-b5e6-4271e88847bb/scratchpad/clean/libcnalab/opengles3-demos/build/sanitize -j 2 --output-on-failure --output-junit /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/316edffb-ec61-4c46-b5e6-4271e88847bb/scratchpad/clean/final2/sanitize/junit.xml",
   "ctest_exit_code": 0,
-  "start": "2026-11-12T07:02:26+01:00",
-  "end": "2026-11-12T07:09:29+01:00",
+  "start": "2026-11-12T07:35:08+01:00",
+  "end": "2026-11-12T07:40:24+01:00",
   "tests_registered": 701,
   "ctest_status_counts": {
     "run": 670,
@@ -210,7 +210,7 @@
   "gpu_safety": {
     "OGLES3_RUN_GPU_FAULT_CASES": "",
     "angle_vulkan_icd": "/usr/share/vulkan/icd.d/lvp_icd.json",
-    "kernel_log_checked": true,
+    "kernel_log": "read",
     "amdgpu_fault_lines_during_run": []
   }
 }

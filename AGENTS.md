@@ -14,15 +14,11 @@ library (`../../libcna/meta-gl`). Every claim of coverage must be backed by a va
 1. **meta-gl only.** Demos call `metagl::gl*`. Never call native `gl*` (the build links only
    libEGL and compiles with `GL_GLES_PROTOTYPES=0`, so direct calls fail to build). Never load
    GL function pointers yourself.
-2. **meta-gl changes are authorized by the owner** (2026-11-11; re-confirmed that evening, together with permission
-   to push the work branch).
-   - Work on the branch `opengles3-demos/enum-gaps` and push only that branch. Merging into `develop` happens only
-     on the owner's explicit request (done once, 2026-11-12); never touch `main`.
-   - Prefer additive, backward-compatible changes; break the API only when the correct ES semantics require it.
-   - Commit only the files you changed; never stage unrelated working-tree changes.
-   - Run meta-gl's tests (`-DMETAGL_BUILD_TESTS=ON -DMETAGL_BUILD_GPU_TESTS=ON`) and check dependents (easy-gl,
-     cna-engine, ...).
-   - Record every gap and fix in `docs/META_GL_GAPS.md` and the required revision in `docs/METAGL_DEPENDENCY.md`.
+2. **Do not modify meta-gl.** meta-gl's own `AGENTS.md` (AI Contribution Policy v2) forbids AI-authored
+   contributions, and since the final stabilization directive (2026-11-12) no agent edits, commits or pushes there.
+   The earlier owner-authorized gap fixes G1–G8 are on meta-gl `develop` at `333d777`, the revision the suite needs
+   (`docs/METAGL_DEPENDENCY.md`). A new meta-gl gap is recorded in `docs/META_GL_GAPS.md` with spec evidence and a
+   proposed fix for a human to write; the affected check reports `BLOCKED_META_GL` until then.
 3. **Do not modify easy-gl, CNA, cna-engine** or other projects. Never add an easy-gl dependency.
 4. **OpenGL ES, not desktop GL.** No fixed function, no desktop-only calls/enums, no desktop
    GLSL. A `#version 310 es` feature must not appear in a `#version 300 es` shader, etc.

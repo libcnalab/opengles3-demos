@@ -5,6 +5,29 @@ Every executable in the suite, in the order a reader should study them (the `ord
 Executables marked ★ are 3D scenes, good starting points to see what the API pieces add up to. The capstone
 `es30-interactive-3d-scene` combines them in one explorable scene (mouse look, WASD, technique toggles 1-6).
 
+## Short path for a first reading
+
+The full catalog below is complete but long. A reader new to OpenGL ES can take this route first and return to
+the catalog for depth:
+
+1. [`es30-hello-triangle`](../demos/es30/hello-triangle/README.md): context, shaders, a buffer, a VAO, one draw call.
+2. [`es20-vertex-attributes`](../demos/es20-foundations/vertex-attributes/README.md) and
+   [`es30-vertex-array-objects`](../demos/es30/vertex-array-objects/README.md): how vertex data reaches the shader.
+3. [`es20-shader-compilation`](../demos/es20-foundations/shader-compilation/README.md) and
+   [`es20-uniforms`](../demos/es20-foundations/uniforms/README.md): shader objects, programs, uniforms.
+4. [`es20-transformations-camera`](../demos/es20-foundations/transformations-camera/README.md) ★: matrices and a 3D camera.
+5. [`es20-textures-2d`](../demos/es20-foundations/textures-2d/README.md), then [`es30-lighting`](../demos/es30/lighting/README.md) ★.
+6. [`es20-framebuffer-objects`](../demos/es20-foundations/framebuffer-objects/README.md): rendering into textures.
+7. [`es30-instancing`](../demos/es30/instancing/README.md) and [`es30-transform-feedback`](../demos/es30/transform-feedback/README.md).
+8. [`es31-compute-basics`](../demos/es31/compute-basics/README.md), [`es31-ssbo-std430`](../demos/es31/ssbo-std430/README.md),
+   [`es31-compute-particles`](../demos/es31/compute-particles/README.md) ★ (ES 3.1).
+9. [`es32-geometry-shaders`](../demos/es32/geometry-shaders/README.md) ★ and
+   [`es32-tessellation-terrain`](../demos/es32/tessellation-terrain/README.md) ★ (ES 3.2).
+10. [`es30-interactive-3d-scene`](../demos/es30/interactive-3d-scene/README.md) ★: the explorable capstone.
+
+Every README has a section on how the demo is validated. Run it with `--headless --validate` and each check prints one
+line (`[ok]` or `[FAIL]` with the measured and expected values).
+
 ## Stage 1–3: ES 2.0 foundations on an ES 3.x context
 
 | executable | min ES | what it teaches |

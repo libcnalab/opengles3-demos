@@ -1,7 +1,10 @@
 # meta-gl compatibility report
 
-meta-gl revision audited: `develop` @ `795bcdc` (v0.4.1). Fixes live on the meta-gl branch
-`opengles3-demos/enum-gaps` (pushed); on 2026-11-12 it was merged into `develop` (`333d777`). The owner authorized meta-gl changes on 2026-11-11.
+meta-gl revision audited: `develop` @ `795bcdc` (v0.4.1). The fixes G1-G8 were made on the meta-gl branch
+`opengles3-demos/enum-gaps` under the owner's authorization of 2026-11-11 and merged into `develop` on 2026-11-12
+(`333d777`, the revision the suite requires; see [METAGL_DEPENDENCY.md](METAGL_DEPENDENCY.md), including the open
+policy question). Since the final stabilization directive (2026-11-12) agents do not change meta-gl: a new gap is
+recorded under "Open questions" with a proposed fix for a human to write.
 
 ## Audit method
 
@@ -145,7 +148,7 @@ be a small additive improvement.
   explicitly and are confined to `tests/negative/`.
 - **O2 — contract violations terminate.** Every wrapper calls `std::terminate()` when meta-gl is
   uninitialized or the entry point was not loaded, and several helpers terminate on invalid
-  sizes (e.g. `glUniformMatrix` with `transpose != GL_FALSE`). Tests that probe these contracts
+  sizes (before G8 also `glUniformMatrix` with `transpose != GL_FALSE`). Tests that probe these contracts
   must run in a separate process and expect abnormal termination (`WILL_FAIL`/death tests).
 - **O3 — per-call error checking.** `METAGL_ENABLE_DEBUG_LOGGING` inserts `glGetError` after
   every call and would consume error flags; this suite forces it OFF.
@@ -173,6 +176,6 @@ be a small additive improvement.
 
 ## Open questions
 
-- None yet. New findings are appended here with the same fields:
+- None open at the release candidate (2026-11-12). New findings are appended here with the same fields:
   affected function/enum, expected, actual, reproduction, spec evidence, location
   (meta-gl / driver / platform / demo), fix.

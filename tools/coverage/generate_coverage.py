@@ -228,7 +228,9 @@ def git_revision(repo):
     import subprocess
     try:
         rev = subprocess.run(["git", "-C", repo, "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
-        dirty = subprocess.run(["git", "-C", repo, "status", "--porcelain", "--untracked-files=no"],
+        # The generator's own outputs do not make the tree dirty (it may already have rewritten them).
+        dirty = subprocess.run(["git", "-C", repo, "status", "--porcelain", "--untracked-files=no", "--", ".",
+                                ":(exclude)docs/generated", ":(exclude)docs/API_COVERAGE.csv"],
                                capture_output=True, text=True).stdout.strip()
         return rev + (" (with uncommitted changes)" if dirty else "")
     except OSError:
@@ -261,6 +263,7 @@ def main():
                          "the parent of each results directory)")
     args = ap.parse_args()
     repo = os.path.abspath(args.repo)
+    source_revision = git_revision(repo)  # before any output is written
     result_dirs = args.results or sorted(glob.glob(os.path.join(repo, "build", "*", "test-results")))
     bin_dirs = [os.path.join(os.path.dirname(d), "bin") for d in result_dirs]
     metagl_dir = args.metagl or os.path.join(repo, "..", "..", "libcna", "meta-gl")
@@ -408,7 +411,7 @@ def main():
     with open(os.path.join(gen, "COVERAGE_SUMMARY.md"), "w") as f:
         f.write(header + "# Coverage summary\n\n")
         f.write(f"Result directories: {', '.join(os.path.relpath(d, repo) for d in result_dirs) or '(none)'}\n\n")
-        f.write(f"Source revision: {git_revision(repo)}\n\n")
+        f.write(f"Source revision: {source_revision}\n\n")
         f.write(f"meta-gl revision: {git_revision(metagl_dir)} ({os.path.relpath(os.path.abspath(metagl_dir), repo)})\n\n")
         if registered is None:
             f.write("Registered runs: not checked (no CTest build directory found).\n\n")

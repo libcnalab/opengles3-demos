@@ -2,14 +2,20 @@
 
 ## Environment
 
-- Reference machine: AMD Radeon 780M (radeonsi) and llvmpipe, Mesa 25.0.7, Linux 6.12, EGL 1.5.
-  No non-Mesa OpenGL ES driver (ANGLE, Mali, Adreno, PowerVR, NVIDIA ES) has been tested.
-  Results therefore say little about vendor-specific behavior.
-- Minimum-version runs use `MESA_GLES_VERSION_OVERRIDE`, which lowers only the reported API version.
-  No native ES 3.0-only driver is available, so "3.10 shaders are rejected by ES 3.0" is not
-  verified anywhere. softpipe (native ES 3.1) verifies the 3.1-vs-3.2 boundary. On non-Mesa drivers
-  set `-DOGLES3_TEST_MIN_VERSION=OFF` and `OGLES3_TEST_DRIVERS=gpu`.
+- Reference machine: AMD Radeon 780M (radeonsi), llvmpipe, zink on lavapipe and softpipe, Mesa 25.0.7, Linux 6.12,
+  EGL 1.5; plus ANGLE 2.1.17841 (from the Android SDK emulator) on lavapipe. ANGLE is an independent GL ES
+  front-end and GLSL compiler, but here it renders through lavapipe, the Vulkan driver zink also uses. No
+  vendor driver outside Mesa (Mali, Adreno, PowerVR, NVIDIA, Intel's closed drivers) and no ANGLE on a hardware
+  Vulkan driver is part of the default matrix. Results therefore say little about vendor-specific behavior.
+- ES 3.2 has Mesa evidence only: ANGLE 2.1.17841 stops at ES 3.1 and softpipe is natively ES 3.1.
+- Mesa's minimum-version runs (`es-min`) use `MESA_GLES_VERSION_OVERRIDE`, which lowers only the reported API
+  version. Native lower-version contexts come from softpipe (ES 3.1, the 3.1-vs-3.2 boundary) and ANGLE
+  (`native` ES 3.1, `native-min` genuine ES 3.0, where ES 3.1 objects such as compute shaders are rejected). On
+  non-Mesa drivers set `-DOGLES3_TEST_MIN_VERSION=OFF` and `OGLES3_TEST_DRIVERS=gpu`.
 - Windowed mode (SDL3) is tested under Xvfb; headless EGL pbuffers are the primary test path.
+- Compilers: GCC 14.2 builds every preset without warnings. Clang 19.1.7 builds and passes the `headless-ci` matrix,
+  but with 189 warnings (178 `-Wdouble-promotion` where a `float` reaches a `double` context such as
+  `std::format`, 11 unused entities) in 30 files, so the `-Werror` preset fails with Clang (measured 2026-11-12).
 - Program binaries: `NUM_PROGRAM_BINARY_FORMATS` may be 0 on some drivers; such checks report
   the implementation's choice rather than failing.
 
@@ -147,15 +153,18 @@ Per-run evidence for every deviation check (which runs failed, which matched run
 override artifacts) is generated in [generated/DEVIATIONS.md](generated/DEVIATIONS.md). A 2026-11-11 audit of
 that table found every "Mesa"-matched deviation reproduced on radeonsi, llvmpipe and zink.
 
-**Matching rule:** the substring is searched in GL_RENDERER and GL_VERSION. For ANGLE only GL_VERSION is
-searched, because ANGLE's GL_RENDERER names its backend ("ANGLE (Mesa, Vulkan ... (llvmpipe ...))"); "Mesa",
-"llvmpipe" or "Vulkan" deviations therefore never excuse ANGLE. Before this rule (fixed 2026-11-11) every "Mesa"
+**Matching rule** (`demo::deviation_matches`, pinned by the CPU test `unit-deviation-matcher`): the driver name is
+searched in GL_RENDERER and GL_VERSION. For ANGLE only GL_VERSION is searched, because ANGLE's GL_RENDERER names its
+backend ("ANGLE (Mesa, Vulkan ... (llvmpipe ...))"); "Mesa", "llvmpipe" or "Vulkan" deviations therefore never
+excuse ANGLE. "llvmpipe" also matches zink on lavapipe ("zink Vulkan 1.4(llvmpipe ...)"), which shares
+llvmpipe's rasterizer; demos that must tell the two apart test "zink" first. An empty name matches nothing (since
+2026-11-12; before, a demo that found no driver name would have excused every driver). Before this rule (fixed 2026-11-11) every "Mesa"
 match also hid ANGLE-on-lavapipe failures; the rerun found one (es31-framebuffer-no-attachments, now recorded).
 The es32-geometry-shaders row (§11.3.4.4) was removed: the rule is conditional ("if it determines"), so a
 successful link is conformant (Codex audit 2026-11-11).
 
-These are reported as XFAIL only on the matching driver (`GL_VERSION` contains "Mesa", or
-`GL_RENDERER` contains "softpipe"). Every other driver gets the strict check. Consequence: demos that
+These are reported as XFAIL only on the matching driver (by the rule above). Every other driver gets the strict
+check. Consequence: demos that
 need a multisampled default framebuffer report BLOCKED_ENVIRONMENT on softpipe.
 
 ## Scope
@@ -167,5 +176,5 @@ need a multisampled default framebuffer report BLOCKED_ENVIRONMENT on softpipe.
 
 ## Current coverage
 
-The project is in an early phase; see `docs/generated/COVERAGE_SUMMARY.md` for current numbers
-and `docs/AGENT_HANDOFF.md` for what is next. Anything not listed there as passing is not covered.
+See `docs/generated/COVERAGE_SUMMARY.md` for the current numbers and `docs/FINAL_RELEASE_READINESS.md` for the
+release-candidate evidence. Anything not listed there as passing is not covered.

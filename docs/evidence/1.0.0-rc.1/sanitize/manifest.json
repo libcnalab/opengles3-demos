@@ -1,0 +1,216 @@
+{
+  "label": "sanitize",
+  "opengles3_demos": {
+    "path": "/tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/316edffb-ec61-4c46-b5e6-4271e88847bb/scratchpad/clean/libcnalab/opengles3-demos",
+    "commit": "2544bad7e0605cb7728594f89279ee5cee6a77e3",
+    "describe": "2544bad",
+    "branch": "main",
+    "dirty": false
+  },
+  "meta_gl": {
+    "path": "/tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/316edffb-ec61-4c46-b5e6-4271e88847bb/scratchpad/clean/libcna/meta-gl",
+    "commit": "333d777fadbe53613a9c2eead358ffbfe6a2ef33",
+    "describe": "v0.4.1-9-g333d777",
+    "branch": "HEAD",
+    "dirty": false
+  },
+  "build": {
+    "dir": "/tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/316edffb-ec61-4c46-b5e6-4271e88847bb/scratchpad/clean/libcnalab/opengles3-demos/build/sanitize",
+    "CMAKE_BUILD_TYPE": "Debug",
+    "options": {
+      "OGLES3_ANGLE_DIR": "/home/robertvokac/Android/Sdk/emulator/lib64/gles_angle",
+      "OGLES3_ANGLE_VULKAN_ICD": "/usr/share/vulkan/icd.d/lvp_icd.json",
+      "OGLES3_BUILD_TESTS": "ON",
+      "OGLES3_METAGL_SOURCE_DIR": "/tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/316edffb-ec61-4c46-b5e6-4271e88847bb/scratchpad/clean/libcnalab/opengles3-demos/../../libcna/meta-gl",
+      "OGLES3_SANITIZE": "ON",
+      "OGLES3_TEST_DRIVERS": "gpu;llvmpipe;zink",
+      "OGLES3_TEST_MIN_VERSION": "ON",
+      "OGLES3_TEST_SIZE_VARIANT": "ON",
+      "OGLES3_TEST_SOFTPIPE": "ON",
+      "OGLES3_USE_INSTALLED_METAGL": "OFF",
+      "OGLES3_WERROR": "OFF",
+      "OGLES3_WITH_SDL3": "ON"
+    },
+    "compiler": "/usr/bin/c++",
+    "compiler_version": "c++ (Debian 14.2.0-19) 14.2.0",
+    "cmake_version": "cmake version 3.31.6"
+  },
+  "host": {
+    "kernel": "6.12.111+deb13-amd64",
+    "machine": "x86_64",
+    "mesa_packages": [
+      "libegl-mesa0 25.0.7-2+deb13u1",
+      "libegl-mesa0 25.0.7-2+deb13u1",
+      "libgl1-mesa-dri 25.0.7-2+deb13u1",
+      "libgl1-mesa-dri 25.0.7-2+deb13u1",
+      "mesa-vulkan-drivers 25.0.7-2+deb13u1",
+      "mesa-vulkan-drivers 25.0.7-2+deb13u1"
+    ]
+  },
+  "drivers_seen": [
+    {
+      "gl_renderer": "AMD Radeon 780M (radeonsi, phoenix, LLVM 19.1.7, DRM 3.61, 6.12.111+deb13-amd64)",
+      "gl_version": "OpenGL ES 3.0 Mesa 25.0.7-2+deb13u1",
+      "glsl_versions": [
+        "OpenGL ES GLSL ES 3.00"
+      ],
+      "platforms": [
+        "EGL 1.5 headless pbuffer (platform=surfaceless, vendor=Mesa Project)"
+      ],
+      "runs": 54
+    },
+    {
+      "gl_renderer": "AMD Radeon 780M (radeonsi, phoenix, LLVM 19.1.7, DRM 3.61, 6.12.111+deb13-amd64)",
+      "gl_version": "OpenGL ES 3.1 Mesa 25.0.7-2+deb13u1",
+      "glsl_versions": [
+        "OpenGL ES GLSL ES 3.10"
+      ],
+      "platforms": [
+        "EGL 1.5 headless pbuffer (platform=surfaceless, vendor=Mesa Project)"
+      ],
+      "runs": 16
+    },
+    {
+      "gl_renderer": "AMD Radeon 780M (radeonsi, phoenix, LLVM 19.1.7, DRM 3.61, 6.12.111+deb13-amd64)",
+      "gl_version": "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1",
+      "glsl_versions": [
+        "OpenGL ES GLSL ES 3.20"
+      ],
+      "platforms": [
+        "EGL 1.5 headless pbuffer (platform=surfaceless, vendor=Mesa Project)"
+      ],
+      "runs": 83
+    },
+    {
+      "gl_renderer": "ANGLE (Mesa, Vulkan 1.4.305 (llvmpipe (LLVM 19.1.7 256 bits) (0x00000000)), llvmpipe-0.0.1)",
+      "gl_version": "OpenGL ES 3.0.0 (ANGLE 2.1.17841 git hash: 5fa2e61da947)",
+      "glsl_versions": [
+        "OpenGL ES GLSL ES 3.00 (ANGLE 2.1.17841 git hash: 5fa2e61da947)"
+      ],
+      "platforms": [
+        "EGL 1.5 headless pbuffer (platform=angle-vulkan, vendor=Google Inc. (Mesa))"
+      ],
+      "runs": 54
+    },
+    {
+      "gl_renderer": "ANGLE (Mesa, Vulkan 1.4.305 (llvmpipe (LLVM 19.1.7 256 bits) (0x00000000)), llvmpipe-0.0.1)",
+      "gl_version": "OpenGL ES 3.1.0 (ANGLE 2.1.17841 git hash: 5fa2e61da947)",
+      "glsl_versions": [
+        "OpenGL ES GLSL ES 3.10 (ANGLE 2.1.17841 git hash: 5fa2e61da947)"
+      ],
+      "platforms": [
+        "EGL 1.5 headless pbuffer (platform=angle-vulkan, vendor=Google Inc. (Mesa))"
+      ],
+      "runs": 83
+    },
+    {
+      "gl_renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+      "gl_version": "OpenGL ES 3.0 Mesa 25.0.7-2+deb13u1",
+      "glsl_versions": [
+        "OpenGL ES GLSL ES 3.00"
+      ],
+      "platforms": [
+        "EGL 1.5 headless pbuffer (platform=surfaceless, vendor=Mesa Project)"
+      ],
+      "runs": 54
+    },
+    {
+      "gl_renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+      "gl_version": "OpenGL ES 3.1 Mesa 25.0.7-2+deb13u1",
+      "glsl_versions": [
+        "OpenGL ES GLSL ES 3.10"
+      ],
+      "platforms": [
+        "EGL 1.5 headless pbuffer (platform=surfaceless, vendor=Mesa Project)"
+      ],
+      "runs": 16
+    },
+    {
+      "gl_renderer": "llvmpipe (LLVM 19.1.7, 256 bits)",
+      "gl_version": "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1",
+      "glsl_versions": [
+        "OpenGL ES GLSL ES 3.20"
+      ],
+      "platforms": [
+        "EGL 1.5 headless pbuffer (platform=surfaceless, vendor=Mesa Project)"
+      ],
+      "runs": 166
+    },
+    {
+      "gl_renderer": "softpipe",
+      "gl_version": "OpenGL ES 3.0 Mesa 25.0.7-2+deb13u1",
+      "glsl_versions": [
+        "OpenGL ES GLSL ES 3.00"
+      ],
+      "platforms": [
+        "EGL 1.5 headless pbuffer (platform=surfaceless, vendor=Mesa Project)"
+      ],
+      "runs": 3
+    },
+    {
+      "gl_renderer": "softpipe",
+      "gl_version": "OpenGL ES 3.1 Mesa 25.0.7-2+deb13u1",
+      "glsl_versions": [
+        "OpenGL ES GLSL ES 3.10"
+      ],
+      "platforms": [
+        "EGL 1.5 headless pbuffer (platform=surfaceless, vendor=Mesa Project)"
+      ],
+      "runs": 18
+    },
+    {
+      "gl_renderer": "zink Vulkan 1.4(llvmpipe (LLVM 19.1.7, 256 bits) (MESA_LLVMPIPE))",
+      "gl_version": "OpenGL ES 3.0 Mesa 25.0.7-2+deb13u1",
+      "glsl_versions": [
+        "OpenGL ES GLSL ES 3.00"
+      ],
+      "platforms": [
+        "EGL 1.5 headless pbuffer (platform=surfaceless, vendor=Mesa Project)"
+      ],
+      "runs": 54
+    },
+    {
+      "gl_renderer": "zink Vulkan 1.4(llvmpipe (LLVM 19.1.7, 256 bits) (MESA_LLVMPIPE))",
+      "gl_version": "OpenGL ES 3.1 Mesa 25.0.7-2+deb13u1",
+      "glsl_versions": [
+        "OpenGL ES GLSL ES 3.10"
+      ],
+      "platforms": [
+        "EGL 1.5 headless pbuffer (platform=surfaceless, vendor=Mesa Project)"
+      ],
+      "runs": 16
+    },
+    {
+      "gl_renderer": "zink Vulkan 1.4(llvmpipe (LLVM 19.1.7, 256 bits) (MESA_LLVMPIPE))",
+      "gl_version": "OpenGL ES 3.2 Mesa 25.0.7-2+deb13u1",
+      "glsl_versions": [
+        "OpenGL ES GLSL ES 3.20"
+      ],
+      "platforms": [
+        "EGL 1.5 headless pbuffer (platform=surfaceless, vendor=Mesa Project)"
+      ],
+      "runs": 83
+    }
+  ],
+  "command": "ctest --test-dir /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/316edffb-ec61-4c46-b5e6-4271e88847bb/scratchpad/clean/libcnalab/opengles3-demos/build/sanitize -j 2 --output-on-failure --output-junit /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/316edffb-ec61-4c46-b5e6-4271e88847bb/scratchpad/clean/final/sanitize/junit.xml",
+  "ctest_exit_code": 0,
+  "start": "2026-11-12T07:02:26+01:00",
+  "end": "2026-11-12T07:09:29+01:00",
+  "tests_registered": 701,
+  "ctest_status_counts": {
+    "run": 670,
+    "notrun": 31
+  },
+  "outcome_counts": {
+    "PASS": 669,
+    "BLOCKED_ENVIRONMENT": 5,
+    "SKIP_UNSUPPORTED": 26,
+    "N/A (no result JSON by design)": 1
+  },
+  "gpu_safety": {
+    "OGLES3_RUN_GPU_FAULT_CASES": "",
+    "angle_vulkan_icd": "/usr/share/vulkan/icd.d/lvp_icd.json",
+    "kernel_log_checked": true,
+    "amdgpu_fault_lines_during_run": []
+  }
+}

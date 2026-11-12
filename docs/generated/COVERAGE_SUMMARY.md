@@ -3,7 +3,11 @@
 
 Result directories: build/debug/test-results
 
-Source revision: ae1c081 (with uncommitted changes)
+Source revision: 2544bad
+
+meta-gl revision: 333d777 (../../libcna/meta-gl)
+
+Registered runs: 700; with a fresh result: 700; missing: 0.
 
 Only results from the current executables count. A result is ignored when its executable was
 rebuilt after the run, or when the demo's sources, `common/` or the CMake glue are newer than the

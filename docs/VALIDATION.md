@@ -15,7 +15,8 @@ Each executable, run with `--headless --validate`:
    reference, buffer/texture readback, state queries, or deliberately provoked GL errors.
 
 A run is `PASS` only if all runtime checks pass, `validate()` recorded **at least one** check,
-and none failed. An empty `validate()` is a `FAIL` — never a vacuous success.
+and none failed. An empty `validate()` is a `FAIL` — never a vacuous success. A skip or block raised after a check
+has already failed is reported as `FAIL`, so a late `demo::Skip` cannot hide a failure.
 
 ## Outcomes and exit codes
 
@@ -52,16 +53,21 @@ detection, the runtime's version gating, and demo code that branches on the vers
 **not** emulate a real lower-version implementation. On radeonsi and llvmpipe the GLSL compiler
 still accepts `#version 310 es`/`320 es` under an ES 3.0 override, and entry points stay loadable.
 Version-rejection assertions (e.g. "a 3.20 shader fails on an ES 3.1 context") are therefore made
-only on **native** lower-version drivers (softpipe = ES 3.1). Under the override they are printed
-as notes. There is currently no native ES 3.0-only driver in the matrix (KNOWN_LIMITATIONS.md).
+only on **native** lower-version contexts (softpipe = ES 3.1; ANGLE `native` = ES 3.1 and `native-min` = ES 3.0,
+see below). Under the override they are printed as notes.
 
-All runs use `EGL_PLATFORM=surfaceless`, a fixed 256×256 surface, fixed `--seed 1`, and
-deterministic animation time (`frame / 60 s`).
+All runs use a headless EGL pbuffer (`EGL_PLATFORM=surfaceless` for Mesa), a 256×256 surface (333×777 for the
+size runs), fixed `--seed 1`, and deterministic animation time (`frame / 60 s`).
+
+**Counting.** CTest reports SKIP_UNSUPPORTED and BLOCKED_* as "Skipped" and counts them as not failed, so its "100%
+tests passed" means *no FAIL*, not *all PASS*. Reports of this project give the outcomes separately (e.g. the
+release-candidate debug matrix: 701 registered tests = 669 PASS + 26 SKIP_UNSUPPORTED + 5 BLOCKED_ENVIRONMENT + the
+CPU unit test). Earlier reports wrote such a run as "700/700".
 
 ## ANGLE: an independent implementation (driver `angle`, mode `native`)
 Every Mesa driver shares Mesa's GL front-end (state tracker, GLSL compiler, validation). Their agreement is
 therefore not independent evidence. The `angle` driver runs the same executables through ANGLE: Google's
-GL ES front-end and GLSL translator, here with the Vulkan backend on RADV.
+GL ES front-end and GLSL translator, here with the Vulkan backend on lavapipe (software).
 - **Build used:** the one shipped with the Android SDK emulator (`~/Android/Sdk/emulator/lib64/gles_angle`,
   ANGLE 2.1.17841, git 5fa2e61da947). It is auto-detected, or set with `-DOGLES3_ANGLE_DIR=`.
 - **How it is loaded:** only at the context-provider level. A shim makes `libEGL.so.1` resolve to ANGLE's libEGL,
@@ -94,7 +100,11 @@ non-vacuous checks SKIPs with the minimum stated in the README.
 
 When a driver demonstrably violates a normative rule, the test keeps the strict expectation and
 names the driver (`// @xfail: Mesa | reason` in shader cases). On a matching driver the result is
-reported as XFAIL with the spec citation. Everywhere else the strict check applies. Each deviation
+reported as XFAIL with the spec citation. Everywhere else the strict check applies. The matching rule is one
+function, `demo::deviation_matches` (`common/include/demo/check.hpp`), pinned by the CPU test
+`unit-deviation-matcher`: "Mesa" selects every Mesa driver; a Mesa driver name selects that driver ("llvmpipe" also
+zink on lavapipe, which shares its rasterizer); "ANGLE" selects ANGLE; ANGLE is matched on GL_VERSION only, so no
+Mesa or backend name in its GL_RENDERER can excuse it; an empty name matches nothing. Each deviation
 is listed in `docs/KNOWN_LIMITATIONS.md`. Checks are never loosened to make a driver pass.
 
 ## Pixel comparison policy
@@ -140,20 +150,38 @@ A run first writes a `CRASHED` result and replaces it when it finishes. A crash,
 `CRASHED` behind, and the generator treats that as a failure; the run cannot silently disappear.
 The coverage generator ignores a result when its executable was rebuilt after the run, or when compiled sources (demo or `common/`) are newer than the executable, or when run-time inputs
 (shaders, data, the CMake test registration) are newer than the run. Those results are listed under
-"Stale results" in COVERAGE_SUMMARY.md. The summary also states the source revision it was generated from.
+"Stale results" in COVERAGE_SUMMARY.md. The generator also reads the CTest registration of the build directory
+(`ctest --show-only=json-v1`): a registered run without a fresh result prevents FULLY_VALIDATED and is listed under
+"Registered runs without a fresh result", and a result file of a test that is no longer registered is ignored. The
+summary states the source and meta-gl revisions it was generated from.
+
+`tools/release/collect_evidence.py` runs one matrix and writes machine-readable evidence: both revisions (it refuses
+dirty working trees), the build configuration, compiler and tool versions, the driver strings seen, the exact ctest
+command, start and end time, one row per registered test, and the amdgpu lines of the kernel log during the run.
+Only result files written during that run count. The release-candidate evidence is in `docs/evidence/`.
 The generator lints every `api` claim: the entry point must be called by the executable's sources, directly or
 through a `common/` helper or a meta-gl convenience overload. The lint is name-based, so it is a heuristic; the
 actual verification is described per entry in `demo.json`.
 
-## Reproducibility from a clean checkout (verified 2026-11-11 23:40)
-1. Clone meta-gl from its origin, branch `opengles3-demos/enum-gaps` (`333d777`, now identical to `develop`), to `<root>/libcna/meta-gl`.
-2. Clone opengles3-demos (`d100bfc`) to `<root>/libcnalab/opengles3-demos`.
-3. Run `cmake --preset debug && cmake --build --preset debug`: no warnings, 83 executables.
-4. Run `ctest --preset debug`: 563/563, with ANGLE auto-detected from the Android SDK.
+## Reproducibility from a clean checkout
+Procedure (the release-candidate run, with its revisions and results, is in
+[FINAL_RELEASE_READINESS.md](FINAL_RELEASE_READINESS.md) section E):
+1. `git clone https://github.com/libcna/meta-gl <root>/libcna/meta-gl` and check out
+   `333d777fadbe53613a9c2eead358ffbfe6a2ef33` (on `develop`).
+2. Clone opengles3-demos to `<root>/libcnalab/opengles3-demos` and check out the revision under test.
+3. `cmake --preset debug && cmake --build --preset debug`: no warnings; 83 executables plus `unit-deviation-matcher`.
+   Configure stops with an error when the meta-gl checkout lacks 333d777.
+4. `tools/release/collect_evidence.py --build build/debug --label debug --out <dir>` (or plain
+   `ctest --preset debug`), then the same for the `sanitize` and `headless-ci` presets.
+5. `cmake --build --preset debug --target coverage`: 82 FULLY_VALIDATED + 1 VISUALLY_VERIFIED, every registered run
+   with a fresh result.
 
-The coverage generator on that fresh tree gives the same 82 FULLY_VALIDATED + 1 VISUALLY_VERIFIED as the working
-tree. Requirements not in the repositories: Mesa (radeonsi, llvmpipe, zink and lavapipe ICDs), EGL, optionally SDL3,
-and for the `angle` driver an ANGLE build (`OGLES3_ANGLE_DIR`).
+Requirements not in the repositories: Mesa (radeonsi, llvmpipe, zink and the lavapipe ICD), EGL, optionally SDL3,
+and for the `angle` driver an ANGLE build (`OGLES3_ANGLE_DIR`, auto-detected from the Android SDK emulator).
+Without a hardware GPU the `gpu` runs use whatever EGL selects, and the `angle` runs are absent without ANGLE.
+
+History: the first clean-clone check (2026-11-11 23:40, opengles3-demos `d100bfc`, before the size and ANGLE
+`native-min` runs existed) gave 563 registered runs without a failure.
 
 ## Coverage status definitions
 
@@ -161,7 +189,8 @@ See `tools/coverage/generate_coverage.py` (single source of truth):
 `NOT_STARTED`, `IMPLEMENTED_UNVERIFIED`, `BUILD_PASSED`, `FAILED`, `BLOCKED_BY_PLATFORM`,
 `BLOCKED_BY_META_GL`, `UNSUPPORTED_BY_CONTEXT`, `RUNTIME_PASSED` (≥1 validated PASS),
 `VISUALLY_VERIFIED` (+ the capture was actually inspected and recorded in `demo.json`),
-`FULLY_VALIDATED` (every matrix run is a validated PASS or a justified SKIP_UNSUPPORTED; gpu and llvmpipe pass in es-min and es-max).
+`FULLY_VALIDATED` (every registered matrix run has a fresh result, each a validated PASS or a justified
+SKIP_UNSUPPORTED; gpu and llvmpipe pass in es-min and es-max).
 
 A function's status is the best status among the executables whose `demo.json` `api` map
 claims it **with a description of how it is verified**. Use of a function without
@@ -173,5 +202,12 @@ verification of its effect must not be listed in `api`.
   front end and much of the state tracker; agreement between them is weaker evidence than
   agreement between independent vendors.
 - CPU sanitizers (`sanitize` preset) check our C++ only, not GPU memory safety.
-- `es-min` relies on Mesa's version override, which changes only the reported API version (see above).
-- All four drivers are Mesa: they share the GLSL front end (which is why the two XFAILs appear on all of them).
+- `es-min` relies on Mesa's version override, which changes only the reported API version (see above). Native
+  lower-version evidence comes from softpipe (ES 3.1) and ANGLE (`native` ES 3.1, `native-min` ES 3.0).
+- The four Mesa drivers share Mesa's GL front-end and GLSL compiler, which is why the "Mesa" XFAILs appear on all of
+  them. ANGLE is an independent front-end and compiler, but in this matrix it runs on lavapipe, the same Vulkan
+  driver as zink, so it is not an independent rasterizer. No driver from another vendor was available; ES 3.2 has
+  Mesa evidence only (ANGLE 2.1.17841 stops at ES 3.1).
+- Results describe Mesa 25.0.7 and ANGLE 2.1.17841 on one machine (AMD Radeon 780M). Another driver version can
+  pass or fail differently; a new deviation needs a spec reading, a KNOWN_LIMITATIONS row and a narrowly matched
+  XFAIL, never a looser check.

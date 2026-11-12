@@ -38,7 +38,7 @@ endif()
 # Vulkan driver under ANGLE. Default: lavapipe (software), so the test matrix never sends ANGLE's Vulkan work to the
 # real GPU. One ANGLE/RADV case faulted the GPU and caused amdgpu ring timeouts that froze the desktop (2026-11-11).
 # Set to the RADV ICD JSON only on purpose, on a machine whose display does not depend on that GPU.
-set(OGLES3_ANGLE_VULKAN_ICD "/usr/share/vulkan/icd.d/lvp_icd.json" CACHE FILEPATH "Vulkan ICD JSON used by the 'angle' test driver")
+set(OGLES3_ANGLE_VULKAN_ICD "/usr/share/vulkan/icd.d/lvp_icd.json" CACHE FILEPATH "Vulkan ICD JSON (lavapipe) used by the 'angle' and 'zink' test drivers")
 # The angle runs preload ANGLE's libGLESv2; in a sanitizer build the ASan runtime has to be preloaded before it
 # ("ASan runtime does not come first in initial library list"). Without a usable runtime path the angle runs are
 # left out of sanitizer builds, with a note.

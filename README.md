@@ -92,7 +92,7 @@ Every demo runs on Mesa's software drivers; the test matrix sets the same variab
 
 ```sh
 EGL_PLATFORM=surfaceless LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe ./build/debug/bin/es31-compute-basics --headless --validate
-GALLIUM_DRIVER=zink ...        # GL on Vulkan (lavapipe)
+GALLIUM_DRIVER=zink VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json ...   # GL on Vulkan, pinned to lavapipe
 GALLIUM_DRIVER=softpipe ...    # a native ES 3.1 driver; ES 3.2 executables SKIP there
 MESA_GLES_VERSION_OVERRIDE=3.0 # lowers the reported version only (see VALIDATION.md "es-min")
 ```

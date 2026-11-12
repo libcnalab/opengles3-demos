@@ -40,7 +40,7 @@ Every executable is registered as `<name>:<driver>:<mode>`:
 | `gpu` | default EGL vendor (radeonsi on the reference machine) | real hardware path |
 | `llvmpipe` | `LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe` | deterministic software ES 3.2 |
 | `softpipe` | `... GALLIUM_DRIVER=softpipe` | a **native ES 3.1 / GLSL ES 3.10** implementation: ES 3.2 executables must report `SKIP_UNSUPPORTED`, 3.20 shaders must be rejected. Only registered for `min_es` 3.2 executables and those listing it in `extra_drivers` (it miscompiles some complex shaders, see KNOWN_LIMITATIONS.md) |
-| `zink` | `... GALLIUM_DRIVER=zink` (on lavapipe) | GL-on-Vulkan: a different backend (NIR→SPIR-V), so agreement is less correlated |
+| `zink` | `... GALLIUM_DRIVER=zink`, Vulkan pinned to lavapipe (`VK_ICD_FILENAMES`/`VK_DRIVER_FILES` = `OGLES3_ANGLE_VULKAN_ICD`) | GL-on-Vulkan: a different backend (NIR→SPIR-V), so agreement is less correlated |
 
 | mode | environment |
 |---|---|
@@ -67,7 +67,7 @@ unchanged; the result JSON records the platform (`SDL 3.4.0 window (video driver
 es30-multisample-default-framebuffer uses it (llvmpipe and zink): its subject is the multisampled default
 framebuffer, and Mesa's surfaceless EGL gives those drivers a 0x0 multisampled pbuffer (KNOWN_LIMITATIONS.md,
 "environment"). A window is a default framebuffer too, so the demo still tests what it claims; it is not replaced by
-a framebuffer object. zink window runs pin the Vulkan device to lavapipe (`VK_ICD_FILENAMES`). When SDL3 or
+a framebuffer object. When SDL3 or
 `xvfb-run` is missing, or `-DOGLES3_TEST_WINDOWED=OFF`, the runs stay headless and report BLOCKED_ENVIRONMENT.
 
 **Counting.** CTest reports SKIP_UNSUPPORTED and BLOCKED_* as "Skipped" and counts them as not failed, so its "100%

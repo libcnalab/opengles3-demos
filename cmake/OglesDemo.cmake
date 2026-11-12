@@ -111,8 +111,9 @@ function(ogles_register_gl_tests)
             set(env ${surface_env})
             if(driver STREQUAL "llvmpipe" OR driver STREQUAL "softpipe" OR driver STREQUAL "zink")
                 list(APPEND env "LIBGL_ALWAYS_SOFTWARE=1" "GALLIUM_DRIVER=${driver}")
-                if(launch AND driver STREQUAL "zink")
-                    # zink on a window surface: pin the Vulkan device to lavapipe, never the hardware GPU.
+                if(driver STREQUAL "zink")
+                    # Pin zink's Vulkan device to lavapipe, never the hardware GPU. Mesa 25's zink already picks a CPU
+                    # device under LIBGL_ALWAYS_SOFTWARE, but that is driver behaviour; the ICD list makes it explicit.
                     list(APPEND env "VK_ICD_FILENAMES=${OGLES3_ANGLE_VULKAN_ICD}" "VK_DRIVER_FILES=${OGLES3_ANGLE_VULKAN_ICD}")
                 endif()
             elseif(driver STREQUAL "angle")

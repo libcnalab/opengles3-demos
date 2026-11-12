@@ -56,8 +56,9 @@ cmake --build --preset debug --target coverage
 ## In flight (2026-11-12 01:50)
 
 **State**
-- 83 executables; full matrix **646/646**: gpu, llvmpipe, zink × es-max/es-min; softpipe for ES 3.2; ANGLE on
-  lavapipe; a 333x777 llvmpipe size run per executable.
+- 83 executables; full matrix **700/700**: gpu, llvmpipe, zink × es-max/es-min; softpipe for ES 3.2; ANGLE on
+  lavapipe in `native` (ES 3.1) and `native-min` (genuine ES 3.0 contexts); a 333x777 llvmpipe size run per
+  executable.
 - 82 FULLY_VALIDATED, 1 VISUALLY_VERIFIED (es30-multisample-default-framebuffer: BLOCKED_ENVIRONMENT on llvmpipe and
   zink).
 - **Window size:** tools/sweep_sizes.sh is clean at 6 sizes, and every demo fills the window. The two pixel-exact
@@ -75,12 +76,16 @@ cmake --build --preset debug --target coverage
 - Deviation matcher: ANGLE's backend name no longer excuses ANGLE.
 - All reports and their disposition: docs/audits/.
 
-**Running**
-- Codex diff review of the fill-window changes (base f75838c), two groups. Reports go to
-  ../opengles3-demos-worktrees/diffreview2-*/DIFF_REVIEW.md. Triage and fix, then run the full matrix and commit.
+**Done after 01:50**
+- Fill-window diff review: 4 findings fixed.
+- STATUS.md written against the directive's criteria.
+- ANGLE `native-min` gives genuine ES 3.0 contexts: all 54 min_es 3.0 executables pass, with one ANGLE ES 3.0
+  deviation (TF array capture).
+
+**Running**: nothing.
 
 **Known follow-ups**
-- No native ES 3.0 driver is available: softpipe and ANGLE are ES 3.1; Mesa's es-min is an override.
+- Native ES 3.0 evidence comes from ANGLE `native-min` only. Mesa's es-min remains an override.
 - The inventory has no IDs for technique-level topics (shader fog, input determinism); they are not API features,
   so they are left out deliberately.
 

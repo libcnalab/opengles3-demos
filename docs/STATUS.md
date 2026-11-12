@@ -15,10 +15,10 @@ Khronos conformance.
 
 ## Runs behind the numbers
 
-The debug matrix gives **646/646**:
+The debug matrix gives **700/700**:
 - gpu (radeonsi), llvmpipe and zink, each at es-max and es-min;
 - softpipe (native ES 3.1) for the ES 3.2 executables and opt-ins;
-- **ANGLE** 2.1.17841 on lavapipe;
+- **ANGLE** 2.1.17841 on lavapipe, in mode `native` (ES 3.1) and in `native-min`, which creates genuine ES 3.0 contexts;
 - one llvmpipe run at 333x777 per executable.
 
 Other runs:

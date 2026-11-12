@@ -72,8 +72,8 @@ GL ES front-end and GLSL translator, here with the Vulkan backend on RADV.
   minimum version via `EGL_ANGLE_create_context_backwards_compatible = FALSE` (`OGLES3_ANGLE_EXACT_VERSION=1`).
   ANGLE then creates a **genuine ES 3.0 context**: GL_VERSION "OpenGL ES 3.0.0", GLSL ES 3.00, and ES 3.1 objects
   rejected (e.g. `glCreateShader(COMPUTE_SHADER)` → INVALID_ENUM). Unlike Mesa's `es-min` override, this is native
-  ES 3.0 evidence. First run (2026-11-12): 53/54 PASS on true ES 3.0; the failure is an ANGLE ES 3.0 transform-feedback
-  restriction (under triage).
+  ES 3.0 evidence. All 54 pass on true ES 3.0. One ANGLE ES 3.0-only deviation (output-array capture in transform feedback) is
+  recorded.
 - **Vulkan driver under ANGLE: lavapipe (software) by default** (`OGLES3_ANGLE_VULKAN_ICD`). On 2026-11-11 one
   ANGLE/RADV case faulted the GPU. Repeated runs caused amdgpu `ring gfx timeout, soft recovered` events (72 kernel
   log lines between 20:23 and 20:38) and visible desktop freezes. The ANGLE matrix therefore never touches the real

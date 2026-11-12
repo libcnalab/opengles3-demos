@@ -15,9 +15,11 @@
 //   * glGetFragDataLocation (3.9.2.3) and the compile-time rules for fragment outputs (GLSL ES 3.00 4.3.8.2);
 //   * MAX_DRAW_BUFFERS, MAX_COLOR_ATTACHMENTS, DRAW_BUFFERi, READ_BUFFER queries.
 //
-// Image (256 x 256 window): the four attachments of the 128 x 128 offscreen target side by side,
+// Image (any window size): the four attachments of the 128 x 128 offscreen target, each scaled to one
+// quarter of the window (the quarters partition it at width / 2 and height / 2),
 //   top-left albedo (RGBA8) | top-right data (RGBA8)
 //   bottom-left ids (RGBA32UI) | bottom-right signed (RG32I)
+// Pixel (x, y) of a w x h quarter shows texel (x * 128 / w, y * 128 / h) in integer arithmetic.
 // The integer attachments are shown through formulas that the CPU repeats (see composite.frag).
 //
 // Validation: every pixel of every attachment is compared with a CPU model of the fragment shader:
@@ -45,7 +47,7 @@ using demo::Rgba8;
 namespace
 {
     constexpr int kSize = 128;        // the offscreen render targets are kSize x kSize
-    constexpr int kWindow = 2 * kSize;  // the window (default framebuffer) is 2 x 2 panels
+    constexpr int kMinWindow = 32;     // the window (default framebuffer) is 2 x 2 panels of any size; this is the smallest
     constexpr int kAttachments = 4;
 
     constexpr std::array<mgl::ColorAttachment, kAttachments> kAttach = {
@@ -111,11 +113,24 @@ namespace
         return {double(-(x * y) - 1), double(std::numeric_limits<std::int32_t>::min() + x), 0.0, 1.0};
     }
 
-    // The composite shader's colors (composite.frag) for the same pixel, in 0..255.
-    Expected composite_model(int window_x, int window_y)
+    // The window is split into 2 x 2 panels at width / 2 and height / 2 (they partition it exactly).
+    // Panel 0 is the top-left quarter, 1 top-right, 2 bottom-left, 3 bottom-right.
+    struct Panel
     {
-        const int panel = window_x / kSize + 2 * (1 - window_y / kSize);  // panel 0 is the top-left quarter
-        const int x = window_x % kSize, y = window_y % kSize;
+        int x, y, w, h;
+    };
+
+    Panel panel_rect(int panel, int width, int height)
+    {
+        const int col = panel % 2, row_from_top = panel / 2;
+        const int x0 = col == 0 ? 0 : width / 2, x1 = col == 0 ? width / 2 : width;
+        const int y0 = row_from_top == 1 ? 0 : height / 2, y1 = row_from_top == 1 ? height / 2 : height;
+        return {x0, y0, x1 - x0, y1 - y0};
+    }
+
+    // The composite shader's colors (composite.frag) for texel (x, y) of the attachment shown in `panel`, in 0..255.
+    Expected composite_model(int panel, int x, int y)
+    {
         switch (panel)
         {
         case 0: { Expected e = albedo_model(x, y); e[3] = 255.0; return e; }  // composite.frag writes alpha 1
@@ -180,8 +195,8 @@ namespace
     public:
         void init(demo::Env& env) override
         {
-            if (env.width < kWindow || env.height < kWindow)
-                throw demo::Skip(std::format("this demo draws into the lower left {0}x{0} pixels and needs a window at least that large", kWindow));
+            if (env.width < kMinWindow || env.height < kMinWindow)
+                throw demo::Skip(std::format("this demo needs a surface of at least {0}x{0} pixels", kMinWindow));
 
             vertex_source_ = env.load_text("shaders/quad.vert");
             mrt_ = demo::build_program(env, "shaders/quad.vert", "shaders/mrt.frag");
@@ -237,17 +252,19 @@ namespace
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
         }
 
-        void render(demo::Env& /*env*/, int /*frame*/) override
+        void render(demo::Env& env, int /*frame*/) override
         {
+            width_ = env.width;
+            height_ = env.height;
             // Pass 1: all four fragment outputs of mrt.frag into the four attachments.
             bind_fbo();
             const std::array<mgl::DrawBuffer, 4> all = {kC0, kC1, kC2, kC3};
             mgl::glDrawBuffers(all);
             draw_mrt(kSize);
 
-            // Pass 2: composite the attachments into the window, one quarter each.
+            // Pass 2: composite the attachments into the window, one quarter each (scaled to the quarter).
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
-            mgl::glViewport(0, 0, kWindow, kWindow);
+            mgl::glViewport(0, 0, width_, height_);
             mgl::glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             mgl::glClear(mgl::ClearBufferBit::Color);
             mgl::glUseProgram(composite_);
@@ -264,10 +281,11 @@ namespace
             mgl::glUniform1f(mgl::glGetUniformLocation(composite_, "u_z"), 0.0f);
             for (int panel = 0; panel < 4; ++panel)
             {
-                const int ox = (panel % 2) * kSize, oy = (1 - panel / 2) * kSize;
-                mgl::glViewport(ox, oy, kSize, kSize);
+                const Panel p = panel_rect(panel, width_, height_);
+                mgl::glViewport(p.x, p.y, p.w, p.h);
                 mgl::glUniform1i(mgl::glGetUniformLocation(composite_, "u_panel"), panel);
-                mgl::glUniform2i(mgl::glGetUniformLocation(composite_, "u_origin"), ox, oy);
+                mgl::glUniform2i(mgl::glGetUniformLocation(composite_, "u_origin"), p.x, p.y);
+                mgl::glUniform2i(mgl::glGetUniformLocation(composite_, "u_panel_size"), p.w, p.h);
                 mgl::glDrawArrays(mgl::PrimitiveType::TriangleStrip, 0, 4);
             }
         }
@@ -420,19 +438,15 @@ namespace
         void check_composite(demo::Check& check) const
         {
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
-            const std::vector<std::uint8_t> window = demo::read_rgba8(0, 0, kWindow, kWindow);
             static constexpr const char* names[4] = {"albedo RGBA8", "data RGBA8", "ids RGBA32UI", "signed RG32I"};
             for (int panel = 0; panel < 4; ++panel)
             {
-                const int ox = (panel % 2) * kSize, oy = (1 - panel / 2) * kSize;
-                std::vector<std::uint8_t> sub(static_cast<std::size_t>(kSize * kSize * 4));
-                for (int y = 0; y < kSize; ++y)
-                    for (int x = 0; x < kSize; ++x)
-                        for (int c = 0; c < 4; ++c)
-                            sub[static_cast<std::size_t>((y * kSize + x) * 4 + c)] =
-                                window[static_cast<std::size_t>(((oy + y) * kWindow + ox + x) * 4 + c)];
-                const Diff d = compare(sub, kSize, kSize, [&](int x, int y) { return composite_model(ox + x, oy + y); }, 1.0);
-                check.expect(d.bad == 0, std::format("window panel {} ({}) shows the attachment: all {} pixels match the CPU model (+-1)", panel, names[panel], kSize * kSize),
+                // Every pixel of the panel; pixel (x, y) shows texel (x * 128 / w, y * 128 / h), as composite.frag computes it.
+                const Panel p = panel_rect(panel, width_, height_);
+                const std::vector<std::uint8_t> sub = demo::read_rgba8(p.x, p.y, p.w, p.h);
+                const Diff d = compare(sub, p.w, p.h, [&](int x, int y) { return composite_model(panel, x * kSize / p.w, y * kSize / p.h); }, 1.0);
+                check.expect(d.bad == 0,
+                             std::format("window panel {} ({}) shows the attachment: all {}x{} pixels match the CPU model (+-1)", panel, names[panel], p.w, p.h),
                              describe(d));
             }
         }
@@ -864,6 +878,7 @@ namespace
         mgl::ProgramId mrt_{}, single_{}, composite_{};
         std::array<mgl::TextureId, kAttachments> tex_{};
         mgl::RenderbufferId depth_stencil_{};
+        int width_ = 0, height_ = 0;  // window size: the 2 x 2 panels partition it
         mgl::FramebufferId fbo_{};
         InitialState initial_{};
     };

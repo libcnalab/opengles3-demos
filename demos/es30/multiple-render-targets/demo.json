@@ -91,8 +91,8 @@
     "negative"
   ],
   "visual_review": {
-    "date": "2026-11-11",
-    "by": "claude-sonnet (subagent)",
-    "notes": "256x256 radeonsi es-max capture viewed (llvmpipe and zink captures differ from it by at most 1/255 per channel). Four 128x128 panels: top-left a red/green gradient on a 16x16 checkerboard with darker alternate squares (albedo RGBA8, blue constant); top-right the inverted gradient (data RGBA8, blue/magenta at the top right, green/yellow at the bottom); bottom-left a red-to-yellow/green gradient with fine horizontal stripes whose blue alternates every row (ids RGBA32UI); bottom-right dark blue at the left edge brightening to yellow-green at the top right (signed RG32I). All four panels fill their quarters with no seams or stray pixels."
+    "date": "2026-11-12",
+    "by": "claude-opus-5.5 (subagent)",
+    "notes": "Window-filling layout reviewed on llvmpipe captures at 640x400 and 800x800 and the 256x256 radeonsi es-max capture. Each attachment is scaled onto one quarter of the window by integer texel mapping (blocky at 800x800, 6.25 pixels per texel): top-left albedo red/green gradient with a dark 16-texel checkerboard, top-right the inverted data gradient (magenta/blue to yellow/green), bottom-left the ids panel with x as red, y as green and fine horizontal blue stripes from the counter's low byte, bottom-right the signed panel, dark navy to yellow. The four quarters meet exactly at the window centre with no gaps."
   }
 }

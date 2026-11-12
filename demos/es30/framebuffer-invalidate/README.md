@@ -27,7 +27,8 @@ by rendering into it.
 
 ## What the image shows
 
-The 256 x 256 window is a 4 x 4 grid of 64 x 64 cells, top row first. Every cell is a 1:1 `glBlitFramebuffer` of one image, and every
+The window is a 4 x 4 grid of cells, top row first, that fills it at any size: the cell edges sit at `i * width / 4` and
+`j * height / 4`. Every cell is a `NEAREST` `glBlitFramebuffer` that stretches one 64 x 64 image onto the cell, and every
 image has its own base color, dark at the left and brighter to the right, with horizontal stripes:
 
 ```
@@ -38,7 +39,12 @@ image has its own base color, dark at the left and brighter to the right, with h
 ```
 
 The last two cells are the "gradient with checkerboard" charts of `mrt.frag` (the same fragment shader writes three
-attachments). If a face, layer or slice had been attached wrongly, two cells would show the same base color. The default
+attachments). The images themselves are always 64 x 64; only the blit that shows them scales. The window check compares
+every pixel of every cell with the source pixel that a stretching `NEAREST` blit reads for it: the destination pixel
+centre `d + 0.5` maps to `(d + 0.5) * 64 / n` in a cell `n` pixels long, and the source pixel whose square contains that
+point is the expected one. Where the point lies within 0.05 pixel of a source pixel edge (this happens exactly at some
+cell sizes, e.g. 160), the implementation's rounding decides and either neighbour is accepted. The smallest window is
+64 x 64; below that the demo reports SKIP. If a face, layer or slice had been attached wrongly, two cells would show the same base color. The default
 framebuffer's depth and stencil are invalidated at the end of the frame (`glInvalidateFramebuffer(FRAMEBUFFER, {DEPTH,
 STENCIL})`); the picture is the color buffer, which that call must not touch.
 

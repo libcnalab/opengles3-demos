@@ -3,8 +3,8 @@
 // glBlitFramebuffer, separate READ / DRAW framebuffer bindings, multisample renderbuffers and the
 // internal-format sample-count query (OpenGL ES 3.0 sections 4.3.3, 4.4.1, 4.4.2, 6.1.15).
 //
-// The 256 x 256 window is four 128 x 128 panels, each one a blit into the default framebuffer:
-//   top-left     the 64 x 64 chart stretched 2x with NEAREST   | top-right the same chart with LINEAR
+// The window is four quarters (any window size), each one a blit that stretches an image onto it:
+//   top-left     the 64 x 64 chart stretched with NEAREST      | top-right the same chart with LINEAR
 //   bottom-left  a depth+stencil scene copied by a blit and then *shown* by depth- and stencil-tested
 //                draws (red where the copied depth failed the test, white where it passed, black where
 //                the copied stencil is 3)                      | bottom-right a triangle rendered into a
@@ -51,7 +51,7 @@ namespace
 {
     constexpr int kSrc = 64;      // edge of the chart (and of the depth/stencil scene)
     constexpr int kDst = 128;     // edge of the destination targets and of the multisample target
-    constexpr int kWindow = 256;  // 2 x 2 panels of kDst
+    constexpr int kMinWindow = 64;  // the window is 2 x 2 quarters of any size; this is the smallest
     constexpr int kSmall = 32;    // edge of the integer targets
 
     constexpr mgl::ClearBufferBit kColorBit = mgl::ClearBufferBit::Color;
@@ -227,6 +227,59 @@ namespace
                 out.at(x, y) = filter == kNearest ? sample_nearest(src, *p) : sample_linear(src, *p);
             }
         return out;
+    }
+
+    /// The source pixel index (or indices) a NEAREST blit may read along one axis for source coordinate `c`: the
+    /// pixel whose square contains it, plus the neighbour when `c` lies within 0.05 pixel of a pixel edge. A stretch by a
+    /// non-integer factor maps some destination centres exactly onto source pixel edges (e.g. 64 -> 160 pixels), where
+    /// the implementation's rounding decides; elsewhere the choice is unique.
+    std::vector<int> nearest_candidates(double c, int size)
+    {
+        const int i = floor_index(c);
+        const double f = c - i;
+        std::vector<int> out{std::clamp(i, 0, size - 1)};
+        if (f < 0.05 && i - 1 >= 0) out.push_back(i - 1);
+        if (f > 0.95 && i + 1 < size) out.push_back(i + 1);
+        return out;
+    }
+
+    /// Compares `got` (a whole destination rectangle) with a NEAREST blit that stretches all of `src` onto it: every
+    /// pixel must equal (within `tolerance`) one of the source pixels nearest_candidates() allows for its centre.
+    Diff compare_nearest_stretch(const Image& got, const Image& src, int tolerance)
+    {
+        Diff d;
+        const Rect s{0, 0, src.w, src.h}, dst{0, 0, got.w, got.h};
+        for (int y = 0; y < got.h; ++y)
+            for (int x = 0; x < got.w; ++x)
+            {
+                const auto p = map_pixel(s, dst, x, y, src.w, src.h);
+                if (!p)
+                {
+                    if (d.bad++ == 0) d.first = std::format("pixel ({},{}) has no source point", x, y);
+                    continue;
+                }
+                int best = 1 << 30;
+                for (const int j : nearest_candidates(p->v, src.h))
+                    for (const int i : nearest_candidates(p->u, src.w))
+                    {
+                        int err = 0;
+                        for (std::size_t c = 0; c < 4; ++c) err = std::max(err, std::abs(int{got.at(x, y)[c]} - int{src.at(i, j)[c]}));
+                        best = std::min(best, err);
+                    }
+                d.max_error = std::max(d.max_error, best);
+                if (best > tolerance && d.bad++ == 0)
+                    d.first = std::format("first at ({},{}): got {} expected {}", x, y, demo::format_rgba(got.at(x, y)),
+                                          demo::format_rgba(sample_nearest(src, *p)));
+            }
+        return d;
+    }
+
+    bool expect_nearest_stretch(demo::Check& check, std::string_view what, const Image& got, const Image& src, int tolerance)
+    {
+        const Diff d = compare_nearest_stretch(got, src, tolerance);
+        return check.expect(d.bad == 0, what,
+                            d.bad == 0 ? std::format("{}x{} pixels from a {}x{} source, max error {} (tolerance {})", got.w, got.h, src.w, src.h, d.max_error, tolerance)
+                                       : std::format("{} of {} pixels differ, {} (tolerance {})", d.bad, got.w * got.h, d.first, tolerance));
     }
 
     int count_differences(const Image& a, const Image& b)
@@ -530,8 +583,10 @@ namespace
     public:
         void init(demo::Env& env) override
         {
-            if (env.width < kWindow || env.height < kWindow)
-                throw demo::Skip(std::format("this demo draws {0}x{0} pixels and needs a default framebuffer at least that large", kWindow));
+            if (env.width < kMinWindow || env.height < kMinWindow)
+                throw demo::Skip(std::format("this demo needs a default framebuffer of at least {0}x{0} pixels", kMinWindow));
+            width_ = env.width;
+            height_ = env.height;
 
             quad_ = demo::build_program(env, "shaders/quad.vert", "shaders/flat.frag");
             chart_ = demo::build_program(env, "shaders/quad.vert", "shaders/chart.frag");
@@ -607,8 +662,10 @@ namespace
             mgl::glBindRenderbuffer(mgl::RenderbufferTarget::Renderbuffer, mgl::RenderbufferId{0});
         }
 
-        void render(demo::Env& /*env*/, int /*frame*/) override
+        void render(demo::Env& env, int /*frame*/) override
         {
+            width_ = env.width;
+            height_ = env.height;
             render_chart();
             render_ds_scene_blit();
             render_multisample_triangle();
@@ -886,21 +943,32 @@ namespace
             draw_triangle(kDst);
         }
 
+        /// The four quarters of the window (they partition it at width / 2 and height / 2):
+        /// 0 top-left, 1 top-right, 2 bottom-left, 3 bottom-right.
+        [[nodiscard]] Rect panel(int i) const
+        {
+            const int xm = width_ / 2, ym = height_ / 2;
+            const bool right = i % 2 == 1, top = i < 2;
+            return {right ? xm : 0, top ? ym : 0, right ? width_ : xm, top ? height_ : ym};
+        }
+
+        /// Each image is stretched onto its quarter of the window: the chart (64 x 64) with NEAREST and with LINEAR,
+        /// the depth/stencil scene's color target and the resolve target (128 x 128) with NEAREST.
         void compose_window() const
         {
             reset_fragment_state();
             bind_both(kDefaultFbo);
-            mgl::glViewport(0, 0, kWindow, kWindow);
+            mgl::glViewport(0, 0, width_, height_);
             mgl::glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             mgl::glClear(kColorBit);
             bind_read(src_);
             mgl::glReadBuffer(mgl::to_read_buffer(mgl::ColorAttachment::Color0));
-            blit({0, 0, kSrc, kSrc}, {0, kDst, kDst, kWindow}, kColorBit, kNearest);
-            blit({0, 0, kSrc, kSrc}, {kDst, kDst, kWindow, kWindow}, kColorBit, kLinear);
+            blit({0, 0, kSrc, kSrc}, panel(0), kColorBit, kNearest);
+            blit({0, 0, kSrc, kSrc}, panel(1), kColorBit, kLinear);
             bind_read(ds_dst_);
-            blit({0, 0, kDst, kDst}, {0, 0, kDst, kDst}, kColorBit, kNearest);
+            blit({0, 0, kDst, kDst}, panel(2), kColorBit, kNearest);
             bind_read(res_);
-            blit({0, 0, kDst, kDst}, {kDst, 0, kWindow, kDst}, kColorBit, kNearest);
+            blit({0, 0, kDst, kDst}, panel(3), kColorBit, kNearest);
         }
 
         // ==========================================================================================
@@ -998,22 +1066,35 @@ namespace
         // Checks
         // ==========================================================================================
 
-        // The window: four blits into the default framebuffer.
+        // The window: four blits into the default framebuffer, each stretching an image onto a quarter of the window.
         void check_window(demo::Check& check) const
         {
             bind_read(kDefaultFbo);
-            const Image win = read_image(kWindow, kWindow);
-            const Image blank(kDst, kDst);
+            const Image win = read_image(width_, height_);
+            auto quarter = [&](int i) {
+                const Rect r = panel(i);
+                return crop(win, r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0);
+            };
+            const Image top_left = quarter(0), top_right = quarter(1);
 
-            const Image nearest = model_color_blit(blank, chart_img_[0], {0, 0, kSrc, kSrc}, {0, 0, kDst, kDst}, kNearest);
-            const Image linear = model_color_blit(blank, chart_img_[0], {0, 0, kSrc, kSrc}, {0, 0, kDst, kDst}, kLinear);
-            expect_image(check, "window top-left: the chart stretched 2x with NEAREST equals the CPU model exactly", crop(win, 0, kDst, kDst, kDst), nearest, 0);
+            const Image blank_tr(top_right.w, top_right.h);
+            const Image linear = model_color_blit(blank_tr, chart_img_[0], {0, 0, kSrc, kSrc}, {0, 0, top_right.w, top_right.h}, kLinear);
+            const Image nearest_tr = model_color_blit(blank_tr, chart_img_[0], {0, 0, kSrc, kSrc}, {0, 0, top_right.w, top_right.h}, kNearest);
+            expect_nearest_stretch(check,
+                                   std::format("window top-left: the 64x64 chart stretched onto {}x{} pixels with NEAREST equals the CPU model exactly "
+                                               "(either neighbour where a pixel centre maps within 0.05 of a source pixel edge)",
+                                               top_left.w, top_left.h),
+                                   top_left, chart_img_[0], 0);
             // LINEAR: the spec gives no precision for the filter weights; an 8-bit weight is off by at most 1/256
             // of a channel difference (at most 153 for the checkerboard), plus rounding of the 8-bit result: 2 steps.
-            expect_image(check, "window top-right: the chart stretched 2x with LINEAR matches bilinear interpolation (tolerance 2)",
-                         crop(win, kDst, kDst, kDst, kDst), linear, 2);
-            check.expect(count_differences(nearest, linear) > 2000, "negative control: the NEAREST and LINEAR models differ in more than 2000 of 16384 pixels",
-                         std::format("{} pixels differ", count_differences(nearest, linear)));
+            expect_image(check, std::format("window top-right: the chart stretched onto {}x{} pixels with LINEAR matches bilinear interpolation (tolerance 2)",
+                                            top_right.w, top_right.h),
+                         top_right, linear, 2);
+            // At 2x (a 256 x 256 window) the two models differ in about 2/3 of the pixels; 1/8 is required at every size.
+            const int differ = count_differences(nearest_tr, linear);
+            check.expect(differ > top_right.w * top_right.h / 8,
+                         "negative control: the NEAREST and LINEAR models of the top-right quarter differ in more than 1/8 of its pixels",
+                         std::format("{} of {} pixels differ", differ, top_right.w * top_right.h));
 
             // bottom-left: the color copied by the blit, painted over by the four overlay draws where their test passes
             Image ds_panel(kDst, kDst);
@@ -1031,11 +1112,14 @@ namespace
                     ds_panel.at(x, y) = c;
                 }
             // flat colors go through float -> 8-bit conversion once more (tolerance 1)
-            expect_image(check, "window bottom-left: depth+stencil blit shown through depth- and stencil-tested draws equals the CPU model (tolerance 1)",
-                         crop(win, 0, 0, kDst, kDst), ds_panel, 1);
+            // The 128 x 128 target is stretched onto the quarter with NEAREST.
+            expect_nearest_stretch(check,
+                                   "window bottom-left: depth+stencil blit shown through depth- and stencil-tested draws equals the CPU model (tolerance 1), "
+                                   "stretched onto the quarter with NEAREST",
+                                   quarter(2), ds_panel, 1);
 
-            expect_image(check, "window bottom-right: the resolved multisample image blitted 1:1 equals the resolve target exactly", crop(win, kDst, 0, kDst, kDst),
-                         res_img_, 0);
+            expect_nearest_stretch(check, "window bottom-right: the resolved multisample image stretched onto the quarter with NEAREST equals the resolve target exactly",
+                                   quarter(3), res_img_, 0);
         }
 
         // The chart itself: the shader's formulas, 8-bit conversion tolerance 1 (equation 2.3 allows either of the two closest integers).
@@ -2012,6 +2096,7 @@ namespace
         // ------------------------------------------------------------------------------------------
         mgl::ProgramId quad_{}, chart_{}, tri_{};
         mgl::UniformLocation quad_rect_{}, quad_z_{}, quad_color_{}, chart_rect_{}, chart_z_{}, tri_tri_{}, tri_size_{}, tri_color_{};
+        int width_ = 0, height_ = 0;  // window size: the 2 x 2 quarters partition it
         std::vector<GLint> rgba8_counts_;
         int ds_samples_ = 0;
 

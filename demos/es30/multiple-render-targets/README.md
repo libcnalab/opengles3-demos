@@ -25,7 +25,8 @@ color-renderable (the 3-component ones are not), so integer render targets are c
 
 ## What the image shows
 
-The 256 x 256 window shows the four attachments of the 128 x 128 offscreen target, one per quarter:
+The window shows the four attachments of the 128 x 128 offscreen target, one per quarter, each scaled to
+fill its quarter at any window size (the quarters split the window at `width / 2` and `height / 2`):
 
 ```
  top-left:     albedo (RGBA8)       top-right:    data (RGBA8)
@@ -38,6 +39,13 @@ with simple formulas (see `shaders/composite.frag`), which the CPU repeats: the 
 x as red and y as green with a striped blue channel from the low byte of the counter, the signed
 panel shows `x*y` as red, `x` as green (from the low byte of `INT_MIN + x`) and a constant blue
 for "negative".
+
+The scaling uses integer texel mapping only: pixel `(x, y)` of a quarter that is `w x h` pixels shows texel
+`(x * 128 / w, y * 128 / h)`, computed with integer division in the shader from `ivec2(gl_FragCoord.xy)`.
+There is no filtering and no float rounding, so the CPU picks exactly the same texel for every pixel and the
+comparison stays exact at every size. The offscreen target stays 128 x 128 at every window size, because the
+integer models are functions of the texel coordinate. The smallest supported window is 32 x 32; below that the
+demo reports SKIP.
 
 ## Central calls
 
@@ -91,7 +99,7 @@ and `glReadBuffer`, which also accept the non-color members (`None`, `Back`, `De
   implementation may be off by one step). **Negative controls:** the albedo image compared with the
   model of the data image differs at every pixel, and an `RGBA32UI` model that is off by one in `w`
   differs at every pixel, so the comparison really is exact.
-- **The window** shows the four panels; each panel is compared pixel by pixel with the formulas of
+- **The window** shows the four panels; every pixel of each panel is compared with the formulas of
   `composite.frag` (+-1/255: the value passes through an 8-bit attachment once and through the 8-bit
   window once).
 - **NONE gaps.** All attachments are set to a sentinel with `glClearBuffer*`, then `{C0, NONE, C2, NONE}`

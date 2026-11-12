@@ -22,18 +22,29 @@ renderbuffer into an image you can sample, read back or show. This demo takes th
 
 ## What the image shows
 
-The 256 x 256 window is four 128 x 128 panels, each one a `glBlitFramebuffer` into the default framebuffer:
+The window is four quarters (split at `width / 2` and `height / 2`, so they fill it at any size), each one a
+`glBlitFramebuffer` that stretches an offscreen image onto the quarter of the default framebuffer:
 
 ```
- top-left:     64x64 chart, 2x NEAREST        top-right:    the same chart, 2x LINEAR
- bottom-left:  copied depth/stencil, shown     bottom-right: a triangle rendered with 4-8 samples
-               through tested draws                         and resolved by a blit
+ top-left:     64x64 chart, NEAREST            top-right:    the same chart, LINEAR
+ bottom-left:  copied depth/stencil (128x128),  bottom-right: a triangle rendered with 4-8 samples
+               shown through tested draws,                    and resolved by a blit (128x128),
+               NEAREST                                        NEAREST
 ```
+
+Only these four display blits depend on the window size; every other blit of the demo works between offscreen targets
+of fixed size (64, 128, 32 pixels), so the pixel-exact experiments are the same at every window size. In a 256 x 256
+window the quarters are 128 x 128, which makes the top quarters exact 2x stretches and the bottom ones 1:1 copies. At
+other sizes the stretch factor is not an integer: a destination pixel centre `d + 0.5` maps to `(d + 0.5) * src / n` in
+the source, and where that lands within 0.05 pixel of a source pixel edge (e.g. 64 -> 160 pixels gives exact edges) the
+implementation's rounding decides, so the NEAREST checks accept either neighbouring source pixel there and require an
+exact match everywhere else. The LINEAR quarter is compared with the bilinear model at the quarter's own scale. The
+smallest window is 64 x 64; below that the demo reports SKIP.
 
 The chart is a 64 x 64 image in which red grows by 4 per pixel in x, green by 4 per pixel in y (so every pixel is
 unique) and blue is an 8 x 8 checkerboard. The NEAREST panel is blocky; the LINEAR panel is smooth between the
 texel centers but keeps the checkerboard edges soft. In the bottom-left panel, a depth+stencil scene of four regions
-was copied 2x by one blit and then painted over by four draws that each pass only where a test passes
+was copied 2x into a 128 x 128 target by one blit and then painted over by four draws that each pass only where a test passes
 on the *copied* buffers: white where the copied depth is greater than 0.5, cyan where the copied stencil is 2,
 gray where the depth is greater than 0.8, black where the stencil is 3. What remains of the original red is the
 region whose copied depth (0.25) failed every depth test, so the picture is a direct view of the copied depth and

@@ -21,8 +21,14 @@ every valid pair with `glTexSubImage2D`, and compared with values decoded on the
 
 ## What the image shows
 
-A contact sheet of 8 x 8 panels of 32 x 32 pixels (panel 0 at the lower left, numbers grow to the right and then upwards; the last
-three rows of the sheet are unused background). Panels 0 to 22 are 4 x 4 textures with one texel per 8 x 8 pixels, so each texel can be seen.
+A contact sheet of 40 panels that fills the window (panel 0 at the lower left, numbers grow to the right and then upwards).
+The panels form a `cols x rows` grid with `cols * rows = 40`, so no cell is empty; of the factorizations of 40 the demo picks
+the one whose smallest panel side is largest (8 x 5 at 640 x 400, 10 x 4 at 1000 x 200, 4 x 10 at 333 x 777; on a tie the
+grid with fewer columns wins). The panel edges sit at `c * width / cols` and `r * height / rows`, so the panels partition the window exactly and
+may be rectangular. Panels 0 to 22 are 4 x 4 textures stretched over the whole panel, so each texel can be seen. The probes
+are every pixel of a panel, with its own `(s, t) = ((x + 0.5) / w, (y + 0.5) / h)`; a panel needs at least 16 x 16 pixels
+to keep 100 probes away from the texel boundaries, so windows that cannot give 40 such panels report SKIP (the smallest square
+window is 128 x 128).
 
 | Panels | What is shown |
 |---|---|
@@ -85,7 +91,7 @@ which need not hold half-float values, and `sampler3D` / `sampler2DArray` have n
 181 checks in `validate()` (the runtime adds its own). Every check compares observable results: pixels, texels read back through a framebuffer, state queries or `glGetError`.
 
 - **Formats (69 checks).** For each of the 23 (format, type) cases: `glTexStorage2D` succeeds and `TEXTURE_IMMUTABLE_FORMAT` / `TEXTURE_IMMUTABLE_LEVELS`
-  read `TRUE` / 1; the pair is accepted by `glTexSubImage2D`; and every pixel of the panel (576 probes, texel boundaries skipped) matches a **CPU decode written from the spec**
+  read `TRUE` / 1; the pair is accepted by `glTexSubImage2D`; and every pixel of the panel (576 probes in a 32 x 32 panel, more in larger ones, texel boundaries skipped; at least 100 required) matches a **CPU decode written from the spec**
   (unorm, snorm `max(c/127, -1)`, IEEE half float, 11-bit and 10-bit unsigned float, the RGB9_E5 algorithm of §3.8.3.2, which is run for the `HALF_FLOAT` / `FLOAT` uploads and the
   decode formula for the packed upload). Tolerances (8-bit units, on top of 0.5 for rounding the result): **0** for every exact-bit path
   that needs no conversion (`R8`, `RG8`, `RGB8`, `RGBA8`, the level colors, `textureSize`); **1** for the exact packed and float cases (unorm expansion, half-float and shared-exponent

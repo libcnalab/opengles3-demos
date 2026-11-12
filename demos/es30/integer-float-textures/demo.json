@@ -80,8 +80,8 @@
     "negative"
   ],
   "visual_review": {
-    "date": "2026-11-11",
-    "by": "claude-sonnet (subagent)",
-    "notes": "256x256 radeonsi es-max capture viewed at 3x (llvmpipe and zink captures differ by at most 1/255 per channel). 4x4 contact sheet of 8x8-texel cells, one texel per 8x8-pixel block. Row 0: a gray R8UI ramp, a gray R16I ramp, an RGBA8I cell with a blue checker (sign bit) over red/green ramps, an RGBA16UI color gradient. Row 1: the 2^24 cell with a clean gray ramp in the left half of every block and green/red vertical stripes in the right half (even texels green, odd red: float cannot hold odd integers above 2^24), a gray R32I ramp over the full int range, RGBA32UI and RGB10_A2UI color gradients. Row 2: R32F gray ramp with one black (-FLT_MAX) and one white (FLT_MAX) texel at the top, RGBA32F and RGBA16F color gradients, R16F gray ramp with a black and a white texel at the top right. Row 3: R11F_G11F_B10F, RGB9_E5 from packed words (a black texel for the tiny 2^-24 value and a white one for the maximum, top right) and RGB9_E5 from FLOAT data as smooth gradients, and the R32F gradient again through a LINEAR sampler (identical to the R32F cell, as expected when GL_OES_texture_float_linear is present)."
+    "date": "2026-11-12",
+    "by": "claude-opus-5.5 (subagent)",
+    "notes": "Window-filling layout reviewed on llvmpipe captures at 640x400 and 800x800 (and the R32I cell cropped at 2x) and the 256x256 radeonsi es-max capture. The 16 cells partition the window; every 8x8 texture shows as 8x8 blocks of equal size within a cell. The R32I 2^24 + k cell shows a gray ramp (black at the bottom left to near white at the top right) in the left half of every block and green/red stripes (even/odd k) in the right halves. Gray ramps, signed ramps, RGBA checkers and float gradients with their black/white extreme-value texels as before; the last cell is the R32F gradient (float-linear present)."
   }
 }

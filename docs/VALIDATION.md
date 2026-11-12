@@ -56,8 +56,19 @@ Version-rejection assertions (e.g. "a 3.20 shader fails on an ES 3.1 context") a
 only on **native** lower-version contexts (softpipe = ES 3.1; ANGLE `native` = ES 3.1 and `native-min` = ES 3.0,
 see below). Under the override they are printed as notes.
 
-All runs use a headless EGL pbuffer (`EGL_PLATFORM=surfaceless` for Mesa), a 256×256 surface (333×777 for the
-size runs), fixed `--seed 1`, and deterministic animation time (`frame / 60 s`).
+All runs use a headless EGL pbuffer (`EGL_PLATFORM=surfaceless` for Mesa) unless listed under "Window-surface runs"
+below, a 256×256 surface (333×777 for the size runs), fixed `--seed 1`, and deterministic animation time
+(`frame / 60 s`).
+
+**Window-surface runs.** An executable whose `demo.json` lists Mesa software drivers in `"window_drivers"` runs on
+those drivers with `--window` in an SDL3 window on a private virtual X server (`xvfb-run -a`, serialized by the CTest
+resource lock `xvfb-run`, label `window`) instead of a pbuffer. The test names, checks and classification are
+unchanged; the result JSON records the platform (`SDL 3.4.0 window (video driver=x11)`). Only
+es30-multisample-default-framebuffer uses it (llvmpipe and zink): its subject is the multisampled default
+framebuffer, and Mesa's surfaceless EGL gives those drivers a 0x0 multisampled pbuffer (KNOWN_LIMITATIONS.md,
+"environment"). A window is a default framebuffer too, so the demo still tests what it claims; it is not replaced by
+a framebuffer object. zink window runs pin the Vulkan device to lavapipe (`VK_ICD_FILENAMES`). When SDL3 or
+`xvfb-run` is missing, or `-DOGLES3_TEST_WINDOWED=OFF`, the runs stay headless and report BLOCKED_ENVIRONMENT.
 
 **Counting.** CTest reports SKIP_UNSUPPORTED and BLOCKED_* as "Skipped" and counts them as not failed, so its "100%
 tests passed" means *no FAIL*, not *all PASS*. Reports of this project give the outcomes separately (e.g. the

@@ -6,6 +6,10 @@
     "300 es"
   ],
   "category": "es30",
+  "window_drivers": [
+    "llvmpipe",
+    "zink"
+  ],
   "order": 285,
   "summary": "A 4-sample default framebuffer (EGL config): SAMPLE_BUFFERS / SAMPLES follow the draw framebuffer; an anti-aliased rotating cube with equal-channel-sum face colors. Asserted without assuming how samples are combined: per-sample stencil counts and occlusion queries on the window (no sample covered twice, no crack inside the silhouette, nothing outside it, with positive controls), the fully specified single-sample control (exact faces, crack-free seams, no blends), glReadPixels allowed on the default framebuffer, identical-bounds sub-rectangle and doubly mirrored resolves equal to the whole resolve, and the INVALID_OPERATION cases of ES 3.0 4.3.2 and 4.3.3. The resolved colors of the window and of the blit (bounds, seam sums, blends, coverage area) are implementation-dependent and only printed.",
   "spec": [
@@ -100,8 +104,8 @@
     "negative"
   ],
   "visual_review": {
-    "date": "2026-11-11",
-    "by": "claude-opus-5.5 (subagent)",
-    "notes": "256x256 radeonsi es-max capture viewed: a cube on a dark navy background showing three flat faces (violet top, green left, cyan right), centred, about half the window wide. A 6x enlargement of the top-left corner shows one-pixel blended steps along the silhouette and along the violet/green seam, with no stair-stepping, cracks or stray pixels. The 333x777 capture shows the same cube centred in the tall window, at the same size relative to the narrow side and not stretched. llvmpipe and zink produce no capture (BLOCKED_ENVIRONMENT, 0x0 multisampled pbuffer)."
+    "date": "2026-11-12",
+    "by": "claude-opus-5.5",
+    "notes": "256x256 radeonsi es-max capture viewed: a cube on a dark navy background showing three flat faces (violet top, green left, cyan right), centred, about half the window wide. A 6x enlargement of the top-left corner shows one-pixel blended steps along the silhouette and along the violet/green seam, with no stair-stepping, cracks or stray pixels. The 333x777 capture shows the same cube centred in the tall window, at the same size relative to the narrow side and not stretched. (review of 2026-11-11 by a claude-opus-5.5 subagent.) 2026-11-12, window runs under xvfb-run (256x256, 8x enlargement of the top-left corner): zink shows the same cube and colours with blended silhouette and seam pixels. llvmpipe shows the same cube and colours with unblended, stair-stepped edges: its glReadPixels resolve of the window does not average samples (the demo prints 90 of 90 centred silhouette pixels unblended, while its blit resolve blends all 90); the combination method is unspecified (ES 3.0 4.1.10), so this is an observation, not a defect. The llvmpipe 333x777 window capture shows the cube centred and not stretched."
   }
 }

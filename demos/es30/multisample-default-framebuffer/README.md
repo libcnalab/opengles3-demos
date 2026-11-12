@@ -209,7 +209,8 @@ the two resolves identical.
 | driver | outcome |
 |---|---|
 | gpu (radeonsi) | PASS at 256x256, 800x800, 640x480, 333x777 and 97x501, in ES 3.2 and ES 3.0 (override) contexts, across many rotation poses (`--frames N`). |
-| llvmpipe, zink | BLOCKED_ENVIRONMENT. Mesa creates a 0x0 drawable for a multisampled surfaceless pbuffer, so the runtime refuses to run the demo. See `docs/KNOWN_LIMITATIONS.md`, row "environment (runtime check)". |
+| llvmpipe, zink (lavapipe) | PASS in an SDL3 window on a virtual X server (`xvfb-run`): 256x256 and 333x777, ES 3.2 and ES 3.0 (override), `SAMPLE_BUFFERS` 1, `SAMPLES` 4. llvmpipe's `glReadPixels` resolve of the window does not average (no centred silhouette pixel is blended, so the capture shows stair steps) while its blit resolve does; both are allowed, since the method of combination is not specified (§4.1.10). The matrix runs this demo on these two drivers in a window (`"window_drivers"` in `demo.json`), because a headless run cannot work there: Mesa 25.0.7 creates a 0x0 drawable for a multisampled *surfaceless pbuffer*, and the runtime reports BLOCKED_ENVIRONMENT. See `docs/KNOWN_LIMITATIONS.md`, row "environment (runtime check)". |
+| ANGLE on lavapipe | PASS headless (pbuffer) in `native` (ES 3.1) and `native-min` (a genuine ES 3.0 context). |
 
 Surfaces smaller than 96 x 96 report `SKIP_UNSUPPORTED`: the edge statistics need enough silhouette pixels.
 
@@ -246,5 +247,6 @@ Surfaces smaller than 96 x 96 report `SKIP_UNSUPPORTED`: the edge statistics nee
   combined are all up to the implementation, for edge pixels and interior pixels alike. Test multisample rasterization
   per sample (stencil counts, occlusion queries, or `texelFetch` on a multisample texture in ES 3.1), and treat resolved
   colors as observations.
-- **Software Mesa drivers** (llvmpipe, zink on lavapipe) cannot create a multisampled surfaceless pbuffer of the
-  requested size. Use multisample renderbuffers there.
+- **Software Mesa drivers** (llvmpipe, zink on lavapipe) cannot create a multisampled *surfaceless pbuffer* of the
+  requested size (Mesa 25.0.7). Their multisampled X11 window surfaces work: run the demo in a window, for example
+  `xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe ./build/debug/bin/es30-multisample-default-framebuffer --window --validate`.

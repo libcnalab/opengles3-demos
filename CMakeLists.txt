@@ -120,6 +120,21 @@ if(OGLES3_WITH_SDL3)
 endif()
 message(STATUS "opengles3-demos: SDL3 windowed mode: ${OGLES3_HAVE_SDL3}")
 
+# Window-surface runs: an executable whose demo.json lists Mesa software drivers in "window_drivers" runs on those
+# drivers in an SDL3 window on a virtual X server (xvfb-run) instead of a surfaceless pbuffer. Used where the
+# surfaceless pbuffer cannot provide the default framebuffer under test (es30-multisample-default-framebuffer:
+# Mesa's surfaceless EGL gives llvmpipe and zink a 0x0 multisampled pbuffer). Without SDL3 or xvfb-run those runs
+# stay headless.
+option(OGLES3_TEST_WINDOWED "Run window_drivers runs in an SDL3 window under xvfb-run" ON)
+set(OGLES3_XVFB_RUN "")
+if(OGLES3_TEST_WINDOWED AND OGLES3_HAVE_SDL3)
+    find_program(OGLES3_XVFB_RUN_PROGRAM xvfb-run)
+    if(OGLES3_XVFB_RUN_PROGRAM)
+        set(OGLES3_XVFB_RUN "${OGLES3_XVFB_RUN_PROGRAM}")
+    endif()
+endif()
+message(STATUS "opengles3-demos: window-surface test runs (xvfb-run): ${OGLES3_XVFB_RUN}")
+
 find_package(Python3 COMPONENTS Interpreter)
 
 include(cmake/OglesDemo.cmake)

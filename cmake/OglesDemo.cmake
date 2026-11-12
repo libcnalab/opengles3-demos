@@ -21,9 +21,30 @@ function(ogles_compile_options target)
 endfunction()
 
 # Registers one CTest entry per (driver, version-mode) combination.
-#   ogles_register_gl_tests(BASE name TARGET exe MIN_ES 3.0 [LABELS ...] [ARGS ...])
+#   ogles_register_gl_tests(BASE name TARGET exe MIN_ES 3.0 [LABELS ...] [ARGS ...] [EXTRA_DRIVERS ...]
+#                           [WINDOW_DRIVERS ...])
+# WINDOW_DRIVERS (Mesa software drivers only): run on these drivers in an SDL3 window under xvfb-run instead of a
+# surfaceless pbuffer, when OGLES3_XVFB_RUN is set (see CMakeLists.txt). The test names stay the same; the result
+# JSON records the platform ("SDL ... window (video driver=x11)").
 function(ogles_register_gl_tests)
-    cmake_parse_arguments(T "" "BASE;TARGET;MIN_ES" "LABELS;ARGS;EXTRA_DRIVERS" ${ARGN})
+    cmake_parse_arguments(T "" "BASE;TARGET;MIN_ES" "LABELS;ARGS;EXTRA_DRIVERS;WINDOW_DRIVERS" ${ARGN})
+    foreach(wd IN LISTS T_WINDOW_DRIVERS)
+        if(NOT wd MATCHES "^(llvmpipe|zink|softpipe)$")
+            message(FATAL_ERROR "${T_BASE}: window_drivers may list only Mesa software drivers, not '${wd}'")
+        endif()
+    endforeach()
+    # Command prefix, surface flag and environment of a window-surface run of <driver> (empty prefix: headless).
+    macro(ogles_surface driver)
+        set(launch "")
+        set(surface "--headless")
+        set(surface_env "EGL_PLATFORM=surfaceless")
+        if(OGLES3_XVFB_RUN AND "${driver}" IN_LIST T_WINDOW_DRIVERS)
+            # A private virtual X server per run; the lock keeps xvfb-run's display-number search race-free.
+            set(launch "${OGLES3_XVFB_RUN}" -a -s "-screen 0 1280x1024x24")
+            set(surface "--window")
+            set(surface_env "")
+        endif()
+    endmacro()
     if(NOT OGLES3_BUILD_TESTS)
         return()
     endif()
@@ -57,16 +78,21 @@ function(ogles_register_gl_tests)
     if(OGLES3_TEST_SIZE_VARIANT AND "llvmpipe" IN_LIST drivers)
         set(test_name "${T_BASE}:llvmpipe:size-333x777")
         string(REPLACE ":" "_" file_stem "${test_name}")
+        ogles_surface(llvmpipe)
         add_test(NAME "${test_name}"
-            COMMAND $<TARGET_FILE:${T_TARGET}> --headless --validate --width 333 --height 777
+            COMMAND ${launch} $<TARGET_FILE:${T_TARGET}> ${surface} --validate --width 333 --height 777
                     --result-json "${OGLES3_RESULTS_DIR}/${file_stem}.json"
                     --test-id "${test_name}" ${T_ARGS})
-        set(size_env "EGL_PLATFORM=surfaceless" "LIBGL_ALWAYS_SOFTWARE=1" "GALLIUM_DRIVER=llvmpipe")
+        set(size_env ${surface_env} "LIBGL_ALWAYS_SOFTWARE=1" "GALLIUM_DRIVER=llvmpipe")
         if(OGLES3_SANITIZE)
             list(APPEND size_env "ASAN_OPTIONS=detect_leaks=0")
         endif()
         set_tests_properties("${test_name}" PROPERTIES ENVIRONMENT "${size_env}" SKIP_RETURN_CODE 77 TIMEOUT 120
                              LABELS "${T_LABELS};llvmpipe;size")
+        if(launch)
+            set_property(TEST "${test_name}" APPEND PROPERTY LABELS window)
+            set_tests_properties("${test_name}" PROPERTIES RESOURCE_LOCK xvfb-run)
+        endif()
     endif()
     foreach(driver IN LISTS drivers)
         set(driver_modes ${modes})
@@ -81,9 +107,14 @@ function(ogles_register_gl_tests)
         foreach(mode IN LISTS driver_modes)
             set(test_name "${T_BASE}:${driver}:${mode}")
             string(REPLACE ":" "_" file_stem "${test_name}")
-            set(env "EGL_PLATFORM=surfaceless")
+            ogles_surface(${driver})
+            set(env ${surface_env})
             if(driver STREQUAL "llvmpipe" OR driver STREQUAL "softpipe" OR driver STREQUAL "zink")
                 list(APPEND env "LIBGL_ALWAYS_SOFTWARE=1" "GALLIUM_DRIVER=${driver}")
+                if(launch AND driver STREQUAL "zink")
+                    # zink on a window surface: pin the Vulkan device to lavapipe, never the hardware GPU.
+                    list(APPEND env "VK_ICD_FILENAMES=${OGLES3_ANGLE_VULKAN_ICD}" "VK_DRIVER_FILES=${OGLES3_ANGLE_VULKAN_ICD}")
+                endif()
             elseif(driver STREQUAL "angle")
                 # Also preload libGLESv2 (as a native ANGLE application links it); without it eglInitialize fails.
                 # Sanitizer builds: the ASan runtime must come first in the initial library list, before the preload.
@@ -108,7 +139,7 @@ function(ogles_register_gl_tests)
                 list(APPEND env "ASAN_OPTIONS=detect_leaks=0")
             endif()
             add_test(NAME "${test_name}"
-                COMMAND $<TARGET_FILE:${T_TARGET}> --headless --validate
+                COMMAND ${launch} $<TARGET_FILE:${T_TARGET}> ${surface} --validate
                         --result-json "${OGLES3_RESULTS_DIR}/${file_stem}.json"
                         --capture "${OGLES3_RESULTS_DIR}/${file_stem}.png"
                         --test-id "${test_name}"
@@ -122,6 +153,10 @@ function(ogles_register_gl_tests)
                 SKIP_RETURN_CODE 77
                 TIMEOUT 120
                 LABELS "${T_LABELS};${driver};${mode}")
+            if(launch)
+                set_property(TEST "${test_name}" APPEND PROPERTY LABELS window)
+                set_tests_properties("${test_name}" PROPERTIES RESOURCE_LOCK xvfb-run)
+            endif()
         endforeach()
     endforeach()
 endfunction()
@@ -146,6 +181,15 @@ function(ogles_add_demo)
             list(APPEND extra_drivers ${d})
         endforeach()
     endif()
+    set(window_drivers "")
+    string(JSON n_window ERROR_VARIABLE no_window LENGTH "${json}" window_drivers)
+    if(NOT no_window AND n_window GREATER 0)
+        math(EXPR last "${n_window} - 1")
+        foreach(i RANGE ${last})
+            string(JSON d GET "${json}" window_drivers ${i})
+            list(APPEND window_drivers ${d})
+        endforeach()
+    endif()
     if(NOT D_SOURCES)
         set(D_SOURCES main.cpp)
     endif()
@@ -159,5 +203,6 @@ function(ogles_add_demo)
     ogles_compile_options(${name})
 
     ogles_register_gl_tests(BASE ${name} TARGET ${name} MIN_ES ${min_es}
-        LABELS "demo;${category}" ARGS ${D_ARGS} EXTRA_DRIVERS ${extra_drivers})
+        LABELS "demo;${category}" ARGS ${D_ARGS} EXTRA_DRIVERS ${extra_drivers}
+        WINDOW_DRIVERS ${window_drivers})
 endfunction()

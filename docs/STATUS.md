@@ -46,12 +46,12 @@ Other runs:
 | 11 | Missing capabilities reported as unsupported | met: SKIP_UNSUPPORTED / BLOCKED_ENVIRONMENT / BLOCKED_META_GL, never PASS |
 | 12 | Visual demos correct and understandable | met: captures reviewed per demo; contact sheet at 640x400 reviewed; capstone es30-interactive-3d-scene |
 | 13 | Reproducible from a clean checkout | met: VALIDATION.md "Reproducibility" |
-| 14 | meta-gl dependency explicit | met: docs/METAGL_DEPENDENCY.md. The suite needs branch `opengles3-demos/enum-gaps` (pushed); with public `develop`, 17 executables do not build |
+| 14 | meta-gl dependency explicit | met: docs/METAGL_DEPENDENCY.md. The suite needs meta-gl `develop` at `333d777` or later (the merged work branch); with the pre-merge `795bcdc`, 17 executables do not build |
 | 15 | Accurate educational documentation | met for the reviewed set: Codex educational review applied (10 fixes); READMEs carry "Read this first" routes for the dense demos |
 | 16 | Generated reports agree with the repository and evidence | met: generator records the source revision and rejects stale results; CRASHED results cannot vanish |
 | 17 | Unresolved limitations identified | see below |
 | 18 | Architecture remains small and comprehensible | met: no engine; `common/` grew only by CLI/EGL/ANGLE selection, input, traceability and the crash marker |
-| 19 | No unrelated repository modified | met: only opengles3-demos and the authorized meta-gl branch; easy-gl, CNA and cna-engine untouched |
+| 19 | No unrelated repository modified | met: only opengles3-demos and meta-gl (authorized branch, merged into `develop` on the owner's request); easy-gl, CNA and cna-engine untouched |
 | 20 | Status report free of exaggeration | this document |
 
 ## Unresolved limitations
@@ -70,7 +70,6 @@ Other runs:
   `OGLES3_RUN_GPU_FAULT_CASES=1`.
 - **Two pixel-exact galleries** (es20-clear-viewport-scissor, es20-primitive-topology) scale by integer factors only.
   At sizes such as 640x400 they stay at 1x, centred.
-- **The meta-gl branch is not merged into `develop`;** that is the owner's decision.
 
 ## Independent reviews held
 

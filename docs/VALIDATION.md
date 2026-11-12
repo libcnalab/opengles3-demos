@@ -146,7 +146,7 @@ through a `common/` helper or a meta-gl convenience overload. The lint is name-b
 actual verification is described per entry in `demo.json`.
 
 ## Reproducibility from a clean checkout (verified 2026-11-11 23:40)
-1. Clone meta-gl from its origin, branch `opengles3-demos/enum-gaps` (`333d777`), to `<root>/libcna/meta-gl`.
+1. Clone meta-gl from its origin, branch `opengles3-demos/enum-gaps` (`333d777`, now identical to `develop`), to `<root>/libcna/meta-gl`.
 2. Clone opengles3-demos (`d100bfc`) to `<root>/libcnalab/opengles3-demos`.
 3. Run `cmake --preset debug && cmake --build --preset debug`: no warnings, 83 executables.
 4. Run `ctest --preset debug`: 563/563, with ANGLE auto-detected from the Android SDK.

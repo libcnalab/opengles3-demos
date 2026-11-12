@@ -1,7 +1,7 @@
 # meta-gl compatibility report
 
-meta-gl revision audited: `develop` @ `795bcdc` (v0.4.1). Fixes live on the local meta-gl branch
-`opengles3-demos/enum-gaps` (commits `146e171`, G4/G5 fix commit after it; not pushed). The owner authorized meta-gl changes on 2026-11-11.
+meta-gl revision audited: `develop` @ `795bcdc` (v0.4.1). Fixes live on the meta-gl branch
+`opengles3-demos/enum-gaps` (pushed); on 2026-11-12 it was merged into `develop` (`333d777`). The owner authorized meta-gl changes on 2026-11-11.
 
 ## Audit method
 

@@ -16,8 +16,8 @@ library (`../../libcna/meta-gl`). Every claim of coverage must be backed by a va
    GL function pointers yourself.
 2. **meta-gl changes are authorized by the owner** (2026-11-11; re-confirmed that evening, together with permission
    to push the work branch).
-   - Work only on the branch `opengles3-demos/enum-gaps` and push only that branch. Never push or merge into
-     `develop`/`main`.
+   - Work on the branch `opengles3-demos/enum-gaps` and push only that branch. Merging into `develop` happens only
+     on the owner's explicit request (done once, 2026-11-12); never touch `main`.
    - Prefer additive, backward-compatible changes; break the API only when the correct ES semantics require it.
    - Commit only the files you changed; never stage unrelated working-tree changes.
    - Run meta-gl's tests (`-DMETAGL_BUILD_TESTS=ON -DMETAGL_BUILD_GPU_TESTS=ON`) and check dependents (easy-gl,

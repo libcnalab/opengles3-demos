@@ -65,7 +65,7 @@ cmake --build --preset debug --target coverage
   galleries scale by integer factors only.
 - **Sanitizer:** the Mesa matrix passes 480/480.
 - **Reproducible from clean clones** (VALIDATION.md).
-- **meta-gl:** `opengles3-demos/enum-gaps` at 333d777 is pushed.
+- **meta-gl:** `opengles3-demos/enum-gaps` at 333d777 is pushed and, on the owner's request (2026-11-12), merged into `develop` (fast-forward, pushed).
 
 **Night 2026-11-11/12 (owner asleep; mandate: fix verified audit findings autonomously)**
 - Codex phase 6 audit: 19 findings fixed.

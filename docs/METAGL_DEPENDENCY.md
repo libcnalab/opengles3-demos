@@ -7,10 +7,11 @@ meta-gl revision the suite needs and what happens with the public one. Measured 
 
 | | revision | content |
 |---|---|---|
-| **public `develop`** | `795bcdc` (`v0.4.1-2-g795bcdc`, "ai policy v2") | upstream; contains AI Contribution Policy v2 |
-| **required** | branch `opengles3-demos/enum-gaps` at `333d777` (pushed to `origin`) | `develop` + 7 commits (G1-G8 fixes; O8 tests; O12 docs) |
+| **required** | `develop` at `333d777` or later | the 7 commits below (G1-G8 fixes; O8 tests; O12 docs) |
+| work branch | `opengles3-demos/enum-gaps` at `333d777` | identical to `develop` since the merge on 2026-11-12 |
+| before the merge | `develop` at `795bcdc` (`v0.4.1-2-g795bcdc`, "ai policy v2") | lacks the fixes; see the measurement below |
 
-The five commits implement the fixes for gaps G1-G8 (details, spec evidence and motivation are in
+The commits implement the fixes for gaps G1-G8 (details, spec evidence and motivation are in
 [META_GL_GAPS.md](META_GL_GAPS.md)):
 
 | commit | gaps | adds |
@@ -30,10 +31,10 @@ searched).
 **Policy status.** meta-gl's committed `AGENTS.md` (AI Contribution Policy v2) forbids AI-authored
 contributions. The owner explicitly authorized these changes, and on 2026-11-11 also pushing the branch. It lives
 at `origin/opengles3-demos/enum-gaps`
-(<https://github.com/libcna/meta-gl/tree/opengles3-demos/enum-gaps>). `develop` and `main` are untouched.
-Whether and how the branch is merged is the owner's decision.
+(<https://github.com/libcna/meta-gl/tree/opengles3-demos/enum-gaps>). On 2026-11-12 the owner had it merged into
+`develop` (fast-forward `795bcdc..333d777`, pushed). `main` is untouched.
 
-## Building against the public `develop` (measured)
+## Building against the pre-merge `develop` `795bcdc` (measured)
 
 The suite was configured against an unmodified export of `develop`
 (`git archive develop`, `-DOGLES3_METAGL_SOURCE_DIR=<export>`):
@@ -48,15 +49,15 @@ The suite was configured against an unmodified export of `develop`
 - **Run (the 65 that build):** 370 of 376 runs pass. The 6 failures are all `test-metagl-contracts`: it asserts
   that a row-major `glUniformMatrix<4>(…, GL_TRUE)` upload works, and the unmodified helper terminates on it (G8).
 
-The suite therefore **requires** the branch. Without it, the 17 executables above cannot be built and
+The suite therefore **requires** `develop` at `333d777` or later. Without it, the 17 executables above cannot be built and
 `test-metagl-contracts` fails. Nothing in opengles3-demos hides this: there are no local copies of the missing
 enumerators and no raw-cast substitutes.
 
 ## How to build
 
 ```sh
-# default: ../../libcna/meta-gl must have opengles3-demos/enum-gaps checked out
-git -C ../../libcna/meta-gl fetch origin && git -C ../../libcna/meta-gl checkout opengles3-demos/enum-gaps
+# default: ../../libcna/meta-gl must have develop (333d777 or later) checked out
+git -C ../../libcna/meta-gl fetch origin && git -C ../../libcna/meta-gl checkout develop && git -C ../../libcna/meta-gl pull --ff-only
 cmake --preset debug
 
 # or point at any meta-gl source tree explicitly
@@ -64,4 +65,4 @@ cmake --preset debug -DOGLES3_METAGL_SOURCE_DIR=/path/to/meta-gl
 ```
 
 Every result file records `metagl_version` (meta-gl's own version string, `0.4.1` on both revisions). The version
-string does not tell the two revisions apart, so the revision is recorded here.
+string does not tell the revisions apart, so the revision is recorded here.

@@ -14,8 +14,9 @@ Writes into <dir>:
 manifest.json, results.csv and SUMMARY.md are small enough to commit (docs/evidence/); ctest.log and junit.xml are
 not, and belong in a release archive.
 
-The working trees of opengles3-demos and meta-gl must be clean (pass --allow-dirty to record a dirty run anyway;
-the manifest then says so). A result JSON counts only if it was written during this run, so leftovers of earlier
+The build directory must have been configured from the checkout that contains this script, and the working trees
+of opengles3-demos and meta-gl must be clean, untracked files included (pass --allow-dirty to record a dirty run
+anyway; the manifest then says so). The kernel log is reported as "read" only when journalctl succeeded. A result JSON counts only if it was written during this run, so leftovers of earlier
 runs are never reported as evidence.
 """
 import argparse
@@ -38,13 +39,24 @@ def sh(cmd, cwd=None):
         return ""
 
 
+def sh_status(cmd):
+    """(exit code, stdout); exit code None when the command could not be started."""
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        return r.returncode, r.stdout
+    except OSError:
+        return None, ""
+
+
 def git_state(path):
     return {
         "path": os.path.abspath(path),
         "commit": sh(["git", "-C", path, "rev-parse", "HEAD"]),
         "describe": sh(["git", "-C", path, "describe", "--tags", "--always", "--long"]),
         "branch": sh(["git", "-C", path, "rev-parse", "--abbrev-ref", "HEAD"]),
-        "dirty": bool(sh(["git", "-C", path, "status", "--porcelain", "--untracked-files=no"])),
+        # Untracked files count (shader-tests discover their cases from the source tree at run time); files
+        # matched by .gitignore, such as build/, do not.
+        "dirty": bool(sh(["git", "-C", path, "status", "--porcelain", "--untracked-files=normal"])),
     }
 
 
@@ -75,9 +87,16 @@ def main():
     cache = cmake_cache(build)
     metagl_dir = os.path.normpath(cache.get("OGLES3_METAGL_SOURCE_DIR", os.path.join(repo, "..", "..", "libcna", "meta-gl")))
 
+    # The build must have been configured from this checkout: otherwise its results would be labelled with this
+    # checkout's revision although another source tree produced them.
+    build_source = os.path.realpath(cache.get("CMAKE_HOME_DIRECTORY", ""))
+    if build_source != os.path.realpath(repo):
+        sys.exit(f"error: {build} was configured from '{build_source}', not from this checkout '{repo}'; run the "
+                 "collector of the checkout that the build directory belongs to")
+
     src, mgl = git_state(repo), git_state(metagl_dir)
     if (src["dirty"] or mgl["dirty"]) and not args.allow_dirty:
-        sys.exit("error: a working tree is dirty (opengles3-demos: %s, meta-gl: %s); commit first or pass --allow-dirty"
+        sys.exit("error: a working tree is dirty or has untracked files (opengles3-demos: %s, meta-gl: %s); commit first or pass --allow-dirty"
                  % (src["dirty"], mgl["dirty"]))
 
     compiler = cache.get("CMAKE_CXX_COMPILER", "c++")
@@ -147,7 +166,9 @@ def main():
 
     since = dt.datetime.fromtimestamp(start).strftime("%Y-%m-%d %H:%M:%S")
     until = dt.datetime.fromtimestamp(end + 5).strftime("%Y-%m-%d %H:%M:%S")
-    klog = sh(["journalctl", "-k", "--no-pager", "--since", since, "--until", until])
+    klog_rc, klog = sh_status(["journalctl", "-k", "--no-pager", "--since", since, "--until", until])
+    kernel_log = ("read" if klog_rc == 0 else
+                  "unavailable (journalctl not found)" if klog_rc is None else f"unavailable (journalctl exit code {klog_rc})")
     gpu_faults = [l for l in klog.splitlines() if "amdgpu" in l and re.search(r"fault|timeout|reset|hang", l, re.I)]
 
     pkgs = sh(["dpkg-query", "-W", "-f", "${Package} ${Version}\\n", "libgl1-mesa-dri", "libegl-mesa0", "mesa-vulkan-drivers"])
@@ -176,7 +197,7 @@ def main():
         "gpu_safety": {
             "OGLES3_RUN_GPU_FAULT_CASES": os.environ.get("OGLES3_RUN_GPU_FAULT_CASES", ""),
             "angle_vulkan_icd": cache.get("OGLES3_ANGLE_VULKAN_ICD", ""),
-            "kernel_log_checked": bool(klog) or klog == "",
+            "kernel_log": kernel_log,
             "amdgpu_fault_lines_during_run": gpu_faults,
         },
     }
@@ -194,7 +215,7 @@ def main():
         f.write(f"- registered tests: {len(ctest_status)}; CTest status: "
                 + ", ".join(f"{k} {v}" for k, v in sorted(status_counts.items())) + "\n")
         f.write("- outcomes: " + ", ".join(f"{k} {v}" for k, v in sorted(outcome_counts.items())) + "\n")
-        f.write(f"- amdgpu fault/timeout/reset lines in the kernel log during the run: {len(gpu_faults)}\n\n")
+        f.write(f"- kernel log {kernel_log}; amdgpu fault/timeout/reset lines during the run: {len(gpu_faults)}\n\n")
         f.write("## Drivers seen\n\n| GL_RENDERER | GL_VERSION | GLSL | runs |\n|---|---|---|---|\n")
         for d in manifest["drivers_seen"]:
             f.write(f"| {d['gl_renderer']} | {d['gl_version']} | {', '.join(d['glsl_versions'])} | {d['runs']} |\n")

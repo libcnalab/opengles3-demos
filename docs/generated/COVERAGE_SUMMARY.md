@@ -3,7 +3,7 @@
 
 Result directories: build/debug/test-results
 
-Source revision: 9050c5a
+Source revision: 2ac69b7
 
 meta-gl revision: 333d777 (../../libcna/meta-gl)
 
@@ -25,12 +25,12 @@ ES 3.2 driver, not conformance of a native ES 3.0/3.1 implementation (see VALIDA
 
 ## Semantic features (by introducing ES version)
 
-| ES | total | passed | passed % | DOCUMENTED_ONLY | VISUALLY_VERIFIED | FULLY_VALIDATED |
-|---|---|---|---|---|---|---|
-| 2.0 | 87 | 86 | 99% | 1 | 0 | 86 |
-| 3.0 | 78 | 78 | 100% | 0 | 1 | 77 |
-| 3.1 | 30 | 30 | 100% | 0 | 0 | 30 |
-| 3.2 | 31 | 31 | 100% | 0 | 0 | 31 |
+| ES | total | passed | passed % | DOCUMENTED_ONLY | FULLY_VALIDATED |
+|---|---|---|---|---|---|
+| 2.0 | 87 | 86 | 99% | 1 | 86 |
+| 3.0 | 78 | 78 | 100% | 0 | 78 |
+| 3.1 | 30 | 30 | 100% | 0 | 30 |
+| 3.2 | 31 | 31 | 100% | 0 | 31 |
 
 ## GLSL ES features (by language version)
 
@@ -45,5 +45,4 @@ ES 3.2 driver, not conformance of a native ES 3.0/3.1 implementation (see VALIDA
 
 | status | count |
 |---|---|
-| FULLY_VALIDATED | 82 |
-| VISUALLY_VERIFIED | 1 |
+| FULLY_VALIDATED | 83 |

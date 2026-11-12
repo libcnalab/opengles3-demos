@@ -166,7 +166,7 @@
 | ES30.RASTER.CENTROID | 3.0 | rasterization | centroid interpolation with multisampling | ES 3.0 §3.6.3 | FULLY_VALIDATED | es30-flat-centroid |
 | ES30.BLEND.MINMAX | 3.0 | fragment-ops | MIN/MAX blend equations | ES 3.0 §4.1.7 | FULLY_VALIDATED | es20-blending, es32-float-targets-and-indexed-blend |
 | ES30.STATE.INDEXED | 3.0 | state | glGetIntegeri_v / glGetInteger64i_v / glGetInteger64v / glGetStringi(EXTENSIONS) | ES 3.0 §6.1.1 | FULLY_VALIDATED | diagnostics-capabilities, es20-state-queries-errors, es32-float-targets-and-indexed-blend |
-| ES30.MULTISAMPLE.DEFAULT | 3.0 | multisample | Multisampled default framebuffer; SAMPLES / SAMPLE_BUFFERS | ES 3.0 §3.3 | VISUALLY_VERIFIED | es30-multisample-default-framebuffer |
+| ES30.MULTISAMPLE.DEFAULT | 3.0 | multisample | Multisampled default framebuffer; SAMPLES / SAMPLE_BUFFERS | ES 3.0 §3.3 | FULLY_VALIDATED | es30-multisample-default-framebuffer |
 | ES30.EXTENSIONS.REPORT | 3.0 | diagnostics | Extension enumeration via glGetStringi + capability/limit report | ES 3.0 §6.1.6 | FULLY_VALIDATED | diagnostics-capabilities |
 | ES31.COMPUTE.DISPATCH | 3.1 | compute | Compute shaders + glDispatchCompute + work group built-ins | ES 3.2 §17; GLSL 3.10 §7.1 | FULLY_VALIDATED | es31-compute-basics, es31-compute-particles, test-glsl310-builtins, test-glsl320-builtins |
 | ES31.COMPUTE.INDIRECT | 3.1 | compute | glDispatchComputeIndirect from DISPATCH_INDIRECT_BUFFER | ES 3.2 §17 | FULLY_VALIDATED | es31-compute-indirect-and-to-render |

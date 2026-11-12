@@ -12,10 +12,10 @@ An educational and validation suite for the **OpenGL ES 2.0–3.2 programmable c
 - **Specification-derived coverage.** The 358 core entry points come from the Khronos registry (`gl.xml`);
   semantic features and GLSL language items are tracked in separate inventories (`inventory/`).
 
-> **Release candidate 1.0.0-rc.1** (prepared 2026-11-12, not yet tagged). 83 executables: 76 demo programs (including
-> `diagnostics-capabilities`), 6 GL tests and `glsl-compile-tests`, plus one CPU-only unit test. 82 are FULLY_VALIDATED and 1 is VISUALLY_VERIFIED
-> (`es30-multisample-default-framebuffer`; Mesa's software EGL path cannot create its multisampled pbuffer). All
-> 358 core entry points have validated evidence. The readiness report, with the evidence behind every number and
+> **Release candidate 1.0.0-rc.2** (prepared 2026-11-12, not yet tagged). 83 executables: 76 demo programs (including
+> `diagnostics-capabilities`), 6 GL tests and `glsl-compile-tests`, plus one CPU-only unit test. All 83 are
+> FULLY_VALIDATED, and all 358 core entry points have validated evidence. GCC 14 and Clang 19 build warning-free
+> under `-Werror`. The readiness report, with the evidence behind every number and
 > the remaining limitations, is [docs/FINAL_RELEASE_READINESS.md](docs/FINAL_RELEASE_READINESS.md).
 > This is **not** a Khronos conformance suite.
 
@@ -32,8 +32,8 @@ Extensions are out of scope ([docs/EXTENSIONS_POLICY.md](docs/EXTENSIONS_POLICY.
 
 ## Requirements
 
-- Linux, CMake ≥ 3.23, Ninja, a C++23 compiler. Tested: GCC 14.2 (all presets, warning-free). Clang 19.1 builds
-  and passes the headless matrix but emits `-Wdouble-promotion` warnings, so `headless-ci` (`-Werror`) needs GCC
+- Linux, CMake ≥ 3.23, Ninja, a C++23 compiler. Tested: GCC 14.2 and Clang 19.1.7, both warning-free under
+  `-Werror` (`headless-ci`, `headless-ci-clang`)
 - EGL and an OpenGL ES 3.x driver (tested: Mesa 25.0.7 radeonsi, llvmpipe, zink on lavapipe, softpipe)
 - **meta-gl** source checkout at `../../libcna/meta-gl` (relative to this directory), on `develop` at commit
   **`333d777`** (the tested revision). Older revisions lack enumerators that 17 executables need; configuring
@@ -53,7 +53,7 @@ cmake --build --preset debug              # 3 parallel jobs (the presets cap com
 ```
 
 Presets: `debug`, `release`, `sanitize` (ASan/UBSan for CPU-side code), `headless-ci` (warnings as errors, no
-SDL3, llvmpipe only).
+SDL3, llvmpipe only), `headless-ci-clang` (the same with `clang++`).
 
 ## Run one demo
 
@@ -75,7 +75,7 @@ are 3D scenes; `es30-interactive-3d-scene` is an explorable capstone (mouse look
 ## Run the automated tests
 
 ```sh
-ctest --preset debug                       # the whole matrix (about 700 runs, under 2 minutes here)
+ctest --preset debug                       # the whole matrix (about 700 runs, a few minutes here)
 ctest --preset debug -L es30 -L llvmpipe   # a subset by labels (group, driver, mode)
 ctest --preset debug -R es30-instancing    # one executable on every driver
 cmake --build --preset debug --target coverage   # regenerate docs/generated/ from the results
@@ -134,6 +134,7 @@ documented, never asserted. Known driver deviations and environment limits:
 | Document | Content |
 |---|---|
 | [docs/FINAL_RELEASE_READINESS.md](docs/FINAL_RELEASE_READINESS.md) | release identity, evidence, audit, decision |
+| [docs/FINAL_COMPLETION_REPORT.md](docs/FINAL_COMPLETION_REPORT.md) | what the completion phase (rc.1 → rc.2) changed, with evidence |
 | [CHANGELOG.md](CHANGELOG.md) | release history and release notes |
 | [docs/DEMO_CATALOG.md](docs/DEMO_CATALOG.md) | every executable in learning order |
 | [docs/VALIDATION.md](docs/VALIDATION.md) | what a PASS means, test matrix, tolerances, reproducibility |
@@ -141,7 +142,7 @@ documented, never asserted. Known driver deviations and environment limits:
 | [docs/API_COVERAGE.csv](docs/API_COVERAGE.csv) | all 358 core entry points with evidence (generated) |
 | [docs/generated/](docs/generated/COVERAGE_SUMMARY.md) | coverage summary, per-executable, feature, GLSL and deviation status (generated) |
 | [docs/FEATURE_COVERAGE.md](docs/FEATURE_COVERAGE.md), [docs/GLSL_COVERAGE.md](docs/GLSL_COVERAGE.md) | inventory methods |
-| [docs/METAGL_DEPENDENCY.md](docs/METAGL_DEPENDENCY.md), [docs/META_GL_GAPS.md](docs/META_GL_GAPS.md) | meta-gl revision, gaps and their fixes |
+| [docs/METAGL_DEPENDENCY.md](docs/METAGL_DEPENDENCY.md), [docs/META_GL_GAPS.md](docs/META_GL_GAPS.md), [docs/METAGL_MAINTAINER_NOTE.md](docs/METAGL_MAINTAINER_NOTE.md) | meta-gl revision, gaps and their fixes, the open owner decision |
 | [docs/evidence/](docs/evidence/) | machine-readable evidence of the release-candidate matrices |
 | [docs/audits/](docs/audits/README.md) | independent review reports and their disposition |
 | [docs/references/README.md](docs/references/README.md) | Khronos specifications and registry |

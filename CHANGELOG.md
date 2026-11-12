@@ -3,6 +3,40 @@
 The project follows [Semantic Versioning](https://semver.org/). Version numbers describe the suite as a whole (its
 executables, validation rules and documentation); there is no library API.
 
+## 1.0.0-rc.2 — release candidate (2026-11-12, not tagged)
+
+The second release candidate. It closes the practical gaps left in rc.1; no demo or feature was added. Readiness
+report: [docs/FINAL_RELEASE_READINESS.md](docs/FINAL_RELEASE_READINESS.md); completion report:
+[docs/FINAL_COMPLETION_REPORT.md](docs/FINAL_COMPLETION_REPORT.md). Evidence: `docs/evidence/1.0.0-rc.2/`.
+
+### Changes since rc.1
+
+- **Clang 19 builds warning-free under `-Werror`** (`0149f5d`). The 189 warnings of rc.1 (178 `-Wdouble-promotion`,
+  11 unused entities in 30 files) are fixed: every float-to-double widening now has an explicit
+  `static_cast<double>` exactly where the implicit conversion was, dead helpers and constants are removed. Object
+  code is identical for 88 of 92 objects; the llvmpipe runs of all 30 changed executables give identical checks,
+  measured values and captures. New preset `headless-ci-clang`.
+- **All 83 executables are FULLY_VALIDATED** (`bf74123`). `es30-multisample-default-framebuffer` runs on llvmpipe
+  and zink in an SDL3 window under `xvfb-run` (new `demo.json` key `window_drivers`), because Mesa's surfaceless
+  EGL gives those drivers a 0x0 multisampled pbuffer. The window is a real multisampled default framebuffer
+  (`SAMPLE_BUFFERS` 1, `SAMPLES` 4) and the checks are unchanged. Without SDL3 or `xvfb-run` the runs stay headless
+  and report BLOCKED_ENVIRONMENT.
+- **Window resizing** (`b259bf8`): when a resize arrives in the validated frame, the runtime swaps once before
+  drawing it, so validation never reads a back buffer the window system has not resized yet (found with live
+  resizes under Xvfb).
+- **es30-lighting** (`b259bf8`): the sweeps skip sphere pixels at a light's terminator, where the shading has a step
+  (it failed at 500x720 on every driver); surfaces below 200 px report SKIP_UNSUPPORTED instead of vacuous FAILs.
+- **Documentation** (`4bdad0b`, `2ac69b7`): a README for `shader-tests/`; the learning path follows ten steps from
+  the first triangle to shader-language validation; a technical note for the meta-gl maintainer
+  ([docs/METAGL_MAINTAINER_NOTE.md](docs/METAGL_MAINTAINER_NOTE.md)); KNOWN_LIMITATIONS records that three
+  executables validate only their documented frame (an explicit `--frames N` can FAIL them).
+- Compilation limit lowered to 3 CPU cores (presets `jobs: 3`, `5bacc8d`).
+
+### Requirements
+
+Unchanged from rc.1: meta-gl `develop` at `333d777fadbe53613a9c2eead358ffbfe6a2ef33`. Compilers: GCC 14.2 and
+Clang 19.1.7. `xvfb-run` and SDL3 are needed for the window-surface runs of the multisample demo.
+
 ## 1.0.0-rc.1 — release candidate (2026-11-12, not tagged)
 
 The first release candidate. It freezes functionality; only defects found during the candidate period are fixed

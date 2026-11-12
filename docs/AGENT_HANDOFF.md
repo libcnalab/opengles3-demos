@@ -4,26 +4,26 @@ _Keep this file current. It is the first thing any agent reads._
 
 ## Current phase
 
-**Release candidate 1.0.0-rc.1 prepared; functionality frozen.** Last update: 2026-11-12.
+**Release candidate 1.0.0-rc.2 prepared; functionality frozen; waiting for the owner.** Last update: 2026-11-12.
 
-The suite is complete within its declared scope. Readiness report, evidence and decision:
-[FINAL_RELEASE_READINESS.md](FINAL_RELEASE_READINESS.md). Release history: [../CHANGELOG.md](../CHANGELOG.md).
-Nothing is running and no worktree or agent task is open.
+The suite is complete within its declared scope. Reports: [FINAL_RELEASE_READINESS.md](FINAL_RELEASE_READINESS.md)
+and [FINAL_COMPLETION_REPORT.md](FINAL_COMPLETION_REPORT.md). Release history: [../CHANGELOG.md](../CHANGELOG.md).
+Nothing is running and no worktree or agent task is open. Nothing has been pushed or tagged remotely; the owner
+decides about publishing 1.0.0 and about the meta-gl policy question ([METAGL_MAINTAINER_NOTE.md](METAGL_MAINTAINER_NOTE.md)).
 
-Do not add demos or features during the candidate period. Fix only demonstrated defects (with a regression check
-where possible), rerun the matrices with `tools/release/collect_evidence.py`, and update the readiness report.
+Do not add demos or features. Fix only demonstrated defects (with a regression check where possible), rerun the
+matrices with `tools/release/collect_evidence.py` from a clean clone, and update the readiness report.
 
 ## State
 
-- 83 executables (76 demo programs, 6 GL tests, `glsl-compile-tests`) plus the CPU test `unit-deviation-matcher`.
-  82 FULLY_VALIDATED, 1 VISUALLY_VERIFIED (`es30-multisample-default-framebuffer`, BLOCKED_ENVIRONMENT on
-  llvmpipe/zink because Mesa's software EGL path gives a 0x0 multisampled pbuffer).
+- 83 executables (76 demo programs, 6 GL tests, `glsl-compile-tests`) plus the CPU test `unit-deviation-matcher`,
+  all 83 FULLY_VALIDATED. `es30-multisample-default-framebuffer` runs on llvmpipe and zink in an SDL3 window under
+  `xvfb-run` (`"window_drivers"`), because Mesa's surfaceless EGL gives those drivers a 0x0 multisampled pbuffer.
 - 358/358 core entry points, 226 semantic features and 94 GLSL items accounted for (generated/COVERAGE_SUMMARY.md).
-- Matrices with evidence in `docs/evidence/1.0.0-rc.1/`: debug (gpu, llvmpipe, zink, softpipe, ANGLE on lavapipe,
-  333x777), sanitize (ASan/UBSan), headless-ci (-Werror) and a Clang 19 build, all from clean clones at 9050c5a.
-- meta-gl: required and tested at `develop` `333d777` (contains G1–G8). **Agents no longer modify meta-gl**
-  (AGENTS.md rule 2). The meta-gl maintainer still has to decide how the AI-authored G1–G8 commits relate to
-  meta-gl's AI Contribution Policy (METAGL_DEPENDENCY.md "Policy status").
+- GCC 14.2 and Clang 19.1.7 strict builds (`headless-ci`, `headless-ci-clang`) are warning-free.
+- Evidence of rc.2 in `docs/evidence/1.0.0-rc.2/`; rc.1 evidence preserved in `docs/evidence/1.0.0-rc.1/`.
+- meta-gl: required and tested at `develop` `333d777` (contains G1–G8). **Agents do not modify meta-gl**
+  (AGENTS.md rule 2). The policy decision about the AI-authored G1–G8 commits is the owner's.
 
 ## Environment (reference machine)
 
@@ -65,6 +65,8 @@ python3 -I tools/release/collect_evidence.py --build build/debug --label debug -
   machine whose display does not depend on the tested GPU).
 - O5 in META_GL_GAPS.md (location-vs-index overload of `glGetActiveAttrib`) is a meta-gl API observation; the demos
   use the index overload.
+- Three executables validate only their documented frame; an explicit `--frames N --validate` can FAIL on a correct
+  render (KNOWN_LIMITATIONS.md, "Scope"). Making their probes pose-independent would be a redesign of their checks.
 
 ## Parallel work / Codex
 

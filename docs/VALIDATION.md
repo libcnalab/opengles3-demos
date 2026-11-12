@@ -72,8 +72,8 @@ a framebuffer object. zink window runs pin the Vulkan device to lavapipe (`VK_IC
 
 **Counting.** CTest reports SKIP_UNSUPPORTED and BLOCKED_* as "Skipped" and counts them as not failed, so its "100%
 tests passed" means *no FAIL*, not *all PASS*. Reports of this project give the outcomes separately (e.g. the
-release-candidate debug matrix: 701 registered tests = 669 PASS + 26 SKIP_UNSUPPORTED + 5 BLOCKED_ENVIRONMENT + the
-CPU unit test). Earlier reports wrote such a run as "700/700".
+1.0.0-rc.2 debug matrix: 701 registered tests = 674 PASS + 26 SKIP_UNSUPPORTED + the CPU unit test; rc.1 had 669 PASS
++ 26 SKIP_UNSUPPORTED + 5 BLOCKED_ENVIRONMENT). Earlier reports wrote such a run as "700/700".
 
 ## ANGLE: an independent implementation (driver `angle`, mode `native`)
 Every Mesa driver shares Mesa's GL front-end (state tracker, GLSL compiler, validation). Their agreement is
@@ -183,9 +183,9 @@ Procedure (the release-candidate run, with its revisions and results, is in
 3. `cmake --preset debug && cmake --build --preset debug`: no warnings; 83 executables plus `unit-deviation-matcher`.
    Configure stops with an error when the meta-gl checkout lacks 333d777.
 4. `tools/release/collect_evidence.py --build build/debug --label debug --out <dir>` (or plain
-   `ctest --preset debug`), then the same for the `sanitize` and `headless-ci` presets.
-5. `cmake --build --preset debug --target coverage`: 82 FULLY_VALIDATED + 1 VISUALLY_VERIFIED, every registered run
-   with a fresh result.
+   `ctest --preset debug`), then the same for the `sanitize`, `headless-ci` and `headless-ci-clang` presets.
+5. `cmake --build --preset debug --target coverage`: 83 FULLY_VALIDATED, every registered run with a fresh result
+   (with SDL3 and `xvfb-run` installed; without them es30-multisample-default-framebuffer stays VISUALLY_VERIFIED).
 
 Requirements not in the repositories: Mesa (radeonsi, llvmpipe, zink and the lavapipe ICD), EGL, optionally SDL3,
 and for the `angle` driver an ANGLE build (`OGLES3_ANGLE_DIR`, auto-detected from the Android SDK emulator).

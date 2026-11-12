@@ -12,6 +12,29 @@ Each run directory has:
 CTest's status `notrun` is its name for exit code 77 (SKIP_UNSUPPORTED or BLOCKED_*). The CPU-only
 `unit-deviation-matcher` writes no result JSON ("N/A ... by design").
 
+## 1.0.0-rc.2
+
+Runs from clean clones (opengles3-demos `2ac69b7`, every executable compiled there; meta-gl `333d777` cloned from
+GitHub) on the reference machine, 2026-11-12:
+
+| run | compiler | registered | PASS | SKIP_UNSUPPORTED | BLOCKED_ENVIRONMENT | FAIL / CRASHED | unit test |
+|---|---|---|---|---|---|---|---|
+| [debug](1.0.0-rc.2/debug/SUMMARY.md) | GCC 14.2 | 701 | 674 | 26 | 0 | 0 | PASS |
+| [sanitize](1.0.0-rc.2/sanitize/SUMMARY.md) (ASan + UBSan) | GCC 14.2 | 701 | 674 | 26 | 0 | 0 | PASS |
+| [sanitize-attempt1](1.0.0-rc.2/sanitize-attempt1/SUMMARY.md) (same build, first run) | GCC 14.2 | 701 | 673 | 26 | 0 | 1 CRASHED (timeout under load) | PASS |
+| [headless-ci](1.0.0-rc.2/headless-ci/SUMMARY.md) (`-Werror`, no SDL3) | GCC 14.2 | 395 | 365 | 26 | 3 | 0 | PASS |
+| [headless-ci-clang](1.0.0-rc.2/headless-ci-clang/SUMMARY.md) (`-Werror`, no SDL3) | Clang 19.1.7 | 395 | 365 | 26 | 3 | 0 | PASS |
+
+All builds compiled without a warning. The 3 BLOCKED_ENVIRONMENT runs of the `headless-ci` presets are
+es30-multisample-default-framebuffer on llvmpipe: those presets build without SDL3, so its window runs fall back to
+the surfaceless pbuffer that Mesa creates as 0x0. The first sanitizer run timed out once under a load average near
+30 (FINAL_RELEASE_READINESS.md section B); both runs are kept.
+
+The full logs, JUnit reports, every result JSON and capture, the clean clone's coverage output and the supplementary
+material are in `opengles3-demos-1.0.0-rc.2-evidence.tar.xz` (sha256
+`3e7a4522079c0d15472a77fc2c49a2f0ee7f17cdbdcbf65978a1f610c6309d6b`), kept on the reference machine under
+`build/release-evidence/`.
+
 ## 1.0.0-rc.1
 
 Runs from clean clones (opengles3-demos `9050c5a`, executables compiled at `2544bad` with identical sources;
@@ -24,8 +47,8 @@ meta-gl `333d777` cloned from GitHub) on the reference machine, 2026-11-12:
 | [headless-ci](1.0.0-rc.1/headless-ci/SUMMARY.md) (`-Werror`, llvmpipe/softpipe/ANGLE) | 395 | 365 | 26 | 3 | 0 | PASS |
 | [clang19](1.0.0-rc.1/clang19/SUMMARY.md) (headless-ci with Clang 19.1.7, **without** `-Werror`) | 395 | 365 | 26 | 3 | 0 | PASS |
 
-The Clang build compiles with 189 warnings (178 `-Wdouble-promotion`, 11 unused entities) in 30 files, so the
-strict preset fails with Clang; see FINAL_RELEASE_READINESS.md section D.
+In rc.1 the Clang build compiled with 189 warnings (178 `-Wdouble-promotion`, 11 unused entities) in 30 files, so the
+strict preset failed with Clang (fixed in rc.2).
 
 The full CTest logs, JUnit reports, every result JSON and the debug captures are not in git (6.5 MB compressed).
 They are in `opengles3-demos-1.0.0-rc.1-evidence.tar.xz` (sha256

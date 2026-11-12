@@ -22,9 +22,10 @@
   shadow must fall on the platform for the probe set to be non-vacuous) and es30-sync-objects (it expects the
   fence-wait count of its default frame count). All other executables pass at `--frames 300` (measured 2026-11-12).
   The matrix never sets `--frames`.
-- Compilers: GCC 14.2 builds every preset without warnings. Clang 19.1.7 builds and passes the `headless-ci` matrix,
-  but with 189 warnings (178 `-Wdouble-promotion` where a `float` reaches a `double` context such as
-  `std::format`, 11 unused entities) in 30 files, so the `-Werror` preset fails with Clang (measured 2026-11-12).
+- Compilers: GCC 14.2 and Clang 19.1.7 build every strict configuration without warnings (`headless-ci` and
+  `headless-ci-clang`, both `-Werror`; since 1.0.0-rc.2). In rc.1 Clang reported 189 warnings (178
+  `-Wdouble-promotion`, 11 unused entities); they were fixed without changing generated code or results (CHANGELOG).
+  Other compilers and versions are not tested.
 - Program binaries: `NUM_PROGRAM_BINARY_FORMATS` may be 0 on some drivers; such checks report
   the implementation's choice rather than failing.
 

@@ -468,8 +468,24 @@ namespace
                 prog_stream_ = link_tf_program(env, "shaders/stream.vert", v, mgl::TransformFeedbackBufferMode::SeparateAttribs, nullptr, nullptr);
             }
             {
+                // Capturing the whole output array v_trail is legal in ES 3.0: section 2.12.8 lists the only reasons the link
+                // fails (an array is not among them) and section 2.15.2 says "When writing output variables that are arrays,
+                // individual array elements are written in order". ANGLE's ES 3.0 contexts refuse it ("Capture of arrays is
+                // undefined and not supported."). Only there the failure is kept for validate() to record as a known deviation,
+                // and a probe without the array keeps every other probe check running. On every other driver a failure throws.
                 const GLchar* v[] = {"v_vertex", "v_instance", "v_trail", "gl_Position"};
-                prog_probe_ = link_tf_program(env, "shaders/probe.vert", v, mgl::TransformFeedbackBufferMode::InterleavedAttribs, nullptr, nullptr);
+                bool linked = false;
+                prog_probe_ = link_tf_program(env, "shaders/probe.vert", v, mgl::TransformFeedbackBufferMode::InterleavedAttribs, &linked, &probe_array_log_);
+                if (!linked)
+                {
+                    const GLubyte* ver = mgl::glGetString(mgl::StringName::Version);
+                    if (ver == nullptr || std::string_view(reinterpret_cast<const char*>(ver)).find("ANGLE") == std::string_view::npos)
+                        throw demo::Failure("shaders/probe.vert failed to link:\n" + probe_array_log_);
+                    mgl::glDeleteProgram(prog_probe_);
+                    const GLchar* without_array[] = {"v_vertex", "v_instance", "gl_Position"};
+                    prog_probe_ = link_tf_program(env, "shaders/probe.vert", without_array, mgl::TransformFeedbackBufferMode::InterleavedAttribs, nullptr, nullptr);
+                    probe_has_array_ = false;
+                }
             }
             prog_render_ = demo::build_program(env, "shaders/render.vert", "shaders/render.frag");  // no varyings: not usable for capture
 
@@ -962,34 +978,53 @@ namespace
             auto mode_of = [&](mgl::ProgramId p) { return static_cast<GLenum>(program_int(p, mgl::ProgramParameter::TransformFeedbackBufferMode)); };
             check.expect(mode_of(prog_step_) == static_cast<GLenum>(Mode::InterleavedAttribs) && mode_of(prog_stream_) == static_cast<GLenum>(Mode::SeparateAttribs),
                          "TRANSFORM_FEEDBACK_BUFFER_MODE: INTERLEAVED_ATTRIBS for the particle program, SEPARATE_ATTRIBS for the stream program");
+            // ES 3.0 sections 2.12.8 / 2.15.2: a whole output array may be captured. Strict everywhere; only ANGLE's ES 3.0
+            // link refuses it (init() then substituted a probe without v_trail so the remaining checks still run).
+            if (probe_has_array_)
+                check.expect(true, "probe.vert links with the whole output array v_trail in the varyings list (sections 2.12.8, 2.15.2)");
+            else
+                check.expect_or_known_deviation(false, "probe.vert links with the whole output array v_trail in the varyings list (sections 2.12.8, 2.15.2)",
+                                                std::format("link failed: {}", probe_array_log_), "ANGLE",
+                                                "ANGLE refuses to capture output arrays in ES 3.0 contexts (\"Capture of arrays is undefined and not supported\"); "
+                                                "ES 3.0 2.12.8 does not list arrays among the link failures and 2.15.2 defines how array elements are written. "
+                                                "The checks below use a probe without v_trail");
+            const GLint probe_count = probe_has_array_ ? 4 : 3;
+            const GLuint pos_index = probe_has_array_ ? 3u : 2u;  // index of gl_Position in the probe's varyings list
             check.expect(program_int(prog_step_, mgl::ProgramParameter::TransformFeedbackVaryings) == 4 && program_int(prog_warp_, mgl::ProgramParameter::TransformFeedbackVaryings) == 2 &&
-                             program_int(prog_stream_, mgl::ProgramParameter::TransformFeedbackVaryings) == 3 && program_int(prog_probe_, mgl::ProgramParameter::TransformFeedbackVaryings) == 4 &&
+                             program_int(prog_stream_, mgl::ProgramParameter::TransformFeedbackVaryings) == 3 && program_int(prog_probe_, mgl::ProgramParameter::TransformFeedbackVaryings) == probe_count &&
                              program_int(prog_render_, mgl::ProgramParameter::TransformFeedbackVaryings) == 0,
-                         "TRANSFORM_FEEDBACK_VARYINGS: 4 / 2 / 3 / 4 for step / warp / stream / probe, 0 for the program without varyings");
+                         std::format("TRANSFORM_FEEDBACK_VARYINGS: 4 / 2 / 3 / {} for step / warp / stream / probe, 0 for the program without varyings", probe_count));
             check.expect_eq(program_int(prog_probe_, mgl::ProgramParameter::TransformFeedbackVaryingMaxLength), 12, "TRANSFORM_FEEDBACK_VARYING_MAX_LENGTH = 12 (\"gl_Position\" and 11 characters + terminator)");
 
             // glGetTransformFeedbackVarying: name, type and size, in the order of the glTransformFeedbackVaryings list.
-            const VaryingInfo v0 = get_varying(prog_probe_, 0), v1 = get_varying(prog_probe_, 1), v2 = get_varying(prog_probe_, 2), v3 = get_varying(prog_probe_, 3);
+            const VaryingInfo v0 = get_varying(prog_probe_, 0), v1 = get_varying(prog_probe_, 1), vp = get_varying(prog_probe_, pos_index);
             check.expect(v0.name == "v_vertex" && v0.type == mgl::UniformType::Int && v0.size == 1, "varying 0 is v_vertex: INT, size 1",
                          std::format("got '{}' size {}", v0.name, v0.size));
             check.expect(v1.name == "v_instance" && v1.type == mgl::UniformType::Int && v1.size == 1, "varying 1 is v_instance: INT, size 1",
                          std::format("got '{}' size {}", v1.name, v1.size));
-            check.expect(v2.name == "v_trail" && v2.type == mgl::UniformType::FloatVec2 && v2.size == 2, "varying 2 is the array v_trail: FLOAT_VEC2, size 2 (units of the type)",
-                         std::format("got '{}' size {}", v2.name, v2.size));
-            check.expect(v3.name == "gl_Position" && v3.type == mgl::UniformType::FloatVec4 && v3.size == 1, "varying 3 is the built-in gl_Position: FLOAT_VEC4, size 1",
-                         std::format("got '{}' size {}", v3.name, v3.size));
-            const VaryingInfo cut = get_varying(prog_probe_, 3, 4);
+            if (probe_has_array_)
+            {
+                const VaryingInfo v2 = get_varying(prog_probe_, 2);
+                check.expect(v2.name == "v_trail" && v2.type == mgl::UniformType::FloatVec2 && v2.size == 2, "varying 2 is the array v_trail: FLOAT_VEC2, size 2 (units of the type)",
+                             std::format("got '{}' size {}", v2.name, v2.size));
+            }
+            check.expect(vp.name == "gl_Position" && vp.type == mgl::UniformType::FloatVec4 && vp.size == 1, std::format("varying {} is the built-in gl_Position: FLOAT_VEC4, size 1", pos_index),
+                         std::format("got '{}' size {}", vp.name, vp.size));
+            const VaryingInfo cut = get_varying(prog_probe_, pos_index, 4);
             check.expect(cut.name == "gl_" && cut.length == 3, "bufSize 4 truncates \"gl_Position\" to 3 characters + terminator and reports length 3", std::format("got '{}' length {}", cut.name, cut.length));
             {
                 char name[8] = "keep";
                 GLsizei length = 77, size = 77;
                 mgl::UniformType type = mgl::UniformType::Bool;
-                mgl::glGetTransformFeedbackVarying(prog_probe_, 4, 8, &length, &size, &type, name);
+                mgl::glGetTransformFeedbackVarying(prog_probe_, static_cast<GLuint>(probe_count), 8, &length, &size, &type, name);
                 check.expect_gl_error(mgl::ErrorCode::InvalidValue, "glGetTransformFeedbackVarying with index = TRANSFORM_FEEDBACK_VARYINGS -> INVALID_VALUE");
                 check.expect(length == 77 && size == 77 && type == mgl::UniformType::Bool && std::string_view(name) == "keep", "... and the return parameters are not modified");
             }
 
             // The recording order and layout, with integer outputs, an array output and a built-in: 3 vertices x 2 instances.
+            // Record: v_vertex (4 B) | v_instance (4 B) | [v_trail[0], v_trail[1] (2 x 8 B)] | gl_Position (16 B) = 40 B (24 B without the array).
+            const std::size_t stride = probe_has_array_ ? sizeof(ProbeRecord) : 24;
+            const std::size_t pos_offset = probe_has_array_ ? offsetof(ProbeRecord, position) : 8;
             allocate(scratch_[0], 320, kSentinel);
             mgl::glBindTransformFeedback(kTFObject, mgl::TransformFeedbackId{0});
             mgl::glBindBufferBase(kTF, 0, scratch_[0]);
@@ -1004,21 +1039,27 @@ namespace
             mgl::glDisable(mgl::Capability::RasterizerDiscard);
             const GLuint probe_prims = query_result(query_);
             const std::vector<std::uint8_t> bytes = read_buffer(scratch_[0], 320);
-            const std::vector<ProbeRecord> rec = from_bytes<ProbeRecord>(bytes, 0, 6);
             const std::array<std::array<float, 2>, 3> pos = {{{-0.5f, -0.25f}, {0.25f, 0.5f}, {0.75f, -0.75f}}};
-            bool ok = rec.size() == 6 && !bytes.empty();
+            bool ok = bytes.size() >= 6 * stride;
             std::string why;
             for (std::size_t i = 0; ok && i < 6; ++i)
             {
                 const std::size_t vtx = i % 3, inst = i / 3;
-                const ProbeRecord& r = rec[i];
-                const bool match = r.vertex == static_cast<std::int32_t>(vtx) && r.instance == static_cast<std::int32_t>(inst) && r.trail[0] == pos[vtx][0] && r.trail[1] == pos[vtx][1] &&
-                                   r.trail[2] == 2.0f * pos[vtx][0] && r.trail[3] == 2.0f * pos[vtx][1] && r.position[0] == pos[vtx][0] && r.position[1] == pos[vtx][1] &&
-                                   r.position[2] == 0.0f && r.position[3] == 1.0f;
+                ProbeRecord r{};
+                std::memcpy(&r.vertex, bytes.data() + i * stride, sizeof(std::int32_t));
+                std::memcpy(&r.instance, bytes.data() + i * stride + sizeof(std::int32_t), sizeof(std::int32_t));
+                if (probe_has_array_) std::memcpy(r.trail, bytes.data() + i * stride + offsetof(ProbeRecord, trail), sizeof(r.trail));
+                std::memcpy(r.position, bytes.data() + i * stride + pos_offset, sizeof(r.position));
+                const bool trail_ok = !probe_has_array_ || (r.trail[0] == pos[vtx][0] && r.trail[1] == pos[vtx][1] && r.trail[2] == 2.0f * pos[vtx][0] && r.trail[3] == 2.0f * pos[vtx][1]);
+                const bool match = r.vertex == static_cast<std::int32_t>(vtx) && r.instance == static_cast<std::int32_t>(inst) && trail_ok && r.position[0] == pos[vtx][0] &&
+                                   r.position[1] == pos[vtx][1] && r.position[2] == 0.0f && r.position[3] == 1.0f;
                 if (!match) { ok = false; why = std::format("record {} is wrong: vertex {} instance {} trail ({},{},{},{}) position ({},{},{},{})", i, r.vertex, r.instance, r.trail[0], r.trail[1], r.trail[2], r.trail[3], r.position[0], r.position[1], r.position[2], r.position[3]); }
             }
-            check.expect(ok, "probe: 6 records of 40 bytes: gl_VertexID/gl_InstanceID as ints, both v_trail elements in order, gl_Position (instance 0's vertices first)", why);
-            check.expect(!bytes.empty() && all_sentinel(bytes, 240, 320) && probe_prims == 6, "probe: 240 bytes written, the other 80 untouched; the query counts 6 points");
+            check.expect(ok, probe_has_array_ ? "probe: 6 records of 40 bytes: gl_VertexID/gl_InstanceID as ints, both v_trail elements in order, gl_Position (instance 0's vertices first)"
+                                              : "probe (without v_trail): 6 records of 24 bytes: gl_VertexID/gl_InstanceID as ints, gl_Position (instance 0's vertices first)",
+                         why);
+            check.expect(!bytes.empty() && all_sentinel(bytes, 6 * stride, 320) && probe_prims == 6,
+                         std::format("probe: {} bytes written, the other {} untouched; the query counts 6 points", 6 * stride, 320 - 6 * stride));
 
             // Incomplete primitives are not recorded (section 2.15.2): 98 vertices as TRIANGLES -> 32 triangles = 96 vertices.
             allocate(scratch_[1], (kMeshPadded + 2) * sizeof(MeshVertex), kSentinel);
@@ -1805,6 +1846,8 @@ namespace
         } init_;
 
         mgl::ProgramId prog_step_{}, prog_warp_{}, prog_stream_{}, prog_probe_{}, prog_render_{};
+        bool probe_has_array_ = true;   // false only on ANGLE, whose ES 3.0 link refuses to capture v_trail (see init())
+        std::string probe_array_log_;   // the link log of the probe with the array
         mgl::UniformLocation u_dt_{}, u_color_{};
         mgl::BufferId vbo_mesh_{}, tf_mesh_{}, pause_in_{}, pause_ebo_{}, pause_out_{}, stream_buf_{}, probe_in_{};
         std::array<mgl::BufferId, 2> particles_{};

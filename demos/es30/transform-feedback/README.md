@@ -122,6 +122,15 @@ the capture, or the capture's output buffers, can drive it.
   ES 3.0 §2.15.2 (and ES 3.2 §12.2.2) require `INVALID_OPERATION` "by ResumeTransformFeedback if the program object being used by
   the current transform feedback object is not active". When that happens the demo pauses again, so the following check
   (resume with the original program) still tests only its own rule.
+  ANGLE on a genuine ES 3.0 context refuses to link `probe.vert` because the list names the output array `v_trail`
+  ("Capture of arrays is undefined and not supported."; its ES 3.1 contexts accept it). ES 3.0 §2.12.8 names exactly four
+  reasons for which "a program will fail to link" (an undeclared name, the same output twice, and the two component limits),
+  and §2.15.2 defines the capture of arrays: "When writing output variables that are arrays, individual array elements are
+  written in order"; `glGetTransformFeedbackVarying` reports the size "in units of the type returned in type". The link is
+  therefore a strict check, recorded as XFAIL only when `GL_VERSION` contains "ANGLE". On every other driver a failed link
+  aborts the demo as before. On ANGLE the demo then links the same shader with `{v_vertex, v_instance, gl_Position}` and runs
+  every probe check that does not depend on the array (count 3, names and types, truncation, the index error, 6 records of
+  24 bytes, untouched tail, query count 6).
 
 ## Run
 
@@ -132,6 +141,9 @@ the capture, or the capture's output buffers, can drive it.
 ## Pitfalls
 
 - Varyings must be declared **before** linking; changing the list has no effect until the next link.
+- Name a whole output array (`"v_trail"`) to capture all its elements. ES 3.0 does not say whether a single element
+  (`"v_trail[1]"`) may be named; ES 3.2 §11.1.2.1 allows it ("different elements from the same array are permitted"). Portable
+  ES 3.0 code names the whole array, or, for ANGLE's ES 3.0 contexts, avoids array outputs in the capture list altogether.
 - Reading a buffer that is also an active capture target (as vertex data, `glMapBufferRange`, `glReadPixels` into it) is
   undefined (ES 3.0 §2.15.2). The ping-pong therefore alternates buffers: a step reads buffer *k mod 2* and writes the other.
   The demo reads captured data back only after `glEndTransformFeedback`.

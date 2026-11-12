@@ -7,23 +7,45 @@ Executables marked ★ are 3D scenes, good starting points to see what the API p
 
 ## Short path for a first reading
 
-The full catalog below is complete but long. A reader new to OpenGL ES can take this route first and return to
-the catalog for depth:
+The full catalog below is complete but long. A reader new to OpenGL ES can take this route first, one step at a
+time, and return to the catalog for depth:
 
-1. [`es30-hello-triangle`](../demos/es30/hello-triangle/README.md): context, shaders, a buffer, a VAO, one draw call.
-2. [`es20-vertex-attributes`](../demos/es20-foundations/vertex-attributes/README.md) and
-   [`es30-vertex-array-objects`](../demos/es30/vertex-array-objects/README.md): how vertex data reaches the shader.
-3. [`es20-shader-compilation`](../demos/es20-foundations/shader-compilation/README.md) and
-   [`es20-uniforms`](../demos/es20-foundations/uniforms/README.md): shader objects, programs, uniforms.
-4. [`es20-transformations-camera`](../demos/es20-foundations/transformations-camera/README.md) ★: matrices and a 3D camera.
-5. [`es20-textures-2d`](../demos/es20-foundations/textures-2d/README.md), then [`es30-lighting`](../demos/es30/lighting/README.md) ★.
-6. [`es20-framebuffer-objects`](../demos/es20-foundations/framebuffer-objects/README.md): rendering into textures.
-7. [`es30-instancing`](../demos/es30/instancing/README.md) and [`es30-transform-feedback`](../demos/es30/transform-feedback/README.md).
-8. [`es31-compute-basics`](../demos/es31/compute-basics/README.md), [`es31-ssbo-std430`](../demos/es31/ssbo-std430/README.md),
-   [`es31-compute-particles`](../demos/es31/compute-particles/README.md) ★ (ES 3.1).
-9. [`es32-geometry-shaders`](../demos/es32/geometry-shaders/README.md) ★ and
-   [`es32-tessellation-terrain`](../demos/es32/tessellation-terrain/README.md) ★ (ES 3.2).
-10. [`es30-interactive-3d-scene`](../demos/es30/interactive-3d-scene/README.md) ★: the explorable capstone.
+1. **Programmable rendering:** [`es30-hello-triangle`](../demos/es30/hello-triangle/README.md) (context, shaders, a
+   buffer, a VAO, one draw call), then [`es20-clear-viewport-scissor`](../demos/es20-foundations/clear-viewport-scissor/README.md).
+2. **GLSL shaders:** [`es20-shader-compilation`](../demos/es20-foundations/shader-compilation/README.md) (shader and
+   program objects, info logs) and [`es20-uniforms`](../demos/es20-foundations/uniforms/README.md).
+3. **Buffers and vertex attributes:** [`es20-vertex-attributes`](../demos/es20-foundations/vertex-attributes/README.md),
+   [`es20-indexed-drawing`](../demos/es20-foundations/indexed-drawing/README.md),
+   [`es30-vertex-array-objects`](../demos/es30/vertex-array-objects/README.md) and
+   [`es30-buffer-mapping`](../demos/es30/buffer-mapping/README.md).
+4. **Textures and framebuffer objects:** [`es20-textures-2d`](../demos/es20-foundations/textures-2d/README.md),
+   [`es20-mipmaps`](../demos/es20-foundations/mipmaps/README.md),
+   [`es20-framebuffer-objects`](../demos/es20-foundations/framebuffer-objects/README.md) (rendering into textures).
+5. **Transformations and 3D cameras:** [`es20-transformations-camera`](../demos/es20-foundations/transformations-camera/README.md) ★
+   and [`es20-depth-test`](../demos/es20-foundations/depth-test/README.md).
+6. **Lighting and shadows:** [`es30-lighting`](../demos/es30/lighting/README.md) ★,
+   [`es30-normal-mapping`](../demos/es30/normal-mapping/README.md) ★,
+   [`es30-shadow-mapping`](../demos/es30/shadow-mapping/README.md) ★ and
+   [`es30-skybox-and-fog`](../demos/es30/skybox-and-fog/README.md) ★.
+7. **Advanced ES 3.0:** [`es30-instancing`](../demos/es30/instancing/README.md),
+   [`es30-uniform-buffer-objects`](../demos/es30/uniform-buffer-objects/README.md),
+   [`es30-multiple-render-targets`](../demos/es30/multiple-render-targets/README.md),
+   [`es30-deferred-shading`](../demos/es30/deferred-shading/README.md) ★,
+   [`es30-transform-feedback`](../demos/es30/transform-feedback/README.md), and the capstone
+   [`es30-interactive-3d-scene`](../demos/es30/interactive-3d-scene/README.md) ★ (mouse look, WASD, toggles 1-6).
+8. **ES 3.1 compute shaders:** [`es31-compute-basics`](../demos/es31/compute-basics/README.md),
+   [`es31-ssbo-std430`](../demos/es31/ssbo-std430/README.md),
+   [`es31-compute-shared-memory`](../demos/es31/compute-shared-memory/README.md),
+   [`es31-compute-particles`](../demos/es31/compute-particles/README.md) ★.
+9. **ES 3.2 geometry and tessellation shaders:** [`es32-geometry-shaders`](../demos/es32/geometry-shaders/README.md) ★,
+   [`es32-layered-rendering`](../demos/es32/layered-rendering/README.md),
+   [`es32-tessellation-domains`](../demos/es32/tessellation-domains/README.md) and
+   [`es32-tessellation-terrain`](../demos/es32/tessellation-terrain/README.md) ★.
+10. **Shader-language validation:** [`glsl-compile-tests`](../shader-tests/README.md) (what the compiler must accept
+    and reject), [`test-glsl-language`](../tests/glsl/glsl-language/README.md) (evaluation order, out parameters) and
+    the built-in function tests [`test-glsl300-builtins`](../tests/glsl/glsl300-builtins/README.md),
+    [`test-glsl310-builtins`](../tests/glsl/glsl310-builtins/README.md),
+    [`test-glsl320-builtins`](../tests/glsl/glsl320-builtins/README.md).
 
 Every README has a section on how the demo is validated. Run it with `--headless --validate` and each check prints one
 line (`[ok]` or `[FAIL]` with the measured and expected values).

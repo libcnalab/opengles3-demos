@@ -3,6 +3,10 @@
 Reports from agents that did not write the code they audited. Each report is followed by an integration step:
 every finding is checked against the spec text, fixed or rejected with a reason, and the result is recorded below.
 
+The reports are kept as the reviewers wrote them. Their file references (`demos/.../main.cpp:475`) are relative to
+the repository root and give line numbers of the revision under review, so they are not clickable links from this
+directory and the lines have moved since.
+
 ## 2026-11-11: Codex phase 6 audit (AUDIT_BRIEF.md), 6 groups, 19 findings
 
 | report | findings | disposition |

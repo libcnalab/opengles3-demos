@@ -10,8 +10,8 @@ This is not a Khronos conformance claim.
 | | |
 |---|---|
 | proposed version | **1.0.0-rc.2** (rc.1 is tagged locally as `v1.0.0-rc.1`; nothing new is pushed or tagged remotely) |
-| tested revision | opengles3-demos **`2ac69b744a4d945834d3a045c9fedd9cf7834cb9`**: every executable in section B was compiled from a clean clone of this commit, and the evidence was collected there |
-| release-candidate commit | the commit that adds this report and the rc.2 evidence on top of `2ac69b7`; it changes documentation and evidence files only (no source, shader, CMake file or test registration) |
+| tested revision | opengles3-demos **`ef7b53db10fa621eca64dbdc5761a46494dcaca2`**: the evidence in section B was collected in a clean clone at this commit. Its executables were compiled in that clone at `2ac69b7`; `ef7b53d` changes only test registration (`cmake/OglesDemo.cmake`, `CMakeLists.txt`: the zink ICD pin) and documentation, and reconfiguring at `ef7b53d` compiled and linked nothing |
+| release-candidate commit | the commit that adds the final version of this report on top of `ef7b53d` (tag `v1.0.0-rc.2`, local); it and `8b5a50f` change documentation and evidence files only |
 | meta-gl | **`333d777fadbe53613a9c2eead358ffbfe6a2ef33`** on `develop` (`v0.4.1-9-g333d777`), cloned from <https://github.com/libcna/meta-gl> for the runs. Configure fails without it (`OGLES3_METAGL_REQUIRED_COMMIT`) |
 | supported and tested | Linux x86-64 (Debian 13, kernel 6.12); GCC 14.2 and Clang 19.1.7 (C++23, both `-Werror`-clean); CMake 3.31 + Ninja; Mesa 25.0.7: radeonsi (AMD Radeon 780M), llvmpipe, zink on lavapipe, softpipe; EGL 1.5 surfaceless pbuffers; SDL3 3.4.0 windows (X11, tested under Xvfb); ANGLE 2.1.17841 (Android SDK emulator build) on lavapipe |
 | expected to work, not tested | other Linux distributions; other conformant ES 3.0–3.2 drivers (deviations would show as FAIL or need a narrowly matched XFAIL); Wayland |
@@ -19,18 +19,17 @@ This is not a Khronos conformance claim.
 
 ## B. Validation results
 
-### Executed for this candidate (2026-11-12, clean clones of `2ac69b7` and meta-gl `333d777`)
+### Executed for this candidate (2026-11-12, clean clone at `ef7b53d`, meta-gl `333d777`)
 
 Evidence: [evidence/1.0.0-rc.2/](evidence/README.md) (manifest, per-run results, summary), and the archive in section
 E (logs, JUnit reports, every result JSON and capture).
 
 | matrix | compiler, build | registered | PASS | SKIP_UNSUPPORTED | BLOCKED_ENVIRONMENT | FAIL / CRASHED | run |
 |---|---|---|---|---|---|---|---|
-| standard (`debug`) | GCC 14.2, 0 warnings | 701 | 674 | 26 | 0 | **0** | 19:59–20:05 |
-| sanitizer (`sanitize`, ASan + UBSan, full matrix incl. ANGLE) | GCC 14.2, 0 warnings | 701 | 674 | 26 | 0 | **0** | 20:38–20:50 |
-| sanitizer, first attempt (kept, see below) | same build | 701 | 673 | 26 | 0 | 1 CRASHED (timeout) | 20:13–20:27 |
-| strict (`headless-ci`, `-Werror`) | GCC 14.2, **0 warnings** | 395 | 365 | 26 | 3 | **0** | 20:30–20:32 |
-| strict (`headless-ci-clang`, `-Werror`) | Clang 19.1.7, **0 warnings** | 395 | 365 | 26 | 3 | **0** | 20:36–20:37 |
+| standard (`debug`) | GCC 14.2, 0 warnings | 701 | 674 | 26 | 0 | **0** | 20:58–21:02 |
+| sanitizer (`sanitize`, ASan + UBSan, full matrix incl. ANGLE) | GCC 14.2, 0 warnings | 701 | 674 | 26 | 0 | **0** | 21:02–21:16 |
+| strict (`headless-ci`, `-Werror`) | GCC 14.2, **0 warnings** | 395 | 365 | 26 | 3 | **0** | 21:16–21:17 |
+| strict (`headless-ci-clang`, `-Werror`) | Clang 19.1.7, **0 warnings** | 395 | 365 | 26 | 3 | **0** | 21:17–21:19 |
 
 Each registered count includes the CPU-only `unit-deviation-matcher` (PASS, no result JSON). Breakdown of the
 standard matrix by driver and mode (from `results.csv`):
@@ -43,13 +42,14 @@ standard matrix by driver and mode (from `results.csv`):
 | softpipe (native ES 3.1) | es-max / es-min | 4 / 4 | 13 (ES 3.2 executables) |
 | ANGLE on lavapipe | native (ES 3.1) / native-min (ES 3.0) | 70 / 54 | 13 (ES 3.2 executables) |
 
-- **The sanitizer timeout:** in the first sanitizer run, `es30-deferred-shading:llvmpipe:size-333x777` exceeded
-  CTest's 120 s limit while another session's ASan suite kept the load average near 30. All nine deferred-shading
-  runs were 6–7 times slower than in rc.1. Run back to back under that load, the rc.1 binary (built at `9050c5a`) and
-  the rc.2 binary need the same CPU time (106.6 / 111.5 s and 109.0 / 120.9 s), and both PASS 79/79. The same build
-  was then collected again at load 12–20: PASS in 74 s (26 s on the idle machine of rc.1). Both runs are kept in
-  `docs/evidence/1.0.0-rc.2/` (`sanitize-attempt1`, `sanitize`); the timeout is a load artifact of a slow ASan +
-  llvmpipe run, not a regression, but it shows that this one run has little margin under heavy load.
+- **Earlier collection at `2ac69b7` (superseded, kept):** before the independent review, the same builds were
+  collected at `2ac69b7` (`docs/evidence/1.0.0-rc.2/superseded-2ac69b7/`): identical counts, except that the first
+  sanitizer attempt had one CRASHED run. `es30-deferred-shading:llvmpipe:size-333x777` exceeded CTest's 120 s limit
+  while another session's ASan suite kept the load average near 30; all nine deferred-shading runs were 6–7 times
+  slower than in rc.1. Run back to back under that load, the rc.1 binary (built at `9050c5a`) and the rc.2 binary need
+  the same CPU time (106.6 / 111.5 s and 109.0 / 120.9 s) and both PASS 79/79. Re-collected, it passed in 74 s, and in
+  the final sanitizer run in 90 s (26 s on the idle machine of rc.1). It is a load artifact, not a regression, but
+  this one ASan + llvmpipe run has little margin under heavy load.
 - **Every SKIP_UNSUPPORTED** is an ES 3.2 executable on an ES 3.1 implementation (softpipe, ANGLE).
 - **BLOCKED_ENVIRONMENT** occurs only in the two `headless-ci` matrices, which build without SDL3 by design: there
   `es30-multisample-default-framebuffer` cannot use its window runs and reports the Mesa surfaceless-pbuffer limit
@@ -81,7 +81,7 @@ standard matrix by driver and mode (from `results.csv`):
 
 ## C. Coverage
 
-From [generated/COVERAGE_SUMMARY.md](generated/COVERAGE_SUMMARY.md) (source revision `2ac69b7`, meta-gl `333d777`):
+From [generated/COVERAGE_SUMMARY.md](generated/COVERAGE_SUMMARY.md) (source revision `ef7b53d`, meta-gl `333d777`):
 
 | | total | FULLY_VALIDATED | other |
 |---|---|---|---|
@@ -127,20 +127,24 @@ Requirements outside the repositories: Mesa with radeonsi (or another hardware d
 and the lavapipe Vulkan ICD; EGL; SDL3 and `xvfb-run` (for the multisample demo's window runs); Python 3; an ANGLE
 build for the `angle` runs. On another machine the `gpu` runs exercise that machine's driver.
 
-Archive: `opengles3-demos-1.0.0-rc.2-evidence.tar.xz` (21,298,164 bytes, 4,119 entries, sha256
-`3e7a4522079c0d15472a77fc2c49a2f0ee7f17cdbdcbf65978a1f610c6309d6b`), on the reference machine under
+Archive: `opengles3-demos-1.0.0-rc.2-evidence.tar.xz` (39,307,700 bytes, 8,106 entries, sha256
+`7bad7492500359fe79153bb1fecd7e39e981d3000d0530feb4db8aaba0d5141c`), on the reference machine under
 `build/release-evidence/` with its `.sha256` file. It holds, per matrix, the manifest, results, summary, CTest log,
-JUnit report, configure and build logs and every result JSON and capture; the coverage output of the clean clone; and
-the supplementary material of this phase (Clang object comparison and build logs, the multisample window runs, the
-resize runs). The rc.1 archive is unchanged (sha256 `2d96c332…cba7`).
+JUnit report, configure and build logs and every result JSON and capture; the coverage output of the clean clone; the
+superseded `2ac69b7` collection; and the supplementary material of this phase (Clang object comparison and build
+logs, the multisample window runs, the resize runs, the review report). The pre-review archive of `2ac69b7` is kept
+as `opengles3-demos-1.0.0-rc.2-pre-review-2ac69b7-evidence.tar.xz` (sha256 `3e7a4522…9d6b`, the value recorded in
+`8b5a50f`), and the rc.1 archive is unchanged (sha256 `2d96c332…cba7`).
 
 ## F. GPU safety
 
 Verified in the source and the manifests:
 - The known GPU-faulting case (`es31-image-load-store`, non-layered 3D-slice `imageStore` on ANGLE/RADV) is not run
   on ANGLE unless `OGLES3_RUN_GPU_FAULT_CASES=1`; the variable was not set in any run.
-- ANGLE's Vulkan driver defaults to lavapipe (`OGLES3_ANGLE_VULKAN_ICD`). The new zink window runs pin Vulkan to
-  the same lavapipe ICD; the llvmpipe window runs are software rendering into a virtual X server.
+- ANGLE's Vulkan driver defaults to lavapipe (`OGLES3_ANGLE_VULKAN_ICD`). Since `ef7b53d` every zink run (headless
+  and window) pins Vulkan to the same lavapipe ICD; before, headless zink relied on Mesa choosing a CPU device under
+  `LIBGL_ALWAYS_SOFTWARE` (it did: every zink run reported llvmpipe). The llvmpipe window runs are software rendering
+  into a virtual X server.
 - Driver crash cases run in child processes with timeouts; CTest kills any run after 120 s and the result is
   `CRASHED`.
 - Compilation stays at ≤ 3 jobs (presets, the owner's limit since 2026-11-12).
@@ -149,8 +153,31 @@ A clean kernel log is evidence for these runs on this machine, not proof of GPU 
 
 ## G. Decision
 
-Pending the independent review (section H).
+**READY FOR 1.0.0 WITH DOCUMENTED LIMITATIONS** (release candidate 1.0.0-rc.2).
+
+Evidence: the candidate builds from clean clones with GCC 14.2 and Clang 19.1.7 under `-Werror` without a warning;
+the standard, sanitizer and both strict matrices have no FAIL, no CRASHED run and no unexplained SKIP; all 83
+executables, all 358 API entry points and every inventory row except the two undefined-behaviour rows are
+FULLY_VALIDATED; the evidence is tied to the exact revisions and archived with checksums; the known GPU-faulting
+case stays opt-in and every Vulkan-backed run is pinned to lavapipe. The independent review found one HIGH issue
+(GPU-safety hardening), which is fixed and re-verified; no BLOCKER or HIGH issue remains open.
+
+The limitations in section D are external (Mesa's surfaceless multisampled pbuffer, driver deviations), environmental
+(no non-Mesa driver, ANGLE only on lavapipe) or minor (three executables validate only their documented frame). Two
+decisions belong to the owner and do not block the suite's correctness: the meta-gl policy question with a meta-gl
+release tag (METAGL_MAINTAINER_NOTE.md), and publishing 1.0.0.
 
 ## H. Independent review
 
-Pending: the focused review ([agent-briefs/RC2_REVIEW_BRIEF.md](agent-briefs/RC2_REVIEW_BRIEF.md)) by a different agent and model runs on this commit.
+Reviewer: Codex (a different agent and model from the implementing agent), in its own worktree at `8b5a50f`, with
+[RC2_REVIEW_BRIEF.md](agent-briefs/RC2_REVIEW_BRIEF.md): the rc.1 → rc.2 change set only, no compilation, at most 10
+findings. Report: [audits/2026-11-12-codex-rc2-review.md](audits/2026-11-12-codex-rc2-review.md).
+
+The reviewer confirmed that the Clang casts keep arithmetic where it was and select no other overload, that the
+multisample window runs keep the assertions a single-sample window would fail, that the fallback without SDL3 stays
+BLOCKED_ENVIRONMENT, that the lighting tolerance is unchanged, and that every evidence count, commit and archive
+checksum (rc.2 and the preserved rc.1) matches the documents.
+
+| severity | finding | resolution |
+|---|---|---|
+| HIGH | headless zink runs did not pin the Vulkan ICD to lavapipe (only the new window runs did), so on another host zink could reach a hardware Vulkan device | verified: on this machine Mesa 25.0.7's zink chose lavapipe in every run although RADV is installed, so no run reached the GPU; but that is driver behaviour, not a guarantee. Fixed in `ef7b53d` (all 153 zink runs pinned, PASS on lavapipe); all four matrices collected again at `ef7b53d` |

@@ -26,7 +26,9 @@ Prepared 2026-11-12 under the final completion directive, starting from release 
 | `5bacc8d` | compilation limit lowered to 3 cores (owner's instruction during this phase) |
 | `b259bf8` | runtime: swap before a validated frame that follows a resize; es30-lighting terminator band and minimum size |
 | `2ac69b7` | technical note for the meta-gl maintainer |
-| RC commit | rc.2 evidence, regenerated coverage, CHANGELOG, README, STATUS, handoff, readiness and this report |
+| `8b5a50f` | pre-review candidate: evidence at `2ac69b7`, CHANGELOG, README, STATUS, handoff, readiness, this report |
+| `ef7b53d` | every zink run pinned to lavapipe (finding of the independent review) |
+| RC commit | evidence at `ef7b53d`, review disposition, final readiness decision and this report; tag `v1.0.0-rc.2` (local) |
 
 ## Clang
 
@@ -89,20 +91,20 @@ run checks that `shutdown()` raises no GL error, and the sanitizer matrix checks
 leaks are not measured: ASan runs with `detect_leaks=0` because driver-internal allocations are outside the suite's
 control.
 
-## Test evidence (clean clones of `2ac69b7`)
+## Test evidence (clean clone at `ef7b53d`; executables compiled there at `2ac69b7`, nothing recompiled since)
 
 | matrix | registered | PASS | SKIP_UNSUPPORTED | BLOCKED_ENVIRONMENT | FAIL / CRASHED |
 |---|---|---|---|---|---|
 | debug (radeonsi, llvmpipe, zink, softpipe, ANGLE native ES 3.1 and ES 3.0, 333x777) | 701 | 674 | 26 | 0 | 0 |
 | sanitize (ASan + UBSan) | 701 | 674 | 26 | 0 | 0 |
-| sanitize, first attempt (load average ≈ 30) | 701 | 673 | 26 | 0 | 1 timeout |
 | headless-ci (GCC, `-Werror`) | 395 | 365 | 26 | 3 | 0 |
 | headless-ci-clang (Clang, `-Werror`) | 395 | 365 | 26 | 3 | 0 |
 
 Counts include the CPU unit test. SKIP_UNSUPPORTED: ES 3.2 executables on ES 3.1 implementations (softpipe, ANGLE).
-BLOCKED_ENVIRONMENT: the window-less fallback described above. The first sanitizer attempt's timeout is explained in
-FINAL_RELEASE_READINESS.md section B (same CPU cost as the rc.1 binary under the same load; PASS in 74 s when
-re-collected). Kernel log: no amdgpu fault, timeout or reset in any run. XFAIL: 650 checks in 202 runs, unchanged
+BLOCKED_ENVIRONMENT: the window-less fallback described above. An earlier collection at `2ac69b7` (kept in
+`docs/evidence/1.0.0-rc.2/superseded-2ac69b7/`) had identical counts, except for one sanitizer timeout under a load
+average near 30. FINAL_RELEASE_READINESS.md section B explains it: the rc.1 binary needs the same CPU time under the
+same load, and the run passed in 74 s and 90 s when collected again. Kernel log: no amdgpu fault, timeout or reset in any run. XFAIL: 650 checks in 202 runs, unchanged
 from rc.1.
 
 ## Coverage
@@ -121,10 +123,12 @@ checkout shows `AGENTS.md` and `CLAUDE.md` deleted in its working tree (not done
 
 ## Release candidate
 
-- Version **1.0.0-rc.2**; code revision under test `2ac69b7`; the RC commit (documentation and evidence only) is the
-  commit that adds this report. A local tag `v1.0.0-rc.2` marks it; nothing was pushed.
-- Evidence: `docs/evidence/1.0.0-rc.2/`; archive `opengles3-demos-1.0.0-rc.2-evidence.tar.xz`, sha256
-  `3e7a4522079c0d15472a77fc2c49a2f0ee7f17cdbdcbf65978a1f610c6309d6b` (`build/release-evidence/`).
+- Version **1.0.0-rc.2**; tested revision `ef7b53db10fa621eca64dbdc5761a46494dcaca2`; the RC commit on top of it
+  changes documentation and evidence only and carries the local annotated tag `v1.0.0-rc.2`. Nothing was pushed,
+  merged or published.
+- Evidence: `docs/evidence/1.0.0-rc.2/`; archive `opengles3-demos-1.0.0-rc.2-evidence.tar.xz` (39,307,700 bytes),
+  sha256 `7bad7492500359fe79153bb1fecd7e39e981d3000d0530feb4db8aaba0d5141c`, in `build/release-evidence/` next to its
+  `.sha256` file, the pre-review archive and the unchanged rc.1 archive.
 
 ## Remaining limitations
 
@@ -138,8 +142,21 @@ checkout shows `AGENTS.md` and `CLAUDE.md` deleted in its working tree (not done
 
 ## Independent review
 
-Pending: the focused independent review ([agent-briefs/RC2_REVIEW_BRIEF.md](agent-briefs/RC2_REVIEW_BRIEF.md)) runs on this commit.
+Codex (a different agent and model) reviewed `v1.0.0-rc.1..8b5a50f` with
+[RC2_REVIEW_BRIEF.md](agent-briefs/RC2_REVIEW_BRIEF.md), without compiling. Report:
+[audits/2026-11-12-codex-rc2-review.md](audits/2026-11-12-codex-rc2-review.md). It confirmed the Clang fixes, the
+multisample validation, the lighting and runtime changes, and the evidence and checksums. One finding, HIGH: headless
+zink runs did not pin the Vulkan ICD. Verified (Mesa 25.0.7 chose lavapipe in every run, but nothing in the suite
+guaranteed it) and fixed in `ef7b53d`; all matrices were collected again. No BLOCKER or HIGH issue remains open.
 
 ## Final decision
 
-Pending the independent review.
+**READY FOR 1.0.0 WITH DOCUMENTED LIMITATIONS.**
+
+Every completion criterion that is within the project's control is met with evidence: a known, consistent Git
+state; 358/358 entry points and 83/83 executables FULLY_VALIDATED; GCC and Clang strict builds warning-free; the
+sanitizer, standard and strict matrices without failures; the multisample limitation investigated and resolved by a
+legitimate window-surface test; GLSL and 3D demos preserved and re-checked; documentation corrected; evidence
+archived with checksums; meta-gl revision explicit and untouched; no unsafe GPU case enabled; an independent review
+without open critical findings; nothing pushed or published. The remaining items are external driver defects,
+unavailable environments and two owner decisions (meta-gl policy and release tag; publishing), listed above.

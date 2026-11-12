@@ -2,8 +2,8 @@
   "label": "headless-ci-clang",
   "opengles3_demos": {
     "path": "/tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/7a63c4aa-c5ab-40b2-9623-c84bee68a371/scratchpad/clean2/libcnalab/opengles3-demos",
-    "commit": "2ac69b744a4d945834d3a045c9fedd9cf7834cb9",
-    "describe": "v1.0.0-rc.1-6-g2ac69b7",
+    "commit": "ef7b53db10fa621eca64dbdc5761a46494dcaca2",
+    "describe": "v1.0.0-rc.1-8-gef7b53d",
     "branch": "HEAD",
     "dirty": false
   },
@@ -32,7 +32,7 @@
       "OGLES3_WERROR": "ON",
       "OGLES3_WITH_SDL3": "OFF"
     },
-    "compiler": "/usr/bin/clang++",
+    "compiler": "clang++",
     "compiler_version": "Debian clang version 19.1.7 (3+b1)",
     "cmake_version": "cmake version 3.31.6"
   },
@@ -127,10 +127,10 @@
       "runs": 18
     }
   ],
-  "command": "ctest --test-dir /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/7a63c4aa-c5ab-40b2-9623-c84bee68a371/scratchpad/clean2/libcnalab/opengles3-demos/build/headless-ci-clang -j 3 --output-on-failure --output-junit /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/7a63c4aa-c5ab-40b2-9623-c84bee68a371/scratchpad/evidence-rc2/headless-ci-clang/junit.xml",
+  "command": "ctest --test-dir /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/7a63c4aa-c5ab-40b2-9623-c84bee68a371/scratchpad/clean2/libcnalab/opengles3-demos/build/headless-ci-clang -j 3 --output-on-failure --output-junit /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/7a63c4aa-c5ab-40b2-9623-c84bee68a371/scratchpad/evidence-rc2b/headless-ci-clang/junit.xml",
   "ctest_exit_code": 0,
-  "start": "2026-11-12T20:36:04+01:00",
-  "end": "2026-11-12T20:37:59+01:00",
+  "start": "2026-11-12T21:17:51+01:00",
+  "end": "2026-11-12T21:19:35+01:00",
   "tests_registered": 395,
   "ctest_status_counts": {
     "run": 366,

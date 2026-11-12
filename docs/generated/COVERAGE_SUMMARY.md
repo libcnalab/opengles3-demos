@@ -3,7 +3,7 @@
 
 Result directories: build/debug/test-results
 
-Source revision: 2ac69b7
+Source revision: ef7b53d
 
 meta-gl revision: 333d777 (../../libcna/meta-gl)
 

@@ -1,9 +1,9 @@
 # Evidence: debug
 
-- opengles3-demos `2ac69b744a4d945834d3a045c9fedd9cf7834cb9` (v1.0.0-rc.1-6-g2ac69b7)
+- opengles3-demos `ef7b53db10fa621eca64dbdc5761a46494dcaca2` (v1.0.0-rc.1-8-gef7b53d)
 - meta-gl `333d777fadbe53613a9c2eead358ffbfe6a2ef33` (v0.4.1-9-g333d777)
 - build `Debug`, c++ (Debian 14.2.0-19) 14.2.0, cmake version 3.31.6
-- run 2026-11-12T19:59:50+01:00 .. 2026-11-12T20:05:19+01:00; `ctest --test-dir /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/7a63c4aa-c5ab-40b2-9623-c84bee68a371/scratchpad/clean2/libcnalab/opengles3-demos/build/debug -j 3 --output-on-failure --output-junit /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/7a63c4aa-c5ab-40b2-9623-c84bee68a371/scratchpad/evidence-rc2/debug/junit.xml`; ctest exit code 0
+- run 2026-11-12T20:58:35+01:00 .. 2026-11-12T21:02:54+01:00; `ctest --test-dir /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/7a63c4aa-c5ab-40b2-9623-c84bee68a371/scratchpad/clean2/libcnalab/opengles3-demos/build/debug -j 3 --output-on-failure --output-junit /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/7a63c4aa-c5ab-40b2-9623-c84bee68a371/scratchpad/evidence-rc2b/debug/junit.xml`; ctest exit code 0
 - registered tests: 701; CTest status: notrun 26, run 675
 - outcomes: N/A (no result JSON by design) 1, PASS 674, SKIP_UNSUPPORTED 26
 - kernel log read; amdgpu fault/timeout/reset lines during the run: 0

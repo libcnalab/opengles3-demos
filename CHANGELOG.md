@@ -31,6 +31,9 @@ report: [docs/FINAL_RELEASE_READINESS.md](docs/FINAL_RELEASE_READINESS.md); comp
   ([docs/METAGL_MAINTAINER_NOTE.md](docs/METAGL_MAINTAINER_NOTE.md)); KNOWN_LIMITATIONS records that three
   executables validate only their documented frame (an explicit `--frames N` can FAIL them).
 - Compilation limit lowered to 3 CPU cores (presets `jobs: 3`, `5bacc8d`).
+- **GPU safety:** every zink run is pinned to lavapipe (`VK_ICD_FILENAMES`/`VK_DRIVER_FILES`), as the ANGLE runs
+  already were (`ef7b53d`, finding of the independent review). Before, headless zink relied on Mesa choosing a CPU
+  Vulkan device under `LIBGL_ALWAYS_SOFTWARE`.
 
 ### Requirements
 

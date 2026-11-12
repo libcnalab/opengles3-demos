@@ -83,3 +83,18 @@ were verified against the code and accepted:
 
 Fixed in 9050c5a. All four matrices were then collected again with the fixed tool, at 9050c5a, from the clean
 clones. Report: [release review](2026-11-12-codex-release-review.md).
+
+## 2026-11-12: Codex focused review of 1.0.0-rc.2 (RC2_REVIEW_BRIEF.md)
+
+Scope: `v1.0.0-rc.1..8b5a50f` (Clang fixes, multisample window runs, resize swap, lighting changes, rc.2 evidence,
+GPU safety, meta-gl, documentation). No compilation (the owner's CPU limit was in use). The reviewer confirmed that
+the Clang casts keep arithmetic in float where it was, that the window runs keep the multisample-specific assertions
+(a single-sample window would fail them), that the lighting tolerance is unchanged, and that every evidence total,
+commit and archive checksum (rc.2 and the preserved rc.1) matches the documents. One finding:
+- **HIGH (accepted as GPU-safety hardening):** headless zink runs did not pin the Vulkan ICD to lavapipe; only the
+  new window runs did. Verified: Mesa 25.0.7's zink chooses a CPU device under `LIBGL_ALWAYS_SOFTWARE` (every zink
+  run here reported llvmpipe although RADV is installed), so no run on this machine reached the GPU, but that is
+  driver behaviour, not a guarantee elsewhere. Fixed in `ef7b53d`: every zink run sets `VK_ICD_FILENAMES` and
+  `VK_DRIVER_FILES` to the lavapipe ICD. All matrices were collected again at `ef7b53d`.
+
+Report: [rc.2 review](2026-11-12-codex-rc2-review.md).

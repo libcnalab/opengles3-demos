@@ -2,8 +2,8 @@
   "label": "headless-ci",
   "opengles3_demos": {
     "path": "/tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/7a63c4aa-c5ab-40b2-9623-c84bee68a371/scratchpad/clean2/libcnalab/opengles3-demos",
-    "commit": "2ac69b744a4d945834d3a045c9fedd9cf7834cb9",
-    "describe": "v1.0.0-rc.1-6-g2ac69b7",
+    "commit": "ef7b53db10fa621eca64dbdc5761a46494dcaca2",
+    "describe": "v1.0.0-rc.1-8-gef7b53d",
     "branch": "HEAD",
     "dirty": false
   },
@@ -127,10 +127,10 @@
       "runs": 18
     }
   ],
-  "command": "ctest --test-dir /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/7a63c4aa-c5ab-40b2-9623-c84bee68a371/scratchpad/clean2/libcnalab/opengles3-demos/build/headless-ci -j 3 --output-on-failure --output-junit /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/7a63c4aa-c5ab-40b2-9623-c84bee68a371/scratchpad/evidence-rc2/headless-ci/junit.xml",
+  "command": "ctest --test-dir /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/7a63c4aa-c5ab-40b2-9623-c84bee68a371/scratchpad/clean2/libcnalab/opengles3-demos/build/headless-ci -j 3 --output-on-failure --output-junit /tmp/claude-1000/-rv-data-development-github-com-libcnalab-opengles3-demos/7a63c4aa-c5ab-40b2-9623-c84bee68a371/scratchpad/evidence-rc2b/headless-ci/junit.xml",
   "ctest_exit_code": 0,
-  "start": "2026-11-12T20:30:36+01:00",
-  "end": "2026-11-12T20:32:46+01:00",
+  "start": "2026-11-12T21:16:11+01:00",
+  "end": "2026-11-12T21:17:49+01:00",
   "tests_registered": 395,
   "ctest_status_counts": {
     "run": 366,

@@ -52,6 +52,7 @@ namespace
     // ---------------------------------------------------------------------------------------------
     constexpr int kHiSlices = 96, kHiStacks = 48;  // smooth sphere: 9216 triangles
     constexpr int kLoSlices = 12, kLoStacks = 8;   // coarse sphere for the Gouraud comparison
+    constexpr int kMinSurface = 200;  // smallest width and height with non-vacuous checks (README "Validation")
     constexpr int kGridCells = 24;                 // ground: 24 x 24 cells of 2 x 2 units
     constexpr float kGroundHalf = 24.0f;
     constexpr float kSphereRadius = 0.85f;
@@ -626,6 +627,22 @@ namespace
             return true;
         }
 
+        // The shading itself is discontinuous at each light's terminator: lighting.frag (like ref_reflect_light) drops a
+        // light entirely where N.L <= 0, although the Phong and Blinn-Phong specular terms are not zero there. A smooth
+        // sphere's interpolated normal differs from the analytic one by < 0.003 rad (see kSphereTol), so a pixel with
+        // |N.L| below kTerminatorBand (more than three times that) may lie on either side of the step. Sweeps skip such
+        // pixels, as they skip silhouettes; the dedicated probes stay away from terminators.
+        [[nodiscard]] bool near_terminator(const Hit& h) const
+        {
+            constexpr double kTerminatorBand = 0.01;
+            const Lights& l = f_.lights;
+            auto near = [&](D3 to_light, const m::Vec3& color) {
+                return (color.x != 0.0f || color.y != 0.0f || color.z != 0.0f) && std::abs(dot(h.normal, normalize(to_light))) < kTerminatorBand;
+            };
+            return near(d3(l.dir_direction) * -1.0, l.dir_color) || near(d3(l.point_position) - h.pos, l.point_color) ||
+                   (ref_spot_cone(l, h.pos) > 0.0 && near(d3(l.spot_position) - h.pos, l.spot_color));
+        }
+
     private:
         template <typename Finish>
         void crystal(Obj id, const m::Vec3& xz, const Ray& r, bool naive, bool with_color, Finish& finish) const
@@ -860,6 +877,11 @@ namespace
     public:
         void init(demo::Env& env) override
         {
+            // Below 200 pixels on a side some named probes find no unoccluded, stable point and the sweeps see fewer
+            // than 8 pixels of the small objects, so the checks would be vacuous (measured on llvmpipe and radeonsi).
+            if (env.width < kMinSurface || env.height < kMinSurface)
+                throw demo::Skip(std::format("surface {}x{} is too small: the probes and sweeps need at least {} pixels on each side",
+                                             env.width, env.height, kMinSurface));
             phong_.id = demo::build_program(env, "shaders/lighting.vert", "shaders/lighting.frag");
             gouraud_.id = demo::build_program(env, "shaders/gouraud.vert", "shaders/gouraud.frag");
             phong_.u = query_uniforms(phong_.id);
@@ -1039,7 +1061,8 @@ namespace
     };
 
     // Compares every `step`-th pixel whose CPU ray hits a surface the reference models, away from
-    // silhouettes, tile edges and crystal edges (Reference::stable), with the CPU colour.
+    // silhouettes, tile edges and crystal edges (Reference::stable) and, on the smooth spheres, away from the
+    // terminators (Reference::near_terminator), with the CPU colour.
     std::array<SweepStat, 10> sweep(const Reference& ref, const Img& img, int step)
     {
         std::array<SweepStat, 10> st{};
@@ -1050,6 +1073,7 @@ namespace
                 if (h.obj == Obj::SpotLamp) continue;
                 if ((h.obj == Obj::SpherePhong || h.obj == Obj::SphereBlinn) && h.n_dot_v < 0.3) continue;  // grazing: chord error grows
                 if (!ref.stable(x, y, h)) continue;
+                if ((h.obj == Obj::SpherePhong || h.obj == Obj::SphereBlinn) && ref.near_terminator(h)) continue;
                 SweepStat& s = st[static_cast<std::size_t>(h.obj)];
                 const demo::Rgba8 want = ref.expected(h), got = img.at(x, y);
                 const int d = diff_rgba(got, want);

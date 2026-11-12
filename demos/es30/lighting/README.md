@@ -182,7 +182,13 @@ t = 2.28 s, per-fragment on both coarse spheres (key `g`), a moved camera and a 
 pixel is skipped when it is not *stable*: its eight neighbours at +-2 px must hit the same object (and the
 same checker tile or crystal face), so no probe sits on a silhouette, a tile edge or a box edge where the
 rasterization tie-break rules would matter. Grazing sphere pixels (`N.V < 0.3`) are skipped because the
-polygonal sphere deviates most from the analytic one there.
+polygonal sphere deviates most from the analytic one there. Sphere pixels within `|N.L| < 0.01` of a light's
+terminator are skipped as well: the shading itself has a step there (a light is dropped entirely where `N.L <= 0`,
+although its specular term is not zero), and the polygonal sphere's normal differs from the analytic one by up to
+0.003 rad, so such a pixel can land on either side of the step (found at 500x720, where one sample did).
+
+Surfaces smaller than 200 pixels on either side report `SKIP_UNSUPPORTED`: some named probes then find no
+unoccluded point and the sweeps see too few pixels of the small objects.
 
 **Named probes.** The pixel is found by projecting a chosen world point on the CPU; the expectation is
 computed at the exact hit of the ray through the pixel centre, so projection rounding does not matter.

@@ -14,6 +14,14 @@
   non-Mesa drivers set `-DOGLES3_TEST_MIN_VERSION=OFF` and `OGLES3_TEST_DRIVERS=gpu`.
 - Windowed mode (SDL3) is tested under Xvfb; headless EGL pbuffers are the primary test path. The only matrix runs
   in a window are es30-multisample-default-framebuffer on llvmpipe and zink (Xvfb, see the environment row below).
+  Live window resizing was tested by hand for 14 3D executables (SDL3 window under Xvfb, llvmpipe, 640x400 resized to
+  500x720 with `xdotool` while running): validation passes at the new size, and the captures keep their aspect ratio.
+- `--validate` checks the frame each README names (the default frame count). With an explicit `--frames N`, three
+  executables can report FAIL on a correct render, because their checks are tuned to that frame:
+  es20-transformations-camera (probe points and post heights depend on the cube's pose), es30-shadow-mapping (the
+  shadow must fall on the platform for the probe set to be non-vacuous) and es30-sync-objects (it expects the
+  fence-wait count of its default frame count). All other executables pass at `--frames 300` (measured 2026-11-12).
+  The matrix never sets `--frames`.
 - Compilers: GCC 14.2 builds every preset without warnings. Clang 19.1.7 builds and passes the `headless-ci` matrix,
   but with 189 warnings (178 `-Wdouble-promotion` where a `float` reaches a `double` context such as
   `std::format`, 11 unused entities) in 30 files, so the `-Werror` preset fails with Clang (measured 2026-11-12).

@@ -446,6 +446,12 @@ namespace demo
                 {
                     env.width = ev.width;
                     env.height = ev.height;
+                    // The window system resizes the default framebuffer asynchronously: Mesa's X11 back buffer, for
+                    // one, takes the new size only after the next buffer swap, so this frame could still be drawn
+                    // into the old buffer. When it is the validated frame, swap once first so that validation and
+                    // the capture see a buffer of the size they assume. (Validation runs only: in an interactive
+                    // window the extra swap would flash a stale frame.)
+                    if (options.validate && frames > 0 && frame == frames - 1) platform->swap();
                 }
                 for (const char k : ev.keys)
                 {

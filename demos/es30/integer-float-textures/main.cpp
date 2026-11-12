@@ -62,10 +62,32 @@ namespace
 {
     constexpr int kTex = 8;       // every texture is 8 x 8
     constexpr int kTexels = kTex * kTex;
-    constexpr int kBlock = 8;     // a texel is shown as an 8 x 8 pixel block
-    constexpr int kCell = kTex * kBlock;
-    constexpr int kGrid = 4;
-    constexpr int kWindow = kGrid * kCell;
+    constexpr int kGrid = 4;      // 4 x 4 cells partition the window
+    constexpr int kMinCell = 16;  // a cell needs 2 pixels per texel so that both halves of the "above 2^24" blocks exist
+
+    struct Rect
+    {
+        int x, y, w, h;
+    };
+
+    /// Cell `cell` of the contact sheet (cell 0 is the top left). The edges sit at i * width / 4 and
+    /// j * height / 4, so the cells partition the window exactly (they may differ by one pixel).
+    Rect cell_rect(int cell, int width, int height)
+    {
+        const int col = cell % kGrid, row = kGrid - 1 - cell / kGrid;  // row 0 is the bottom row of the window
+        const int x0 = col * width / kGrid, x1 = (col + 1) * width / kGrid;
+        const int y0 = row * height / kGrid, y1 = (row + 1) * height / kGrid;
+        return {x0, y0, x1 - x0, y1 - y0};
+    }
+
+    /// The pixels of a cell n pixels long that show part `i` of `parts` (pixel p shows part p * parts / n, the
+    /// integer division in the show_*.frag shaders): [first, last]. Returns their centre.
+    int block_centre(int i, int parts, int n)
+    {
+        const int first = (i * n + parts - 1) / parts;            // smallest p with p * parts / n >= i
+        const int last = ((i + 1) * n + parts - 1) / parts - 1;   // largest p with p * parts / n <= i
+        return (first + last) / 2;
+    }
     constexpr std::uint32_t kOneBits = 0x3F800000u;  // 1.0f
 
     using Words = std::array<std::uint32_t, 4>;
@@ -542,8 +564,8 @@ namespace
     public:
         void init(demo::Env& env) override
         {
-            if (env.width < kWindow || env.height < kWindow)
-                throw demo::Skip(std::format("this demo draws into the lower left {0}x{0} pixels and needs a window at least that large", kWindow));
+            if (env.width < kGrid * kMinCell || env.height < kGrid * kMinCell)
+                throw demo::Skip(std::format("this demo needs a surface of at least {0}x{0} pixels (4 x 4 cells of {1} pixels)", kGrid * kMinCell, kMinCell));
 
             exact_[0] = demo::build_program(env, "shaders/quad.vert", "shaders/exact_uint.frag");
             exact_[1] = demo::build_program(env, "shaders/quad.vert", "shaders/exact_int.frag");
@@ -615,10 +637,12 @@ namespace
             float_linear_ = mgl::HasExtension("GL_OES_texture_float_linear");
         }
 
-        void render(demo::Env& /*env*/, int /*frame*/) override
+        void render(demo::Env& env, int /*frame*/) override
         {
+            width_ = env.width;
+            height_ = env.height;
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
-            mgl::glViewport(0, 0, kWindow, kWindow);
+            mgl::glViewport(0, 0, width_, height_);
             mgl::glClearColor(0.05f, 0.05f, 0.08f, 1.0f);
             mgl::glClear(mgl::ClearBufferBit::Color);
             mgl::glActiveTexture(mgl::TextureUnit::Texture0);
@@ -627,13 +651,14 @@ namespace
                 const bool linear_cell = cell == 15;
                 const Case& c = cases_[linear_cell ? kCaseR32f : static_cast<std::size_t>(cell)];
                 const mgl::ProgramId program = show_[static_cast<std::size_t>(c.kind)];
-                const int x0 = (cell % kGrid) * kCell, y0 = (kGrid - 1 - cell / kGrid) * kCell;  // cell 0 is the top left
+                const Rect r = cell_rect(cell, width_, height_);  // cell 0 is the top left
                 mgl::glUseProgram(program);
-                mgl::glViewport(x0, y0, kCell, kCell);
+                mgl::glViewport(r.x, r.y, r.w, r.h);
                 mgl::glBindTexture(mgl::TextureTarget::Texture2D, c.tex);
                 mgl::glBindSampler(0, linear_cell ? samplers_[1] : mgl::SamplerId{0});
                 mgl::glUniform1i(mgl::glGetUniformLocation(program, "u_tex"), 0);
-                mgl::glUniform2i(mgl::glGetUniformLocation(program, "u_origin"), x0, y0);
+                mgl::glUniform2i(mgl::glGetUniformLocation(program, "u_origin"), r.x, r.y);
+                mgl::glUniform2i(mgl::glGetUniformLocation(program, "u_cell_size"), r.w, r.h);
                 mgl::glUniform3f(mgl::glGetUniformLocation(program, "u_scale"), c.display.scale[0], c.display.scale[1], c.display.scale[2]);
                 mgl::glUniform3f(mgl::glGetUniformLocation(program, "u_bias"), c.display.bias[0], c.display.bias[1], c.display.bias[2]);
                 mgl::glUniform1i(mgl::glGetUniformLocation(program, "u_gray"), c.display.gray ? 1 : 0);
@@ -724,16 +749,16 @@ namespace
         // ------------------------------------------------------------------------------------------
         void check_display(demo::Check& check) const
         {
-            const std::vector<std::uint8_t> window = demo::read_rgba8(0, 0, kWindow, kWindow);
+            const std::vector<std::uint8_t> window = demo::read_rgba8(0, 0, width_, height_);
             auto pixel = [&](int x, int y) {
-                const auto o = static_cast<std::size_t>((y * kWindow + x) * 4);
+                const auto o = static_cast<std::size_t>((y * width_ + x) * 4);
                 return Rgba8{window[o], window[o + 1], window[o + 2], window[o + 3]};
             };
             for (int cell = 0; cell < kGrid * kGrid; ++cell)
             {
                 const bool linear_cell = cell == 15;
                 const Case& c = cases_[linear_cell ? kCaseR32f : static_cast<std::size_t>(cell)];
-                const int x0 = (cell % kGrid) * kCell, y0 = (kGrid - 1 - cell / kGrid) * kCell;
+                const Rect r = cell_rect(cell, width_, height_);
                 int probes = 0, bad = 0;
                 std::string first;
                 auto compare = [&](int x, int y, const std::array<double, 3>& want, std::string_view where) {
@@ -750,24 +775,26 @@ namespace
                 for (int k = 0; k < kTexels; ++k)
                 {
                     const int i = k % kTex, j = k / kTex;
-                    const int px = x0 + i * kBlock, py = y0 + j * kBlock;
+                    // The centre pixel of the block that shows texel (i, j); the integer texel mapping of the shaders
+                    // is exact, so every pixel of the block shows that texel and the centre is never ambiguous.
+                    const int px = r.x + block_centre(i, kTex, r.w), py = r.y + block_centre(j, kTex, r.h);
                     const Words& w = c.expected[static_cast<std::size_t>(k)];
                     if (c.display.mode == 1)
                     {
                         // Left half: (value - 2^24) / 63 as gray = k / 63. Right half: green for even k (float(value)
                         // is exact), red for odd k (an odd integer above 2^24 has no float).
                         const double gray = 255.0 * static_cast<double>(k) / 63.0;
-                        compare(px + 1, py + 4, {gray, gray, gray}, "left half");
+                        compare(r.x + block_centre(2 * i, 2 * kTex, r.w), py, {gray, gray, gray}, "left half");
                         const std::array<double, 3> stripe = (k % 2 == 0) ? std::array<double, 3>{0.0, 255.0, 0.0} : std::array<double, 3>{255.0, 0.0, 0.0};
-                        compare(px + 6, py + 4, stripe, "right half");
+                        compare(r.x + block_centre(2 * i + 1, 2 * kTex, r.w), py, stripe, "right half");
                     }
                     else if (linear_cell && !float_linear_)
                     {
-                        compare(px + 4, py + 4, {0.0, 0.0, 0.0}, "incomplete R32F + LINEAR");  // (0, 0, 0, 1)
+                        compare(px, py, {0.0, 0.0, 0.0}, "incomplete R32F + LINEAR");  // (0, 0, 0, 1)
                     }
                     else
                     {
-                        compare(px + 4, py + 4, display_color(c, w), "texel center");
+                        compare(px, py, display_color(c, w), "texel center");
                     }
                 }
                 std::string what = linear_cell ? std::format("cell {}: R32F through a LINEAR sampler object: {}", cell,
@@ -1103,6 +1130,7 @@ namespace
         mgl::ProgramId mixed_{};
         std::vector<Case> cases_;
         std::array<mgl::SamplerId, 2> samplers_{};   // [0] NEAREST, [1] LINEAR, both CLAMP_TO_EDGE
+        int width_ = 0, height_ = 0;                  // window size: the 4 x 4 cells partition it
         std::array<mgl::RenderbufferId, 2> rbo_{};   // RGBA32UI, RGBA32I
         std::array<mgl::FramebufferId, 2> fbo_{};
         bool float_linear_ = false;

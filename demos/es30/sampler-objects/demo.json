@@ -74,8 +74,8 @@
     "negative"
   ],
   "visual_review": {
-    "date": "2026-11-11",
-    "by": "claude-sonnet (subagent)",
-    "notes": "256x256 radeonsi es-max capture viewed at 3x (llvmpipe and zink captures differ by at most 1/255 per channel). Bottom row: hard 3x3 tiles (A own NEAREST/REPEAT), smooth clamped streaks (A + LINEAR/CLAMP sampler), a split cell with hard tiles on the left and a solid black right half (incomplete texture), smooth clamped streaks (B own). Second row: hard tiles (B + NEAREST/REPEAT sampler), a split cell with tiled blocks on the left and smooth mirrored/clamped colors on the right, two identical smooth halves, two identical hard clamped halves. Third row: hard clamped streaks (TexParameter under a sampler), smooth 3x3 tiles (sampler unbound), solid green (level 1), solid yellow (level 3). Top row: solid red (level 0), teal mix of levels 1 and 2, yellow (level 3), green (level 1)."
+    "date": "2026-11-12",
+    "by": "claude-opus-5.5 (subagent)",
+    "notes": "Window-filling layout reviewed on llvmpipe captures at 640x400 and 800x800 and the 256x256 radeonsi es-max capture. The 4x4 cells now partition the whole surface (rectangular at 640x400). Bottom row: hard 3x3 tiles (A own NEAREST/REPEAT), smooth clamped streaks (A + LINEAR/CLAMP sampler), split cell with hard tiles left and a solid black right half (incomplete), smooth clamped streaks (B own). Second row: hard tiles, split cell tiled left / smooth mirrored-clamped right, two identical smooth halves, two identical hard clamped halves. Third row: hard clamped streaks, smooth 3x3 tiles, green (level 1), yellow (level 3). Top row: red (level 0), teal mix, yellow, green. LOD cells are flat at every size; no gaps between cells."
   }
 }

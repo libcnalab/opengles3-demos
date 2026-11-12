@@ -77,8 +77,8 @@
     "negative"
   ],
   "visual_review": {
-    "date": "2026-11-11",
-    "by": "claude-sonnet-5.5",
-    "notes": "radeonsi es-max capture viewed at 3x and the lower and upper halves of the 40 used panels at 4x (llvmpipe and zink captures differ by at most 8 and 9 levels per channel, in the lossy 8-bit-into-4/5/6-bit panels only). Bottom row: R8 as a dark-to-bright red 4x4 ramp, RG8, RGB8 and RGBA8 as multi-colored 4x4 grids, R8_SNORM as a black-to-red grid (negative texels black), the two 5-6-5 grids and the first 4-4-4-4 grid. Second and third rows: the remaining 4-4-4-4, the three 5-5-5-1 / 2-10-10-10 grids and RGB10_A2, the half-float and float panels (the HALF_FLOAT and FLOAT uploads of one format look the same), the R11F_G11F_B10F trio and the RGB9_E5 trio (again identical pairs); the third row ends with the flat red level 0 of the 4-level texture. Fourth row: level 1 as green with a magenta 2x2 box (glTexSubImage2D at an offset), level 2 blue, level 3 yellow, then black (mutable one-level texture), yellow (immutable, BASE_LEVEL 100 clamped), black (mutable, BASE_LEVEL 100) and the first two textureSize colors. Fifth row: the remaining eight textureSize colors as flat dark swatches. The upper three rows are intentionally empty background."
+    "date": "2026-11-12",
+    "by": "claude-opus-5.5 (subagent)",
+    "notes": "Window-filling layout reviewed on llvmpipe captures at 640x400 (8x5 grid) and 800x800 (5x8 grid) and the 256x256 radeonsi es-max capture (5x8). All 40 panels fill the window, no empty cells. The format panels show their 4x4 texels as equal blocks; the mip ladder shows red, green with the magenta box, blue, yellow; the incomplete mutable panels are black; the base-level panels yellow and black; the textureSize panels are flat colors encoding the sizes."
   }
 }

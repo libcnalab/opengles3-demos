@@ -5,7 +5,7 @@
 // bound to a texture UNIT. While a sampler is bound, its state supersedes the state of whatever
 // texture is bound to that unit; binding sampler 0 gives the texture its own state back.
 //
-// Contact sheet of 16 cells (64 x 64 pixels each, row 0 is at the bottom). Every cell is a draw call;
+// Contact sheet of 4 x 4 cells that partition the whole surface (row 0 is at the bottom). Every cell is a draw call;
 // "A" is a 4x4 texture whose own state is NEAREST/REPEAT, "B" is the same texels with LINEAR/CLAMP_TO_EDGE
 // and "M" is a 64x64 texture with 7 mipmap levels, every level one flat color.
 //
@@ -42,8 +42,14 @@ namespace
     constexpr int kBase = 4;     // textures A and B are 4 x 4
     constexpr int kMip = 64;     // texture M is 64 x 64 with 7 levels
     constexpr int kLevels = 7;
-    constexpr int kCell = 64;    // cell size in pixels
-    constexpr int kGrid = 4;
+    constexpr int kGrid = 4;     // 4 x 4 cells partition the surface
+    constexpr int kMinCell = 32; // smallest cell (pixels) that leaves enough probes away from texel edges and seams
+    constexpr int kProbes = 16;  // probes per axis in a texel cell (8 in a LOD cell), independent of the cell size
+
+    struct Rect
+    {
+        int x, y, w, h;
+    };
 
     constexpr std::array<mgl::TextureUnit, 4> kUnits = {mgl::TextureUnit::Texture0, mgl::TextureUnit::Texture1,
                                                        mgl::TextureUnit::Texture2, mgl::TextureUnit::Texture3};
@@ -146,7 +152,8 @@ namespace
     }};
 
     // Cells 10..15: texture M with a sampler (or its own state) deciding the LOD range. The quad maps
-    // 128 texels onto 64 pixels in u and keeps v constant, so rho = 2 and lambda = 1 for every pixel.
+    // 2 * w texels onto the w pixels of the cell width in u and keeps v constant, so rho = 2 and lambda = 1
+    // for every pixel at every cell size.
     struct LodCell
     {
         const char* what;
@@ -181,8 +188,10 @@ namespace
     public:
         void init(demo::Env& env) override
         {
-            if (env.width < kGrid * kCell || env.height < kGrid * kCell)
-                throw demo::Skip(std::format("this demo draws into the lower left {0}x{0} pixels and needs a window at least that large", kGrid * kCell));
+            if (env.width < kGrid * kMinCell || env.height < kGrid * kMinCell)
+                throw demo::Skip(std::format("this demo needs a surface of at least {0}x{0} pixels (4 x 4 cells of {1} pixels)", kGrid * kMinCell, kMinCell));
+            width_ = env.width;
+            height_ = env.height;
 
             program_ = demo::build_program(env, "shaders/quad.vert", "shaders/sampled.frag");
             u_tex_a_ = mgl::glGetUniformLocation(program_, "u_tex_a");
@@ -222,9 +231,11 @@ namespace
             mgl::glGenSamplers(static_cast<GLsizei>(samplers_.size()), samplers_.data());
         }
 
-        void render(demo::Env& /*env*/, int /*frame*/) override
+        void render(demo::Env& env, int /*frame*/) override
         {
-            mgl::glViewport(0, 0, kGrid * kCell, kGrid * kCell);
+            width_ = env.width;
+            height_ = env.height;
+            mgl::glViewport(0, 0, width_, height_);
             mgl::glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
             mgl::glClear(mgl::ClearBufferBit::Color);
             mgl::glUseProgram(program_);
@@ -414,9 +425,25 @@ namespace
 
         void set_uniform_split(bool split) const { mgl::glUniform1i(u_split_, split ? 1 : 0); }
 
-        static void set_cell_viewport(int index)
+        /// Cell `index` of the 4 x 4 grid; the cell edges are at i * width / 4, so the cells partition the surface exactly.
+        Rect cell_rect(int index) const
         {
-            mgl::glViewport((index % kGrid) * kCell, (index / kGrid) * kCell, kCell, kCell);
+            const int col = index % kGrid, row = index / kGrid;
+            const int x0 = col * width_ / kGrid, x1 = (col + 1) * width_ / kGrid;
+            const int y0 = row * height_ / kGrid, y1 = (row + 1) * height_ / kGrid;
+            return {x0, y0, x1 - x0, y1 - y0};
+        }
+
+        void set_cell_viewport(int index) const
+        {
+            const Rect r = cell_rect(index);
+            mgl::glViewport(r.x, r.y, r.w, r.h);
+        }
+
+        std::vector<std::uint8_t> read_cell(int index) const
+        {
+            const Rect r = cell_rect(index);
+            return demo::read_rgba8(r.x, r.y, r.w, r.h);
         }
 
         void draw_cell(int index) const
@@ -428,11 +455,12 @@ namespace
             mgl::glDrawArrays(mgl::PrimitiveType::TriangleStrip, 0, 4);
         }
 
-        /// u spans 2 over the cell (128 texels over 64 pixels: lambda = 1), v is constant 0.5.
+        /// u spans 2 * w / 64 over a cell w pixels wide (2 * w texels of the 64-texel level 0 over w pixels: rho = 2,
+        /// lambda = 1), v is constant 0.5.
         void draw_lod_cell(int index) const
         {
             set_cell_viewport(index);
-            mgl::glUniform2f(u_scale_, 2.0f, 0.0f);
+            mgl::glUniform2f(u_scale_, 2.0f * static_cast<float>(cell_rect(index).w) / static_cast<float>(kMip), 0.0f);
             mgl::glUniform2f(u_offset_, 0.0f, 0.5f);
             mgl::glDrawArrays(mgl::PrimitiveType::TriangleStrip, 0, 4);
         }
@@ -440,8 +468,6 @@ namespace
         // ------------------------------------------------------------------------------------------
         // Checks on the pixels
         // ------------------------------------------------------------------------------------------
-        static int cell_x(int index) { return (index % kGrid) * kCell; }
-        static int cell_y(int index) { return (index / kGrid) * kCell; }
 
         struct HalfResult
         {
@@ -450,21 +476,25 @@ namespace
             std::string first_bad;
         };
 
-        /// Compares one half (or the whole) of a cell with the CPU sampler. `pixels` is the whole cell read back.
-        HalfResult compare_half(const std::vector<std::uint8_t>& pixels, const Cell& cell, const Look& look, bool left_half, bool right_half,
-                                bool incomplete = false) const
+        /// Compares one half (or the whole) of a cell with the CPU sampler. `pixels` is the whole cell (w x h) read back.
+        /// The probes form a 16 x 16 grid at pixel (2p + 1) * size / 32 (2, 6, ..., 62 in a 64-pixel cell), whatever the
+        /// cell size is, so the number of probes does not depend on the surface size.
+        HalfResult compare_half(const std::vector<std::uint8_t>& pixels, int w, int h, const Cell& cell, const Look& look, bool left_half,
+                                bool right_half, bool incomplete = false) const
         {
             HalfResult r;
             const int tolerance = look.linear ? 3 : 0;  // bilinear weights are only required to be precise to the implementation's accuracy
-            for (int ly = 2; ly < kCell; ly += 4)
-                for (int lx = 2; lx < kCell; lx += 4)
+            for (int py = 0; py < kProbes; ++py)
+                for (int px = 0; px < kProbes; ++px)
                 {
-                    if (cell.split && ((lx < kCell / 2) != left_half || (lx >= kCell / 2) != right_half)) continue;
-                    if (cell.split && std::abs(lx - kCell / 2) < 3) continue;  // keep away from the seam of the two halves
-                    double cx = (lx + 0.5) / kCell;
+                    const int lx = (2 * px + 1) * w / (2 * kProbes), ly = (2 * py + 1) * h / (2 * kProbes);
+                    const double cx_full = (lx + 0.5) / w;  // v_corner.x at the pixel centre, as the fragment shader sees it
+                    if (cell.split && ((cx_full < 0.5) != left_half || (cx_full >= 0.5) != right_half)) continue;
+                    if (cell.split && std::abs((lx + 0.5) - w / 2.0) < 3.0) continue;  // keep away from the seam of the two halves
+                    double cx = cx_full;
                     if (cell.split) cx = cx < 0.5 ? cx * 2.0 : (cx - 0.5) * 2.0;
                     const double u = cx * double{cell.su} + double{cell.ou};
-                    const double v = ((ly + 0.5) / kCell) * double{cell.sv} + double{cell.ov};
+                    const double v = ((ly + 0.5) / h) * double{cell.sv} + double{cell.ov};
                     if (!look.linear && (near_texel_edge(u * kBase) || near_texel_edge(v * kBase))) continue;  // texel boundary: implementation-defined rounding
                     // An incomplete texture returns (0, 0, 0, 1) whatever the coordinates are (ES 3.0 3.9.2.1).
                     const std::array<double, 4> ref = incomplete ? std::array<double, 4>{0.0, 0.0, 0.0, 255.0} : sample_ref(texels_, look, u, v);
@@ -473,7 +503,7 @@ namespace
                     std::array<int, 4> got{};
                     for (std::size_t k = 0; k < 4; ++k)
                     {
-                        got[k] = pixels[static_cast<std::size_t>((ly * kCell + lx) * 4) + k];
+                        got[k] = pixels[static_cast<std::size_t>((ly * w + lx) * 4) + k];
                         ok = ok && std::abs(got[k] - ref[k]) <= tolerance + 0.5;
                     }
                     if (!ok && r.bad++ == 0)
@@ -488,16 +518,17 @@ namespace
             for (int c = 0; c < static_cast<int>(kTexelCells.size()); ++c)
             {
                 const Cell& cell = kTexelCells[static_cast<std::size_t>(c)];
-                const std::vector<std::uint8_t> pixels = demo::read_rgba8(cell_x(c), cell_y(c), kCell, kCell);
+                const Rect rc = cell_rect(c);
+                const std::vector<std::uint8_t> pixels = read_cell(c);
                 if (!cell.split)
                 {
-                    const HalfResult r = compare_half(pixels, cell, cell.left, true, true);
+                    const HalfResult r = compare_half(pixels, rc.w, rc.h, cell, cell.left, true, true);
                     check.expect(r.probes > 20 && r.bad == 0, std::format("cell {}: {}: matches the CPU sampler at {} probes", c, cell.what, r.probes), r.first_bad);
                 }
                 else
                 {
-                    const HalfResult l = compare_half(pixels, cell, cell.left, true, false);
-                    const HalfResult r = compare_half(pixels, cell, cell.right, false, true, cell.right_incomplete);
+                    const HalfResult l = compare_half(pixels, rc.w, rc.h, cell, cell.left, true, false);
+                    const HalfResult r = compare_half(pixels, rc.w, rc.h, cell, cell.right, false, true, cell.right_incomplete);
                     check.expect(l.probes > 10 && l.bad == 0, std::format("cell {} (left half, unit 0): {}", c, cell.what), std::format("{} probes; {}", l.probes, l.first_bad));
                     check.expect(r.probes > 10 && r.bad == 0,
                                  std::format("cell {} (right half, unit 1): {} at {} probes", c,
@@ -514,14 +545,16 @@ namespace
             {
                 const int index = 10 + static_cast<int>(i);
                 const LodCell& cell = kLodCells[i];
-                const std::vector<std::uint8_t> pixels = demo::read_rgba8(cell_x(index), cell_y(index), kCell, kCell);
+                const Rect rc = cell_rect(index);
+                const std::vector<std::uint8_t> pixels = read_cell(index);
                 int bad = 0;
                 std::string first;
-                for (int ly = 4; ly < kCell; ly += 8)
-                    for (int lx = 4; lx < kCell; lx += 8)
+                for (int py = 0; py < kProbes / 2; ++py)
+                    for (int px = 0; px < kProbes / 2; ++px)
                         for (std::size_t k = 0; k < 4; ++k)
                         {
-                            const int got = pixels[static_cast<std::size_t>((ly * kCell + lx) * 4) + k];
+                            const int lx = (2 * px + 1) * rc.w / kProbes, ly = (2 * py + 1) * rc.h / kProbes;  // 8 x 8 probes
+                            const int got = pixels[static_cast<std::size_t>((ly * rc.w + lx) * 4) + k];
                             if (std::abs(got - cell.expected[k]) > cell.tolerance + 0.5 && bad++ == 0)
                                 first = std::format("at ({},{}) channel {}: got {} expected {:.1f}", lx, ly, k, got, cell.expected[k]);
                         }
@@ -534,15 +567,19 @@ namespace
         // would not match the model of cell 1.
         void check_override_is_visible(demo::Check& check) const
         {
-            const std::vector<std::uint8_t> c0 = demo::read_rgba8(cell_x(0), cell_y(0), kCell, kCell);
-            const std::vector<std::uint8_t> c1 = demo::read_rgba8(cell_x(1), cell_y(1), kCell, kCell);
+            // Cells 0 and 1 can differ by one pixel in width; compare their common w x h region pixel by pixel.
+            const Rect r0 = cell_rect(0), r1 = cell_rect(1);
+            const int w = std::min(r0.w, r1.w), h = std::min(r0.h, r1.h);
+            const std::vector<std::uint8_t> c0 = demo::read_rgba8(r0.x, r0.y, w, h);
+            const std::vector<std::uint8_t> c1 = demo::read_rgba8(r1.x, r1.y, w, h);
             int differing = 0;
             for (std::size_t i = 0; i < c0.size(); i += 4)
                 if (std::abs(c0[i] - c1[i]) > 8 || std::abs(c0[i + 1] - c1[i + 1]) > 8 || std::abs(c0[i + 2] - c1[i + 2]) > 8) ++differing;
-            check.expect(differing > kCell * kCell / 4, "negative control: cells 0 and 1 (same texture and coordinates, with and without sampler) differ in many pixels",
-                         std::format("{} of {} pixels differ", differing, kCell * kCell));
+            check.expect(differing > w * h / 4, "negative control: cells 0 and 1 (same texture and coordinates, with and without sampler) differ in many pixels",
+                         std::format("{} of {} pixels differ", differing, w * h));
 
-            const HalfResult wrong = compare_half(c0, kTexelCells[1], kTexelCells[1].left, true, true);  // cell 0's pixels against cell 1's model
+            const std::vector<std::uint8_t> c0_full = read_cell(0);
+            const HalfResult wrong = compare_half(c0_full, r0.w, r0.h, kTexelCells[1], kTexelCells[1].left, true, true);  // cell 0's pixels against cell 1's model
             check.expect(wrong.bad > 20, "negative control: the pixels of cell 0 do not match the CPU model of LINEAR/CLAMP_TO_EDGE (the comparison can fail)",
                          std::format("{} of {} probes differ", wrong.bad, wrong.probes));
         }
@@ -728,6 +765,7 @@ namespace
 
         mgl::ProgramId program_{};
         mgl::UniformLocation u_tex_a_{}, u_tex_b_{}, u_scale_{}, u_offset_{}, u_split_{};
+        int width_ = 0, height_ = 0;  // surface size: the 4 x 4 cells partition it
         std::array<mgl::TextureId, kTexCount> tex_{};
         std::array<mgl::SamplerId, 9> samplers_{};
         std::vector<Rgba8> texels_;

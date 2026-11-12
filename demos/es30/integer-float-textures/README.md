@@ -17,8 +17,12 @@ float and packed formats may be filtered; the 32-bit float formats may not, unle
 
 ## What the image shows
 
-A 4 x 4 contact sheet in a 256 x 256 window. Each cell is one 8 x 8 texture, drawn one texel per 8 x 8 pixel block
-(texel row 0 is at the bottom of its cell). The texels hold smooth gradients so the picture means something, with the
+A 4 x 4 contact sheet that fills the window: the cell edges sit at `i * width / 4` and `j * height / 4`, so the cells
+partition the window at any size. Each cell is one 8 x 8 texture, drawn one texel per block of pixels (texel row 0 is
+at the bottom of its cell). The mapping is integer arithmetic in the shader: pixel `p` of a cell `n` pixels wide shows
+texel `p * 8 / n`, so the CPU knows exactly which pixels show which texel and probes the centre of each block. The
+`R32I` "above 2^24" cell splits every block at half-texel `p * 16 / n`, which needs cells of at least 16 pixels: the
+smallest window is 64 x 64, below that the demo reports SKIP. The texels hold smooth gradients so the picture means something, with the
 low-order bits replaced by a hash (so the exact checks cover full-entropy values) and a few extreme texels (white and
 black dots in the float cells are `FLT_MAX`, `-FLT_MAX`, `65504`, ...). The color is `clamp(value * scale + bias, 0, 1)`,
 for display only; the exact checks do not use it.

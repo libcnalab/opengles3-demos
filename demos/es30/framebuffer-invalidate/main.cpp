@@ -10,7 +10,8 @@
 // define: legal calls raise no error, the listed errors are raised (and change nothing), every attachment or
 // region that was NOT invalidated keeps its contents bit for bit, and rendering after an invalidation works.
 //
-// Image (256 x 256 window, 4 x 4 cells of 64 x 64, top row first), every cell a blit of one image:
+// Image (any window size, 4 x 4 cells that partition the window, top row first), every cell a NEAREST blit that
+// stretches one 64 x 64 image onto the cell:
 //   cube faces +X -X +Y -Y | +Z -Z, layers 0..3 of a 2D array texture | slices 0..3 of a 3D texture |
 //   color attachments 0 and 1 of a framebuffer whose attachments were ALL invalidated and rendered again.
 //   The default framebuffer's depth and stencil are invalidated at the end of the frame (the classic use).
@@ -41,7 +42,7 @@ using demo::Rgba8;
 namespace
 {
     constexpr int kSize = 64;      // edge of every target image
-    constexpr int kWindow = 256;   // 4 x 4 cells
+    constexpr int kMinWindow = 64; // 4 x 4 cells that partition the window; the smallest window (cells of 16 pixels)
     constexpr int kCells = 16;
 
     constexpr mgl::ClearBufferBit kColorBit = mgl::ClearBufferBit::Color;
@@ -147,6 +148,59 @@ namespace
                 }
                 if (bad && d.bad++ == 0)
                     d.first = std::format("first at ({},{}): got {} expected {}", x, y, demo::format_rgba(got.at(x, y)), demo::format_rgba(want.at(x, y)));
+            }
+        return d;
+    }
+
+    /// Window cell `cell` (cell 0 is the top left) of the 4 x 4 grid; the edges sit at i * width / 4 and j * height / 4,
+    /// so the cells partition the window exactly.
+    Rect cell_rect(int cell, int width, int height)
+    {
+        const int col = cell % 4, row = 3 - cell / 4;
+        return {col * width / 4, row * height / 4, (col + 1) * width / 4, (row + 1) * height / 4};
+    }
+
+    /// The source texel(s) that a NEAREST blit which stretches `src_size` pixels onto `dst_size` pixels may read for
+    /// destination pixel `d`: the pixel centre d + 0.5 maps to (d + 0.5) * src_size / dst_size in the source, and the
+    /// nearest source pixel is the one whose square contains it (ES 3.0 4.3.3: pixels have half-integer centres). Where
+    /// that coordinate lies within 0.05 pixel of a source pixel edge, the rounding of the implementation decides, so
+    /// either neighbour is accepted. Returns 1 or 2 candidates.
+    std::vector<int> nearest_candidates(int d, int src_size, int dst_size)
+    {
+        const double s = (d + 0.5) * src_size / dst_size;
+        const int i = static_cast<int>(std::floor(s));
+        const double f = s - i;
+        std::vector<int> c{std::clamp(i, 0, src_size - 1)};
+        if (f < 0.05 && i - 1 >= 0) c.push_back(i - 1);
+        if (f > 0.95 && i + 1 < src_size) c.push_back(i + 1);
+        return c;
+    }
+
+    /// Compares a w x h window cell with a NEAREST-stretched copy of `src` (every destination pixel against the
+    /// source pixel(s) it may come from).
+    Diff compare_stretched(const Image& got, const Image& src, int tolerance)
+    {
+        Diff d;
+        std::vector<std::vector<int>> xs, ys;
+        for (int x = 0; x < got.w; ++x) xs.push_back(nearest_candidates(x, src.w, got.w));
+        for (int y = 0; y < got.h; ++y) ys.push_back(nearest_candidates(y, src.h, got.h));
+        for (int y = 0; y < got.h; ++y)
+            for (int x = 0; x < got.w; ++x)
+            {
+                ++d.compared;
+                int best = 1 << 30;
+                for (const int sy : ys[static_cast<std::size_t>(y)])
+                    for (const int sx : xs[static_cast<std::size_t>(x)])
+                    {
+                        int err = 0;
+                        for (std::size_t c = 0; c < 4; ++c) err = std::max(err, std::abs(int{got.at(x, y)[c]} - int{src.at(sx, sy)[c]}));
+                        best = std::min(best, err);
+                    }
+                d.max_error = std::max(d.max_error, best);
+                if (best > tolerance && d.bad++ == 0)
+                    d.first = std::format("first at ({},{}): got {} expected {} (source pixel ({},{}))", x, y, demo::format_rgba(got.at(x, y)),
+                                          demo::format_rgba(src.at(xs[static_cast<std::size_t>(x)][0], ys[static_cast<std::size_t>(y)][0])),
+                                          xs[static_cast<std::size_t>(x)][0], ys[static_cast<std::size_t>(y)][0]);
             }
         return d;
     }
@@ -287,8 +341,10 @@ namespace
         void init(demo::Env& env) override
         {
             version_ = env.context_version;
-            if (env.width < kWindow || env.height < kWindow)
-                throw demo::Skip(std::format("this demo draws {0}x{0} pixels and needs a default framebuffer at least that large", kWindow));
+            if (env.width < kMinWindow || env.height < kMinWindow)
+                throw demo::Skip(std::format("this demo needs a default framebuffer of at least {0}x{0} pixels", kMinWindow));
+            width_ = env.width;
+            height_ = env.height;
 
             pattern_ = make_quad(env, "shaders/pattern.frag");
             mrt_ = make_quad(env, "shaders/mrt.frag");
@@ -351,8 +407,10 @@ namespace
             mgl::glBindRenderbuffer(mgl::RenderbufferTarget::Renderbuffer, mgl::RenderbufferId{0});
         }
 
-        void render(demo::Env& /*env*/, int /*frame*/) override
+        void render(demo::Env& env, int /*frame*/) override
         {
+            width_ = env.width;
+            height_ = env.height;
             render_targets();
             // The subject is filled, then ALL of its attachments are invalidated (their contents are now undefined) and
             // it is filled again: rendering after an invalidation behaves normally. Cells 14 and 15 show the result.
@@ -598,19 +656,20 @@ namespace
             return s;
         }
 
-        /// Composes the window: 14 images and two attachments of the subject, each a 1:1 blit.
+        /// Composes the window: 14 images and two attachments of the subject, each a NEAREST blit that stretches the
+        /// 64 x 64 image onto its cell (a quarter of the window in each direction).
         void compose_window() const
         {
             reset_state();
             bind_both(kDefaultFbo);
-            mgl::glViewport(0, 0, kWindow, kWindow);
+            mgl::glViewport(0, 0, width_, height_);
             mgl::glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             mgl::glClear(kColorBit | kDepthBit | kStencilBit);
             bind_draw(kDefaultFbo);
-            std::size_t cell = 0;
-            auto blit_cell = [&cell] {
-                const int cx = static_cast<int>(cell % 4) * kSize, cy = (3 - static_cast<int>(cell / 4)) * kSize;
-                mgl::glBlitFramebuffer(0, 0, kSize, kSize, cx, cy, cx + kSize, cy + kSize, kColorBit, mgl::BlitFilter::Nearest);
+            int cell = 0;
+            auto blit_cell = [&cell, this] {
+                const Rect r = cell_rect(cell, width_, height_);
+                mgl::glBlitFramebuffer(0, 0, kSize, kSize, r.x0, r.y0, r.x1, r.y1, kColorBit, mgl::BlitFilter::Nearest);
                 ++cell;
             };
             bind_read(view_);
@@ -654,7 +713,7 @@ namespace
         void check_window(demo::Check& check, std::string_view when) const
         {
             bind_read(kDefaultFbo);
-            const Image win = read_image(kWindow, kWindow);
+            const Image win = read_image(width_, height_);
             // Cells 11..13 are slices 1..3 of the 3D texture, blitted from a read framebuffer whose attachment is
             // glFramebufferTextureLayer(volume, 0, slice). They are judged separately so that a driver which blits the
             // wrong slice does not hide the result of every other cell.
@@ -663,10 +722,12 @@ namespace
             std::string first, first_3d;
             for (int cell = 0; cell < kCells; ++cell)
             {
-                const Image got = crop(win, (cell % 4) * kSize, (3 - cell / 4) * kSize, kSize, kSize);
+                const Rect r = cell_rect(cell, width_, height_);
+                const Image got = crop(win, r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0);
                 const Image want = cell < 14 ? pattern_image(kPalette[static_cast<std::size_t>(cell)], kSize) : mrt_image(cell - 14);
                 // The patterns are computed in float and stored as 8 bits: equation 2.3 allows either of the two closest values (tolerance 1).
-                const Diff d = compare(got, want, 1);
+                // Every pixel of the cell is compared with the source pixel the stretching NEAREST blit reads for it.
+                const Diff d = compare_stretched(got, want, 1);
                 if (d.bad == 0) continue;
                 if (is_3d_blit(cell))
                 {
@@ -1402,7 +1463,7 @@ namespace
             reset_state();
             mgl::glEnable(mgl::Capability::ScissorTest);
             mgl::glScissor(0, 0, 32, 32);
-            mgl::glViewport(0, 0, kWindow, kWindow);
+            mgl::glViewport(0, 0, width_, height_);
             mgl::glClearColor(0.25f, 0.5f, 0.75f, 1.0f);
             mgl::glClearDepthf(1.0f);
             mgl::glClearStencil(0);
@@ -1434,6 +1495,7 @@ namespace
 
         // ------------------------------------------------------------------------------------------
         demo::Version version_{};
+        int width_ = 0, height_ = 0;  // window size: the 4 x 4 cells partition it
         Quad pattern_, mrt_, flat_;
         mgl::UniformLocation pattern_base_{}, pattern_size_{}, flat_color_{};
 

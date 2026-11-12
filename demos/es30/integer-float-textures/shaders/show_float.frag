@@ -10,6 +10,7 @@ precision highp sampler2D;
 
 uniform sampler2D u_tex;
 uniform ivec2 u_origin;
+uniform ivec2 u_cell_size;  // pixel p of a cell n pixels wide shows texel p * 8 / n (integer division)
 uniform vec3 u_scale;
 uniform vec3 u_bias;
 uniform bool u_gray;
@@ -19,7 +20,7 @@ out vec4 o_color;
 
 void main()
 {
-    ivec2 t = (ivec2(gl_FragCoord.xy) - u_origin) / 8;
+    ivec2 t = (ivec2(gl_FragCoord.xy) - u_origin) * 8 / u_cell_size;
     vec4 v = (u_use_texture == 1) ? texture(u_tex, (vec2(t) + 0.5) / 8.0) : texelFetch(u_tex, t, 0);
     vec3 c = u_gray ? vec3(v.r) : v.rgb;
     o_color = vec4(clamp(c * u_scale + u_bias, 0.0, 1.0), 1.0);

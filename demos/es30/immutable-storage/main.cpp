@@ -8,8 +8,9 @@
 // INVALID_OPERATION. The demo shows that with pixels (what is sampled before and after the refused commands), with the
 // TEXTURE_IMMUTABLE_FORMAT / TEXTURE_IMMUTABLE_LEVELS queries, and with the defined errors of section 3.8.4.
 //
-// The window is a contact sheet of 8 x 8 panels (32 x 32 pixels each, panel 0 at the lower left, panels are numbered
-// left to right and then upwards):
+// The window is a contact sheet of 40 panels that fills it: a cols x rows grid with cols * rows = 40 (8 x 5 for a
+// 640 x 400 window, 4 x 10 for 333 x 777), chosen for the largest smallest panel side; panel 0 is at the lower left, panels are
+// numbered left to right and then upwards:
 //
 //   panels  0-22  13 sized formats x their valid upload pairs; every texture is made with glTexStorage2D(1 level)
 //                 and filled with glTexSubImage2D; each panel is compared with decoded values computed on the CPU
@@ -57,7 +58,13 @@ using demo::Rgba8;
 
 namespace
 {
-    constexpr int kGrid = 8;     // 8 x 8 panels
+    constexpr std::size_t kPanels = 40;  // 23 format panels, 4 levels, 3 completeness panels, 10 textureSize panels
+    constexpr int kMinPanel = 16;        // smallest panel side in pixels (keeps >= 100 probes away from texel boundaries)
+
+    struct Cell
+    {
+        int x, y, w, h;
+    };
     constexpr int kTexel = 4;    // the format textures are 4 x 4
     constexpr int kTexels = kTexel * kTexel;
     constexpr auto kColor0 = mgl::to_framebuffer_attachment(mgl::ColorAttachment::Color0);
@@ -665,6 +672,15 @@ namespace
     public:
         void init(demo::Env& env) override
         {
+            sheet_w_ = env.width;
+            sheet_h_ = env.height;
+            choose_layout();
+            const int cell_w = sheet_w_ / cols_, cell_h = sheet_h_ / rows_;
+            if (std::min(cell_w, cell_h) < kMinPanel)
+                throw demo::Skip(std::format("the {} panels would be {}x{} pixels at {}x{}; every panel needs at least {}x{} pixels so that at least 100 "
+                                             "probes stay away from texel boundaries",
+                                             kPanels, cell_w, cell_h, sheet_w_, sheet_h_, kMinPanel, kMinPanel));
+
             program_ = demo::build_program(env, "shaders/quad.vert", "shaders/sample.frag");
             mgl::glDisable(mgl::Capability::Dither);
             mgl::glGenFramebuffers(1, &fbo_);
@@ -676,12 +692,14 @@ namespace
             build_ladders();
             build_size_textures();
             build_panels();
+            if (panels_.size() != kPanels) throw demo::Failure(std::format("{} panels were built, the layout expects {}", panels_.size(), kPanels));
         }
 
         void render(demo::Env& env, int /*frame*/) override
         {
             sheet_w_ = env.width;
             sheet_h_ = env.height;
+            choose_layout();
             draw_sheet();
         }
 
@@ -912,11 +930,11 @@ namespace
             mgl::glUniform1i(uniform("u_tex3d"), 1);
             mgl::glUniform1i(uniform("u_tex_array"), 2);
 
-            pw_ = std::min(sheet_w_, sheet_h_) / kGrid;
             for (std::size_t i = 0; i < panels_.size(); ++i)
             {
                 const Panel& p = panels_[i];
-                mgl::glViewport(static_cast<GLint>(i % kGrid) * pw_, static_cast<GLint>(i / kGrid) * pw_, pw_, pw_);
+                const Cell r = panel_rect(i);
+                mgl::glViewport(r.x, r.y, r.w, r.h);
                 bind_for(p);
                 mgl::glUniform1i(uniform("u_mode"), static_cast<int>(p.mode));
                 mgl::glUniform1f(uniform("u_lod_f"), p.lod_f);
@@ -933,6 +951,37 @@ namespace
             mgl::glActiveTexture(mgl::TextureUnit::Texture0);
             mgl::glBindTexture(mgl::TextureTarget::Texture2D, mgl::TextureId{0});
             mgl::glViewport(0, 0, sheet_w_, sheet_h_);
+        }
+
+        /// The panels fill the window as a cols x rows grid with cols * rows == kPanels (no empty cells). Among the
+        /// factorizations of the panel count the one with the largest smallest panel side is chosen, so the panels are as
+        /// square as the window allows.
+        void choose_layout()
+        {
+            const int n = static_cast<int>(kPanels);
+            int best = -1;
+            for (int cols = 1; cols <= n; ++cols)
+            {
+                if (n % cols != 0) continue;
+                const int rows = n / cols;
+                const int side = std::min(sheet_w_ / cols, sheet_h_ / rows);
+                if (side > best)
+                {
+                    best = side;
+                    cols_ = cols;
+                    rows_ = rows;
+                }
+            }
+        }
+
+        /// Panel `idx` (panel 0 at the lower left, left to right and then upwards). The edges sit at c * width / cols and
+        /// r * height / rows, so the panels partition the window exactly (neighbouring panels may differ by one pixel).
+        [[nodiscard]] Cell panel_rect(std::size_t idx) const
+        {
+            const int c = static_cast<int>(idx) % cols_, r = static_cast<int>(idx) / cols_;
+            const int x0 = c * sheet_w_ / cols_, x1 = (c + 1) * sheet_w_ / cols_;
+            const int y0 = r * sheet_h_ / rows_, y1 = (r + 1) * sheet_h_ / rows_;
+            return {x0, y0, x1 - x0, y1 - y0};
         }
 
         void bind_for(const Panel& p) const
@@ -965,14 +1014,14 @@ namespace
         [[nodiscard]] Probe probe(std::size_t idx, const std::function<Color(double, double)>& ref, const Color& tol, int boundary) const
         {
             Probe r;
-            const int gx = static_cast<int>(idx) % kGrid, gy = static_cast<int>(idx) / kGrid;
-            for (int py = 0; py < pw_; ++py)
-                for (int px = 0; px < pw_; ++px)
+            const Cell cell = panel_rect(idx);
+            for (int py = 0; py < cell.h; ++py)
+                for (int px = 0; px < cell.w; ++px)
                 {
-                    const double s = (px + 0.5) / pw_, t = (py + 0.5) / pw_;
+                    const double s = (px + 0.5) / cell.w, t = (py + 0.5) / cell.h;
                     if (boundary > 0 && (near_edge(s * boundary) || near_edge(t * boundary))) continue;
                     const Color want = ref(s, t);
-                    const Rgba8 got = pixel(frame_, gx * pw_ + px, gy * pw_ + py);
+                    const Rgba8 got = pixel(frame_, cell.x + px, cell.y + py);
                     bool ok = true;
                     for (std::size_t c = 0; c < 4; ++c)
                     {
@@ -1465,7 +1514,8 @@ namespace
         mgl::TextureId ladder_{}, mutable_one_{}, mutable_full_{}, size2d_{}, size3d_{}, size_array_{};
         std::vector<Panel> panels_;
         std::size_t first_level_panel_ = 0;
-        int sheet_w_ = 256, sheet_h_ = 256, pw_ = 32;
+        int sheet_w_ = 256, sheet_h_ = 256;
+        int cols_ = 8, rows_ = 5;  // panel grid, chosen by choose_layout() for the window size
         std::vector<std::uint8_t> frame_;
     };
 }

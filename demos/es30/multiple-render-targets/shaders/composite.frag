@@ -1,5 +1,5 @@
 #version 300 es
-// Shows one of the four attachments in one quarter of the window. texelFetch reads the texel
+// Shows one of the four attachments in one quarter of the window, scaled to the quarter's size. texelFetch reads the texel
 // (x, y) of level 0 directly (no filtering, no coordinate normalization), which is the way to look
 // at integer textures: they are not texture-filterable (ES 3.0 Table 3.13).
 //
@@ -14,13 +14,17 @@ uniform highp sampler2D u_data;
 uniform highp usampler2D u_ids;
 uniform highp isampler2D u_signed;
 uniform int u_panel;
-uniform ivec2 u_origin;  // window position of the lower left corner of the panel
+uniform ivec2 u_origin;      // window position of the lower left corner of the panel
+uniform ivec2 u_panel_size;  // the panel's size in pixels (a quarter of the window, any size)
 
 out vec4 o_color;
 
 void main()
 {
-    ivec2 t = ivec2(gl_FragCoord.xy) - u_origin;
+    // Integer texel mapping: pixel p of a panel n pixels wide shows texel p * 128 / n (integer division).
+    // Every step is exact integer arithmetic, so the CPU model picks the very same texel at every window size.
+    ivec2 tex_size = textureSize(u_albedo, 0);  // all four attachments are 128 x 128
+    ivec2 t = (ivec2(gl_FragCoord.xy) - u_origin) * tex_size / u_panel_size;
     vec3 c;
     if (u_panel == 0)
     {

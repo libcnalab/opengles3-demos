@@ -20,7 +20,11 @@ that the calls return.
 
 ## What the image shows
 
-A 4 x 4 contact sheet; every cell is 64 x 64 pixels and one draw call. In the capture row 3 is on top.
+A 4 x 4 contact sheet that fills the whole surface; every cell is one draw call. In the capture row 3 is on top.
+The cell edges sit at `i * width / 4` and `j * height / 4`, so the cells partition the surface exactly and
+may be rectangular and differ by one pixel; every texture coordinate is a function of the position inside the
+cell, so the picture stretches with the window. The minimum surface is 128x128 (cells of 32 pixels); below that
+the demo reports SKIP.
 Textures: **A** is a 4x4 RGBA8 texture whose *own* state is `NEAREST` + `REPEAT`; **B** has the same texels but its own
 state is `LINEAR` + `CLAMP_TO_EDGE`; **M** is 64x64 with 7 mipmap levels, each level a single flat color
 (red, green, blue, yellow, magenta, cyan, white for levels 0 to 6). A, B and the split cells show
@@ -45,8 +49,9 @@ texture coordinates over [-1, 2] (three repetitions, so wrap modes and filters a
 | 14 | M with its **own** `MIN_LOD` = 3 (`glTexParameterf`), no sampler | level 3 (yellow) | §3.8.7 |
 | 15 | the same M plus a sampler with the default LOD range | level 1 (green): the sampler overrides the texture's LOD range | §3.8.2 |
 
-The LOD cells use a quad that maps 128 texels onto 64 pixels in `u` and keeps `v` constant, so the
-scale factor ρ is exactly 2 and λ = 1 for every pixel; there is no dependence on how an implementation
+The LOD cells use a quad that maps `2 * w` texels of level 0 onto the `w` pixels of the cell width in `u`
+(the `u` range is `2 * w / 64`) and keeps `v` constant, so the scale factor ρ is exactly 2 and λ = 1 for every
+pixel at every cell size; there is no dependence on how an implementation
 approximates ρ (§3.8.10.1 only bounds it).
 
 ## Central calls

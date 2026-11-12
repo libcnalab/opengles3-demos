@@ -38,7 +38,7 @@
     "glTexStorage2D": "cube map, 2D mip chain, 4 x 4 format-test textures",
     "glTexStorage3D": "2D array and 3D textures with a three-level mip chain",
     "glDeleteTextures": "cleanup",
-    "glBlitFramebuffer": "1:1 NEAREST copy of each image into its window cell: every cell equals its CPU pattern (+-1)",
+    "glBlitFramebuffer": "NEAREST copy of each 64x64 image stretched onto its window cell: every pixel of every cell equals the CPU pattern pixel the blit reads for it (+-1; either neighbour within 0.05 pixel of a source pixel edge)",
     "glDrawBuffers": "{C0, C1, C2} / {C0} for the fills",
     "glReadBuffer": "selects the color attachment glReadPixels reads (C0, C1, C2)",
     "glReadPixels": "RGBA/UNSIGNED_BYTE readback of every compared image and of the default framebuffer",
@@ -90,8 +90,8 @@
     "negative"
   ],
   "visual_review": {
-    "date": "2026-11-11",
-    "by": "claude-sonnet-5.5 (subagent)",
-    "notes": "256x256 radeonsi es-max capture viewed (llvmpipe and zink captures differ by at most 1/255 per channel). A 4x4 grid of 64x64 cells, each dark at the left and brighter at the right with 8-pixel horizontal stripes and its own base color: red, green, blue, yellow (cube faces +X -X +Y -Y), magenta, cyan, orange, violet (+Z -Z, array layers 0 1), light green, pink, steel blue, olive (array layers 2 3, 3D slices 0 1), lilac, teal (3D slices 2 3), then the two charts of mrt.frag (red/green gradient with blue/dark checkerboard and its channel permutation) from the framebuffer whose attachments were invalidated and re-rendered. All 16 cells are distinct and fill the window with no seams."
+    "date": "2026-11-12",
+    "by": "claude-opus-5.5 (subagent)",
+    "notes": "Window-filling layout reviewed on llvmpipe captures at 640x400 and 800x800 and the 256x256 radeonsi es-max capture. The 16 cells partition the window; each 64x64 image is stretched onto its cell with a NEAREST blit (8 stripes per cell, shade dark to bright left to right): red, green, blue, yellow (cube +X -X +Y -Y), magenta, cyan, orange, violet, light green, pink, steel blue, olive, lilac, teal, then the two mrt.frag charts with their channel permutation. All cells distinct, no seams or gaps."
   }
 }

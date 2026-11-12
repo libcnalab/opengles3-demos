@@ -39,6 +39,21 @@ endif()
 # real GPU. One ANGLE/RADV case faulted the GPU and caused amdgpu ring timeouts that froze the desktop (2026-11-11).
 # Set to the RADV ICD JSON only on purpose, on a machine whose display does not depend on that GPU.
 set(OGLES3_ANGLE_VULKAN_ICD "/usr/share/vulkan/icd.d/lvp_icd.json" CACHE FILEPATH "Vulkan ICD JSON used by the 'angle' test driver")
+# The angle runs preload ANGLE's libGLESv2; in a sanitizer build the ASan runtime has to be preloaded before it
+# ("ASan runtime does not come first in initial library list"). Without a usable runtime path the angle runs are
+# left out of sanitizer builds, with a note.
+if(OGLES3_SANITIZE AND OGLES3_ANGLE_DIR)
+    set(asan_name "libasan.so")
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        set(asan_name "libclang_rt.asan-${CMAKE_SYSTEM_PROCESSOR}.so")
+    endif()
+    execute_process(COMMAND "${CMAKE_CXX_COMPILER}" "-print-file-name=${asan_name}"
+                    OUTPUT_VARIABLE OGLES3_ASAN_RUNTIME OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    if(NOT IS_ABSOLUTE "${OGLES3_ASAN_RUNTIME}" OR NOT EXISTS "${OGLES3_ASAN_RUNTIME}")
+        message(STATUS "opengles3-demos: no ASan runtime found for preloading; the angle runs are not registered in this sanitizer build")
+        set(OGLES3_ANGLE_DIR "")
+    endif()
+endif()
 option(OGLES3_TEST_SIZE_VARIANT "Also run every executable once on llvmpipe at a non-square, non-power-of-two size (333x777)" ON)
 option(OGLES3_TEST_MIN_VERSION "Also run every demo on a context limited to its minimum ES version (Mesa only)" ON)
 

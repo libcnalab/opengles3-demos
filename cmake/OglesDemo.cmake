@@ -86,8 +86,13 @@ function(ogles_register_gl_tests)
                 list(APPEND env "LIBGL_ALWAYS_SOFTWARE=1" "GALLIUM_DRIVER=${driver}")
             elseif(driver STREQUAL "angle")
                 # Also preload libGLESv2 (as a native ANGLE application links it); without it eglInitialize fails.
+                # Sanitizer builds: the ASan runtime must come first in the initial library list, before the preload.
+                set(angle_preload "${OGLES3_ANGLE_DIR}/libGLESv2.so")
+                if(OGLES3_SANITIZE)
+                    set(angle_preload "${OGLES3_ASAN_RUNTIME}:${angle_preload}")
+                endif()
                 set(env "OGLES3_EGL_PLATFORM=angle" "LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/angle-shim:${OGLES3_ANGLE_DIR}"
-                        "LD_PRELOAD=${OGLES3_ANGLE_DIR}/libGLESv2.so"
+                        "LD_PRELOAD=${angle_preload}"
                         "VK_ICD_FILENAMES=${OGLES3_ANGLE_VULKAN_ICD}" "VK_DRIVER_FILES=${OGLES3_ANGLE_VULKAN_ICD}")
             elseif(NOT driver STREQUAL "gpu")
                 message(FATAL_ERROR "unknown OGLES3_TEST_DRIVERS entry '${driver}'")

@@ -37,6 +37,7 @@ pushed as `origin/opengles3-demos/enum-gaps`, and on the owner's request merged 
 `795bcdc..333d777`, 2026-11-12). `main` is untouched. Since the final stabilization directive (2026-11-12) agents
 make no further meta-gl changes.
 
+A concise summary for the maintainer, with the options, is in [METAGL_MAINTAINER_NOTE.md](METAGL_MAINTAINER_NOTE.md).
 That leaves a decision for the meta-gl maintainer, outside this repository: either keep the commits under a
 recorded exception to the policy, or have a human review and re-author them. Either way the dependency stays
 reproducible: commit `333d777` exists on the public `develop`, and a human-authored equivalent that keeps the same

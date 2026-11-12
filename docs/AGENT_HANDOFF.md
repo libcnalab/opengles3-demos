@@ -53,41 +53,36 @@ cmake --build --preset debug --target coverage
 4. Phase 6 audit (coverage gaps: run `coverage` and read docs/generated/COVERAGE_SUMMARY.md), then phase 7
    final verification on a clean build.
 
-## In flight (2026-11-11 23:50)
+## In flight (2026-11-12 01:50)
 
 **State**
-- 83 executables. Full matrix 563/563: gpu, llvmpipe, zink × es-max/es-min, softpipe for ES 3.2, and ANGLE on
-  lavapipe.
-- 82 FULLY_VALIDATED, 1 VISUALLY_VERIFIED (es30-multisample-default-framebuffer, BLOCKED_ENVIRONMENT on
-  llvmpipe/zink).
-- **Window-size sweep** (`tools/sweep_sizes.sh`, 6 sizes, llvmpipe) is clean.
-- **Clean-clone reproducibility** is verified (VALIDATION.md).
-- **meta-gl:** branch `opengles3-demos/enum-gaps` at 333d777 is pushed. O8 is fixed (contract tests now real) and
-  O12 is resolved by docs (owner's decision).
+- 83 executables; full matrix **646/646**: gpu, llvmpipe, zink × es-max/es-min; softpipe for ES 3.2; ANGLE on
+  lavapipe; a 333x777 llvmpipe size run per executable.
+- 82 FULLY_VALIDATED, 1 VISUALLY_VERIFIED (es30-multisample-default-framebuffer: BLOCKED_ENVIRONMENT on llvmpipe and
+  zink).
+- **Window size:** tools/sweep_sizes.sh is clean at 6 sizes, and every demo fills the window. The two pixel-exact
+  galleries scale by integer factors only.
+- **Sanitizer:** the Mesa matrix passes 480/480.
+- **Reproducible from clean clones** (VALIDATION.md).
+- **meta-gl:** `opengles3-demos/enum-gaps` at 333d777 is pushed.
 
-**Done tonight**
-- **Codex phase 6 audit:** 19 findings, all fixed.
-- **Codex educational review:** 10 accepted and fixed, 1 rejected.
-- **Size sweep:** 25 executables fixed, plus es31-image-load-store.
-- **Deviation matcher:** no longer lets ANGLE's backend name excuse ANGLE.
-- **GPU safety:** ANGLE runs on lavapipe; GPU-faulting cases are opt-in only.
-- Archived reports are in docs/audits/.
+**Night 2026-11-11/12 (owner asleep; mandate: fix verified audit findings autonomously)**
+- Codex phase 6 audit: 19 findings fixed.
+- Educational review: 10 fixed, 1 rejected.
+- Size sweep: 26 executables fixed.
+- Independent diff review of those fixes: 5 more fixed.
+- Contact sheet: 17 demos made to fill the window.
+- Deviation matcher: ANGLE's backend name no longer excuses ANGLE.
+- All reports and their disposition: docs/audits/.
 
-**Done after 23:50**
-- The Codex diff review found 5 issues (4 dishonest minimum sizes, 1 tuned threshold); all are fixed.
-- Sanitizer Mesa matrix: 480/480.
-- Full matrix 563/563; size sweep clean.
-
-**Previously running (done)**
-- Codex independent review of every demo changed after the audit (`git diff 5bd59a6..HEAD`), per
-  docs/agent-briefs/DIFF_REVIEW_BRIEF.md. Three groups; reports in ../opengles3-demos-worktrees/diffreview-*/DIFF_REVIEW.md.
+**Running**
+- Codex diff review of the fill-window changes (base f75838c), two groups. Reports go to
+  ../opengles3-demos-worktrees/diffreview2-*/DIFF_REVIEW.md. Triage and fix, then run the full matrix and commit.
 
 **Known follow-ups**
-- es20-clear-viewport-scissor and es20-primitive-topology draw their 64-px panel gallery at native size, so larger
-  windows are not filled. The models are pixel-exact, so scaling them is a larger rewrite.
-- Inventory has no IDs for shader fog, interactive input determinism or the barycentric wireframe
-  (es30-interactive-3d-scene).
-- softpipe and ANGLE give only ES 3.1 natively; there is still no native ES 3.0 driver.
+- No native ES 3.0 driver is available: softpipe and ANGLE are ES 3.1; Mesa's es-min is an override.
+- The inventory has no IDs for technique-level topics (shader fog, input determinism); they are not API features,
+  so they are left out deliberately.
 
 ## Parallel work / Codex
 

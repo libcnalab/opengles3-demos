@@ -13,6 +13,10 @@ Ways to fix it, in order of preference. Pick per demo and never weaken a check:
    design: viewports, scissor boxes, blit rectangles, ReadPixels rectangles, pixel-unit geometry. Scale the CPU model
    identically and centre the scaled design. Rasterization of scaled triangles changes edge pixels, so either derive
    probes from the scaled geometry or keep the original margin-based probe rules.
+2b. **Offscreen design, scaled presentation** (approved in es30-texture-swizzle-lod): if the design depends on exact
+   pixel geometry and the demo does not test the default framebuffer itself, render the design at its original
+   size into an offscreen texture, run the existing checks on that texture unchanged, then present it with an
+   integer-mapped stretch. Add a check that every window pixel equals the texel it must show.
 3. If neither works without weakening a check, keep the fixed design, add a clear README note explaining why, and
    report it. Do not fake it.
 

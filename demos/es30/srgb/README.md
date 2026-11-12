@@ -67,7 +67,7 @@ The ramp written to the render targets is `l = x/255`, color `(l, 1 - l, l*l)`, 
 
 ## Validation (`--validate`)
 
-57 checks, none of which only checks that a call returned:
+56 checks, none of which only checks that a call returned:
 
 - **Bands (8).** Every pixel column of every band (one probe in the middle row of the band per window column, 256 at the default size) against a CPU model
   of the texel that column shows (`x * 256 / w`, the shader's integer mapping, so the expectation is exact at every width). Bands 0, 3, 4, 5 and 6 are byte copies and must match within the rounding

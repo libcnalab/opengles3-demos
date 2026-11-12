@@ -38,7 +38,7 @@ window the quarters are 128 x 128, which makes the top quarters exact 2x stretch
 other sizes the stretch factor is not an integer: a destination pixel centre `d + 0.5` maps to `(d + 0.5) * src / n` in
 the source, and where that lands within 0.05 pixel of a source pixel edge (e.g. 64 -> 160 pixels gives exact edges) the
 implementation's rounding decides, so the NEAREST checks accept either neighbouring source pixel there and require an
-exact match everywhere else. The LINEAR quarter is compared with the bilinear model at the quarter's own scale. The
+exact match everywhere else. **Basis:** ES 3.0 §4.3.3 says only that "the source image is stretched to fit the destination rectangle" and that `filter` "specifies the method of interpolation". It gives no formula for the source position of a destination pixel. The pixel-centre mapping above and the 0.05-pixel band are therefore an assumption, listed in docs/VALIDATION.md ("Suite-wide assumptions"). They apply only to the *display* blits into the window, never to the blit rules this demo tests. The LINEAR quarter is compared with the bilinear model at the quarter's own scale. The
 smallest window is 64 x 64; below that the demo reports SKIP.
 
 The chart is a 64 x 64 image in which red grows by 4 per pixel in x, green by 4 per pixel in y (so every pixel is

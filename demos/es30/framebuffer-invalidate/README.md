@@ -43,7 +43,7 @@ attachments). The images themselves are always 64 x 64; only the blit that shows
 every pixel of every cell with the source pixel that a stretching `NEAREST` blit reads for it: the destination pixel
 centre `d + 0.5` maps to `(d + 0.5) * 64 / n` in a cell `n` pixels long, and the source pixel whose square contains that
 point is the expected one. Where the point lies within 0.05 pixel of a source pixel edge (this happens exactly at some
-cell sizes, e.g. 160), the implementation's rounding decides and either neighbour is accepted. The smallest window is
+cell sizes, e.g. 160), the implementation's rounding decides and either neighbour is accepted. **Basis:** ES 3.0 §4.3.3 says only that "the source image is stretched to fit the destination rectangle" and that `filter` "specifies the method of interpolation". It gives no formula for the source position of a destination pixel. The pixel-centre mapping above and the 0.05-pixel band are therefore an assumption, listed in docs/VALIDATION.md ("Suite-wide assumptions"). They apply only to the *display* blits into the window, never to the blit rules this demo tests. The smallest window is
 64 x 64; below that the demo reports SKIP. If a face, layer or slice had been attached wrongly, two cells would show the same base color. The default
 framebuffer's depth and stencil are invalidated at the end of the frame (`glInvalidateFramebuffer(FRAMEBUFFER, {DEPTH,
 STENCIL})`); the picture is the color buffer, which that call must not touch.

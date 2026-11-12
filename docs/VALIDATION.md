@@ -119,6 +119,11 @@ is listed in `docs/KNOWN_LIMITATIONS.md`. Checks are never loosened to make a dr
   resolved pixel is a function of that pixel's samples; Appendix A.1 repeatability), per-sample readback with
   `texelFetch(gsampler2DMS)` in ES 3.1+ contexts, and per-sample stencil counts with occlusion queries.
 
+- **Stretched NEAREST display blits** (es30-framebuffer-blit-msaa, es30-framebuffer-invalidate) assume the
+  pixel-centre mapping `(d + 0.5) * src / n` and accept either neighbour within 0.05 pixel of a source pixel edge.
+  ES 3.0 §4.3.3 gives no mapping formula. This affects only the presentation into the window, not the blit rules
+  under test (independent review, 2026-11-12).
+
 ## Evidence traceability and staleness
 Every result JSON records:
 - the executable path and mtime, and the run time;

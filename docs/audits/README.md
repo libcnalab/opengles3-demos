@@ -51,3 +51,14 @@ Disposition:
 
 Reports: [es20+tests](2026-11-11-codex-diffreview-es20-tests.md), [es30](2026-11-11-codex-diffreview-es30.md),
 [es31/es32](2026-11-11-codex-diffreview-es31-32.md).
+
+## 2026-11-12: Codex independent review of the fill-window changes (base f75838c)
+
+The review found no loosened checks: integer scaling and offscreen presentation keep every check, and negative controls
+still bite. Findings, all accepted:
+- **WEAK ×2:** the 0.05-pixel either-neighbour band for stretched NEAREST display blits had no normative basis. ES 3.0
+  §4.3.3 gives no mapping formula, so the band is now documented as an assumption (VALIDATION.md and both READMEs),
+  limited to presentation blits.
+- **README ×2:** the srgb check count (57 → 56) and the cube-map-array field-of-view cap were corrected.
+
+Reports: [a](2026-11-12-codex-diffreview2-a.md), [b](2026-11-12-codex-diffreview2-b.md).

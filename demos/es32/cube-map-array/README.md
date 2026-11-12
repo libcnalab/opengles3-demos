@@ -29,7 +29,9 @@ A 256 × 256 frame (frame 19 of the animation, time = frame/60 s, camera orbitin
 
 On other surfaces the layout scales: the tile rows are `min(w/10, 3h/10/3)` pixels high, the ten tile columns partition the whole width (`[c·w/10, (c+1)·w/10)`,
 so the tiles may be wider than high), and the spheres take the rest. The camera's vertical field of view is 45°, except that a portrait scene viewport keeps a 45°
-*horizontal* field of view, and neither field of view exceeds 90° (very wide or very tall viewports), beyond which the perspective would stretch the outer spheres into ovals.
+*horizontal* field of view. Both fields of view are capped at 90° and the cap wins: for viewports narrower than
+tan(22.5°) ≈ 0.414 of their height, the vertical cap makes the horizontal field of view smaller than 45°. Beyond 90° the
+perspective would stretch the outer spheres into ovals.
 
 The spheres fill the scene viewport whatever its shape. `layout_of()` considers four arrangements of the five spheres (centres 1.95 apart, radius 0.8): one row of five, two rows (3 + 2),
 three rows (2 + 2 + 1) and one column of five. For each it computes the camera distance at which the arrangement's bounding box fits the field of view with a 20 % margin (for the

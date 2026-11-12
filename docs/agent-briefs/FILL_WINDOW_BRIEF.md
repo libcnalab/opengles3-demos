@@ -26,4 +26,4 @@ Then:
 - view a 640x400 and an 800x800 capture of each demo;
 - update visual_review and the README layout description.
 
-CPU limit `-j 2`; llvmpipe first; never run anything known to fault the GPU.
+CPU limit `-j 1`; llvmpipe first; never run anything known to fault the GPU.

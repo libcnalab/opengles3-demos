@@ -56,27 +56,27 @@
     {
       "name": "debug",
       "configurePreset": "debug",
-      "jobs": 6
+      "jobs": 3
     },
     {
       "name": "release",
       "configurePreset": "release",
-      "jobs": 6
+      "jobs": 3
     },
     {
       "name": "sanitize",
       "configurePreset": "sanitize",
-      "jobs": 6
+      "jobs": 3
     },
     {
       "name": "headless-ci",
       "configurePreset": "headless-ci",
-      "jobs": 6
+      "jobs": 3
     },
     {
       "name": "headless-ci-clang",
       "configurePreset": "headless-ci-clang",
-      "jobs": 6
+      "jobs": 3
     }
   ],
   "testPresets": [

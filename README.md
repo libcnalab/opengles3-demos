@@ -49,7 +49,7 @@ git clone https://github.com/libcna/meta-gl ../../libcna/meta-gl
 git -C ../../libcna/meta-gl checkout 333d777fadbe53613a9c2eead358ffbfe6a2ef33
 
 cmake --preset debug
-cmake --build --preset debug              # 6 parallel jobs (the presets cap compilation at 6 cores)
+cmake --build --preset debug              # 3 parallel jobs (the presets cap compilation at 3 cores)
 ```
 
 Presets: `debug`, `release`, `sanitize` (ASan/UBSan for CPU-side code), `headless-ci` (warnings as errors, no
@@ -113,7 +113,7 @@ same lavapipe.
   ANGLE unless `OGLES3_RUN_GPU_FAULT_CASES=1` is set, and `OGLES3_ANGLE_VULKAN_ICD` defaults to lavapipe.
 - Driver crash cases (`test-driver-crash-readpixels-none`, parts of `es30-program-binary`, `es30-immutable-storage`
   and `es31-image-load-store`) run in child processes with timeouts; a crash there is recorded, not fatal.
-- Compile with at most 6 parallel jobs (the presets do).
+- Compile with at most 3 parallel jobs (the presets do).
 
 ## What FULLY_VALIDATED means, and what it does not
 

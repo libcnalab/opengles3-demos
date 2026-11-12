@@ -35,7 +35,7 @@ where possible), rerun the matrices with `tools/release/collect_evidence.py`, an
 - SDL3 3.4.0 in `/usr/local`; windowed runs tested with `xvfb-run -a`.
 - Khronos specs are not committed. Fetch them into a scratch directory when needed
   (URLs in `docs/references/README.md`).
-- At most 6 CPU cores for compilation in total (presets: `jobs: 6`; parallel agents `-j 2`, Codex `-j 1`).
+- At most 3 CPU cores for compilation in total (presets: `jobs: 3`; parallel agents and Codex `-j 1`).
 
 ## Build / test
 

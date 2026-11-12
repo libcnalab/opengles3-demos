@@ -514,6 +514,14 @@ namespace demo
             }
         }
 
+        if ((rep.outcome == Outcome::SkipUnsupported || rep.outcome == Outcome::BlockedMetaGl) &&
+            (runtime_checks.failed() > 0 || demo_checks.failed() > 0))
+        {
+            // A skip or block raised after a check had already failed must not hide that failure.
+            rep.outcome = Outcome::Fail;
+            rep.reason = std::format("{} check(s) failed before: {}", runtime_checks.failed() + demo_checks.failed(),
+                                     rep.reason);
+        }
         if (rep.reason.empty())
         {
             if (runtime_checks.failed() > 0)

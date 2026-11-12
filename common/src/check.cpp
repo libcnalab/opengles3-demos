@@ -37,19 +37,19 @@ namespace demo
             const GLubyte* p = metagl::glGetString(n);
             return std::string(p != nullptr ? reinterpret_cast<const char*>(p) : "");
         };
-        // Matched against GL_RENDERER and GL_VERSION, so "radeonsi" selects one driver and "Mesa" all Mesa drivers.
-        // Exception: ANGLE's GL_RENDERER names its *backend* ("ANGLE (Mesa, Vulkan ... (llvmpipe ...))"), which would
-        // let every "Mesa"/"llvmpipe"/"Vulkan" deviation silently excuse ANGLE too. For ANGLE only GL_VERSION is
-        // used, so only "ANGLE" matches; a demo that must single out ANGLE's backend checks GL_RENDERER itself.
-        const std::string version = text(metagl::StringName::Version);
-        const std::string haystack = version.find("ANGLE") != std::string::npos
-                                         ? version
-                                         : text(metagl::StringName::Renderer) + " | " + version;
-        if (haystack.find(renderer_substring) == std::string::npos) return expect(ok, what, detail);
+        if (!deviation_matches(renderer_substring, text(metagl::StringName::Renderer), text(metagl::StringName::Version)))
+            return expect(ok, what, detail);
         if (!ok) ++xfail_;
         return expect(true, what,
                       std::format("{} on '{}': {}{}{}", ok ? "XPASS (driver now conforms)" : "XFAIL known driver deviation",
                                   renderer_substring, reason, detail.empty() ? "" : " | ", detail));
+    }
+
+    bool deviation_matches(std::string_view tag, std::string_view gl_renderer, std::string_view gl_version)
+    {
+        if (tag.empty()) return false;
+        if (gl_version.find("ANGLE") != std::string_view::npos) return gl_version.find(tag) != std::string_view::npos;
+        return gl_renderer.find(tag) != std::string_view::npos || gl_version.find(tag) != std::string_view::npos;
     }
 
     bool Check::expect_no_gl_error(std::string_view what)

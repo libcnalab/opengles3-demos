@@ -31,6 +31,11 @@ Status rules (see docs/VALIDATION.md):
   FULLY_VALIDATED        every registered matrix run is a validated PASS or a SKIP_UNSUPPORTED, gpu and
                          llvmpipe pass in every version mode, and the manifest declares at least one
                          non-trivial validation method
+
+Registered runs: the CTest registration of each build directory (`ctest --show-only=json-v1`) is the list of runs
+an executable must have. A registered run without a fresh result (never run, filtered out, or stale) prevents
+FULLY_VALIDATED, and a result file whose test is no longer registered is ignored. Without a build directory the
+check is skipped and the summary says so.
 """
 import argparse
 import csv
@@ -127,6 +132,27 @@ def fresh_runs(m, runs, repo):
     return fresh, stale
 
 
+def registered_tests(ctest_dirs):
+    """Test names registered by CTest in the given build directories, grouped by executable (the part before the
+    first ':'). Returns None when no directory could be queried."""
+    import subprocess
+    by_demo = defaultdict(set)
+    queried = False
+    for d in ctest_dirs:
+        if not os.path.exists(os.path.join(d, "CTestTestfile.cmake")):
+            continue
+        try:
+            out = subprocess.run(["ctest", "--show-only=json-v1", "--test-dir", d], capture_output=True, text=True,
+                                 check=True).stdout
+        except (OSError, subprocess.CalledProcessError):
+            continue
+        queried = True
+        for t in json.loads(out).get("tests", []):
+            name = t.get("name", "")
+            by_demo[name.split(":", 1)[0]].add(name)
+    return by_demo if queried else None
+
+
 def demo_status(m, results, bin_dirs):
     runs = results.get(m["name"], [])
     built = any(os.path.exists(os.path.join(b, m["name"])) for b in bin_dirs)
@@ -156,7 +182,7 @@ def demo_status(m, results, bin_dirs):
     ok_runs = all((r["outcome"] == "PASS" and r.get("validated")) or r["outcome"] == "SKIP_UNSUPPORTED" for r in runs)
     pass_ids = {r.get("test_id", "") for r in passed}
     need = {f"{m['name']}:{d}:{md}" for d in ("gpu", "llvmpipe") for md in expected_modes}
-    full = ok_runs and bool(methods) and need <= pass_ids
+    full = ok_runs and bool(methods) and need <= pass_ids and not m.get("_missing")
     if full:
         return "FULLY_VALIDATED", runs
     if m.get("visual_review"):
@@ -230,6 +256,9 @@ def main():
     ap.add_argument("--repo", default=os.path.join(os.path.dirname(__file__), "..", ".."))
     ap.add_argument("--results", action="append", default=[], help="test-results directory (repeatable)")
     ap.add_argument("--metagl", default=None)
+    ap.add_argument("--ctest-dir", action="append", default=[],
+                    help="build directory whose CTest registration lists the required runs (repeatable; default: "
+                         "the parent of each results directory)")
     args = ap.parse_args()
     repo = os.path.abspath(args.repo)
     result_dirs = args.results or sorted(glob.glob(os.path.join(repo, "build", "*", "test-results")))
@@ -251,6 +280,25 @@ def main():
         if stale:
             m["_stale"] = len(stale)
             stale_report.append(f"{m['name']}: {len(stale)} stale result file(s) ignored")
+
+    # Completeness: every registered run must have a fresh result; results of unregistered tests do not count.
+    ctest_dirs = args.ctest_dir or [os.path.dirname(d) for d in result_dirs]
+    registered = registered_tests(ctest_dirs)
+    missing_report, unregistered_report = [], []
+    n_registered = 0
+    if registered is not None:
+        for m in manifests:
+            reg = registered.get(m["name"], set())
+            n_registered += len(reg)
+            kept = [r for r in results[m["name"]] if r.get("test_id", "") in reg]
+            dropped = len(results[m["name"]]) - len(kept)
+            if dropped:
+                unregistered_report.append(f"{m['name']}: {dropped} result file(s) of unregistered tests ignored")
+            results[m["name"]] = kept
+            missing = sorted(reg - {r.get("test_id", "") for r in kept})
+            if missing:
+                m["_missing"] = missing
+                missing_report.append(f"{m['name']}: {', '.join(missing)}")
 
     # Manifest honesty lint: every claimed API entry point must be called by the executable's own sources,
     # directly or through a common/ helper (demo::get_integer -> glGetIntegerv, Check::expect_pixel -> glReadPixels).
@@ -361,6 +409,12 @@ def main():
         f.write(header + "# Coverage summary\n\n")
         f.write(f"Result directories: {', '.join(os.path.relpath(d, repo) for d in result_dirs) or '(none)'}\n\n")
         f.write(f"Source revision: {git_revision(repo)}\n\n")
+        f.write(f"meta-gl revision: {git_revision(metagl_dir)} ({os.path.relpath(os.path.abspath(metagl_dir), repo)})\n\n")
+        if registered is None:
+            f.write("Registered runs: not checked (no CTest build directory found).\n\n")
+        else:
+            f.write(f"Registered runs: {n_registered}; with a fresh result: {n_registered - sum(len(m.get('_missing', [])) for m in manifests)}"
+                    f"; missing: {sum(len(m.get('_missing', [])) for m in manifests)}.\n\n")
         f.write("Only results from the current executables count. A result is ignored when its executable was\n"
                 "rebuilt after the run, or when the demo's sources, `common/` or the CMake glue are newer than the\n"
                 "executable. `es-min` runs use `MESA_GLES_VERSION_OVERRIDE`: they prove API-version detection on an\n"
@@ -371,6 +425,10 @@ def main():
         f.write("## Executables\n\n" + md_table(sorted(Counter(status_of.values()).items()), ["status", "count"]) + "\n")
         if stale_report:
             f.write("\n## Stale results (ignored)\n\n" + "\n".join(f"- {x}" for x in stale_report) + "\n")
+        if missing_report:
+            f.write("\n## Registered runs without a fresh result\n\n" + "\n".join(f"- {x}" for x in missing_report) + "\n")
+        if unregistered_report:
+            f.write("\n## Results of unregistered tests (ignored)\n\n" + "\n".join(f"- {x}" for x in unregistered_report) + "\n")
         if problems:
             f.write("\n## Manifest problems\n\n" + "\n".join(f"- {p}" for p in problems) + "\n")
     # Evidence for every known-deviation check: where it actually failed (XFAIL) or passed although matched (XPASS).

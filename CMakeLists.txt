@@ -61,6 +61,27 @@ else()
             "meta-gl not found at '${OGLES3_METAGL_SOURCE_DIR}'. "
             "Set -DOGLES3_METAGL_SOURCE_DIR=<path> or -DOGLES3_USE_INSTALLED_METAGL=ON.")
     endif()
+    # The suite needs meta-gl develop at 333d777 or later (docs/METAGL_DEPENDENCY.md). When the checkout is a git
+    # repository, check that it contains that commit; an export without .git is accepted with a note.
+    set(OGLES3_METAGL_REQUIRED_COMMIT "333d777fadbe53613a9c2eead358ffbfe6a2ef33")
+    find_package(Git QUIET)
+    if(GIT_FOUND AND EXISTS "${OGLES3_METAGL_SOURCE_DIR}/.git")
+        execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${OGLES3_METAGL_SOURCE_DIR}" rev-parse HEAD
+                        OUTPUT_VARIABLE metagl_head OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+        execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${OGLES3_METAGL_SOURCE_DIR}" merge-base --is-ancestor
+                                "${OGLES3_METAGL_REQUIRED_COMMIT}" HEAD
+                        RESULT_VARIABLE metagl_has_required ERROR_QUIET)
+        if(NOT metagl_has_required EQUAL 0)
+            message(FATAL_ERROR
+                "meta-gl at '${OGLES3_METAGL_SOURCE_DIR}' (HEAD ${metagl_head}) does not contain the required commit "
+                "${OGLES3_METAGL_REQUIRED_COMMIT} (develop, 2026-11-12). Check out meta-gl develop at that commit or "
+                "later; see docs/METAGL_DEPENDENCY.md.")
+        endif()
+        message(STATUS "opengles3-demos: meta-gl ${metagl_head} (contains the required ${OGLES3_METAGL_REQUIRED_COMMIT})")
+    else()
+        message(STATUS "opengles3-demos: meta-gl at '${OGLES3_METAGL_SOURCE_DIR}' is not a git checkout; the required "
+                       "revision (${OGLES3_METAGL_REQUIRED_COMMIT} or later) cannot be checked")
+    endif()
     # Never enable meta-gl's per-call debug logging here: it inserts glGetError() after every
     # wrapper and would consume the error flags that our negative tests inspect.
     set(METAGL_ENABLE_DEBUG_LOGGING OFF CACHE BOOL "" FORCE)

@@ -37,8 +37,8 @@ namespace demo
 
         bool expect_near(double actual, double expected, double tolerance, std::string_view what);
 
-        /// Strict check with a *documented* driver deviation: when `ok` is false and GL_RENDERER or GL_VERSION
-        /// contains `renderer_substring` (e.g. "radeonsi" for one driver, "Mesa" for all Mesa drivers), the result is recorded as XFAIL (passing, but labelled) with `reason`, which
+        /// Strict check with a *documented* driver deviation: when `ok` is false and the current driver matches
+        /// `renderer_substring` (demo::deviation_matches: e.g. "radeonsi" for one driver, "Mesa" for all Mesa drivers, never ANGLE), the result is recorded as XFAIL (passing, but labelled) with `reason`, which
         /// must also be listed in docs/KNOWN_LIMITATIONS.md. Every other driver gets the strict check. If
         /// the named driver starts conforming, the check passes and is labelled XPASS.
         bool expect_or_known_deviation(bool ok, std::string_view what, std::string_view detail,
@@ -68,4 +68,15 @@ namespace demo
     };
 
     [[nodiscard]] std::string format_rgba(Rgba8 c);
+
+    /// The driver-selection rule behind Check::expect_or_known_deviation and the shader-test `@xfail` annotations.
+    /// `tag` names the implementation a documented deviation applies to: "Mesa" (every Mesa driver), a Mesa driver
+    /// ("radeonsi", "llvmpipe", "zink", "softpipe") or "ANGLE". It is searched in GL_RENDERER and GL_VERSION, with two
+    /// exceptions:
+    ///  - ANGLE (GL_VERSION contains "ANGLE") is matched on GL_VERSION only. Its GL_RENDERER names the Vulkan
+    ///    backend ("ANGLE (Mesa, Vulkan ... (llvmpipe ...))"), and a Mesa deviation must not excuse ANGLE.
+    ///  - An empty tag matches nothing: a missing driver name must give the strict check, never an XFAIL everywhere.
+    /// "llvmpipe" also matches zink on lavapipe ("zink Vulkan ...(llvmpipe ...)"): the two share llvmpipe's
+    /// rasterizer, and demos that must tell them apart pass "zink" first.
+    [[nodiscard]] bool deviation_matches(std::string_view tag, std::string_view gl_renderer, std::string_view gl_version);
 }

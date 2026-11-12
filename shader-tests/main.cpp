@@ -8,7 +8,7 @@
 //   // @min-es: 3.1          (default from the directory: glsl100/glsl300 -> 3.0, glsl310 -> 3.1, glsl320 -> 3.2)
 //   // @spec: GLSL ES 3.00 §4.5.4 ...
 //   // @feature: GLSL300.PRECISION.DEFAULT     (repeatable; read by the coverage generator)
-//   // @xfail: Mesa | <why>   known driver deviation: when GL_VERSION contains "Mesa" and the case
+//   // @xfail: Mesa | <why>   known driver deviation: when the driver matches "Mesa" (demo::deviation_matches) and the case
 //                             does NOT meet its expectation, it is reported as XFAIL (documented in
 //                             docs/KNOWN_LIMITATIONS.md) instead of FAIL; on every other driver the
 //                             strict expectation applies. If the driver starts conforming: XPASS.
@@ -23,6 +23,7 @@
 // ES 3.1 driver, must refuse "#version 320 es". Under MESA_GLES_VERSION_OVERRIDE (API-version
 // emulation only) the outcome is printed but not asserted; see docs/VALIDATION.md.
 
+#include <demo/check.hpp>
 #include <demo/gl_util.hpp>
 #include <demo/runtime.hpp>
 
@@ -211,6 +212,8 @@ namespace
             cases_ = discover(env.source_dir);
             const GLubyte* v = mgl::glGetString(mgl::StringName::Version);
             version_string_ = v != nullptr ? reinterpret_cast<const char*>(v) : "";
+            const GLubyte* r = mgl::glGetString(mgl::StringName::Renderer);
+            renderer_string_ = r != nullptr ? reinterpret_cast<const char*>(r) : "";
             version_override_ = std::getenv("MESA_GLES_VERSION_OVERRIDE") != nullptr;
             if (cases_.empty()) throw demo::Failure("no shader test cases found under " + env.source_dir);
         }
@@ -272,7 +275,7 @@ namespace
                 {
                     const std::string driver = c.xfail.substr(0, c.xfail.find('|'));
                     const std::string needle = driver.substr(0, driver.find_last_not_of(' ') + 1);
-                    if (version_string_.find(needle) != std::string::npos)
+                    if (demo::deviation_matches(needle, renderer_string_, version_string_))
                     {
                         ++xfail_cases_;
                         detail = std::format("{} ({}) | {}", ok ? "XPASS: driver now conforms" : "XFAIL: known driver deviation",
@@ -294,6 +297,7 @@ namespace
     private:
         std::vector<Case> cases_;
         std::string version_string_;
+        std::string renderer_string_;
         int xfail_cases_ = 0;
         bool version_override_ = false;
     };

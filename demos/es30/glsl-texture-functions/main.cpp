@@ -119,7 +119,6 @@ namespace
     {
         int level = 0, i = 0, j = 0, a = 0;
         bool valid = true;
-        friend bool operator==(const Texel&, const Texel&) = default;
     };
 
     std::array<std::uint8_t, 4> rgba8_of(const Texel& t)

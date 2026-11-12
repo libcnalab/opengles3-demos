@@ -380,8 +380,10 @@ namespace
         for (std::size_t i = 0; i + 2 < m.indices.size(); i += 3)
         {
             const Vertex &a = m.vertices[m.indices[i]], &b = m.vertices[m.indices[i + 1]], &c = m.vertices[m.indices[i + 2]];
-            const V3 e1{b.px - a.px, b.py - a.py, b.pz - a.pz}, e2{c.px - a.px, c.py - a.py, c.pz - a.pz};
-            const V3 n{a.nx, a.ny, a.nz};
+            // edges differenced in float, then widened; only the sign of the dot product below matters
+            const V3 e1{static_cast<double>(b.px - a.px), static_cast<double>(b.py - a.py), static_cast<double>(b.pz - a.pz)};
+            const V3 e2{static_cast<double>(c.px - a.px), static_cast<double>(c.py - a.py), static_cast<double>(c.pz - a.pz)};
+            const V3 n{static_cast<double>(a.nx), static_cast<double>(a.ny), static_cast<double>(a.nz)};
             if (dot(cross(e1, e2), n) < 0.0) std::swap(m.indices[i + 1], m.indices[i + 2]);
         }
     }
@@ -1283,7 +1285,7 @@ namespace
         const std::vector<double> on = read_depth_texels(texels);
         bool within = true, never_toward = true;
         double lo_ratio = 1e9, hi_ratio = 0;
-        const double factor_d = kOffsetFactor, units_d = kOffsetUnits;
+        const double factor_d = static_cast<double>(kOffsetFactor), units_d = static_cast<double>(kOffsetUnits);
         for (std::size_t i = 0; i < targets.size(); ++i)
         {
             const double offset = on[i] - off[i];

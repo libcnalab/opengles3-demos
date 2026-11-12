@@ -226,7 +226,6 @@ namespace
         mgl::BlendFactor src_alpha = mgl::BlendFactor::One;
         mgl::BlendFactor dst_alpha = mgl::BlendFactor::Zero;
         std::array<bool, 4> mask = {true, true, true, true};
-        friend bool operator==(const BufState&, const BufState&) = default;
     };
 
     std::string describe(const BufState& s)
@@ -1689,7 +1688,7 @@ namespace
                 (std::max({want[0], want[1], want[2]}) > 1.0 ? over_one : under_one)++;
                 for (int c = 0; c < 3; ++c)
                 {
-                    const double got = hdr_[static_cast<std::size_t>((pr.y * scene_w_ + pr.x) * 4 + c)];
+                    const double got = static_cast<double>(hdr_[static_cast<std::size_t>((pr.y * scene_w_ + pr.x) * 4 + c)]);
                     const double err = std::fabs(got - want[c]);
                     if (err / (std::fabs(want[c]) + 0x1p-6) > worst)
                     {
@@ -1719,7 +1718,7 @@ namespace
                 split_px += split ? 1 : 0;
                 for (int c = 0; c < 3; ++c)
                 {
-                    const double h = hdr_[static_cast<std::size_t>((ty * scene_w_ + tx) * 4 + c)];
+                    const double h = static_cast<double>(hdr_[static_cast<std::size_t>((ty * scene_w_ + tx) * 4 + c)]);
                     const double v = split ? 0.85 : left ? std::min(h, 1.0) : (h * kExposure) / (1.0 + h * kExposure);
                     const int want = static_cast<int>(std::lround(255.0 * v));
                     const int got = window_[static_cast<std::size_t>((wy * width_ + wx) * 4 + c)];
@@ -1754,7 +1753,7 @@ namespace
                     const int tx = texel_for_local(lx, kPatternSize, r.w), ty = texel_for_local(ly, kPatternSize, r.h);
                     for (int c = 0; c < 3; ++c)
                     {
-                        const double want = signed_map(stored_component(kFormats[i], c, raw_pattern(kFormats[i], c, tx, ty)));
+                        const double want = signed_map(static_cast<double>(stored_component(kFormats[i], c, raw_pattern(kFormats[i], c, tx, ty))));
                         const int got = window_[static_cast<std::size_t>(((r.y + ly) * width_ + r.x + lx) * 4 + c)];
                         ++checked;
                         // The shader divides in fp32 and converts to 8 bits with rounding: +-1 (the 16-bit pattern value itself is exact).

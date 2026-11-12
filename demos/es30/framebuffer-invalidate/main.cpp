@@ -78,7 +78,6 @@ namespace
                                                           mgl::TextureTarget::TextureCubeMapPositiveZ, mgl::TextureTarget::TextureCubeMapNegativeZ};
     constexpr std::array<std::string_view, 6> kFaceNames = {"+X", "-X", "+Y", "-Y", "+Z", "-Z"};
 
-    constexpr int gl(GLenum e) { return static_cast<int>(e); }
     constexpr int gl(mgl::TextureTarget t) { return static_cast<int>(static_cast<GLenum>(t)); }
 
     std::uint8_t to8(double v) { return static_cast<std::uint8_t>(std::lround(std::clamp(v, 0.0, 1.0) * 255.0)); }

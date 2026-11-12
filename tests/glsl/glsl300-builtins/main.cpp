@@ -91,9 +91,9 @@ namespace
     Row IA(I4 ia, I4 ib = {}) { Row r; r.ia = ia; r.ib = ib; return r; }
     Row UA(U4 ua, U4 ub = {}) { Row r; r.ua = ua; r.ub = ub; return r; }
 
-    double fa(const Row& r, int i) { return r.a[static_cast<std::size_t>(i)]; }
-    double fb(const Row& r, int i) { return r.b[static_cast<std::size_t>(i)]; }
-    double fc(const Row& r, int i) { return r.c[static_cast<std::size_t>(i)]; }
+    double fa(const Row& r, int i) { return static_cast<double>(r.a[static_cast<std::size_t>(i)]); }
+    double fb(const Row& r, int i) { return static_cast<double>(r.b[static_cast<std::size_t>(i)]); }
+    double fc(const Row& r, int i) { return static_cast<double>(r.c[static_cast<std::size_t>(i)]); }
 
     std::uint32_t f2u(float f) { return std::bit_cast<std::uint32_t>(f); }
     float u2f(std::uint32_t u) { return std::bit_cast<float>(u); }
@@ -471,9 +471,9 @@ namespace
                     else if (cs.type == OutType::Int) { got = static_cast<std::int32_t>(bits); ok = got == r; }
                     else
                     {
-                        got = u2f(bits);
+                        got = static_cast<double>(u2f(bits));
                         const double diff = std::abs(got - r);
-                        const double x = cs.rows[row].a[static_cast<std::size_t>(k % 4)];
+                        const double x = static_cast<double>(cs.rows[row].a[static_cast<std::size_t>(k % 4)]);
                         switch (cs.tol.kind)
                         {
                         case TolKind::Exact: ok = got == static_cast<double>(static_cast<float>(r)) || (std::isnan(r) && std::isnan(got)); break;

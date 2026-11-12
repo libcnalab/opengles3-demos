@@ -390,7 +390,7 @@ namespace
                 {
                     GLfloat x = 0.0f;
                     mgl::glGetFloatv(l.pname, &x);
-                    value = x;
+                    value = static_cast<double>(x);
                     ok = l.kind == Kind::AtLeastFloat ? value >= req : value <= req;
                     break;
                 }
@@ -398,8 +398,8 @@ namespace
                 {
                     GLfloat r[2] = {0.0f, 0.0f};
                     mgl::glGetFloatv(l.pname, r);
-                    value = r[0];
-                    value_hi = r[1];
+                    value = static_cast<double>(r[0]);
+                    value_hi = static_cast<double>(r[1]);
                     ok = r[0] <= 1.0f && r[1] >= 1.0f;
                     break;
                 }

@@ -187,8 +187,8 @@ namespace
             const double fz = std::clamp((z + kHalfSizeD) * scale, 0.0, last - 0.001);
             const int ix = static_cast<int>(std::floor(fx)), iz = static_cast<int>(std::floor(fz));
             const double wx = fx - ix, wz = fz - iz;
-            const double h0 = mixd(at(ix, iz), at(ix + 1, iz), wx);
-            const double h1 = mixd(at(ix, iz + 1), at(ix + 1, iz + 1), wx);
+            const double h0 = mixd(static_cast<double>(at(ix, iz)), static_cast<double>(at(ix + 1, iz)), wx);
+            const double h1 = mixd(static_cast<double>(at(ix, iz + 1)), static_cast<double>(at(ix + 1, iz + 1)), wx);
             return mixd(h0, h1, wz);
         }
         // terrain_normal()
@@ -819,7 +819,7 @@ namespace
     {
         FrameParams fp = shown_;
         fp.tint = 0.0f;
-        const Expectation ex = expected(fp.lod_eye, fp.lod_scale);
+        const Expectation ex = expected(fp.lod_eye, static_cast<double>(fp.lod_scale));
         std::cout << std::format("note: displayed frame: {} triangles, patch edge segments from {} to {}, smallest distance of a level to an odd-rounding boundary {:.3g}\n",
                                  ex.triangles, ex.min_patch_level, ex.max_patch_level, ex.min_margin);
         check.expect(ex.min_margin > 1e-3, "model precondition: every level of the displayed frame is more than 1e-3 away from a rounding boundary of fractional_odd_spacing, so the CPU rounds like the GPU",
@@ -860,18 +860,19 @@ namespace
             }
             const int pi = id % kPatchesPerEdge, pj = id / kPatchesPerEdge;
             const V3 c0 = patch_corner(pi, pj, 0), c3 = patch_corner(pi, pj, 3);
-            const double u = r.uv[0], v = r.uv[1];
+            const double u = static_cast<double>(r.uv[0]), v = static_cast<double>(r.uv[1]);
+            const double px = static_cast<double>(r.pos[0]), py = static_cast<double>(r.pos[1]), pz = static_cast<double>(r.pos[2]);
             const double ex_x = mixd(c0[0], c3[0], u), ex_z = mixd(c0[2], c3[2], v);
-            worst_xz = std::max({worst_xz, std::abs(static_cast<double>(r.pos[0]) - ex_x), std::abs(static_cast<double>(r.pos[2]) - ex_z)});
-            const double ex_y = terrain_.height(r.pos[0], r.pos[2]);
-            worst_y = std::max(worst_y, std::abs(static_cast<double>(r.pos[1]) - ex_y));
-            lo_y = std::min<double>(lo_y, r.pos[1]);
-            hi_y = std::max<double>(hi_y, r.pos[1]);
+            worst_xz = std::max({worst_xz, std::abs(px - ex_x), std::abs(pz - ex_z)});
+            const double ex_y = terrain_.height(px, pz);
+            worst_y = std::max(worst_y, std::abs(py - ex_y));
+            lo_y = std::min<double>(lo_y, py);
+            hi_y = std::max<double>(hi_y, py);
             const double eps = 1e-6;
-            if (u <= eps) pd.edges[0].push_back({v, r.pos[0], r.pos[1], r.pos[2]});
-            if (u >= 1.0 - eps) pd.edges[1].push_back({v, r.pos[0], r.pos[1], r.pos[2]});
-            if (v <= eps) pd.edges[2].push_back({u, r.pos[0], r.pos[1], r.pos[2]});
-            if (v >= 1.0 - eps) pd.edges[3].push_back({u, r.pos[0], r.pos[1], r.pos[2]});
+            if (u <= eps) pd.edges[0].push_back({v, px, py, pz});
+            if (u >= 1.0 - eps) pd.edges[1].push_back({v, px, py, pz});
+            if (v <= eps) pd.edges[2].push_back({u, px, py, pz});
+            if (v >= 1.0 - eps) pd.edges[3].push_back({u, px, py, pz});
         }
         int unseen = 0;
         for (int p = 0; p < kPatchCount; ++p)
@@ -951,7 +952,7 @@ namespace
             {
                 FrameParams f = fp;
                 f.lod_eye = fp.cam_eye + V3{0.0, e.lift, 0.0};
-                const Expectation x = expected(f.lod_eye, f.lod_scale);
+                const Expectation x = expected(f.lod_eye, static_cast<double>(f.lod_scale));
                 margins_ok = margins_ok && x.min_margin > 1e-3;
                 const Capture c = capture(f, x.triangles * 3);
                 counts_ok = counts_ok && c.written == x.triangles && c.generated == x.triangles;
@@ -970,7 +971,7 @@ namespace
         {
             FrameParams f = fp;
             f.lod_eye = {0.0, terrain_.height(0.0, 0.0) + 1.0, 0.0};
-            const Expectation x = expected(f.lod_eye, f.lod_scale);
+            const Expectation x = expected(f.lod_eye, static_cast<double>(f.lod_scale));
             const Capture c = capture(f, x.triangles * 3);
             float highest = 0.0f;
             for (const Record& r : c.records)
@@ -1097,7 +1098,7 @@ namespace
         mgl::glBindFramebuffer(mgl::FramebufferTarget::ReadFramebuffer, mgl::FramebufferId{0});
         const std::vector<std::uint8_t> px = demo::read_rgba8(0, 0, fp.width, fp.height);
 
-        const Expectation ex = expected(fp.lod_eye, fp.lod_scale);
+        const Expectation ex = expected(fp.lod_eye, static_cast<double>(fp.lod_scale));
         const Capture cap = capture(fp, ex.triangles * 3);
         if (cap.records.size() != ex.triangles * 3)
         {
@@ -1107,7 +1108,11 @@ namespace
         std::vector<Tri> tris;
         for (std::size_t i = 0; i + 2 < cap.records.size(); i += 3)
         {
-            auto w = [&](std::size_t k) { return V3{cap.records[i + k].pos[0], cap.records[i + k].pos[1], cap.records[i + k].pos[2]}; };
+            auto w = [&](std::size_t k)
+            {
+                const float* p = cap.records[i + k].pos;
+                return V3{static_cast<double>(p[0]), static_cast<double>(p[1]), static_cast<double>(p[2])};
+            };
             tris.push_back({w(0), w(1), w(2)});
         }
         const Caster caster(fp, std::move(tris));

@@ -493,8 +493,8 @@ namespace
                     if (cell.split && std::abs((lx + 0.5) - w / 2.0) < 3.0) continue;  // keep away from the seam of the two halves
                     double cx = cx_full;
                     if (cell.split) cx = cx < 0.5 ? cx * 2.0 : (cx - 0.5) * 2.0;
-                    const double u = cx * double{cell.su} + double{cell.ou};
-                    const double v = ((ly + 0.5) / h) * double{cell.sv} + double{cell.ov};
+                    const double u = cx * static_cast<double>(cell.su) + static_cast<double>(cell.ou);
+                    const double v = ((ly + 0.5) / h) * static_cast<double>(cell.sv) + static_cast<double>(cell.ov);
                     if (!look.linear && (near_texel_edge(u * kBase) || near_texel_edge(v * kBase))) continue;  // texel boundary: implementation-defined rounding
                     // An incomplete texture returns (0, 0, 0, 1) whatever the coordinates are (ES 3.0 3.9.2.1).
                     const std::array<double, 4> ref = incomplete ? std::array<double, 4>{0.0, 0.0, 0.0, 255.0} : sample_ref(texels_, look, u, v);

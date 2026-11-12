@@ -48,7 +48,6 @@ namespace
     constexpr int kGroupsHeavy = 512;                          // 65536 invocations
     constexpr int kGroupsLight = 8;                            // 1024 invocations (the range-bound run)
     constexpr std::uint32_t kHeavyN = kGroup * kGroupsHeavy;
-    constexpr std::uint32_t kLightN = kGroup * kGroupsLight;
     constexpr std::uint32_t kCompactN = 16384;                 // 128 x 128 elements
     constexpr std::uint32_t kCanary = 0xC5C5C5C5u;
     constexpr std::uint32_t kSentinel = 0xFFFFFFFFu;

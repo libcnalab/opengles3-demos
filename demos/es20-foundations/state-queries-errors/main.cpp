@@ -682,7 +682,7 @@ namespace
             {
                 const Values v = get_all(P::MaxTextureLodBias);
                 rec_.expect(v.f[0] >= 2.0f, "MAX_TEXTURE_LOD_BIAS: GetFloatv >= 2.0", std::format("got {}", v.f[0]));
-                const double frac = v.f[0] - std::floor(v.f[0]);
+                const double frac = static_cast<double>(v.f[0] - std::floor(v.f[0]));
                 if (frac != 0.5)  // a tie has no single "nearest integer"
                     rec_.expect(v.i[0] == std::lround(v.f[0]), "MAX_TEXTURE_LOD_BIAS: GetIntegerv = float rounded to nearest",
                                 std::format("float={} int={}", v.f[0], v.i[0]));

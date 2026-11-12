@@ -586,7 +586,7 @@ namespace
             p.linear = linear;
             p.wrap_r = wrap_r;
             p.r = r;
-            p.ref = [&v, linear, wrap_r, r](double s, double t) { return sample_volume(v, linear, wrap_r, s, t, r); };
+            p.ref = [&v, linear, wrap_r, r](double s, double t) { return sample_volume(v, linear, wrap_r, s, t, static_cast<double>(r)); };
             p.tol = linear ? kTolLinear : 0;
             if (!linear) p.boundary_w = v.w, p.boundary_h = v.h;
             panels_.push_back(std::move(p));
@@ -607,7 +607,7 @@ namespace
             p.tex = tex_[slot];
             p.linear = linear;
             p.r = r;
-            p.ref = [&v, linear, r](double s, double t) { return sample_array(v, linear, s, t, r); };
+            p.ref = [&v, linear, r](double s, double t) { return sample_array(v, linear, s, t, static_cast<double>(r)); };
             p.tol = linear ? kTolLinear : 0;
             if (!linear) p.boundary_w = v.w, p.boundary_h = v.h;
             panels_.push_back(std::move(p));

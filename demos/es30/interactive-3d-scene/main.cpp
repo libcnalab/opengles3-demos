@@ -203,7 +203,8 @@ namespace
 
     // Shape ids of the CPU model (and the draw order of the GPU objects after the ground).
     constexpr int kIdSky = -2, kIdGround = -1;
-    constexpr int kIdWall = 0, kIdPlinth = 1, kIdMonolith = 2, kIdCrate = 3, kIdBall = 4, kIdPillar0 = 5;
+    // Every shape has an id; the unused ones are named to document the order.
+    [[maybe_unused]] constexpr int kIdWall = 0, kIdPlinth = 1, kIdMonolith = 2, kIdCrate = 3, kIdBall = 4, kIdPillar0 = 5;
     constexpr int kIdTrunk0 = kIdPillar0 + kPillarCount, kIdCanopy0 = kIdTrunk0 + kTreeCount;
 
     // =============================================================================================

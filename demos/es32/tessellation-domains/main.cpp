@@ -118,18 +118,18 @@ namespace
         if (d == Domain::Isolines)
         {
             // Section 11.2.2.3: the tessellation spacing is ignored (equal_spacing) for the number of isolines.
-            p.outer[0] = round_level(levels.outer[0], Spacing::Equal, max_level);
-            p.outer[1] = round_level(levels.outer[1], s, max_level);
+            p.outer[0] = round_level(static_cast<double>(levels.outer[0]), Spacing::Equal, max_level);
+            p.outer[1] = round_level(static_cast<double>(levels.outer[1]), s, max_level);
             return p;
         }
         for (int i = 0; i < relevant; ++i)
-            p.outer[static_cast<std::size_t>(i)] = round_level(levels.outer[static_cast<std::size_t>(i)], s, max_level);
+            p.outer[static_cast<std::size_t>(i)] = round_level(static_cast<double>(levels.outer[static_cast<std::size_t>(i)]), s, max_level);
         const int inner_count = d == Domain::Quads ? 2 : 1;
         bool all_one = true;
         for (int i = 0; i < relevant; ++i) all_one = all_one && p.outer[static_cast<std::size_t>(i)] == 1;
         for (int i = 0; i < inner_count; ++i)
         {
-            p.inner[static_cast<std::size_t>(i)] = round_level(levels.inner[static_cast<std::size_t>(i)], s, max_level);
+            p.inner[static_cast<std::size_t>(i)] = round_level(static_cast<double>(levels.inner[static_cast<std::size_t>(i)]), s, max_level);
             all_one = all_one && p.inner[static_cast<std::size_t>(i)] == 1;
         }
         // "If the inner tessellation level is one and any of the outer tessellation levels is greater than one, the inner
@@ -269,7 +269,7 @@ namespace
         std::vector<Coord> out;
         for (const Record& r : records)
         {
-            const Coord c = {r.coord[0], r.coord[1], r.coord[2]};
+            const Coord c = {static_cast<double>(r.coord[0]), static_cast<double>(r.coord[1]), static_cast<double>(r.coord[2])};
             bool found = false;
             for (const Coord& q : out)
                 if (std::abs(q[0] - c[0]) < kDedupe && std::abs(q[1] - c[1]) < kDedupe && std::abs(q[2] - c[2]) < kDedupe)
@@ -1078,7 +1078,7 @@ namespace
                         vd.fail("patch centroid (written by invocation 0 after barrier()) differs");
                     if (static_cast<int>(std::lround(r.center[3])) != ps.patch_size) vd.fail("per-patch output p_center.w differs");
                     if (std::abs(r.misc[3] - ps.verts[first].tag) > 0.0f) vd.fail("t_tag[0] differs");
-                    const dm::Vec4 want = cpu_clip(ps, first, v.domain, {r.coord[0], r.coord[1], r.coord[2]}, mvp);
+                    const dm::Vec4 want = cpu_clip(ps, first, v.domain, {static_cast<double>(r.coord[0]), static_cast<double>(r.coord[1]), static_cast<double>(r.coord[2])}, mvp);
                     worst_pos = std::max({worst_pos, static_cast<double>(std::abs(r.pos[0] - want.x)), static_cast<double>(std::abs(r.pos[1] - want.y)),
                                           static_cast<double>(std::abs(r.pos[2] - want.z)), static_cast<double>(std::abs(r.pos[3] - want.w))});
                     if (!vd.ok) break;
@@ -1176,7 +1176,7 @@ namespace
             {
                 // Every isoline: the u positions of its segments' end points (grouped by v).
                 std::map<long, std::vector<double>> lines;
-                for (const Record& r : cap.records) lines[std::lround(static_cast<double>(r.coord[1]) * 1e4)].push_back(r.coord[0]);
+                for (const Record& r : cap.records) lines[std::lround(static_cast<double>(r.coord[1]) * 1e4)].push_back(static_cast<double>(r.coord[0]));
                 bool lines_ok = static_cast<int>(lines.size()) == plan.outer[0];
                 EdgeShape worst;
                 worst.segment_count_ok = worst.symmetric = worst.lengths_ok = true;
@@ -1278,7 +1278,7 @@ namespace
             l.outer = {1.0f, outer1, 1.0f, 1.0f};
             const Capture cap = run_capture(p, irregular_quad_, 4, l, 0.0f, capture_mode(v), true);
             std::vector<double> us;
-            for (const Record& r : cap.records) us.push_back(r.coord[0]);
+            for (const Record& r : cap.records) us.push_back(static_cast<double>(r.coord[0]));
             std::sort(us.begin(), us.end());
             us.erase(std::unique(us.begin(), us.end(), [](double a, double b) { return std::abs(a - b) < kDedupe; }), us.end());
             if (us.size() < 4) return -1.0;

@@ -998,7 +998,7 @@ namespace
             check.expect(!s.scissor_enabled, "initially GL_SCISSOR_TEST is disabled (ES 3.0 §4.1.2)");
             check.expect(s.clear_color == std::array<GLfloat, 4>{0.0f, 0.0f, 0.0f, 0.0f},
                          "initial GL_COLOR_CLEAR_VALUE = (0,0,0,0) (ES 3.0 §4.2.3)");
-            check.expect_near(s.clear_depth, 1.0, 0.0, "initial GL_DEPTH_CLEAR_VALUE = 1.0 (ES 3.0 §4.2.3)");
+            check.expect_near(static_cast<double>(s.clear_depth), 1.0, 0.0, "initial GL_DEPTH_CLEAR_VALUE = 1.0 (ES 3.0 §4.2.3)");
             check.expect_eq(s.clear_stencil, 0, "initial GL_STENCIL_CLEAR_VALUE = 0 (ES 3.0 §4.2.3)");
             check.expect(std::all_of(s.color_mask.begin(), s.color_mask.end(), [](GLboolean b) { return b == GL_TRUE; }),
                          "initial GL_COLOR_WRITEMASK = (TRUE,TRUE,TRUE,TRUE) (ES 3.0 §4.2.2)");
@@ -1031,13 +1031,13 @@ namespace
             s = query_state();
             check.expect(s.clear_color == std::array<GLfloat, 4>{0.25f, 0.5f, 0.75f, 1.0f},
                          "glClearColor(.25,.5,.75,1) is returned by GL_COLOR_CLEAR_VALUE");
-            check.expect_near(s.clear_depth, 0.375, 1e-6, "glClearDepthf(0.375) is returned by GL_DEPTH_CLEAR_VALUE");
+            check.expect_near(static_cast<double>(s.clear_depth), 0.375, 1e-6, "glClearDepthf(0.375) is returned by GL_DEPTH_CLEAR_VALUE");
             check.expect_eq(s.clear_stencil, 0x12, "glClearStencil(0x12) is returned by GL_STENCIL_CLEAR_VALUE");
             // ES 3.0 §4.2.3: "d is clamped to the range [0, 1]" when specified.
             mgl::glClearDepthf(2.0f);
-            check.expect_near(query_state().clear_depth, 1.0, 0.0, "glClearDepthf(2.0) is clamped to 1.0 (ES 3.0 §4.2.3)");
+            check.expect_near(static_cast<double>(query_state().clear_depth), 1.0, 0.0, "glClearDepthf(2.0) is clamped to 1.0 (ES 3.0 §4.2.3)");
             mgl::glClearDepthf(-3.0f);
-            check.expect_near(query_state().clear_depth, 0.0, 0.0, "glClearDepthf(-3.0) is clamped to 0.0 (ES 3.0 §4.2.3)");
+            check.expect_near(static_cast<double>(query_state().clear_depth), 0.0, 0.0, "glClearDepthf(-3.0) is clamped to 0.0 (ES 3.0 §4.2.3)");
 
             // Write masks.
             mgl::glColorMask(GL_TRUE, GL_FALSE, GL_TRUE, GL_FALSE);

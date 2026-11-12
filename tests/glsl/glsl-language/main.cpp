@@ -86,7 +86,7 @@ namespace
     Exp U(std::uint32_t v) { return {Kind::Bits, v, 0.0, 0.0}; }
     Exp I(std::int32_t v) { return {Kind::Bits, std::bit_cast<std::uint32_t>(v), 0.0, 0.0}; }
     Exp B(bool b) { return U(b ? 1u : 0u); }
-    Exp F(float f) { return {Kind::Float, std::bit_cast<std::uint32_t>(f), f, 0.0}; }
+    Exp F(float f) { return {Kind::Float, std::bit_cast<std::uint32_t>(f), static_cast<double>(f), 0.0}; }
     Exp R(double exact) { return {Kind::Rounded, 0, exact, 0.0}; }
     Exp Ulp(double ref, double n) { return {Kind::Ulp, 0, ref, n}; }
     Exp Q(double ref, double rel) { return {Kind::Quality, 0, ref, rel}; }

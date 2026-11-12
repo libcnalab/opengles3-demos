@@ -113,7 +113,7 @@ namespace
 
     D3 sun_direction()
     {
-        const double az = rad(kSunAzimuthDeg), el = rad(kSunElevationDeg);
+        const double az = rad(static_cast<double>(kSunAzimuthDeg)), el = rad(static_cast<double>(kSunElevationDeg));
         return {std::sin(az) * std::cos(el), std::sin(el), -std::cos(az) * std::cos(el)};
     }
 
@@ -542,7 +542,7 @@ namespace
     struct Model
     {
         const CubeImage* cube = nullptr;
-        double eta = kEta;
+        double eta = static_cast<double>(kEta);
         double fog_density = 0.0;
         bool reflect = true;   // false: mirrors sample along I (as if the surface were transparent)
         bool fresnel = true;   // false: glass shows the refraction only
@@ -687,7 +687,7 @@ namespace
             for (const Obj o : {Obj::Chrome, Obj::Glass})
             {
                 const D3 c = d3(o == Obj::Chrome ? kChromePos : kGlassPos);
-                const double rr = kSphereRadius;
+                const double rr = static_cast<double>(kSphereRadius);
                 const D3 oc = r.o - c;
                 const double b = dot(oc, r.d), disc = b * b - (dot(oc, oc) - rr * rr);
                 if (disc < 0.0) continue;
@@ -765,7 +765,7 @@ namespace
         template <typename Take>
         void box(const Ray& r, Take& take) const
         {
-            const double a = rad(kBoxAngleDeg), c = std::cos(a), s = std::sin(a);
+            const double a = rad(static_cast<double>(kBoxAngleDeg)), c = std::cos(a), s = std::sin(a);
             const D3 centre = d3(kBoxPos);
             // world -> object: q = R^-1 (p - centre) / size, with R the rotation about y (x' = c x + s z, z' = -s x + c z)
             auto to_obj = [&](D3 v) { return D3{c * v.x - s * v.z, v.y, s * v.x + c * v.z} * (1.0 / dbl(kBoxSize)); };

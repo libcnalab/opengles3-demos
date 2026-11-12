@@ -1238,13 +1238,12 @@ namespace
         check.expect(f.size[0] == img.w && f.size[1] == img.h, std::format("{}: textureSize = {} x {}", label, img.w, img.h),
                      std::format("textureSize = {} x {}", f.size[0], f.size[1]));
         Tally t;
-        int exact_unorm8 = 0, exact_unorm16 = 0, exact_f16 = 0, nan_errors = 0, magenta_errors = 0, compared = 0;
+        int exact_unorm8 = 0, exact_unorm16 = 0, exact_f16 = 0, nan_errors = 0, magenta_errors = 0;
         for (int y = 0; y < img.h; ++y)
             for (int x = 0; x < img.w; ++x)
             {
                 const Decoded d = img.decode(x, y, srgb);
                 const std::array<float, 4> m = as_float(f.texels[static_cast<std::size_t>(y * img.w + x)]);
-                ++compared;
                 if (d.error)
                 {
                     const bool magenta = m[0] == 1.0f && m[1] == 0.0f && m[2] == 1.0f && m[3] == 1.0f;

@@ -1305,7 +1305,7 @@ namespace
             check.expect(limits_.line_lo <= 1.0f && limits_.line_hi >= 1.0f && limits_.line_lo <= limits_.line_hi,
                          "ALIASED_LINE_WIDTH_RANGE contains 1 (only width 1 is guaranteed, ES 3.0 §3.5)",
                          std::format("[{}, {}]", limits_.line_lo, limits_.line_hi));
-            check.expect_near(initial_line_width_, 1.0, 0.0, "initial GL_LINE_WIDTH = 1.0 (ES 3.0 §3.5.3)");
+            check.expect_near(static_cast<double>(initial_line_width_), 1.0, 0.0, "initial GL_LINE_WIDTH = 1.0 (ES 3.0 §3.5.3)");
 
             // glLineWidth(width <= 0) -> INVALID_VALUE and the width is unchanged.
             check.expect_no_gl_error("no GL error before the negative tests");
@@ -1315,12 +1315,12 @@ namespace
             check.expect_gl_error(mgl::ErrorCode::InvalidValue, "glLineWidth(-2) -> INVALID_VALUE (ES 3.0 §3.5)");
             GLfloat width = 0.0f;
             mgl::glGetFloatv(mgl::GetParameter::LineWidth, &width);
-            check.expect_near(width, 1.0, 0.0, "a rejected glLineWidth leaves GL_LINE_WIDTH unchanged");
+            check.expect_near(static_cast<double>(width), 1.0, 0.0, "a rejected glLineWidth leaves GL_LINE_WIDTH unchanged");
             if (limits_.line_hi >= 3.0f)
             {
                 mgl::glLineWidth(3.0f);
                 mgl::glGetFloatv(mgl::GetParameter::LineWidth, &width);
-                check.expect_near(width, 3.0, 0.0, "glLineWidth(3) is returned by GL_LINE_WIDTH when the width range allows it");
+                check.expect_near(static_cast<double>(width), 3.0, 0.0, "glLineWidth(3) is returned by GL_LINE_WIDTH when the width range allows it");
                 mgl::glLineWidth(1.0f);
             }
 

@@ -342,6 +342,10 @@ namespace
         float px, py, pz, nx, ny, nz;
     };
 
+    // The CPU checks work in double; widening the float attributes is exact.
+    V3 position_of(const Vertex& v) { return {static_cast<double>(v.px), static_cast<double>(v.py), static_cast<double>(v.pz)}; }
+    V3 normal_of(const Vertex& v) { return {static_cast<double>(v.nx), static_cast<double>(v.ny), static_cast<double>(v.nz)}; }
+
     struct MeshRange
     {
         std::uint32_t first_index = 0;
@@ -1575,7 +1579,7 @@ namespace
                 const Vertex& a = mesh_.vertices[mesh_.indices[i]];
                 const Vertex& b = mesh_.vertices[mesh_.indices[i + 1]];
                 const Vertex& c = mesh_.vertices[mesh_.indices[i + 2]];
-                const V3 pa = {a.px, a.py, a.pz}, pb = {b.px, b.py, b.pz}, pc = {c.px, c.py, c.pz};
+                const V3 pa = position_of(a), pb = position_of(b), pc = position_of(c);
                 const V3 n = cross(pb - pa, pc - pa);
                 if (length(n) < 1e-9) continue;  // degenerate triangle at a pole
                 inradius = std::min(inradius, std::abs(dot(normalize(n), pa)));
@@ -1628,10 +1632,10 @@ namespace
             const Vertex& a = mesh.vertices[mesh.indices[i]];
             const Vertex& b = mesh.vertices[mesh.indices[i + 1]];
             const Vertex& c = mesh.vertices[mesh.indices[i + 2]];
-            const V3 pa = {a.px, a.py, a.pz}, pb = {b.px, b.py, b.pz}, pc = {c.px, c.py, c.pz};
+            const V3 pa = position_of(a), pb = position_of(b), pc = position_of(c);
             const V3 n = cross(pb - pa, pc - pa);
             if (length(n) < 1e-9) continue;  // degenerate triangle at a pole
-            const V3 na = {a.nx, a.ny, a.nz}, nb = {b.nx, b.ny, b.nz}, nc = {c.nx, c.ny, c.nz};
+            const V3 na = normal_of(a), nb = normal_of(b), nc = normal_of(c);
             ++triangles;
             if (dot(n, na + nb + nc) <= 0.0) ++wrong;
         }
@@ -1645,7 +1649,7 @@ namespace
             const Vertex& a = mesh.vertices[mesh.indices[i]];
             const Vertex& b = mesh.vertices[mesh.indices[i + 1]];
             const Vertex& c = mesh.vertices[mesh.indices[i + 2]];
-            const V3 pa = {a.px, a.py, a.pz}, pb = {b.px, b.py, b.pz}, pc = {c.px, c.py, c.pz};
+            const V3 pa = position_of(a), pb = position_of(b), pc = position_of(c);
             const V3 n = cross(pb - pa, pc - pa);
             if (length(n) < 1e-9) continue;
             const V3 unit = normalize(n);
@@ -1654,7 +1658,7 @@ namespace
             for (std::uint32_t j = volume.first_index; j < volume.first_index + volume.index_count; ++j)
             {
                 const Vertex& v = mesh.vertices[mesh.indices[j]];
-                if (dot(unit, V3{v.px, v.py, v.pz}) > distance + 1e-6) ++outside_vertices;
+                if (dot(unit, position_of(v)) > distance + 1e-6) ++outside_vertices;
             }
         }
         check.expect(outside_vertices == 0 && min_distance * volume_scale >= 1.0 - 1e-9,
@@ -2008,7 +2012,7 @@ namespace
                 const auto reference = texel(img_forward, w, c.x, c.y);
                 const std::array<int, 3> without_bytes = {to_byte(without.x), to_byte(without.y), to_byte(without.z)};
                 const auto& pixel_budget = budget.model[model.index(c.x, c.y)];
-                const double allowed = *std::max_element(pixel_budget.begin(), pixel_budget.end());
+                const double allowed = static_cast<double>(*std::max_element(pixel_budget.begin(), pixel_budget.end()));
                 int dev_model = 0, dev_forward = 0;
                 for (std::size_t i = 0; i < 3; ++i)
                 {

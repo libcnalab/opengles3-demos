@@ -163,7 +163,7 @@ namespace
         f.center = kCameraTarget;
         f.eye = f.center + m::Vec3{std::sin(yaw) * std::cos(el), std::sin(el), std::cos(yaw) * std::cos(el)} * p.distance;
         f.view = m::look_at(f.eye, f.center, {0.0f, 1.0f, 0.0f});
-        f.proj = m::perspective(static_cast<float>(2.0 * std::atan(tan_half_fovy(aspect))), aspect, kNear, kFar);
+        f.proj = m::perspective(static_cast<float>(2.0 * std::atan(tan_half_fovy(static_cast<double>(aspect)))), aspect, kNear, kFar);
 
         Lights& l = f.lights;
         l.ambient = kAmbient;
@@ -1446,7 +1446,7 @@ namespace
             const Lights& l = f_spot.lights;
             const D3 spos = d3(l.spot_position), sdir = d3(l.spot_direction);
             const D3 axis_hit = spos + sdir * (-spos.y / sdir.y);  // where the cone axis meets the ground
-            const double inner = kSpotInnerDeg, outer = kSpotOuterDeg;
+            const double inner = static_cast<double>(kSpotInnerDeg), outer = static_cast<double>(kSpotOuterDeg);
             const double thetas[7] = {0.0, 0.5 * inner, 0.95 * inner, 0.5 * (inner + outer), outer - 0.2 * (outer - inner), outer + 3.0, outer + 10.0};
             const char* names[7] = {"on the axis", "half way to the inner edge", "just inside the inner cone", "in the middle of the falloff",
                                     "near the outer edge", "just outside the outer cone", "far outside the cone"};

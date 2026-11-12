@@ -147,7 +147,6 @@ namespace
     constexpr std::array<double, 6> kRibbonX = {-0.85, -0.60, -0.35, 0.35, 0.60, 0.85};
     constexpr std::array<std::array<int, 3>, 6> kRibbonBase = {{{255, 0, 0}, {255, 128, 0}, {255, 255, 0}, {0, 255, 128}, {0, 160, 255}, {128, 0, 255}}};
     constexpr std::size_t kSpike = 255;  // the vertex that index 0xFF refers to when restart is disabled
-    constexpr std::uint32_t kMarker = 0xFFFFFFFFu;  // placeholder in the index templates
 
     std::vector<RibbonVertex> make_ribbon()
     {

@@ -1021,8 +1021,8 @@ namespace
                     if (ps.empty()) ++unprobed;
                     // Shade gradient (per pixel) for the smooth control's tolerance: vertex snapping to a 1/16 px
                     // grid (SUBPIXEL_BITS >= 4) moves the plane by at most ~1/16 px times the gradient.
-                    const double s0 = scene_[static_cast<std::size_t>(tri.v[0])].shade, s1 = scene_[static_cast<std::size_t>(tri.v[1])].shade,
-                                 s2 = scene_[static_cast<std::size_t>(tri.v[2])].shade;
+                    const double s0 = static_cast<double>(scene_[static_cast<std::size_t>(tri.v[0])].shade), s1 = static_cast<double>(scene_[static_cast<std::size_t>(tri.v[1])].shade),
+                                 s2 = static_cast<double>(scene_[static_cast<std::size_t>(tri.v[2])].shade);
                     const double a2 = cross(w[0], w[1], w[2]);
                     const double gx = ((s1 - s0) * (w[2].y - w[0].y) - (s2 - s0) * (w[1].y - w[0].y)) / a2;
                     const double gy = ((s2 - s0) * (w[1].x - w[0].x) - (s1 - s0) * (w[2].x - w[0].x)) / a2;
@@ -1042,7 +1042,7 @@ namespace
                         if (i == 0)
                         {
                             ++control_n;
-                            const double smooth = std::bit_cast<float>(o[3]);
+                            const double smooth = static_cast<double>(std::bit_cast<float>(o[3]));
                             const double expect = pr.w[0] * s0 + pr.w[1] * s1 + pr.w[2] * s2;
                             worst_smooth_err = std::max(worst_smooth_err, std::abs(smooth - expect));
                             if (std::abs(smooth - expect) <= tol && std::abs(smooth - static_cast<double>(p.shade)) > tol) ++control_ok;

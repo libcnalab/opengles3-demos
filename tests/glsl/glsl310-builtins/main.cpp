@@ -878,7 +878,7 @@ namespace
                         if (byte == 0) continue;
                         ++nonzero;
                         const double wrong = byte / 256.0;
-                        const double gpu = f(outputs[idx][row][static_cast<std::size_t>(k)]);
+                        const double gpu = static_cast<double>(f(outputs[idx][row][static_cast<std::size_t>(k)]));
                         if (std::abs(gpu - wrong) > kMediumpRel * wrong) ++rejected;
                     }
                 check.expect(rejected == nonzero && nonzero == 255,

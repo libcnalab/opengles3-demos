@@ -1368,7 +1368,7 @@ namespace
             {
                 const Probe& p = got[static_cast<std::size_t>(t)];
                 const double f = upload_value(u, t);
-                const double s = bits_to_float(p[0]);
+                const double s = static_cast<double>(bits_to_float(p[0]));
                 bool ok;
                 if (fmt.is_float)
                     ok = p[0] == float_to_bits(static_cast<float>(f));  // stored without conversion: exact
@@ -1412,9 +1412,9 @@ namespace
         mgl::glBindTexture(TT::Texture2D, mgl::TextureId{0});
         const Lookup last[1] = {lk[15]};
         bind_unit(kUnitRaw2D, TT::Texture2D, up_tex_[kUp16Short], raw_sampler_);
-        const double v16 = bits_to_float(probe(kModeRaw2D, last)[0][0]);
+        const double v16 = static_cast<double>(bits_to_float(probe(kModeRaw2D, last)[0][0]));
         bind_unit(kUnitRaw2D, TT::Texture2D, up_tex_[kUp24Int], raw_sampler_);
-        const double v24 = bits_to_float(probe(kModeRaw2D, last)[0][0]);
+        const double v24 = static_cast<double>(bits_to_float(probe(kModeRaw2D, last)[0][0]));
         check.expect(fixed_interval(sub32 / 4294967295.0, depth_bits_[kF16]).contains(v16), "DEPTH_COMPONENT16 texel (7,1) now holds the UNSIGNED_INT value 0.125",
                      std::format("got {:.9g}", v16));
         check.expect(fixed_interval(kU32For24[15] / 4294967295.0, depth_bits_[kF24]).contains(v24),
@@ -1492,7 +1492,7 @@ namespace
             {
                 const float written = t < 15 ? kFragDepths[static_cast<std::size_t>(t)] : kClearDepth;
                 const double f = std::clamp(static_cast<double>(written), 0.0, 1.0);  // §3.9.2.3: clamped to [0, 1] first
-                const double s = bits_to_float(got[static_cast<std::size_t>(t)][0]);
+                const double s = static_cast<double>(bits_to_float(got[static_cast<std::size_t>(t)][0]));
                 sampled[uk].push_back(s);
                 const bool ok = fmt.is_float ? got[static_cast<std::size_t>(t)][0] == float_to_bits(static_cast<float>(f)) : fixed_interval(f, bits).contains(s);
                 if (!ok)
@@ -1517,7 +1517,7 @@ namespace
         {
             int off = 0;
             for (int t : kOff16Grid)
-                if (!fixed_interval(kFragDepths[static_cast<std::size_t>(t)], 24).contains(sampled[kF16][static_cast<std::size_t>(t)])) ++off;
+                if (!fixed_interval(static_cast<double>(kFragDepths[static_cast<std::size_t>(t)]), 24).contains(sampled[kF16][static_cast<std::size_t>(t)])) ++off;
             check.expect(off == static_cast<int>(kOff16Grid.size()),
                          "negative control: DEPTH_COMPONENT16 misses a 24-bit expectation at all 5 off-grid values (16-bit quantization is visible)",
                          std::format("{} of 5", off));
@@ -1552,7 +1552,7 @@ namespace
             std::string first;
             for (std::size_t k = 0; k < probes.size(); ++k)
             {
-                const double s = bits_to_float(got[k][0]);
+                const double s = static_cast<double>(bits_to_float(got[k][0]));
                 const bool is_sky = probes[k].id == 0;
                 sky += is_sky ? 1 : 0;
                 const bool ok = is_sky ? s == 1.0 : std::abs(s - probes[k].depth) <= tol;
@@ -1630,7 +1630,7 @@ namespace
                     // Dref == Dt is only well defined where Dt is exactly representable as the float the
                     // shader passes: every value of a float format, 0 and 1 of a fixed-point format.
                     if (ref == dt && !fmt.is_float && !edge) continue;
-                    items.push_back({{raw_lk[static_cast<std::size_t>(t)].x, raw_lk[static_cast<std::size_t>(t)].y, 0.0f, ref}, ref_c, dt, ref < 0.0f || ref > 1.0f});
+                    items.push_back({{raw_lk[static_cast<std::size_t>(t)].x, raw_lk[static_cast<std::size_t>(t)].y, 0.0f, ref}, ref_c, static_cast<double>(dt), ref < 0.0f || ref > 1.0f});
                 }
             }
             std::vector<Lookup> lk;
@@ -1734,7 +1734,7 @@ namespace
             std::string first;
             for (std::size_t k = 0; k < lk.size(); ++k)
             {
-                const bool pass = table_3_23(kFuncs[f].func, ref_dt[k][0], ref_dt[k][1]);
+                const bool pass = table_3_23(kFuncs[f].func, static_cast<double>(ref_dt[k][0]), static_cast<double>(ref_dt[k][1]));
                 if (got[k][0] != float_to_bits(pass ? 1.0f : 0.0f))
                 {
                     ++bad;
@@ -1794,7 +1794,7 @@ namespace
             std::string first;
             for (std::size_t k = 0; k < cube_lk.size(); ++k)
             {
-                const bool pass = table_3_23(kFuncs[f].func, cube_ref_dt[k][0], cube_ref_dt[k][1]);
+                const bool pass = table_3_23(kFuncs[f].func, static_cast<double>(cube_ref_dt[k][0]), static_cast<double>(cube_ref_dt[k][1]));
                 if (got[k][0] != float_to_bits(pass ? 1.0f : 0.0f))
                 {
                     ++bad;
@@ -1932,7 +1932,7 @@ namespace
                 std::string detail;
                 for (const Probe& p : got)
                 {
-                    const double r = bits_to_float(p[0]);
+                    const double r = static_cast<double>(bits_to_float(p[0]));
                     const bool r_ok = c.complete ? std::abs(r - 0.75) <= 1e-6 : p[0] == 0u;
                     ok = ok && r_ok && p[1] == 0u && p[2] == 0u && p[3] == float_to_bits(1.0f);
                     detail += std::format("({:.6g},{},{},{}) ", r, bits_to_float(p[1]), bits_to_float(p[2]), bits_to_float(p[3]));

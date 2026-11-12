@@ -304,7 +304,7 @@ namespace
     {
         const double c = std::cos(static_cast<double>(in.angle)), s = std::sin(static_cast<double>(in.angle));
         auto to_local = [&](V3 v) { return V3{c * v.x - s * v.z, v.y, s * v.x + c * v.z}; };  // inverse of x' = c x + s z, z' = -s x + c z
-        const V3 o = to_local(origin - V3{in.x, in.y, in.z});
+        const V3 o = to_local(origin - V3{static_cast<double>(in.x), static_cast<double>(in.y), static_cast<double>(in.z)});
         const V3 d = to_local(dir);
         const double half = 0.5 * static_cast<double>(in.scale) + grow;
         double tn = -std::numeric_limits<double>::infinity(), tf = std::numeric_limits<double>::infinity();
@@ -1355,7 +1355,7 @@ namespace
         const int scene_h = h - kStripHeight;
         const double aspect = static_cast<double>(w) / scene_h;
         const dm::Vec3 eye_f = eye_position();
-        const V3 eye{eye_f.x, eye_f.y, eye_f.z};
+        const V3 eye{static_cast<double>(eye_f.x), static_cast<double>(eye_f.y), static_cast<double>(eye_f.z)};
         const V3 forward = normalize(V3{0, 0, 0} - eye);
         const V3 right = normalize(cross(forward, V3{0, 1, 0}));
         const V3 up = cross(right, forward);

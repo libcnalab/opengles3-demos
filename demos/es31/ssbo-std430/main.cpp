@@ -474,7 +474,7 @@ namespace
     }
 
     constexpr Rgba8 kBackground = {14, 16, 22, 255};
-    constexpr Rgba8 kGreen = {0, 255, 0, 255}, kMagenta = {255, 0, 255, 255}, kRed = {255, 0, 0, 255};
+    constexpr Rgba8 kGreen = {0, 255, 0, 255}, kMagenta = {255, 0, 255, 255};
 
     // geometry: the window is divided into 16 columns and 16 rows of (window / 16) pixels
     constexpr int kColumns = 16;  // cells per row of the verification grid

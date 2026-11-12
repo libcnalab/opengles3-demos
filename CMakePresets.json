@@ -41,6 +41,15 @@
         "OGLES3_WITH_SDL3": "OFF",
         "OGLES3_TEST_DRIVERS": "llvmpipe"
       }
+    },
+    {
+      "name": "headless-ci-clang",
+      "displayName": "Headless CI with Clang (warnings as errors)",
+      "description": "headless-ci built with clang++ instead of the default compiler",
+      "inherits": "headless-ci",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
     }
   ],
   "buildPresets": [
@@ -62,6 +71,11 @@
     {
       "name": "headless-ci",
       "configurePreset": "headless-ci",
+      "jobs": 6
+    },
+    {
+      "name": "headless-ci-clang",
+      "configurePreset": "headless-ci-clang",
       "jobs": 6
     }
   ],
@@ -99,6 +113,16 @@
     {
       "name": "headless-ci",
       "configurePreset": "headless-ci",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 4
+      }
+    },
+    {
+      "name": "headless-ci-clang",
+      "configurePreset": "headless-ci-clang",
       "output": {
         "outputOnFailure": true
       },

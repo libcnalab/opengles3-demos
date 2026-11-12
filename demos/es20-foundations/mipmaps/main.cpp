@@ -310,8 +310,8 @@ namespace
         st.mag = c.mag;
         st.base = c.base;
         st.max_level = c.max_level;
-        st.min_lod = c.min_lod;
-        st.max_lod = c.max_lod;
+        st.min_lod = static_cast<double>(c.min_lod);
+        st.max_lod = static_cast<double>(c.max_lod);
         st.range = strip_of(c, cw).range;
         st.cw = cw;
         return st;

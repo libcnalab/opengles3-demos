@@ -58,6 +58,8 @@ namespace
     constexpr D3 operator*(D3 a, double s) { return {a.x * s, a.y * s, a.z * s}; }
     constexpr double dot(D3 a, D3 b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
     constexpr D3 cross(D3 a, D3 b) { return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x}; }
+    // the first three components of a float vertex attribute, widened exactly to double
+    constexpr D3 d3(const float* v) { return {static_cast<double>(v[0]), static_cast<double>(v[1]), static_cast<double>(v[2])}; }
     inline double length(D3 a) { return std::sqrt(dot(a, a)); }
     inline D3 normalize(D3 a)
     {
@@ -404,8 +406,8 @@ namespace
     {
         const std::size_t n = mesh.vertices.size();
         std::vector<D3> tan_u(n), tan_v(n);
-        auto pos = [&](std::size_t i) { return D3{double{mesh.vertices[i].position[0]}, double{mesh.vertices[i].position[1]}, double{mesh.vertices[i].position[2]}}; };
-        auto uv = [&](std::size_t i) { return std::array<double, 2>{double{mesh.vertices[i].uv[0]}, double{mesh.vertices[i].uv[1]}}; };
+        auto pos = [&](std::size_t i) { return d3(mesh.vertices[i].position); };
+        auto uv = [&](std::size_t i) { return std::array<double, 2>{static_cast<double>(mesh.vertices[i].uv[0]), static_cast<double>(mesh.vertices[i].uv[1])}; };
         for (std::size_t k = 0; k + 2 < mesh.indices.size(); k += 3)
         {
             const std::size_t i0 = mesh.indices[k], i1 = mesh.indices[k + 1], i2 = mesh.indices[k + 2];
@@ -424,7 +426,7 @@ namespace
         }
         for (std::size_t i = 0; i < n; ++i)
         {
-            const D3 nrm{double{mesh.vertices[i].normal[0]}, double{mesh.vertices[i].normal[1]}, double{mesh.vertices[i].normal[2]}};
+            const D3 nrm = d3(mesh.vertices[i].normal);
             D3 t = tan_u[i] - nrm * dot(nrm, tan_u[i]);
             if (length(t) < 1e-12)  // no UV information: any vector perpendicular to the normal
                 t = std::abs(nrm.x) < 0.9 ? cross(nrm, D3{1, 0, 0}) : cross(nrm, D3{0, 1, 0});
@@ -1063,7 +1065,7 @@ namespace
                     for (std::size_t k = 0; k < 4; ++k)
                     {
                         const Vertex& v = mesh.vertices[f * 4 + k];
-                        const D3 t{double{v.tangent[0]}, double{v.tangent[1]}, double{v.tangent[2]}};
+                        const D3 t = d3(v.tangent);
                         const double angle = std::acos(std::clamp(dot(t, normalize(faces[f].eu)), -1.0, 1.0));
                         worst_angle = std::max(worst_angle, angle);
                         signs = signs && static_cast<double>(v.tangent[3]) == expected_w[f];
@@ -1079,8 +1081,8 @@ namespace
             for (std::size_t i = 0; i < sphere_cpu_.vertices.size(); ++i)
             {
                 const Vertex& v = sphere_cpu_.vertices[i];
-                const D3 t{double{v.tangent[0]}, double{v.tangent[1]}, double{v.tangent[2]}};
-                const D3 n{double{v.normal[0]}, double{v.normal[1]}, double{v.normal[2]}};
+                const D3 t = d3(v.tangent);
+                const D3 n = d3(v.normal);
                 worst_ortho = std::max(worst_ortho, std::abs(dot(t, n)));
                 worst_len = std::max(worst_len, std::abs(length(t) - 1.0));
                 const std::size_t stack = i / 49;

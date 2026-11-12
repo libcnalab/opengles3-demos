@@ -914,7 +914,7 @@ namespace
         bool inside = true;
         for (std::uint32_t i = 0; i < kGridN * kGridN; ++i)
         {
-            proj[i] = project(cam, render_target(i), kRenderHalf, W, H);
+            proj[i] = project(cam, render_target(i), static_cast<double>(kRenderHalf), W, H);
             min_half = std::min({min_half, proj[i].half_px_x, proj[i].half_px_y});
             inside = inside && proj[i].in_front && proj[i].x - proj[i].half_px_x > 2 && proj[i].x + proj[i].half_px_x < W - 2 &&
                      proj[i].y - proj[i].half_px_y > 2 && proj[i].y + proj[i].half_px_y < H - 2;

@@ -1617,7 +1617,7 @@ namespace
         const auto centres = sphere_centres(lay, t);
         constexpr double kRadius = kSphereRadius;
         const dm::Vec3 eye_f = eye_position(lay, frame);
-        const V3 eye{eye_f.x, eye_f.y, eye_f.z};
+        const V3 eye{static_cast<double>(eye_f.x), static_cast<double>(eye_f.y), static_cast<double>(eye_f.z)};
         const V3 forward = normalize(V3{0, 0, 0} - eye);
         const V3 right = normalize(cross(forward, V3{0, 1, 0}));
         const V3 up = cross(right, forward);

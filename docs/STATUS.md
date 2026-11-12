@@ -61,8 +61,9 @@ Other runs:
 - **Mesa and ANGLE share lower layers.** ANGLE's backend here is lavapipe, the same Vulkan driver as zink.
   Independence covers the GL front-end and the GLSL compiler, not rasterization. No other vendor's driver was
   available.
-- **Multisampled default framebuffer:** llvmpipe and zink give a 0x0 pbuffer, so ES30.MULTISAMPLE.DEFAULT has
-  radeonsi evidence only (VISUALLY_VERIFIED).
+- **Multisampled default framebuffer:** Mesa's EGL path gives llvmpipe and zink a 0x0 pbuffer, so the executable
+  stays VISUALLY_VERIFIED (FULLY_VALIDATED requires llvmpipe). Evidence exists from radeonsi and from ANGLE (ES 3.1 and
+  native ES 3.0).
 - **Assumptions beyond the normative text** remain, each documented in VALIDATION.md: per-sample checks replaced the
   resolve average; the stretched NEAREST display-blit mapping is assumed (presentation only).
 - **The ANGLE/RADV GPU-fault case** (es31-image-load-store, 3D-slice image store) runs only with

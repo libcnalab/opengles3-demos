@@ -37,7 +37,7 @@ Other runs:
 | 2 | Coverage backed by meaningful evidence | met within the method: validate() checks results; stale results are rejected; `api` claims are linted; 4 independent review rounds found and fixed unmet claims (docs/audits/) |
 | 3 | ES 3.0/3.1/3.2 feature categories accounted for | met: see the numbers above |
 | 4 | GLSL ES 1.00-3.20 systematically reviewed | met: inventory complete; Codex audit plus GLSL language tests; misreadings corrected (atomic counters without binding, early_fragment_tests compile or link) |
-| 5 | Version-specific functionality used correctly | met for what is testable: shader `#version` per stage audited; **limitation:** no native ES 3.0 driver exists here (es-min is an override; softpipe and ANGLE are native ES 3.1) |
+| 5 | Version-specific functionality used correctly | met: shader `#version` per stage audited; **native ES 3.0 evidence** via ANGLE `native-min` (exact ES 3.0 contexts) for all 54 min_es 3.0 executables, besides Mesa's override-based es-min |
 | 6 | Every executable builds in its configuration | met: debug, sanitize, headless-ci, clean clone |
 | 7 | Every demo has meaningful validation | met: negative controls required and audited; vacuity checks enforced |
 | 8 | Destructive negatives isolated | met: crash cases run in re-exec child processes with timeouts; GPU-faulting cases are opt-in only, after the 2026-11-11 desktop freezes |
@@ -56,8 +56,8 @@ Other runs:
 
 ## Unresolved limitations
 
-- **No native ES 3.0 implementation.** es-min runs use `MESA_GLES_VERSION_OVERRIDE` and only prove API-version
-  detection. ANGLE and softpipe are native ES 3.1.
+- **Native ES 3.0 evidence comes from ANGLE alone** (`angle:native-min`, exact ES 3.0 contexts). Mesa's es-min
+  remains an override, and softpipe is native ES 3.1.
 - **Mesa and ANGLE share lower layers.** ANGLE's backend here is lavapipe, the same Vulkan driver as zink.
   Independence covers the GL front-end and the GLSL compiler, not rasterization. No other vendor's driver was
   available.

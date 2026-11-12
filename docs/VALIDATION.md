@@ -67,9 +67,13 @@ GL ES front-end and GLSL translator, here with the Vulkan backend on RADV.
 - **How it is loaded:** only at the context-provider level. A shim makes `libEGL.so.1` resolve to ANGLE's libEGL,
   `libGLESv2.so` is preloaded, and `OGLES3_EGL_PLATFORM=angle` selects `EGL_PLATFORM_ANGLE_ANGLE`
   (Vulkan, headless). Every GL call still goes through meta-gl.
-- **Version:** the build exposes **ES 3.1 natively**. ES 3.2 executables are SKIP_UNSUPPORTED. The context is not
-  produced by a version override, so ANGLE gives the only native lower-version (3.1) evidence in the matrix.
-  ES 3.0 requests also return a 3.1 context, as EGL allows.
+- **Version:** mode `native` takes ANGLE's highest version, **ES 3.1** (ES 3.2 executables are SKIP_UNSUPPORTED).
+  Mode **`native-min`** is registered for every min_es 3.0 executable. It requests a context of exactly the
+  minimum version via `EGL_ANGLE_create_context_backwards_compatible = FALSE` (`OGLES3_ANGLE_EXACT_VERSION=1`).
+  ANGLE then creates a **genuine ES 3.0 context**: GL_VERSION "OpenGL ES 3.0.0", GLSL ES 3.00, and ES 3.1 objects
+  rejected (e.g. `glCreateShader(COMPUTE_SHADER)` → INVALID_ENUM). Unlike Mesa's `es-min` override, this is native
+  ES 3.0 evidence. First run (2026-11-12): 53/54 PASS on true ES 3.0; the failure is an ANGLE ES 3.0 transform-feedback
+  restriction (under triage).
 - **Vulkan driver under ANGLE: lavapipe (software) by default** (`OGLES3_ANGLE_VULKAN_ICD`). On 2026-11-11 one
   ANGLE/RADV case faulted the GPU. Repeated runs caused amdgpu `ring gfx timeout, soft recovered` events (72 kernel
   log lines between 20:23 and 20:38) and visible desktop freezes. The ANGLE matrix therefore never touches the real

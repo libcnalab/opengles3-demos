@@ -171,6 +171,21 @@ namespace demo::detail
                     ctx_attribs[n++] = EGL_CONTEXT_OPENGL_RESET_NOTIFICATION_STRATEGY;
                     ctx_attribs[n++] = EGL_LOSE_CONTEXT_ON_RESET;
                 }
+                // ANGLE with OGLES3_ANGLE_EXACT_VERSION=1: a context of exactly the requested version
+                // (EGL_ANGLE_create_context_backwards_compatible = FALSE). This gives native ES 3.0 contexts, not an
+                // override of the reported version: an ES 3.0 context really lacks ES 3.1 entry points and GLSL 3.10.
+                const char* exact = std::getenv("OGLES3_ANGLE_EXACT_VERSION");
+                if (platform_ == "angle-vulkan" && exact != nullptr && std::string_view(exact) == "1")
+                {
+                    if (!has_extension(eglQueryString(display_, EGL_EXTENSIONS), "EGL_ANGLE_create_context_backwards_compatible"))
+                    {
+                        error = "OGLES3_ANGLE_EXACT_VERSION=1 but the display lacks EGL_ANGLE_create_context_backwards_compatible";
+                        return false;
+                    }
+                    constexpr EGLint kBackwardsCompatibleAngle = 0x3483;  // EGL_CONTEXT_OPENGL_BACKWARDS_COMPATIBLE_ANGLE
+                    ctx_attribs[n++] = kBackwardsCompatibleAngle;
+                    ctx_attribs[n++] = EGL_FALSE;
+                }
                 ctx_attribs[n++] = EGL_NONE;
 
                 context_ = eglCreateContext(display_, config, EGL_NO_CONTEXT, ctx_attribs);

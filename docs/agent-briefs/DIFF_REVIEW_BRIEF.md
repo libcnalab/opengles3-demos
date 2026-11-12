@@ -4,7 +4,7 @@ After the phase 6 audit, several agents changed demos: precision checks became o
 and probes were rewritten, and thresholds were re-derived. Each agent tested its own work. You are the independent
 reviewer; the code author did not review it.
 
-Review `git diff 5bd59a6..HEAD -- <your directories>` (5bd59a6 is the state the audit saw). For each changed demo,
+Review `git diff <BASE>..HEAD -- <your directories>`, where BASE is given in your task (the state before the changes). For each changed demo,
 check:
 1. **No check was silently loosened.** A tolerance widened, a threshold lowered, a hard check turned into a print, or
    probes excluded: each needs a spec justification (normative text, or "implementation-dependent/undefined" with a

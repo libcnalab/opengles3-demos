@@ -11,6 +11,7 @@ docs/agent-briefs/DIFF_REVIEW_BRIEF.md and follow it exactly. meta-gl is at /rv/
 (configure with -DOGLES3_METAGL_SOURCE_DIR=that path). CPU LIMIT: -j 1. Never run anything on the GPU (llvmpipe only).
 Write ./DIFF_REVIEW.md; modify nothing else; do not commit.
 
+BASE: ${BASE:-5bd59a6}
 YOUR DIRECTORIES:
 $dirs"
 codex exec -C "$wt" -s workspace-write -c model_reasoning_effort='"high"' --add-dir "$wt" \

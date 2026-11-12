@@ -25,14 +25,22 @@ which pixels passed. A panel thus displays the content of a buffer you cannot re
 
 ## The gallery
 
-The image is a 4x4 grid of 64x64-pixel panels. Each panel is one experiment, isolated from its
-neighbours by its own scissor box and viewport. Panels are named A-P in reading order.
+The image is a 4x4 grid of panels, each designed as 64x64 pixels. Each panel is one experiment,
+isolated from its neighbours by its own scissor box and viewport. Panels are named A-P in reading order.
 
-The experiments are exact to the pixel (scissor edges, 4-pixel depth columns), so a panel is always
-64x64 pixels and is never scaled. The 16 panels are arranged as 4x4, 8x2 or 2x8, whichever fits
-the surface with the closest aspect ratio (at the default size: 4x4, as in the table below), with
-the bottom row at window y = 0. **Minimum surface:** 256x256, 512x128 or 128x512. On a surface
-that fits none of them the demo reports `SKIP_UNSUPPORTED` instead of shrinking the experiments.
+The experiments are exact to the pixel (scissor edges, 4-pixel depth columns), so the design is
+never shrunk and never scaled by a fraction. Instead the whole design is multiplied by one integer
+factor `k = max(1, floor(min(width / W0, height / H0)))`, where `W0 x H0` is 256x256, 512x128 or
+128x512 for the 4x4, 8x2 and 2x8 arrangements: every viewport, scissor box and pixel rectangle is
+multiplied by `k`, and so is the CPU model, so every edge stays on an integer window coordinate and
+every check keeps its meaning. The arrangement with the largest `k` wins (ties: the aspect ratio
+closest to the surface); at 800x800 it is 4x4 with `k = 3` (panels of 192x192). The scaled gallery
+is centred horizontally; vertically it is centred too, but its bottom row stays at most `16k`
+pixels above the window's bottom edge, so that panel N's viewport (which starts `32k` pixels below
+its panel) always has a negative window y, which is what panel N shows. The numbers in the table
+and in the check names are design pixels (multiply by `k` for window pixels). **Minimum surface:**
+256x256, 512x128 or 128x512. On a surface that fits none of them the demo reports
+`SKIP_UNSUPPORTED` instead of shrinking the experiments.
 
 | | col 1 | col 2 | col 3 | col 4 |
 |---|---|---|---|---|
@@ -78,16 +86,17 @@ and a coral square, and a violet rectangle.
 
 ## Validation
 
-`es20-clear-viewport-scissor --headless --validate` runs 78 checks.
+`es20-clear-viewport-scissor --headless --validate` runs 79 checks.
 
-- **Gallery (36 checks).** For every panel the CPU paints the expected 64x64 image from the rules
+- **Gallery (37 checks).** For every panel the CPU paints the expected 64k x 64k image from the rules
   above - for example "pixel is lit iff `z_w < clear depth`", "value after masked clear = `(old &
   ~mask) | (clear & mask)`", "pixel is inside the triangle by at least 1 px" - and compares it with
   a `glReadPixels` of the framebuffer. Colors are compared to +-1 (the spec allows a difference in
   rounding of `c * 255`). Probe pixels are exact: scissor boxes and viewports are on integer window
   coordinates, so pixel centers are never on an edge. Only the triangle panel (M) skips pixels
-  within 1 px of an edge. Named checks additionally probe the four corner pixels of a scissor box
-  and the pixels just outside it.
+  within 1 window pixel of an edge (its triangles are derived from the scaled viewports). Named checks
+  additionally probe the four corner pixels of a scissor box and the pixels just outside it, at the
+  scaled box edges, and one check confirms that panel N's viewport origin really lies below the window.
 - **State (25 checks).** Initial values of viewport, scissor box and test, clear values, masks and
   depth range (10); round trips of every setter through `glGet*` and `glIsEnabled`, clamping of
   `glClearDepthf` and `glDepthRangef`, and the independent back stencil mask (15).

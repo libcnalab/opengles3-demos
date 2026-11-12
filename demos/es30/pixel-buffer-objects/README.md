@@ -26,8 +26,11 @@ as they apply to buffers, and the errors.
 
 ## The image
 
-The 256×256 default framebuffer shows seven textures in cells of 32×32 pixels along the bottom row (cell 0 at the left,
-row 0 at the bottom). Small textures are magnified so each texel is several pixels wide; every pixel is compared.
+The default framebuffer shows seven textures in equal cells that partition the surface: 8×1, 4×2, 3×3, 2×4 or 1×8,
+whichever gives the largest cells (3×3 at 256×256 and 800×800, 4×2 at 640×400; reading order from the top-left). Each texture
+is centred in its cell and magnified by the **largest integer factor** `m` that fits (cells of 128 pixels or more keep a 4-pixel gutter) (the chart is 2x at
+256×256, the 5×4 textures 17x), so every window pixel shows exactly one texel; every pixel is compared. **Minimum surface:** cells
+of at least 32×32 (for example 256×32, 128×64, 96×96, 64×128 or 32×256); smaller surfaces report `SKIP_UNSUPPORTED`.
 
 | cell | content |
 |---|---|
@@ -35,9 +38,9 @@ row 0 at the bottom). Small textures are magnified so each texel is several pixe
 | 1 | a 20×13 sub-rectangle at column 5, row 3 of the chart in the buffer (`ROW_LENGTH 32, SKIP_PIXELS 5, SKIP_ROWS 3`) |
 | 2 | a 20×13 sub-rectangle (`SKIP_PIXELS 2, SKIP_ROWS 8`) of a **second**, colour-inverted chart that starts at byte offset 4160 of the same buffer |
 | 3 | `glTexSubImage2D`: a 14×10 patch from the chart (`SKIP 11, 2`) written at texel (6, 9) of a flat-coloured texture |
-| 4 | RGB8, 5×4 (×6) taken from a 7×6 image (`ROW_LENGTH 7, SKIP 1, 1`) whose rows are padded to 24 bytes by `UNPACK_ALIGNMENT 4`; data offset 5 |
-| 5 | RGBA4, 5×4 (×6), type `UNSIGNED_SHORT_4_4_4_4`, rows of 10 bytes padded to 12; data offset 6 |
-| 6 | a GPU-only round trip: `glReadPixels` of cell 0 into a pack buffer, then the **same buffer** as the unpack buffer of a `glTexImage2D` |
+| 4 | RGB8, 5×4 taken from a 7×6 image (`ROW_LENGTH 7, SKIP 1, 1`) whose rows are padded to 24 bytes by `UNPACK_ALIGNMENT 4`; data offset 5 |
+| 5 | RGBA4, 5×4, type `UNSIGNED_SHORT_4_4_4_4`, rows of 10 bytes padded to 12; data offset 6 |
+| 6 | a GPU-only round trip: `glReadPixels` of the whole cell 0 as drawn (32m×32m pixels) into a pack buffer, then the **same buffer** as the unpack buffer of a 32m×32m `glTexImage2D`, shown 1:1: a pixel-exact copy of cell 0 |
 
 ## Key ideas
 
@@ -92,7 +95,8 @@ row 0 at the bottom). Small textures are magnified so each texel is several pixe
   and compared **exactly** with the model (no arithmetic is specified for moving a stored 8-bit value). All seven cells are
   also compared as drawn, pixel for pixel, with ±1: the shader output conversion allows one step (§2.1.6.2). RGB8 and
   RGBA4 are only compared as drawn (RGBA4 is `17·c`, since `c/15·255`).
-- **Pack buffers.** Four layouts (whole 32×32 at offset 0; a 10×8 rectangle at offset 100; row length / skips / offset; alignment 8)
+- **Pack buffers.** Four layouts, all read from the chart cell as drawn (the whole 32m×32m cell into a buffer of exactly its size at
+  offset 0; a 10×8 rectangle at offset 100; row length / skips / offset; alignment 8)
   plus the integer read: the mapped bytes of every pixel group equal the CPU placement of a client-memory read of the same
   pixels, and the sentinel `0xEE` is still there everywhere outside the footprint.
 - **Errors.** `INVALID_OPERATION` for each over-long unpack and pack, each misaligned offset of a 2- and a 4-byte type,

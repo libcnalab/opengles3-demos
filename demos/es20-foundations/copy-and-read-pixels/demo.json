@@ -79,8 +79,8 @@
     "negative"
   ],
   "visual_review": {
-    "date": "2026-11-11",
-    "by": "claude-sonnet-5.5 (subagent)",
-    "notes": "256x256 radeonsi es-max capture viewed (all six matrix captures are byte-identical). Row 1: the test chart (red grows to the right, green upward, blue 8x8 checkerboard; it was blitted with its alpha 128..254 so a viewer shows it paler than the next cell); the full RGBA copy (identical, opaque); a uniform blue-gray texture with a small 16x16 patch lower left and a 24x24 patch upper right (two glCopyTexSubImage2D); the 32x24 RGBA8 sub-rectangle at 2x. Row 2: RGB sub-rectangle; LUMINANCE (gray ramp from the red channel); ALPHA shown as light gray (alpha 128+x+y); LUMINANCE_ALPHA (red ramp as gray). Row 3: R8 (black to red ramp) and RG8 (red and green ramps). The bottom row is empty by design."
+    "date": "2026-11-12",
+    "by": "claude-opus (subagent, fill-window)",
+    "notes": "Viewed at 800x800 (llvmpipe, 4x3 cells of 200x266: chart 3x, 32x24 blocks 6x), 640x400 (4x3 cells of 160x133: chart 2x, blocks 4x, 4-px gutters) and 256x256 (chart 1x, blocks 2x, as before). Row 1: the paler blitted chart, the opaque RGBA copy, the blue-gray texture with its two chart patches, the RGBA8 block; row 2: RGB block, LUMINANCE gray ramp, ALPHA light gray, LUMINANCE_ALPHA ramp; row 3: R8 red ramp and RG8 red/green ramps. Every image is centred in its cell with sharp texel blocks."
   }
 }

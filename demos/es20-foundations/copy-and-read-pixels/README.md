@@ -19,7 +19,13 @@ rows or swapped channels cannot pass unnoticed.
 
 ## What the image shows
 
-256 x 256 default framebuffer, cells of 64 x 64, reading order top row first. The bottom row is empty.
+The default framebuffer is divided into equal display cells, reading order top row first: 4 x 3 at the default
+256 x 256, or 3 x 4, 5 x 2 or 2 x 5, whichever gives the largest cells (the smallest cell edge is maximized). Each
+image is centred in its cell and magnified by the **largest integer factor** `m` that fits (cells of 128 pixels or more keep a 4-pixel gutter), so
+every window pixel shows exactly one texel and the cells are compared exactly with the magnified texture. At
+256 x 256 the chart is shown 1:1 and the 32 x 24 blocks 2x (the factors in the table); at 800 x 800 they are 3x and 6x.
+**Minimum surface:** cells of at least 64 x 64 (for example 256 x 192, 192 x 256, 320 x 128 or 128 x 320); smaller
+surfaces report `SKIP_UNSUPPORTED`.
 
 | Cell | Content | How it was made |
 |---|---|---|
@@ -34,7 +40,7 @@ rows or swapped channels cannot pass unnoticed.
 | 9 | red ramp, 2x | `R8` |
 | 10 | red + green, 2x | `RG8` |
 
-Cell 1 is blitted with the chart's alpha (128..254), so an image viewer shows it paler than cell 2, which is
+Cell 1 is blitted (NEAREST, magnified `m` times) with the chart's alpha (128..254), so an image viewer shows it paler than cell 2, which is
 sampled with alpha forced to 1. All copies are made while `READ_FRAMEBUFFER` is the chart and `DRAW_FRAMEBUFFER` is the default framebuffer,
 so the copies can only contain the chart (the default framebuffer never holds the chart at that place, and the
 copies equal it exactly).
@@ -136,7 +142,10 @@ Per copy case (whole chart, and a 32 x 24 sub-rectangle for each internal format
    `RGB`/`R8`/`RG8` -> dropped components 0 and alpha 1, `LUMINANCE` -> `(R,R,R,1)`, `ALPHA` -> `(0,0,0,A)`,
    `LUMINANCE_ALPHA` -> `(R,R,R,A)`. Tolerance +-1 for the shader's float -> 8-bit conversion. (`LUMINANCE`,
    `ALPHA` and `LUMINANCE_ALPHA` are not color-renderable, so view 1 does not exist for them.)
-3. **The cell** on the screen (2x magnified for the 32 x 24 textures) equals view 2's expectation.
+3. **The cell** on the screen (magnified by its integer factor `m`; 2x for the 32 x 24 textures at 256 x 256) equals
+   view 2's expectation for every window pixel: pixel `(i, j)` shows texel `(i / m, j / m)`. The blitted chart cell
+   is compared exactly (a NEAREST blit with an integer magnification copies stored values), the patched texture
+   with +-1.
 
 `glCopyTexSubImage2D`: two patches replace exactly their rectangles of the 64 x 64 texture (exact), all other
 texels keep the base color; negative control: the unpatched base color differs in more than 400 texels.

@@ -7,7 +7,9 @@
 //
 // Everything starts from a 64 x 64 test chart in an RGBA8 framebuffer object whose pixel (x, y) is
 // (4x, 4y, checker, 128 + x + y): each pixel is distinct, so a misplaced, flipped or channel-swapped
-// result cannot pass. The 256 x 256 default framebuffer shows (cells of 64 x 64, top row first):
+// result cannot pass. The default framebuffer is divided into display cells (4 x 3 at the default size,
+// 2 x 5, 5 x 2 or 3 x 4 when that gives larger cells; reading order top row first). Each cell shows its
+// image centred and magnified by the largest integer factor that fits ("2x" below is the factor at 256 x 256):
 //
 //   row 0: the chart | glCopyTexImage2D RGBA, whole chart | two glCopyTexSubImage2D patches | RGBA8 sub-rectangle (2x)
 //   row 1: RGB (2x)  | LUMINANCE (2x)                      | ALPHA as gray (2x)               | LUMINANCE_ALPHA (2x)
@@ -42,8 +44,13 @@ using demo::Rgba8;
 
 namespace
 {
-    constexpr int kChart = 64;     // edge of the chart framebuffer
-    constexpr int kCellSize = 64;  // edge of a cell on the screen
+    constexpr int kChart = 64;  // edge of the chart framebuffer
+    // The default framebuffer is divided into g_columns x g_rows display cells (chosen in init()). Every image
+    // is shown with an integer magnification, so each window pixel shows exactly one texel and the cells are
+    // compared exactly with the magnified texture.
+    constexpr int kDisplayCells = 10;
+    int g_columns = 4;
+    int g_rows = 3;
     constexpr auto kColor0 = mgl::to_framebuffer_attachment(mgl::ColorAttachment::Color0);
 
     // A float -> 8-bit conversion returns one of the two integers closest to f * 255 (eq. 2.3, section
@@ -272,7 +279,6 @@ namespace
         mgl::InternalFormat internal;
         Region src;
         int cell;
-        int scale;         // magnification on the screen
         int display_mode;  // show.frag u_mode of the on-screen cell
         bool renderable;   // can the texture be attached to a framebuffer (and read back directly)?
     };
@@ -280,14 +286,14 @@ namespace
     // LUMINANCE, ALPHA and LUMINANCE_ALPHA are not color-renderable (section 4.4.4): those textures can
     // only be checked by sampling.
     const std::array<CopyCase, 8> kCases = {{
-        {"RGBA, whole chart", kTexFull, mgl::InternalFormat::Rgba, {0, 0, 64, 64}, 1, 1, 0, true},
-        {"RGBA8 (sized), sub-rectangle", kTexRgba8, mgl::InternalFormat::Rgba8, {8, 16, 32, 24}, 3, 2, 0, true},
-        {"RGB, sub-rectangle", kTexRgb, mgl::InternalFormat::Rgb, {8, 16, 32, 24}, 4, 2, 0, true},
-        {"LUMINANCE, sub-rectangle", kTexLum, mgl::InternalFormat::Luminance, {8, 16, 32, 24}, 5, 2, 0, false},
-        {"ALPHA, sub-rectangle", kTexAlpha, mgl::InternalFormat::Alpha, {8, 16, 32, 24}, 6, 2, 1, false},
-        {"LUMINANCE_ALPHA, sub-rectangle", kTexLumAlpha, mgl::InternalFormat::LuminanceAlpha, {8, 16, 32, 24}, 7, 2, 0, false},
-        {"R8, sub-rectangle", kTexR8, mgl::InternalFormat::R8, {8, 16, 32, 24}, 8, 2, 0, true},
-        {"RG8, sub-rectangle", kTexRg8, mgl::InternalFormat::Rg8, {8, 16, 32, 24}, 9, 2, 0, true},
+        {"RGBA, whole chart", kTexFull, mgl::InternalFormat::Rgba, {0, 0, 64, 64}, 1, 0, true},
+        {"RGBA8 (sized), sub-rectangle", kTexRgba8, mgl::InternalFormat::Rgba8, {8, 16, 32, 24}, 3, 0, true},
+        {"RGB, sub-rectangle", kTexRgb, mgl::InternalFormat::Rgb, {8, 16, 32, 24}, 4, 0, true},
+        {"LUMINANCE, sub-rectangle", kTexLum, mgl::InternalFormat::Luminance, {8, 16, 32, 24}, 5, 0, false},
+        {"ALPHA, sub-rectangle", kTexAlpha, mgl::InternalFormat::Alpha, {8, 16, 32, 24}, 6, 1, false},
+        {"LUMINANCE_ALPHA, sub-rectangle", kTexLumAlpha, mgl::InternalFormat::LuminanceAlpha, {8, 16, 32, 24}, 7, 0, false},
+        {"R8, sub-rectangle", kTexR8, mgl::InternalFormat::R8, {8, 16, 32, 24}, 8, 0, true},
+        {"RG8, sub-rectangle", kTexRg8, mgl::InternalFormat::Rg8, {8, 16, 32, 24}, 9, 0, true},
     }};
 
     // The glCopyTexSubImage2D scene: a solid texture with two patches copied into it.
@@ -301,8 +307,24 @@ namespace
     constexpr int kSubCell = 2;
     constexpr int kChartCell = 0;
 
-    int cell_x(int cell) { return (cell % 4) * kCellSize; }
-    int cell_y(int cell) { return (3 - cell / 4) * kCellSize; }
+    /// Display cell `cell` (row-major from the top-left) of a width x height surface; the cells partition the
+    /// surface exactly. Inside it, an image of w x h texels is centred and magnified by the largest integer
+    /// factor `scale` that fits (init() guarantees at least 1 for the 64 x 64 chart, hence for every image).
+    struct Display
+    {
+        Region rect;
+        int scale;
+    };
+    Display display_rect(int width, int height, int cell, int w, int h)
+    {
+        const int col = cell % g_columns, row = cell / g_columns;
+        const int x0 = width * col / g_columns, x1 = width * (col + 1) / g_columns;
+        const int y0 = height * (g_rows - 1 - row) / g_rows, y1 = height * (g_rows - row) / g_rows;
+        // Cells of at least 128 pixels keep a gutter of 4 pixels between neighbouring images.
+        const int gutter = std::min(x1 - x0, y1 - y0) >= 128 ? 4 : 0;
+        const int scale = std::max(1, std::min((x1 - x0 - gutter) / w, (y1 - y0 - gutter) / h));
+        return {{x0 + (x1 - x0 - w * scale) / 2, y0 + (y1 - y0 - h * scale) / 2, w * scale, h * scale}, scale};
+    }
 
     template <typename F>
     void expect_error(demo::Check& check, mgl::ErrorCode code, std::string_view what, F&& call)
@@ -317,8 +339,23 @@ namespace
     public:
         void init(demo::Env& env) override
         {
-            if (env.width < 4 * kCellSize || env.height < 4 * kCellSize)
-                throw demo::Skip(std::format("needs a default framebuffer of at least {0}x{0}", 4 * kCellSize));
+            // Arrange the 10 display cells so that the smallest cell edge is as large as possible. The chart needs a
+            // cell of at least 64 x 64 window pixels to be shown 1:1, so smaller surfaces are skipped.
+            int best = -1;
+            for (const auto& [columns, rows] : {std::pair{4, 3}, std::pair{3, 4}, std::pair{5, 2}, std::pair{2, 5}})
+            {
+                if (columns * rows < kDisplayCells) continue;
+                const int edge = std::min(env.width / columns, env.height / rows);
+                if (edge > best)
+                {
+                    best = edge;
+                    g_columns = columns;
+                    g_rows = rows;
+                }
+            }
+            if (best < kChart)
+                throw demo::Skip(std::format("needs a surface whose display cells are at least {0}x{0} pixels: 256x192, 192x256, "
+                                             "320x128 or 128x320 (got {1}x{2})", kChart, env.width, env.height));
             if (demo::get_integer(mgl::GetParameter::RedBits) < 8 || demo::get_integer(mgl::GetParameter::GreenBits) < 8 ||
                 demo::get_integer(mgl::GetParameter::BlueBits) < 8)
                 throw demo::Skip("needs 8 bits per color channel in the default framebuffer");
@@ -347,7 +384,7 @@ namespace
             mgl::glBindTexture(mgl::TextureTarget::Texture2D, mgl::TextureId{0});
         }
 
-        void render(demo::Env& /*env*/, int /*frame*/) override
+        void render(demo::Env& env, int /*frame*/) override
         {
             mgl::glDisable(mgl::Capability::Dither);  // dithering could change a stored value by one step
 
@@ -381,24 +418,27 @@ namespace
 
             // ---- the default framebuffer shows everything -------------------------------------------------
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
-            mgl::glViewport(0, 0, 4 * kCellSize, 4 * kCellSize);
+            mgl::glViewport(0, 0, env.width, env.height);
             mgl::glClearColor(0.05f, 0.05f, 0.08f, 1.0f);
             mgl::glClear(mgl::ClearBufferBit::Color);
 
             mgl::glBindFramebuffer(mgl::FramebufferTarget::ReadFramebuffer, chart_fbo_);
             mgl::glBindFramebuffer(mgl::FramebufferTarget::DrawFramebuffer, mgl::FramebufferId{0});
-            mgl::glBlitFramebuffer(0, 0, kChart, kChart, cell_x(kChartCell), cell_y(kChartCell), cell_x(kChartCell) + kChart, cell_y(kChartCell) + kChart,
+            const Region chart_cell = display_rect(env.width, env.height, kChartCell, kChart, kChart).rect;
+            mgl::glBlitFramebuffer(0, 0, kChart, kChart, chart_cell.x, chart_cell.y, chart_cell.x + chart_cell.w, chart_cell.y + chart_cell.h,
                                    mgl::ClearBufferBit::Color, mgl::BlitFilter::Nearest);
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
 
             for (const CopyCase& c : kCases)
             {
-                mgl::glViewport(cell_x(c.cell), cell_y(c.cell), c.src.w * c.scale, c.src.h * c.scale);
+                const Region r = display_rect(env.width, env.height, c.cell, c.src.w, c.src.h).rect;
+                mgl::glViewport(r.x, r.y, r.w, r.h);
                 show(tex_[c.tex], c.display_mode);
             }
-            mgl::glViewport(cell_x(kSubCell), cell_y(kSubCell), kChart, kChart);
+            const Region sub = display_rect(env.width, env.height, kSubCell, kChart, kChart).rect;
+            mgl::glViewport(sub.x, sub.y, sub.w, sub.h);
             show(tex_[kTexSub], 0);
-            mgl::glViewport(0, 0, 4 * kCellSize, 4 * kCellSize);
+            mgl::glViewport(0, 0, env.width, env.height);
         }
 
         void validate(demo::Env& env, demo::Check& check) override
@@ -412,9 +452,9 @@ namespace
             check_out_of_window(check, env);
             check_pack_alignment(check);
             check_pack_rows(check);
-            check_implementation_pair(check);
-            check_copy_tex_image(check);
-            check_copy_tex_sub_image(check);
+            check_implementation_pair(check, env);
+            check_copy_tex_image(check, env);
+            check_copy_tex_sub_image(check, env);
             check_copy_errors(check);
             check_read_errors(check);
 
@@ -737,10 +777,11 @@ namespace
             check.expect(bad == 0, std::format("{}: reading with the implementation-chosen pair ({}) agrees with RGBA/UNSIGNED_BYTE", name, describe(raw_f, raw_t)), std::format("{} channel values differ", bad));
         }
 
-        void check_implementation_pair(demo::Check& check)
+        void check_implementation_pair(demo::Check& check, const demo::Env& env)
         {
             mgl::glBindFramebuffer(mgl::FramebufferTarget::Framebuffer, mgl::FramebufferId{0});
-            compare_pair_with_rgba8(check, "default framebuffer (inside the chart cell)", {8, cell_y(kChartCell) + 8, 5, 4});
+            const Region chart_cell = display_rect(env.width, env.height, kChartCell, kChart, kChart).rect;
+            compare_pair_with_rgba8(check, "default framebuffer (inside the chart cell)", {chart_cell.x + 8, chart_cell.y + 8, 5, 4});
             bind_read(chart_fbo_);
             compare_pair_with_rgba8(check, "chart framebuffer (RGBA8 renderbuffer)", {3, 5, 11, 9});
             // The pair a normalized RGBA8 surface names is one every ES 3.0 implementation can honour.
@@ -826,7 +867,7 @@ namespace
         // ===========================================================================================
         // glCopyTexImage2D / glCopyTexSubImage2D
         // ===========================================================================================
-        void check_copy_tex_image(demo::Check& check)
+        void check_copy_tex_image(demo::Check& check, const demo::Env& env)
         {
             for (const CopyCase& c : kCases)
             {
@@ -855,24 +896,35 @@ namespace
                 check.expect(s.bad == 0, std::format("glCopyTexImage2D {}: sampling the {}x{} texture returns the expected components ({}; max deviation {})", c.name, c.src.w, c.src.h,
                                                      c.internal == mgl::InternalFormat::Luminance ? "(L,L,L,1), L = R" : c.internal == mgl::InternalFormat::Alpha ? "(0,0,0,A)" :
                                                      c.internal == mgl::InternalFormat::LuminanceAlpha ? "(L,L,L,A)" : "dropped components read as 0,0,0,1", s.max_dev), s.first);
-                // (3) the cell on the screen
+                // (3) the cell on the screen: an integer magnification m, so window pixel (i, j) of the cell samples
+                //     texel (i / m, j / m) at a texel-space distance of at least 1/(2m) from every texel edge.
+                const Display shown = display_rect(env.width, env.height, c.cell, c.src.w, c.src.h);
+                const int m = shown.scale;
                 std::vector<Rgba8> cell_want;
-                for (int j = 0; j < c.src.h * c.scale; ++j)
-                    for (int i = 0; i < c.src.w * c.scale; ++i)
+                for (int j = 0; j < c.src.h * m; ++j)
+                    for (int i = 0; i < c.src.w * m; ++i)
                     {
-                        const Rgba8 t = want[static_cast<std::size_t>(j / c.scale) * static_cast<std::size_t>(c.src.w) + static_cast<std::size_t>(i / c.scale)];
+                        const Rgba8 t = want[static_cast<std::size_t>(j / m) * static_cast<std::size_t>(c.src.w) + static_cast<std::size_t>(i / m)];
                         cell_want.push_back(c.display_mode == 1 ? Rgba8{t[3], t[3], t[3], 255} : Rgba8{t[0], t[1], t[2], 255});
                     }
                 mgl::glBindFramebuffer(mgl::FramebufferTarget::ReadFramebuffer, mgl::FramebufferId{0});
-                const std::vector<Rgba8> cell = read_texels(cell_x(c.cell), cell_y(c.cell), c.src.w * c.scale, c.src.h * c.scale);
-                const Diff cd = compare(cell, cell_want, c.src.w * c.scale, kConvertTolerance);
-                check.expect(cd.bad == 0, std::format("{}: the cell on the default framebuffer shows the texture (x{} magnified; max deviation {})", c.name, c.scale, cd.max_dev), cd.first);
+                const std::vector<Rgba8> cell = read_texels(shown.rect.x, shown.rect.y, shown.rect.w, shown.rect.h);
+                const Diff cd = compare(cell, cell_want, shown.rect.w, kConvertTolerance);
+                check.expect(cd.bad == 0, std::format("{}: the cell on the default framebuffer shows the texture (x{} magnified; max deviation {})", c.name, m, cd.max_dev), cd.first);
             }
 
-            // The chart itself was blitted to cell 0.
+            // The chart itself was blitted to cell 0, magnified by an integer m with NEAREST: every window pixel is
+            // an exact copy of chart pixel (i / m, j / m).
             mgl::glBindFramebuffer(mgl::FramebufferTarget::ReadFramebuffer, mgl::FramebufferId{0});
-            const Diff chart_cell = compare(read_texels(cell_x(kChartCell), cell_y(kChartCell), kChart, kChart), chart_, kChart, 0);
-            check.expect(chart_cell.bad == 0, "cell 0 on the default framebuffer shows the chart", chart_cell.first);
+            const Display chart_shown = display_rect(env.width, env.height, kChartCell, kChart, kChart);
+            std::vector<Rgba8> chart_want;
+            for (int j = 0; j < chart_shown.rect.h; ++j)
+                for (int i = 0; i < chart_shown.rect.w; ++i)
+                    chart_want.push_back(chart_[static_cast<std::size_t>(j / chart_shown.scale) * kChart + static_cast<std::size_t>(i / chart_shown.scale)]);
+            const Diff chart_cell = compare(read_texels(chart_shown.rect.x, chart_shown.rect.y, chart_shown.rect.w, chart_shown.rect.h), chart_want,
+                                            chart_shown.rect.w, 0);
+            check.expect(chart_cell.bad == 0, std::format("cell 0 on the default framebuffer shows the chart (blit, x{} magnified, exact)", chart_shown.scale),
+                         chart_cell.first);
 
             // Negative control: a reference with the wrong source rectangle is rejected.
             {
@@ -894,7 +946,7 @@ namespace
             return read_texels(0, 0, kChart, kChart);
         }
 
-        void check_copy_tex_sub_image(demo::Check& check)
+        void check_copy_tex_sub_image(demo::Check& check, const demo::Env& env)
         {
             std::vector<Rgba8> want(static_cast<std::size_t>(kChart) * kChart, kBaseColor);
             for (const Patch& p : kPatches)
@@ -912,10 +964,17 @@ namespace
             const Diff s = compare(sampled(tex_[kTexSub], kChart, kChart, 2), want, kChart, kConvertTolerance);
             check.expect(s.bad == 0, std::format("glCopyTexSubImage2D: sampling the patched texture matches (max deviation {})", s.max_dev), s.first);
             mgl::glBindFramebuffer(mgl::FramebufferTarget::ReadFramebuffer, mgl::FramebufferId{0});
-            std::vector<Rgba8> shown = want;  // the cell is drawn with u_mode 0: (r, g, b, 1)
-            for (Rgba8& px : shown) px[3] = 255;
-            const Diff cd = compare(read_texels(cell_x(kSubCell), cell_y(kSubCell), kChart, kChart), shown, kChart, kConvertTolerance);
-            check.expect(cd.bad == 0, "the patched texture on the default framebuffer (cell 2) matches", cd.first);
+            const Display cell = display_rect(env.width, env.height, kSubCell, kChart, kChart);
+            std::vector<Rgba8> shown;  // the cell is drawn with u_mode 0: (r, g, b, 1), magnified by an integer
+            for (int j = 0; j < cell.rect.h; ++j)
+                for (int i = 0; i < cell.rect.w; ++i)
+                {
+                    Rgba8 px = want[static_cast<std::size_t>(j / cell.scale) * kChart + static_cast<std::size_t>(i / cell.scale)];
+                    px[3] = 255;
+                    shown.push_back(px);
+                }
+            const Diff cd = compare(read_texels(cell.rect.x, cell.rect.y, cell.rect.w, cell.rect.h), shown, cell.rect.w, kConvertTolerance);
+            check.expect(cd.bad == 0, std::format("the patched texture on the default framebuffer (cell 2, x{} magnified) matches", cell.scale), cd.first);
             // Negative control: pretending the patch had not been applied must be detected.
             const std::vector<Rgba8> unpatched(static_cast<std::size_t>(kChart) * kChart, kBaseColor);
             check.expect(direct && compare(*direct, unpatched, kChart, 0).bad > 400, "negative control: comparing with the unpatched base color is rejected (the patches changed >400 texels)");

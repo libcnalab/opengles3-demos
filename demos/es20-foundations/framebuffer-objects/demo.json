@@ -92,8 +92,8 @@
     "negative"
   ],
   "visual_review": {
-    "date": "2026-11-11",
-    "by": "claude-sonnet-5.5 (subagent)",
-    "notes": "256x256 radeonsi es-max capture viewed (llvmpipe and zink captures are byte-identical to each other and differ from radeonsi by at most 1/255 in the gradient). Row 1: the gradient (red rising to the right, green rising upward) with an 8x8 blue checkerboard; its photographic negative; the 16x16 level-2 pattern shown as 4x4-pixel blocks; the stencil scene (blue background, yellow square ring, red inner square). Row 2: depth test with D16 and D24 (green rectangle at the left, red rectangle at the right partly hidden by the green one although it was drawn later, a small blue notch visible only in the red-only part); the depth-test-off control (red over green in the overlap, blue stripe across both); the stencil-off control (solid red). Row 3: DEPTH24_STENCIL8 (upper half green/red with the occlusion, lower half cyan, magenta and yellow bands for stencil 1, 2, 3); the depth-texture color cell (same as the depth scene); the depth texture shown as gray (white clear value, dark near rectangle, lighter far rectangle, mid-gray notch). The bottom row is empty by design."
+    "date": "2026-11-12",
+    "by": "claude-opus (subagent, fill-window)",
+    "notes": "Viewed at 800x800 (llvmpipe, 4x3 cells, every 64x64 target shown 3x) and 640x400 (4x3 cells of 160x133, targets 2x). Row 1: gradient with checkerboard, its negative, the 16x16 level-2 pattern in 4m-pixel blocks, the stencil ring scene; row 2: D16 and D24 depth scenes, the depth-off control (red over green, blue stripe across), the solid red stencil-off control; row 3: DEPTH24_STENCIL8 (occlusion above, cyan/magenta/yellow stencil bands below), the depth-texture color cell, the depth texture as gray. Each target is centred in its cell with a gutter; no bleed between cells."
   }
 }

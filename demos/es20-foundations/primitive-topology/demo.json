@@ -35,7 +35,7 @@
     "glUniform4f": "per-draw color observed in the pixels",
     "glClearColor": "cell background pixels equal the clear color (every unlit pixel is compared)",
     "glClear": "COLOR_BUFFER_BIT under a scissor box per cell",
-    "glViewport": "one 64x64 viewport per cell maps NDC to the cell's pixels",
+    "glViewport": "one viewport per cell (64k x 64k pixels for the integer scale k) maps NDC to the cell's pixels",
     "glScissor": "one box per cell: each cell's clear touches only that cell",
     "glEnable": "SCISSOR_TEST: without it each per-cell clear would wipe the whole window and only the last cell would survive",
     "glReadPixels": "RGBA/UNSIGNED_BYTE readback of the whole default framebuffer; every check is a comparison with it",
@@ -67,8 +67,8 @@
     "gl-error"
   ],
   "visual_review": {
-    "date": "2026-11-11",
-    "by": "claude-sonnet (subagent)",
-    "notes": "256x256 radeonsi capture (es-max) viewed: 4x4 gallery. Row 1: seven dots and squares of growing size; a point-sprite gradient (black top-left, red top-right, green bottom-left, yellow bottom-right); three separate cyan bars (LINES); a green open staircase path (LINE_STRIP). Row 2: the same path closed in orange (LINE_LOOP); two separate red triangles (TRIANGLES); a green ribbon (TRIANGLE_STRIP); a blue three-quarter fan with an open wedge. Row 3: a pink vertical bar and four cyan rows of width 3, 3, 1, 1; one large orange square; three yellow sloped lines; a lime L-shaped path and a short pink segment from first/count. Row 4: lone cyan, red and orange control pieces of the too-few-vertices cell; violet disc; lime octagon with clean 45-degree edges; a house with red roof, door, window, chimneys, sun. llvmpipe captures differ from it by at most 1 per channel."
+    "date": "2026-11-12",
+    "by": "claude-opus (subagent, fill-window)",
+    "notes": "Viewed at 800x800 (llvmpipe, k = 3, 192-px cells), 640x400 (k = 1, centred) and 1920x1080 (radeonsi, k = 4, 256-px cells centred). Points, triangles, the gl_PointCoord sprite and the largest point scale with k; lines stay 1 px (or 3 px for the wide ones) and run through pixel centres, so the staircases, octagon and house outlines are crisp single-pixel lines in large cells; size-1 points stay single pixels. Same content as the 256x256 review: dots and squares, point sprite gradient, LINES / LINE_STRIP / LINE_LOOP staircases, two red triangles, green ribbon, blue open fan, wide lines, orange largest point, sloped yellow lines, first/count path, degenerate controls, violet disc, lime octagon, house."
   }
 }

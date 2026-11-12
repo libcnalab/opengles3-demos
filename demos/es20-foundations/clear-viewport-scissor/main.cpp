@@ -3,7 +3,8 @@
 // How a frame is prepared and where its pixels may land: glClear and its clear values, the
 // per-buffer write masks, the viewport transform, DepthRange and the scissor test.
 //
-// The image is a gallery of 16 panels of 64x64 pixels (4x4, panel A top-left, panel P bottom-right).
+// The image is a gallery of 16 panels designed as 64x64 pixels (4x4, panel A top-left, panel P bottom-right),
+// scaled as a whole by an integer factor k to fill the surface (see init()).
 // Every panel is one experiment confined to its own rectangle by the scissor test. OpenGL ES cannot
 // read the depth or stencil buffer back, so those buffers are observed *indirectly*: after the
 // clears under test, a probe quad is drawn with the depth or the stencil test enabled and the color
@@ -40,17 +41,25 @@ namespace
     // ---------------------------------------------------------------------------------------------
     // Gallery layout and palette
     // ---------------------------------------------------------------------------------------------
-    constexpr int kPanel = 64;  // panel edge in pixels
+    constexpr int kPanel = 64;  // panel edge in design pixels
     constexpr int kPanels = 16;
-    // The 16 panels are arranged as 4x4, 8x2 or 2x8, whichever fits the surface (chosen in init()).
-    // Every experiment works in exact panel-local pixels, so the panel itself is never scaled.
+    // The 16 panels are arranged as 4x4, 8x2 or 2x8 (chosen in init()). Every experiment is designed in
+    // exact panel-local pixels; the whole design - viewports, scissor boxes, pixel rectangles and the CPU
+    // model - is multiplied by one integer scale factor g_k, so every edge stays on an integer window
+    // coordinate. g_origin_* is the window position of the gallery's lower-left corner.
     int g_columns = 4;
     int g_rows = 4;
+    int g_k = 1;
+    int g_origin_x = 0;
+    int g_origin_y = 0;
+    int px(int design) { return design * g_k; }  // design pixels -> window pixels
+    int panel_size() { return kPanel * g_k; }
 
     struct Rect
     {
         int x, y, w, h;  // lower-left corner and size, in window (or panel-local) pixels
     };
+    Rect scaled(Rect d) { return {d.x * g_k, d.y * g_k, d.w * g_k, d.h * g_k}; }
     struct Color
     {
         float r, g, b, a;
@@ -68,17 +77,20 @@ namespace
         ViewportMapping, FourViewports, NegativeViewport, ClippedTriangle,
     };
 
-    // Row-major from the top: panel 0 is the top-left cell, window y grows upwards. The bottom row
-    // always starts at y = 0, so panel N's negative viewport origin lies below the window in every arrangement.
+    // Row-major from the top: panel 0 is the top-left cell, window y grows upwards. Panel N is in the
+    // bottom row in every arrangement; init() keeps that row low enough for N's viewport origin to lie below the window.
     Rect panel_rect(Panel p)
     {
         const int i = static_cast<int>(p);
-        return {(i % g_columns) * kPanel, (g_rows - 1 - i / g_columns) * kPanel, kPanel, kPanel};
+        const int s = panel_size();
+        return {g_origin_x + (i % g_columns) * s, g_origin_y + (g_rows - 1 - i / g_columns) * s, s, s};
     }
 
-    constexpr Rect shifted(Rect local, Rect origin)
+    /// A panel-local rectangle in design pixels -> window rectangle (scaled by g_k, offset by the panel origin).
+    Rect shifted(Rect local, Rect origin)
     {
-        return {origin.x + local.x, origin.y + local.y, local.w, local.h};
+        const Rect l = scaled(local);
+        return {origin.x + l.x, origin.y + l.y, l.w, l.h};
     }
 
     constexpr Color kSurface{0.02f, 0.02f, 0.03f, 1.0f};  // frame clear (visible only outside the gallery)
@@ -168,27 +180,28 @@ namespace
         std::vector<std::uint8_t> pixels_;
     };
 
-    /// Calls f(x, y) for every panel-local pixel of `r` that lies inside the panel.
+    /// Calls f(x, y) for every panel-local pixel of `r` (window pixels, i.e. already scaled) inside the panel.
     template <typename F>
     void for_each_pixel(Rect r, F&& f)
     {
-        for (int y = std::max(r.y, 0); y < std::min(r.y + r.h, kPanel); ++y)
-            for (int x = std::max(r.x, 0); x < std::min(r.x + r.w, kPanel); ++x) f(x, y);
+        for (int y = std::max(r.y, 0); y < std::min(r.y + r.h, panel_size()); ++y)
+            for (int x = std::max(r.x, 0); x < std::min(r.x + r.w, panel_size()); ++x) f(x, y);
     }
 
-    /// Expected content of one panel; pixels with care == 0 are not compared.
+    /// Expected content of one panel at the scaled resolution; pixels with care == 0 are not compared.
     struct Model
     {
-        std::vector<demo::Rgba8> color = std::vector<demo::Rgba8>(kPanel * kPanel);
-        std::vector<char> care = std::vector<char>(kPanel * kPanel, 1);
+        std::vector<demo::Rgba8> color = std::vector<demo::Rgba8>(static_cast<std::size_t>(panel_size() * panel_size()));
+        std::vector<char> care = std::vector<char>(static_cast<std::size_t>(panel_size() * panel_size()), 1);
 
         [[nodiscard]] static std::size_t index(int x, int y)
         {
-            return static_cast<std::size_t>(y) * kPanel + static_cast<std::size_t>(x);
+            return static_cast<std::size_t>(y) * static_cast<std::size_t>(panel_size()) + static_cast<std::size_t>(x);
         }
-        void fill(Rect r, demo::Rgba8 c)
+        /// Fills a rectangle given in *design* pixels, scaled by g_k exactly like the GL side.
+        void fill(Rect design, demo::Rgba8 c)
         {
-            for_each_pixel(r, [&](int x, int y) { color[index(x, y)] = c; });
+            for_each_pixel(scaled(design), [&](int x, int y) { color[index(x, y)] = c; });
         }
     };
 
@@ -261,21 +274,24 @@ namespace
             u_color_ = mgl::glGetUniformLocation(program_, "u_color");
             if (u_vertex_.value < 0 || u_z_.value < 0 || u_color_.value < 0)
                 throw demo::Failure("rect.vert / solid.frag: an expected uniform is not active");
-            // Pick the arrangement that fits the surface and whose aspect ratio is closest to it.
-            // The panels hold exact pixel experiments (scissor edges, 4-px depth columns), so a surface
-            // that fits none of 256x256, 512x128 and 128x512 cannot show them: skip instead of shrinking.
+            // Pick the arrangement with the largest integer scale k = floor(min(w / W0, h / H0)), ties broken
+            // by the aspect ratio closest to the surface. The panels hold exact pixel experiments (scissor
+            // edges, 4-px depth columns): they are only ever scaled by an integer, never shrunk, so a surface
+            // that fits none of 256x256, 512x128 and 128x512 cannot show them and the demo skips.
             bool fits = false;
             double best = 0.0;
             for (const int columns : {4, 8, 2})
             {
                 const int rows = kPanels / columns;
-                if (env.width < kPanel * columns || env.height < kPanel * rows) continue;
+                const int k = std::min(env.width / (kPanel * columns), env.height / (kPanel * rows));
+                if (k < 1) continue;
                 const double mismatch = std::abs(std::log(static_cast<double>(env.width) / env.height *
                                                           static_cast<double>(rows) / columns));
-                if (!fits || mismatch < best)
+                if (!fits || k > g_k || (k == g_k && mismatch < best))
                 {
                     fits = true;
                     best = mismatch;
+                    g_k = k;
                     g_columns = columns;
                     g_rows = rows;
                 }
@@ -283,6 +299,11 @@ namespace
             if (!fits)
                 throw demo::Skip(std::format("the 16 panels of 64x64 px need a 256x256, 512x128 or 128x512 surface (got {}x{})",
                                              env.width, env.height));
+            // Centre the scaled gallery. Vertically the bottom row stays at most 16k px above the window's
+            // bottom edge: panel N's viewport starts 32k px below its panel, so its origin is always at a
+            // negative window y (outside the window), which is what panel N demonstrates.
+            g_origin_x = (env.width - g_columns * panel_size()) / 2;
+            g_origin_y = std::min((env.height - g_rows * panel_size()) / 2, px(16));
 
             // The very first GL state of the context: nothing has been set yet, so these are the
             // *initial* values the specification lists (checked in validate()).
@@ -411,7 +432,7 @@ namespace
         /// Quad covering a panel-local pixel rectangle; the viewport must be the panel.
         void quad_px(Rect local, float z, Color c) const
         {
-            auto ndc = [](int px) { return static_cast<float>(px) / 32.0f - 1.0f; };
+            auto ndc = [](int design) { return static_cast<float>(design) / 32.0f - 1.0f; };
             quad(ndc(local.x), ndc(local.y), ndc(local.x + local.w), ndc(local.y + local.h), z, c);
         }
 
@@ -468,7 +489,7 @@ namespace
             mgl::glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
             for (int k = 0; k < 4; ++k)
             {
-                set_scissor({r.x + 16 * k, r.y, 16, kPanel});
+                set_scissor({r.x + px(16 * k), r.y, px(16), r.h});
                 mgl::glColorMask(gl_bool(k == 0), gl_bool(k == 1), gl_bool(k == 2), gl_bool(k == 3));
                 mgl::glClear(mgl::ClearBufferBit::Color);
             }
@@ -493,7 +514,7 @@ namespace
             clear_color(kDark);
             for (int b = 0; b < 4; ++b)
             {
-                set_scissor({r.x, r.y + 16 * b, kPanel, 16});
+                set_scissor({r.x, r.y + px(16 * b), r.w, px(16)});
                 mgl::glClearDepthf(kRulerDepth[static_cast<std::size_t>(b)]);
                 mgl::glClear(mgl::ClearBufferBit::Depth);
             }
@@ -564,7 +585,7 @@ namespace
             clear_color(kDark);
             for (int b = 0; b < 4; ++b)
             {
-                set_scissor({r.x, r.y + 16 * b, kPanel, 16});
+                set_scissor({r.x, r.y + px(16 * b), r.w, px(16)});
                 mgl::glClearStencil(kStencilBands[static_cast<std::size_t>(b)]);
                 mgl::glClear(mgl::ClearBufferBit::Stencil);
             }
@@ -579,22 +600,22 @@ namespace
             mgl::glClearStencil(kStencilInit);
             mgl::glClear(mgl::ClearBufferBit::Stencil);  // 0xA5 everywhere
 
-            set_scissor({r.x, r.y + 0, kPanel, 16});
+            set_scissor({r.x, r.y + px(0), r.w, px(16)});
             mgl::glStencilMask(0x0F);
             mgl::glClearStencil(0xFF);
             mgl::glClear(mgl::ClearBufferBit::Stencil);  // low nibble only -> 0xAF
 
-            set_scissor({r.x, r.y + 16, kPanel, 16});
+            set_scissor({r.x, r.y + px(16), r.w, px(16)});
             mgl::glStencilMask(0xF0);
             mgl::glClearStencil(0x00);
             mgl::glClear(mgl::ClearBufferBit::Stencil);  // high nibble only -> 0x05
 
-            set_scissor({r.x, r.y + 32, kPanel, 16});
+            set_scissor({r.x, r.y + px(32), r.w, px(16)});
             mgl::glStencilMask(0x00);
             mgl::glClearStencil(0xFF);
             mgl::glClear(mgl::ClearBufferBit::Stencil);  // nothing writable -> 0xA5
 
-            set_scissor({r.x, r.y + 48, kPanel, 16});
+            set_scissor({r.x, r.y + px(48), r.w, px(16)});
             mgl::glStencilMaskSeparate(mgl::CullFace::Front, 0xFF);
             mgl::glStencilMaskSeparate(mgl::CullFace::Back, 0x00);
             mgl::glClearStencil(0x3C);
@@ -634,7 +655,7 @@ namespace
         {
             const Rect r = begin_panel(Panel::ScissoredDraw);
             clear_color(kDark);
-            set_scissor({r.x + 30, r.y + 4, 8, 8});          // a box is set ...
+            set_scissor(shifted({30, 4, 8, 8}, r));          // a box is set ...
             mgl::glDisable(mgl::Capability::ScissorTest);     // ... but the test is off: it is ignored
             quad(-1.0f, -1.0f, 1.0f, 1.0f, 0.0f, kSteel);     // covers the whole viewport (= panel)
             set_scissor(shifted(kBoxO, r));
@@ -660,7 +681,7 @@ namespace
             clear_color(kDark);
             for (int q = 0; q < 4; ++q)
             {
-                mgl::glViewport(r.x + 32 * (q % 2), r.y + 32 * (q / 2), 32, 32);
+                mgl::glViewport(r.x + px(32 * (q % 2)), r.y + px(32 * (q / 2)), px(32), px(32));
                 triangle(kTriangleM, 0.0f, kQuadrant[static_cast<std::size_t>(q)]);
             }
         }
@@ -710,14 +731,14 @@ namespace
             return out;
         }
 
-        /// Compares the cared-about pixels of `region` (panel-local) with the model; one check.
+        /// Compares the cared-about pixels of `region` (panel-local, design pixels) with the model; one check.
         void compare(demo::Check& check, const Image& image, Panel p, const Model& m, Rect region, std::string_view what,
                      int tolerance = 1) const
         {
             const Rect o = panel_rect(p);
             int compared = 0, bad = 0;
             std::string first_bad;
-            for_each_pixel(region, [&](int x, int y) {
+            for_each_pixel(scaled(region), [&](int x, int y) {
                 if (!m.care[Model::index(x, y)]) return;
                 ++compared;
                 const demo::Rgba8 got = image.at(o.x + x, o.y + y), want = m.color[Model::index(x, y)];
@@ -729,11 +750,11 @@ namespace
                                             demo::format_rgba(want));
             });
             check.expect(compared > 0 && bad == 0, what,
-                         bad == 0 ? std::format("{} pixels compared", compared)
+                         bad == 0 ? std::format("{} pixels compared (panel-local numbers are design pixels, scale k = {})", compared, g_k)
                                   : std::format("{} of {} pixels differ; {}", bad, compared, first_bad));
         }
 
-        /// True when every listed panel-local pixel equals `want` (within `tolerance`).
+        /// True when every listed panel-local *window* pixel equals `want` (within `tolerance`).
         bool all_equal(const Image& image, Panel p, std::initializer_list<std::array<int, 2>> pixels, demo::Rgba8 want,
                        int tolerance = 1) const
         {
@@ -769,10 +790,14 @@ namespace
             compare(check, image, Panel::ScissoredClear, m, kWholePanel,
                     "B: a clear under glScissor(12,8,40,30) changes exactly the 40x30 box and nothing around it");
             // ES 3.0 §4.1.2: passes iff left <= x < left + width and bottom <= y < bottom + height.
-            check.expect(all_equal(image, Panel::ScissoredClear, {{12, 8}, {51, 8}, {12, 37}, {51, 37}}, rgba8(kGold)),
+            // The box in window pixels is [x0, x1) x [y0, y1); at k = 1 these are (12, 52) x (8, 38).
+            const Rect b = scaled(kBoxB);
+            const int x0 = b.x, x1 = b.x + b.w, y0 = b.y, y1 = b.y + b.h;
+            check.expect(all_equal(image, Panel::ScissoredClear, {{x0, y0}, {x1 - 1, y0}, {x0, y1 - 1}, {x1 - 1, y1 - 1}}, rgba8(kGold)),
                          "B: the four corner pixels of the box (left, left+w-1, bottom, bottom+h-1) are inside");
             check.expect(all_equal(image, Panel::ScissoredClear,
-                                   {{11, 8}, {52, 8}, {12, 7}, {12, 38}, {51, 7}, {51, 38}, {11, 37}, {52, 37}}, rgba8(kNavy)),
+                                   {{x0 - 1, y0}, {x1, y0}, {x0, y0 - 1}, {x0, y1}, {x1 - 1, y0 - 1}, {x1 - 1, y1}, {x0 - 1, y1 - 1}, {x1, y1 - 1}},
+                                   rgba8(kNavy)),
                          "B: the pixels at left-1, left+w, bottom-1 and bottom+h are outside (half-open interval)");
         }
 
@@ -827,10 +852,13 @@ namespace
             f.fill(kBoxF1, rgba8(kDark));       // cleared to 0.0 -> fails
             compare(check, image, Panel::DepthClear, f, kWholePanel,
                     "F: depth cleared to 0.0 inside the scissor box only; the same clear with glDepthMask(FALSE) changed nothing");
-            check.expect(all_equal(image, Panel::DepthClear, {{8, 8}, {31, 31}, {8, 31}, {31, 8}}, rgba8(kDark)) &&
-                             all_equal(image, Panel::DepthClear, {{7, 8}, {32, 8}, {8, 32}, {8, 7}}, rgba8(kLitF)),
+            const Rect f1 = scaled(kBoxF1), f2 = scaled(kBoxF2);  // at k = 1: [8, 32)^2 and [36, 56)^2
+            const int a0 = f1.x, a1 = f1.x + f1.w;
+            check.expect(all_equal(image, Panel::DepthClear, {{a0, a0}, {a1 - 1, a1 - 1}, {a0, a1 - 1}, {a1 - 1, a0}}, rgba8(kDark)) &&
+                             all_equal(image, Panel::DepthClear, {{a0 - 1, a0}, {a1, a0}, {a0, a1}, {a0, a0 - 1}}, rgba8(kLitF)),
                          "F: scissored depth clear is exact at the box edges");
-            check.expect(all_equal(image, Panel::DepthClear, {{36, 36}, {55, 55}, {45, 45}}, rgba8(kLitF)),
+            check.expect(all_equal(image, Panel::DepthClear,
+                                   {{f2.x, f2.y}, {f2.x + f2.w - 1, f2.y + f2.h - 1}, {px(45), px(45)}}, rgba8(kLitF)),
                          "F: depth clear with glDepthMask(FALSE) leaves the old depth 1.0 (probe passes inside box 2)");
 
             // G: z_w = (f-n)/2 * z_d + (n+f)/2, compared with the clear depth 0.6.
@@ -868,15 +896,17 @@ namespace
             compare(check, image, Panel::ViewportMapping, l, kWholePanel,
                     "L: viewport (8,12,40,24) maps NDC [-1,1]^2 to x 8..47, y 12..35 and NDC [-.5,.5]^2 to x 18..37, y 18..29");
 
-            // M: the triangle in every 32x32 viewport. Pixels within 1 px of an edge are not compared.
+            // M: the triangle in every 32x32 viewport (32k x 32k window pixels). The triangle is derived from the
+            // scaled viewport; pixels within 1 window pixel of an edge are not compared.
             Model m = background(kDark);
             int skipped = 0;
+            const float half = static_cast<float>(px(16));
             for (int q = 0; q < 4; ++q)
             {
-                const float ox = static_cast<float>(32 * (q % 2)) + 16.0f, oy = static_cast<float>(32 * (q / 2)) + 16.0f;
+                const float ox = static_cast<float>(px(32 * (q % 2))) + half, oy = static_cast<float>(px(32 * (q / 2))) + half;
                 std::array<Vec2, 3> t{};
-                for (std::size_t i = 0; i < 3; ++i) t[i] = {ox + 16.0f * kTriangleM[i].x, oy + 16.0f * kTriangleM[i].y};
-                for_each_pixel({32 * (q % 2), 32 * (q / 2), 32, 32}, [&](int x, int y) {
+                for (std::size_t i = 0; i < 3; ++i) t[i] = {ox + half * kTriangleM[i].x, oy + half * kTriangleM[i].y};
+                for_each_pixel(scaled({32 * (q % 2), 32 * (q / 2), 32, 32}), [&](int x, int y) {
                     const float margin = triangle_margin(t, static_cast<float>(x) + 0.5f, static_cast<float>(y) + 0.5f);
                     if (margin >= 1.0f) m.color[Model::index(x, y)] = rgba8(kQuadrant[static_cast<std::size_t>(q)]);
                     else if (margin > -1.0f) { m.care[Model::index(x, y)] = 0; ++skipped; }
@@ -885,12 +915,17 @@ namespace
             compare(check, image, Panel::FourViewports, m, kWholePanel,
                     std::format("M: one NDC triangle through four viewports lands in each 32x32 quadrant ({} edge pixels not compared)", skipped));
 
-            // N: viewport (-32,-32,96,96): center at (16,16), half size 48.
+            // N: viewport (-32,-32,96,96) panel-local (design pixels): center at (16,16), half size 48.
             Model n = background(kDark);
             n.fill({4, 4, 24, 24}, rgba8(kMint));    // NDC +-0.25 -> 16 +- 12
             n.fill({40, 40, 24, 24}, rgba8(kCoral)); // NDC 0.5..1 -> 16 + 24 .. 16 + 48
+            const Rect vn = shifted(kViewportN, panel_rect(Panel::NegativeViewport));
             compare(check, image, Panel::NegativeViewport, n, kWholePanel,
-                    "N: viewport (-32,-32,96,96) is legal; NDC (0,0) lands at pixel (16,16) of the panel");
+                    std::format("N: viewport ({},{},{},{}) with its origin below the window (y < 0) is legal; NDC (0,0) lands "
+                                "at design pixel (16,16) of the panel",
+                                vn.x, vn.y, vn.w, vn.h));
+            check.expect(vn.y < 0, "N: the viewport's lower-left corner really lies outside the window (negative window y)",
+                         std::format("viewport y = {}", vn.y));
 
             // P: clipping to the clip volume = the viewport rectangle.
             Model p = background(kDark);
@@ -1074,7 +1109,7 @@ namespace
         {
             const Rect r = panel_rect(Panel::ClearColor);
             const Color marker{0.30f, 0.60f, 0.20f, 1.0f}, other{0.90f, 0.10f, 0.70f, 1.0f};
-            const int cx = r.x + 32, cy = r.y + 32;
+            const int cx = r.x + px(32), cy = r.y + px(32);
 
             // glClear(0): "If buf is zero, no buffers are cleared" - and it is not an error.
             begin_panel(Panel::ClearColor);
@@ -1086,18 +1121,18 @@ namespace
 
             // Scissor test enabled with an empty box: no fragment passes, neither for clears nor for draws.
             mgl::glEnable(mgl::Capability::ScissorTest);
-            mgl::glScissor(r.x + 8, r.y + 8, 0, 0);
+            mgl::glScissor(r.x + px(8), r.y + px(8), 0, 0);
             mgl::glClear(mgl::ClearBufferBit::Color);
             quad(-1.0f, -1.0f, 1.0f, 1.0f, 0.0f, other);
             check.expect_pixel(cx, cy, rgba8(marker), 1, "a 0x0 scissor box rejects every fragment of a clear and of a draw");
-            mgl::glScissor(r.x, r.y, 0, kPanel);
+            mgl::glScissor(r.x, r.y, 0, r.h);
             mgl::glClear(mgl::ClearBufferBit::Color);
             check.expect_pixel(r.x, cy, rgba8(marker), 1, "a scissor box of width 0 and full height also rejects everything");
 
             // The scissor box is ignored while the test is disabled.
             mgl::glDisable(mgl::Capability::ScissorTest);
-            mgl::glScissor(r.x + 8, r.y + 8, 1, 1);
-            mgl::glViewport(r.x, r.y, kPanel, kPanel);
+            mgl::glScissor(r.x + px(8), r.y + px(8), 1, 1);
+            mgl::glViewport(r.x, r.y, r.w, r.h);
             mgl::glClear(mgl::ClearBufferBit::Color);
             check.expect_pixel(cx, cy, rgba8(other), 1, "with GL_SCISSOR_TEST disabled glClear clears the whole window (box ignored)");
 

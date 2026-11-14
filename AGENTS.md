@@ -1,95 +1,107 @@
-# AGENTS.md — operating rules for every agent (Claude Code, Codex, humans)
+# AI Contribution Policy (v4)
 
-These rules are shared by all agents. `CLAUDE.md` only imports this file; do not create
-product-specific rules elsewhere. Read `docs/AGENT_HANDOFF.md` before starting any work.
+AI-assisted contributions are permitted under the conditions below.
+The human contributor remains responsible for the entire contribution,
+including any material generated or modified by AI.
 
-## Mission
+“AI” includes Large Language Models (“LLMs”) and other generative AI tools,
+such as ChatGPT, Claude, Copilot, and similar systems.
 
-`opengles3-demos` is a suite of **independent C++23 executables** that teach and validate the
-OpenGL ES 3.0 / 3.1 / 3.2 core API and GLSL ES 3.00 / 3.10 / 3.20 through the **meta-gl**
-library (`../../libcna/meta-gl`). Every claim of coverage must be backed by a validated run.
+This policy applies to all project content, including source code, tests,
+build scripts, configuration, documentation, examples, assets, commit
+messages, pull or merge request descriptions, and issue reports.
 
-## Hard rules
+## Authorization to make changes
 
-1. **meta-gl only.** Demos call `metagl::gl*`. Never call native `gl*` (the build links only
-   libEGL and compiles with `GL_GLES_PROTOTYPES=0`, so direct calls fail to build). Never load
-   GL function pointers yourself.
-2. **Do not modify meta-gl.** meta-gl's own `AGENTS.md` (AI Contribution Policy v2) forbids AI-authored
-   contributions, and since the final stabilization directive (2026-11-12) no agent edits, commits or pushes there.
-   The earlier owner-authorized gap fixes G1–G8 are on meta-gl `develop` at `333d777`, the revision the suite needs
-   (`docs/METAGL_DEPENDENCY.md`). A new meta-gl gap is recorded in `docs/META_GL_GAPS.md` with spec evidence and a
-   proposed fix for a human to write; the affected check reports `BLOCKED_META_GL` until then.
-3. **Do not modify easy-gl, CNA, cna-engine** or other projects. Never add an easy-gl dependency.
-4. **OpenGL ES, not desktop GL.** No fixed function, no desktop-only calls/enums, no desktop
-   GLSL. A `#version 310 es` feature must not appear in a `#version 300 es` shader, etc.
-5. **Core only.** Extensions are out of scope except for the diagnostics report
-   (`docs/EXTENSIONS_POLICY.md`). Never use an extension to stand in for a core feature.
-6. **No fabricated results.** A demo is PASS only if it ran with `--validate` and recorded at
-   least one meaningful check. Unsupported -> `SKIP_UNSUPPORTED`; meta-gl limitation ->
-   `BLOCKED_META_GL` (throw `demo::BlockedByMetaGl`) with a META_GL_GAPS.md entry.
-7. **Spec first.** Semantics come from the Khronos specs (ES 3.0/3.1/3.2, GLSL ES
-   3.00/3.10/3.20, gl.xml). Cite sections in README.md and demo.json. ES 2.0/3.0 features cite
-   ES 3.0 numbering; ES 3.1/3.2 features cite ES 3.2 numbering.
-8. **Small independent programs.** No engine, no renderer abstraction. GL calls stay visible
-   in each `main.cpp`. Repetition across demos is acceptable and intended.
+AI must act only as an advisor unless a human explicitly authorizes it
+to make changes for a defined task or scope.
 
-## Layout
+In its advisory role, AI may analyze existing content, explain code and
+architecture, research external documentation, identify possible issues,
+and propose solutions or draft text for human consideration. It must not
+apply changes to the project.
 
-```
-common/            tiny runtime: CLI, EGL/SDL3 context, checks, readback, PNG, math (demo::)
-demos/<group>/<d>/ one executable per directory: main.cpp, shaders/, README.md, demo.json, CMakeLists.txt
-  groups: es20-foundations (ES 2.0 API features), es30, es31, es32, diagnostics
-shader-tests/      GLSL ES compile/link (positive + negative) runner
-tests/             integration / negative API tests (separate processes)
-inventory/         registry-derived command/enum lists + feature/GLSL inventories (CSV)
-tools/registry/    gl.xml extraction;  tools/coverage/ coverage generator
-docs/              coverage, validation, gaps, handoff (docs/generated/ is generated)
-```
+A human instruction to implement or fix something within a defined scope
+authorizes the edits reasonably necessary for that task. Separate approval
+is not required for every individual edit within that scope.
 
-## Adding a demo (the normal unit of work)
+A request for advice, review, explanation, or a proposal does not authorize
+changes. If the authorization is unclear, AI must ask before making changes.
+If additional work falls outside the authorized scope, AI must obtain
+further authorization.
 
-1. Create `demos/<group>/<name-without-prefix>/` with:
-   - `CMakeLists.txt` containing `ogles_add_demo()` (discovered automatically; do not edit shared CMake files)
-   - `demo.json` — copy the schema of `demos/es30/hello-triangle/demo.json`. `name` must be
-     `<group-prefix>-<dir>` (e.g. `es30-instancing`), `min_es` the true minimum version,
-     `api` maps every core entry point the demo meaningfully exercises to *how it is verified*,
-     `features` / `glsl_features` use IDs from `inventory/*.csv` (add new IDs there if missing).
-   - `main.cpp` implementing `demo::Demo` (`init/render/validate/shutdown`) and `main()` with a
-     `demo::Info{... .source_dir = DEMO_SOURCE_DIR}`.
-   - `shaders/*.vert|frag|comp|geom|tesc|tese` with the correct `#version`.
-   - `README.md`: purpose, min ES / GLSL version, central API calls, spec sections, shader
-     concepts, expected result, how to run, how it is validated, pitfalls. Real prose; no templates.
-2. `validate()` must check observable results: pixels against a CPU reference, buffer/texture
-   readback, state queries, or expected GL errors. Calling a function is not coverage.
-3. Build and run: `cmake --build --preset debug && ctest --preset debug -R <name>`.
-   All matrix runs (gpu/llvmpipe/zink × es-max/es-min; softpipe for ES 3.2 executables) must PASS,
-   or SKIP_UNSUPPORTED where the driver is below `min_es` (softpipe is natively ES 3.1).
-4. Look at the capture (`build/debug/test-results/<test>.png`). Only after actually viewing it
-   add `"visual_review": {"date": "YYYY-MM-DD", "by": "<agent>", "notes": "..."}` to demo.json.
-5. `cmake --build --preset debug --target coverage` and commit the regenerated docs.
+Authorization to edit does not by itself authorize pushing, publishing,
+or merging changes.
 
-## Commands
+## Human understanding and responsibility
 
-```
-cmake --preset debug && cmake --build --preset debug     # configure + build
-ctest --preset debug                                     # full matrix
-ctest --preset debug -L es30 -L llvmpipe                 # subset by labels
-./build/debug/bin/<demo> --help                          # options of any demo
-./build/debug/bin/<demo> --headless --validate --capture out.png
-cmake --build --preset debug --target coverage           # regenerate coverage docs
-```
+The human contributor must review the complete contribution, including
+all AI-generated or AI-modified content.
 
-## Conventions
+Before submitting the contribution, the human contributor must:
 
-- Compilation uses at most **3 CPU cores in total** (owner's rule; lowered from 8 to 6 on 2026-11-11 and to 3 on
-  2026-11-12). The build presets set `jobs: 3`. When several agents build in parallel, each passes `-j 1`, so that the
-  total stays <= 3.
+- Understand the changes and their effects.
+- Be able to explain their purpose, behavior, and relevant design choices.
+- Verify factual claims and confirm that reported issues actually exist.
+- Perform appropriate validation and inspect the actual results.
+- Correct or remove errors, unnecessary changes, and other deficiencies.
+- Be able to address review feedback and correct problems in the contribution.
 
-- C++23, `namespace mgl = metagl;`, typed enums/handles, no raw `GLenum` casts except where a
-  test deliberately exercises an invalid value (and then only in `tests/negative`).
-- Warnings are errors in the `headless-ci` preset; keep the build warning-free.
-- Commit messages: imperative summary + body explaining *why*. No AI attribution lines.
-- Work in small batches; build and run before committing; update `docs/AGENT_HANDOFF.md`.
-- Parallel agents: one worktree/branch per agent, only touching their own demo directories
-  plus their own rows in `inventory/*.csv`. Shared infrastructure (`common/`, `cmake/`,
-  `tools/`) is changed only by the integrating agent.
+AI-generated explanations, another person's approval, or passing automated
+checks do not replace the contributor's own understanding.
+
+AI-assisted changes must not be submitted or merged if the human contributor
+does not understand them. If the contributor cannot adequately evaluate or
+explain a change, they must obtain the necessary understanding or remove
+that change before proceeding.
+
+These responsibilities apply equally to contributions made without AI.
+
+## Git commits
+
+AI must not create Git commits, amend commits, rewrite commit history,
+or sign commits. This prohibition applies whether performed directly
+or indirectly through tools, scripts, APIs, or other automation.
+
+Operations that create or rewrite commits must be performed by a human.
+
+AI may propose commit messages for human review. The human must verify
+that the final message accurately describes the changes and must perform
+the commit operation themselves.
+
+Permission to modify project content does not waive this restriction.
+
+## Quality, provenance, and licensing
+
+AI output must be treated as unverified material.
+
+The human contributor must evaluate the contribution for correctness,
+maintainability, security, and compliance with project requirements.
+
+Using AI does not establish the origin, ownership, or licensing status
+of its output. The contributor must ensure that they have the necessary
+rights to contribute all included material and preserve any required
+attribution and notices.
+
+Contributors must not describe AI-generated material as entirely
+human-authored.
+
+## Disclosure and submission
+
+Pull and merge requests must state whether AI was used to generate or
+modify contribution content. If it was, briefly describe its role,
+the affected parts, and the validation performed.
+
+By submitting a contribution, the human contributor confirms that they
+understand and accept responsibility for it, have the necessary rights
+to contribute it under the project's applicable license terms, and have
+complied with this policy.
+
+## Project-specific instructions
+
+Additional project-specific instructions may be provided in `AI.md`.
+That file is optional.
+
+Those instructions supplement this policy. They do not by themselves
+authorize edits or waive the requirements for human understanding,
+human responsibility, or human-performed commits.
